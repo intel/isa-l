@@ -1,0 +1,100 @@
+EXTRA_DIST = autogen.sh Makefile.unx make.inc Makefile.nmake isa-l.def About_bsd.txt
+CLEANFILES =
+LDADD =
+AM_MAKEFLAGS = --no-print-directory
+noinst_HEADERS =
+pkginclude_HEADERS = include/test.h
+noinst_LTLIBRARIES =
+INCLUDE = -I $(srcdir)/include
+AM_CFLAGS = ${my_CFLAGS} ${INCLUDE} ${D}
+
+lsrc=
+extern_hdrs=
+other_src=
+check_tests=
+unit_tests=
+perf_tests=
+unit_tests_extra=
+perf_tests_extra=
+examples=
+other_tests=
+lsrc32=
+unit_tests32=
+perf_tests32=
+
+# Include units
+include erasure_code/Makefile.am
+
+# LIB version info not necessarily the same as package version
+LIBISAL_CURRENT=2
+LIBISAL_REVISION=14
+LIBISAL_AGE=0
+
+lib_LTLIBRARIES = libisal.la
+pkginclude_HEADERS += $(sort ${extern_hdrs})
+libisal_la_SOURCES = ${lsrc}
+nobase_include_HEADERS = isa-l.h
+libisal_la_LDFLAGS = $(AM_LDFLAGS) \
+	-version-info $(LIBISAL_CURRENT):$(LIBISAL_REVISION):$(LIBISAL_AGE)
+libisal_la_LIBADD = ${noinst_LTLIBRARIES}
+
+EXTRA_DIST += ${other_src}
+EXTRA_DIST += Release_notes.txt
+
+# For tests
+LDADD += libisal.la
+check_PROGRAMS = ${check_tests}
+TESTS = ${check_tests}
+
+# For additional tests
+EXTRA_PROGRAMS = ${unit_tests}
+EXTRA_PROGRAMS += ${perf_tests}
+EXTRA_PROGRAMS += ${other_tests}
+EXTRA_PROGRAMS += ${examples}
+CLEANFILES += ${EXTRA_PROGRAMS}
+
+perfs: ${perf_tests}
+tests: ${unit_tests}
+other: ${other_tests}
+perf: $(addsuffix .run,$(perf_tests))
+ex: ${examples}
+test: $(addsuffix .run,$(unit_tests))
+
+# Build rule to run tests
+%.run: %
+	$<
+	@echo Completed run: $<
+
+# Support for yasm
+CCAS = ${srcdir}/tools/yasm-filter.sh
+EXTRA_DIST += tools/yasm-filter.sh
+AM_CCASFLAGS = ${yasm_args} ${INCLUDE}
+
+.asm.s:
+	@echo "  MKTMP   " $@;
+	@cp $< $@
+
+# Generate isa-l.h
+BUILT_SOURCES = isa-l.h
+CLEANFILES += isa-l.h
+isa-l.h:
+	@echo 'Building $@'
+	@echo ''			>> $@
+	@echo '#ifndef _ISAL_H_'	>> $@
+	@echo '#define _ISAL_H_'	>> $@
+	@echo ''			>> $@
+	@echo '#define.ISAL_MAJOR_VERSION.${VERSION}' |  ${AWK} -F . '{print $$1, $$2, $$3}' >> $@
+	@echo '#define.ISAL_MINOR_VERSION.${VERSION}' |  ${AWK} -F . '{print $$1, $$2, $$4}' >> $@
+	@echo '#define.ISAL_PATCH_VERSION.${VERSION}' |  ${AWK} -F . '{print $$1, $$2, $$5}' >> $@
+	@echo '#define ISAL_MAKE_VERSION(maj, min, patch)  ((maj) * 0x10000 + (min) * 0x100 + (patch))' >> $@
+	@echo '#define ISAL_VERSION ISAL_MAKE_VERSION(ISAL_MAJOR_VERSION, ISAL_MINOR_VERSION, ISAL_PATCH_VERSION)' >> $@
+	@echo ''			>> $@
+	@for unit in ${extern_hdrs}; do echo "#include <isa-l/$$unit>" | sed -e 's;include/;;' >> $@; done
+	@echo '#endif //_ISAL_H_'	>> $@
+
+
+license   = bsd
+licc      = $(srcdir)/doc/license_$(license)_c.txt
+lica      = $(srcdir)/doc/license_$(license)_asm.txt
+licm      = $(srcdir)/doc/license_$(license)_make.txt
+

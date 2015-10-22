@@ -1,0 +1,19 @@
+=================================================
+Intel(R) Intelligent Storage Acceleration Library
+=================================================
+
+Build Prerequisites
+===================
+
+ISA-L requires yasm version 1.2 or later.
+
+Building ISA-L
+==============
+
+To build and install the library it is usually sufficient to run the following.
+
+   ./configure
+   make
+   sudo make install
+
+Other targets include: make check, make tests and make perfs.
