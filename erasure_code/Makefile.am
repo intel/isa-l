@@ -69,6 +69,16 @@ lsrc         += erasure_code/ec_highlevel_func.c \
 		erasure_code/gf_6vect_mad_avx2.asm \
 		erasure_code/ec_multibinary.asm
 
+#if HAVE_AVX512
+lsrc +=		erasure_code/gf_vect_dot_prod_avx512.asm \
+		erasure_code/gf_2vect_dot_prod_avx512.asm \
+		erasure_code/gf_3vect_dot_prod_avx512.asm \
+		erasure_code/gf_4vect_dot_prod_avx512.asm \
+		erasure_code/gf_vect_mad_avx512.asm \
+		erasure_code/gf_2vect_mad_avx512.asm \
+		erasure_code/gf_3vect_mad_avx512.asm \
+		erasure_code/gf_4vect_mad_avx512.asm
+
 lsrc32	     += erasure_code/ec_highlevel_func.c \
 		erasure_code/ec_multibinary.asm \
 		erasure_code/ec_base.c \
@@ -85,7 +95,7 @@ lsrc32	     += erasure_code/ec_highlevel_func.c \
 		erasure_code/gf_3vect_dot_prod_avx2.asm \
 		erasure_code/gf_4vect_dot_prod_avx2.asm
 
-unit_tests32 += erasure_code_base_test \
+unit_tests32 += erasure_code/erasure_code_base_test \
 		erasure_code/erasure_code_test \
 		erasure_code/erasure_code_sse_test \
 		erasure_code/gf_vect_mul_test \
@@ -114,6 +124,7 @@ extern_hdrs  += include/erasure_code.h \
 		include/gf_vect_mul.h
 
 other_src    += erasure_code/ec_base.h \
+		include/multibinary.asm \
 		include/reg_sizes.asm
 
 check_tests  += erasure_code/gf_vect_mul_test \

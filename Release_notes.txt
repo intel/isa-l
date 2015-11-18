@@ -1,5 +1,5 @@
 =============================================================================
-v2.14 Intel Intelligent Storage Acceleration Library Release Notes
+v2.15 Intel Intelligent Storage Acceleration Library Release Notes
       Open Source Version
 =============================================================================
 
@@ -23,6 +23,12 @@ RELEASE NOTE CONTENTS
 =============================================================================
 2. FIXED ISSUES
 =============================================================================
+v2.15
+
+* Fix for windows register save in gf_6vect_mad_avx2.asm.  Only affects windows
+  versions of ec_encode_data_update() running with AVX2.  A GP register was not
+  properly restored resulting in corruption on return.
+
 v2.14
 
 * Building in unit directories is no longer supported removing the issue of
@@ -37,6 +43,14 @@ v2.10
 =============================================================================
 3. CHANGE LOG & FEATURES ADDED 
 =============================================================================
+v2.15
+
+* Erasure code updates. New AVX512 versions.
+
+* Nasm support.  ISA-L ported to build with nasm or yasm assembler.
+
+* Windows DLL support.  Windows builds DLL by default.
+
 v2.14
 
 * Autoconf and autotools build allows easier porting to additional systems.

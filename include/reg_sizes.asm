@@ -30,6 +30,14 @@
 %ifndef _REG_SIZES_ASM_
 %define _REG_SIZES_ASM_
 
+%ifdef __NASM_VER__
+%ifidn __OUTPUT_FORMAT__, win64
+%error nasm not supported in windows
+%else
+%define endproc_frame
+%endif
+%endif
+
 %define EFLAGS_HAS_CPUID        (1<<21)
 %define FLAG_CPUID1_ECX_CLMUL   (1<<1)
 %define FLAG_CPUID1_EDX_SSE2    (1<<26)
@@ -41,7 +49,24 @@
 %define FLAG_CPUID1_ECX_OSXSAVE (1<<27)
 %define FLAG_CPUID1_ECX_AVX     (1<<28)
 %define FLAG_CPUID1_EBX_AVX2    (1<<5)
-%define FLAG_XGETBV_EAX_XMM_YMM	0x6
+
+%define FLAG_CPUID7_EBX_AVX2           (1<<5)
+%define FLAG_CPUID7_EBX_AVX512F        (1<<16)
+%define FLAG_CPUID7_EBX_AVX512DQ       (1<<17)
+%define FLAG_CPUID7_EBX_AVX512IFMA     (1<<21)
+%define FLAG_CPUID7_EBX_AVX512PF       (1<<26)
+%define FLAG_CPUID7_EBX_AVX512ER       (1<<27)
+%define FLAG_CPUID7_EBX_AVX512CD       (1<<28)
+%define FLAG_CPUID7_EBX_AVX512BW       (1<<30)
+%define FLAG_CPUID7_EBX_AVX512VL       (1<<31)
+%define FLAG_CPUID7_ECX_AVX512VBMI     (1<<1)
+
+%define FLAGS_CPUID7_ECX_AVX512_G1 (FLAG_CPUID7_EBX_AVX512F | FLAG_CPUID7_EBX_AVX512VL | FLAG_CPUID7_EBX_AVX512BW | FLAG_CPUID7_EBX_AVX512CD | FLAG_CPUID7_EBX_AVX512DQ)
+
+%define FLAG_XGETBV_EAX_XMM            (1<<1)
+%define FLAG_XGETBV_EAX_YMM            (1<<2)
+%define FLAG_XGETBV_EAX_XMM_YMM        0x6
+%define FLAG_XGETBV_EAX_ZMM_OPM        0xe0
 
 %define FLAG_CPUID1_EAX_AVOTON 0x000406d0
 

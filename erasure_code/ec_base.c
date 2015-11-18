@@ -351,10 +351,10 @@ struct slver gf_mul_slver_00000214;
 struct slver gf_mul_slver = { 0x0214, 0x00, 0x00 };
 
 struct slver gf_invert_matrix_slver_00000215;
-struct slver gf_invert_matrix_slver = { 0x0215, 0x00, 0x00};
+struct slver gf_invert_matrix_slver = { 0x0215, 0x00, 0x00 };
 
 struct slver gf_gen_rs_matrix_slver_00000216;
 struct slver gf_gen_rs_matrix_slver = { 0x0216, 0x00, 0x00 };
 
 struct slver gf_gen_cauchy1_matrix_slver_00000217;
-struct slver gf_gen_cauchy1_matrix_slver = { 0x0217, 0x00, 0x00};
+struct slver gf_gen_cauchy1_matrix_slver = { 0x0217, 0x00, 0x00 };
