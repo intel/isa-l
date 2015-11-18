@@ -365,9 +365,9 @@ section .data
 align 16
 
 mask0f:
-	ddq 0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f
+	dq 0x0f0f0f0f0f0f0f0f, 0x0f0f0f0f0f0f0f0f
 constip16:
-	ddq 0xf0f1f2f3f4f5f6f7f8f9fafbfcfdfeff
+	dq 0xf8f9fafbfcfdfeff, 0xf0f1f2f3f4f5f6f7
 
 ;;;       func             core, ver, snum
 slversion gf_5vect_mad_sse, 00,  01,  020c

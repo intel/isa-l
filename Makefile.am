@@ -5,7 +5,7 @@ AM_MAKEFLAGS = --no-print-directory
 noinst_HEADERS =
 pkginclude_HEADERS = include/test.h
 noinst_LTLIBRARIES =
-INCLUDE = -I $(srcdir)/include
+INCLUDE = -I $(srcdir)/include/
 AM_CFLAGS = ${my_CFLAGS} ${INCLUDE} ${D}
 
 lsrc=
@@ -23,6 +23,7 @@ unit_tests32=
 perf_tests32=
 
 # Include units
+
 include erasure_code/Makefile.am
 
 # LIB version info not necessarily the same as package version
@@ -65,10 +66,18 @@ test: $(addsuffix .run,$(unit_tests))
 	$<
 	@echo Completed run: $<
 
-# Support for yasm
-CCAS = ${srcdir}/tools/yasm-filter.sh
-EXTRA_DIST += tools/yasm-filter.sh
-AM_CCASFLAGS = ${yasm_args} ${INCLUDE}
+# Support for yasm/nasm
+if USE_YASM
+  as_filter = ${srcdir}/tools/yasm-filter.sh
+endif
+if USE_NASM
+  as_filter = ${srcdir}/tools/nasm-filter.sh
+  as_include = $(addprefix -I ${srcdir}/,$(sort $(dir $(lsrc))))
+endif
+
+CCAS = $(as_filter)
+EXTRA_DIST += tools/yasm-filter.sh tools/nasm-filter.sh
+AM_CCASFLAGS = ${yasm_args} ${INCLUDE} ${as_include} ${DEFS} ${D}
 
 .asm.s:
 	@echo "  MKTMP   " $@;
@@ -89,7 +98,7 @@ isa-l.h:
 	@echo '#define ISAL_MAKE_VERSION(maj, min, patch)  ((maj) * 0x10000 + (min) * 0x100 + (patch))' >> $@
 	@echo '#define ISAL_VERSION ISAL_MAKE_VERSION(ISAL_MAJOR_VERSION, ISAL_MINOR_VERSION, ISAL_PATCH_VERSION)' >> $@
 	@echo ''			>> $@
-	@for unit in ${extern_hdrs}; do echo "#include <isa-l/$$unit>" | sed -e 's;include/;;' >> $@; done
+	@for unit in $(sort $(extern_hdrs)); do echo "#include <isa-l/$$unit>" | sed -e 's;include/;;' >> $@; done
 	@echo '#endif //_ISAL_H_'	>> $@
 
 

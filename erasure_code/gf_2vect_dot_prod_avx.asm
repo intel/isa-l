@@ -255,13 +255,13 @@ func(gf_2vect_dot_prod_avx)
 	mov	dest1, [dest1]
 	SSTR	dest1_m, dest1
 
-.loop16
+.loop16:
 	vpxor	xp1, xp1
 	vpxor	xp2, xp2
 	mov	tmp, mul_array
 	xor	vec_i, vec_i
 
-.next_vect
+.next_vect:
 	SLDR	src, src_m
 	mov	ptr, [src+vec_i]
 
@@ -331,7 +331,7 @@ endproc_frame
 section .data
 
 align 16
-mask0f: ddq 0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f
+mask0f: dq 0x0f0f0f0f0f0f0f0f, 0x0f0f0f0f0f0f0f0f
 
 ;;;       func                  core, ver, snum
 slversion gf_2vect_dot_prod_avx, 02,  05,  0191

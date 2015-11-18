@@ -178,7 +178,7 @@ func(gf_2vect_mad_avx)
 	XLDR	xtmpd1, [dest1+len]	;backup the last 16 bytes in dest
 	XLDR	xtmpd2, [dest2+len]	;backup the last 16 bytes in dest
 
-.loop16
+.loop16:
 	XLDR	xd1, [dest1+pos]		;Get next dest vector
 	XLDR	xd2, [dest2+pos]		;Get next dest vector
 .loop16_overlap:
@@ -230,7 +230,7 @@ endproc_frame
 section .data
 
 align 16
-mask0f: ddq 0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f
+mask0f: dq 0x0f0f0f0f0f0f0f0f, 0x0f0f0f0f0f0f0f0f
 
 ;;;       func             core, ver, snum
 slversion gf_2vect_mad_avx, 02,  01,  0204

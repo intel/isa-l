@@ -356,8 +356,8 @@ endproc_frame
 section .data
 align 32
 constip32:
-	ddq 0xf0f1f2f3f4f5f6f7f8f9fafbfcfdfeff
-	ddq 0xe0e1e2e3e4e5e6e7e8e9eaebecedeeef
+	dq 0xf8f9fafbfcfdfeff, 0xf0f1f2f3f4f5f6f7
+	dq 0xe8e9eaebecedeeef, 0xe0e1e2e3e4e5e6e7
 
 ;;;       func             core, ver, snum
 slversion gf_5vect_mad_avx2, 04,  01,  020e

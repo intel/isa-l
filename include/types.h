@@ -41,7 +41,7 @@
 extern "C" {
 #endif
 
-#ifdef __WIN32__
+#ifdef _WIN32
 #ifdef __MINGW32__
 # include <_mingw.h>
 #endif

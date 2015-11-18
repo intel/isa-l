@@ -158,7 +158,7 @@ section .data
 align 16
 
 mask0f:
-ddq 0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f
+dq 0x0f0f0f0f0f0f0f0f, 0x0f0f0f0f0f0f0f0f
 
 ;;;       func             core, ver, snum
 slversion gf_vect_mul_avx, 01,   03,  0036

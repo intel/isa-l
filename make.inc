@@ -80,7 +80,7 @@ ifeq ($(arch),mingw)
 endif
 
 
-INCLUDE   = $(patsubst %,-I%,$(subst :, ,$(VPATH)))
+INCLUDE   = $(patsubst %,-I%/,$(subst :, ,$(VPATH)))
 CFLAGS   = $(CFLAGS_$(arch)) $(CFLAGS_$(CC)) $(DEBUG) -O2 $(DEFINES) $(INCLUDE)
 ASFLAGS  = $(ASFLAGS_$(arch)) $(ASFLAGS_$(CC)) $(DEBUG_$(AS)) $(DEFINES) $(INCLUDE)
 ARFLAGS  = $(ARFLAGS_$(arch))
@@ -110,35 +110,31 @@ perf_testswin64 = $(perf_tests)
 # Build and run unit tests, performance tests, etc.
 all_tests = $(notdir $(sort $(perf_tests$(arch)) $(check_tests$(arch)) $(unit_tests$(arch)) $(examples$(arch)) $(other_tests)))
 all_unit_tests = $(notdir $(sort $(check_tests$(arch)) $(unit_tests$(arch))))
+all_perf_tests = $(notdir $(sort $(perf_tests$(arch))))
 
 $(all_unit_tests): % : %.c $(lib_name)
-$(sort $(notdir $(perf_tests$(arch)))): % : %.c $(lib_name)
-$(sort $(examples$(arch))): % : %.c $(lib_name)
-$(sort $(other_tests)): % : %.c $(lib_name)
+$(all_perf_tests): % : %.c $(lib_name)
+$(sort $(notdir $(examples$(arch)))): % : %.c $(lib_name)
+$(sort $(notdir $(other_tests))): % : %.c $(lib_name)
 
 sim test trace: $(addsuffix .run,$(all_unit_tests))
-
-perf: $(addsuffix .run,$(notdir $(perf_tests$(arch))))
-ex:   $(examples$(arch))
+perf: $(addsuffix .run,$(all_perf_tests))
+ex:   $(notdir $(examples$(arch)))
 all: lib $(all_tests)
-other: $(other_tests)
+other: $(notdir $(other_tests))
 tests: $(all_unit_tests)
-perfs: $(notdir $(perf_tests$(arch)))
+perfs: $(all_perf_tests)
 check test perf: SIM=
 trace: SIMFLAGS = -debugtrace
 check test sim:
 	@echo Finished running $@
 
-#$(foreach c, $^, ./$c )
-#for i in $^; do ./$$i ; done
-
 $(objs): | $(O)
 $(O): ; mkdir -p $(O)
 
-
 # Build rule to run tests
-%.run: %
-	$(SIM) $(@D)/$<
+$(addsuffix .run,$(all_tests)): %.run : %
+	$(SIM) ./$<
 	@echo Completed run: $<
 
 # Other build rules
@@ -233,7 +229,7 @@ rpt_name = perf_report_$(shell uname -n)_$(shell date +%y%m%d).perf
 
 perf_report:
 	echo Results for $(rpt_name) >> $(rpt_name)
-	$(MAKE) -k perf | tee -a $(rpt_name)
+	$(MAKE) -f Makefile.unx -k perf | tee -a $(rpt_name)
 	@echo Summary:
 	-grep runtime $(rpt_name)
 

@@ -4,15 +4,24 @@
 
 while [ -n "$*" ]; do
     case "$1" in
-	-f | -o | -I | -i | -D )
+	-f | -o | -D )
 	    # Supported options with arg
 	    options="$options $1 $2"
 	    shift
 	    shift
 	    ;;
-	-I* | -i* | --prefix* )
+	-I | -i )
+	    options="$options $1 $2/"
+	    shift
+	    shift
+	    ;;
+	--prefix* )
 	    # Supported options without arg
 	    options="$options $1"
+	    shift
+	    ;;
+	-I* | -i* )
+	    options="$options $1/"
 	    shift
 	    ;;
 	-D* ) # For defines we need to remove spaces
@@ -35,4 +44,4 @@ while [ -n "$*" ]; do
     esac
 done
 
-yasm $options $args
+nasm $options $args

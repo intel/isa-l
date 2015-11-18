@@ -192,7 +192,7 @@ func(gf_2vect_mad_avx2)
 	XLDR	xtmpd1, [dest1+len]	;backup the last 16 bytes in dest
 	XLDR	xtmpd2, [dest2+len]	;backup the last 16 bytes in dest
 
-.loop32
+.loop32:
 	XLDR	xd1, [dest1+pos]		;Get next dest vector
 	XLDR	xd2, [dest2+pos]		;Get next dest vector
 .loop32_overlap:
