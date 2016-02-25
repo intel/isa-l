@@ -68,6 +68,9 @@
 
 typedef unsigned char u8;
 
+extern void FUNCTION_UNDER_TEST(int len, int vlen, unsigned char *gftbls,
+				unsigned char **src, unsigned char **dest);
+
 void dump(unsigned char *buf, int len)
 {
 	int i;

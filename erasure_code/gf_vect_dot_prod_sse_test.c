@@ -66,6 +66,9 @@
 # define LEN_ALIGN_CHK_B 32	// 0 for aligned only
 #endif
 
+extern void FUNCTION_UNDER_TEST(int len, int vlen, unsigned char *gftbls,
+				unsigned char **src, unsigned char *dest);
+
 typedef unsigned char u8;
 
 void dump(unsigned char *buf, int len)

@@ -79,6 +79,17 @@
 
 typedef unsigned char u8;
 
+#if (VECT == 1)
+# define LAST_ARG *dest
+#else
+# define LAST_ARG **dest
+#endif
+
+extern void FUNCTION_UNDER_TEST(int len, int vec, int vec_i, unsigned char *gftbls,
+				unsigned char *src, unsigned char LAST_ARG);
+extern void REF_FUNCTION(int len, int vlen, unsigned char *gftbls, unsigned char **src,
+			 unsigned char LAST_ARG);
+
 void dump(unsigned char *buf, int len)
 {
 	int i;
