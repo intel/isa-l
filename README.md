@@ -2,6 +2,8 @@
 Intel(R) Intelligent Storage Acceleration Library
 =================================================
 
+[![Build Status](https://travis-ci.org/01org/isa-l.svg?branch=master)](https://travis-ci.org/01org/isa-l)
+
 Build Prerequisites
 ===================
 
