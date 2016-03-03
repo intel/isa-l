@@ -1,4 +1,4 @@
-EXTRA_DIST = autogen.sh Makefile.unx make.inc Makefile.nmake isa-l.def About_bsd.txt
+EXTRA_DIST = autogen.sh Makefile.unx make.inc Makefile.nmake isa-l.def LICENSE
 CLEANFILES =
 LDADD =
 AM_MAKEFLAGS = --no-print-directory
