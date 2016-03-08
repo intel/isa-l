@@ -33,7 +33,7 @@
 #include <string.h>
 #include "igzip_lib.h"
 #include "test.h"
-#include "igzip_inflate_ref.h"
+#include "inflate.h"
 
 #define BUF_SIZE 1024
 #define MIN_TEST_LOOPS   8
@@ -41,8 +41,12 @@
 # define RUN_MEM_SIZE 2000000000
 #endif
 
+extern uint64_t inflate_in_read_bits(struct inflate_in_buffer *, uint8_t);
+extern int read_header(struct inflate_state *);
+extern uint16_t decode_next(struct inflate_in_buffer *, struct inflate_huff_code *);
+
 /* Inflates and fills a histogram of lit, len, and dist codes seen in non-type 0 blocks.*/
-int igzip_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *histogram)
+int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *histogram)
 {
 	/* The following tables are based on the tables in the deflate standard,
 	 * RFC 1951 page 11. */
@@ -336,8 +340,8 @@ int main(int argc, char *argv[])
 	stream.hufftables = &hufftables_custom;
 	isal_deflate_stateless(&stream);
 
-	igzip_inflate_init(&gstream, outbuf, stream.total_out, NULL, 0);
-	igzip_inflate_hist(&gstream, &histogram2);
+	isal_inflate_init(&gstream, outbuf, stream.total_out, NULL, 0);
+	isal_inflate_hist(&gstream, &histogram2);
 
 	printf("Histogram Error \n");
 	print_diff_histogram(&histogram1, &histogram2);

@@ -31,7 +31,7 @@
 #include <assert.h>
 #include <zlib.h>
 #include "huff_codes.h"
-#include "igzip_inflate_ref.h"
+#include "inflate.h"
 #include "test.h"
 
 #define BUF_SIZE 1024
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 	struct inflate_state state;
 
 	if (argc > 3 || argc < 2) {
-		fprintf(stderr, "Usage: igzip_inflate_file_perf  infile\n"
+		fprintf(stderr, "Usage: isal_inflate_file_perf  infile\n"
 			"\t - Runs multiple iterations of igzip on a file to "
 			"get more accurate time results.\n");
 		exit(0);
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 		}
 		printf("outfile=%s\n", argv[2]);
 	}
-	printf("igzip_inflate_perf: \n");
+	printf("isal_inflate_perf: \n");
 	fflush(0);
 	/* Allocate space for entire input file and output
 	 * (assuming some possible expansion on output size)
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Can't allocate input buffer memory\n");
 		exit(0);
 	}
-	outbuf = malloc(infile_size);
+	outbuf = malloc(outbuf_size);
 	if (outbuf == NULL) {
 		fprintf(stderr, "Can't allocate output buffer memory\n");
 		exit(0);
@@ -117,16 +117,16 @@ int main(int argc, char *argv[])
 		printf("Compression of input file failed\n");
 		exit(0);
 	}
-	printf("igzip_inflate_perf: %s %d iterations\n", argv[1], iterations);
+	printf("isal_inflate_stateless_perf: %s %d iterations\n", argv[1], iterations);
 	/* Read complete input file into buffer */
 	fclose(in);
 	struct perf start, stop;
 	perf_start(&start);
 
 	for (i = 0; i < iterations; i++) {
-		igzip_inflate_init(&state, inbuf + 2, inbuf_size - 2, outbuf, outbuf_size);
+		isal_inflate_init(&state, inbuf + 2, inbuf_size - 2, outbuf, outbuf_size);
 
-		check = igzip_inflate(&state);
+		check = isal_inflate_stateless(&state);
 		if (check) {
 			printf("Error in decompression with error %d\n", check);
 			break;
@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
 	printf("igzip_file: ");
 	perf_print(stop, start, (long long)infile_size * i);
 
-	printf("End of igzip_inflate_perf\n\n");
+	printf("End of isal_inflate_stateless_perf\n\n");
 	fflush(0);
 
 	free(inbuf);

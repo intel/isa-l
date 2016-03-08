@@ -30,8 +30,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "igzip_lib.h"
-#include "igzip_inflate_ref.h"
+#include "inflate.h"
 #include "crc_inflate.h"
 #include <math.h>
 
@@ -350,8 +351,8 @@ int inflate_check(uint8_t * z_buf, int z_size, uint8_t * in_buf, int in_size)
 	z_size -= gzip_hdr_bytes;
 #endif
 
-	igzip_inflate_init(&gstream, z_buf, z_size, test_buf, test_size);
-	ret = igzip_inflate(&gstream);
+	isal_inflate_init(&gstream, z_buf, z_size, test_buf, test_size);
+	ret = isal_inflate_stateless(&gstream);
 
 	if (test_buf != NULL)
 		mem_result = memcmp(in_buf, test_buf, in_size);

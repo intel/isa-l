@@ -1,34 +1,51 @@
-/**********************************************************************
-  Copyright(c) 2011-2016 Intel Corporation All rights reserved.
+// <COPYRIGHT_TAG>
 
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions
-  are met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in
-      the documentation and/or other materials provided with the
-      distribution.
-    * Neither the name of Intel Corporation nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
+#include <stdint.h>
+#include "inflate.h"
+#include "huff_codes.h"
 
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-**********************************************************************/
+extern int decode_huffman_code_block_stateless(struct inflate_state *);
 
-#include "igzip_inflate_ref.h"
+/* structure contain lookup data based on RFC 1951 */
+struct rfc1951_tables {
+	uint8_t dist_extra_bit_count[32];
+	uint32_t dist_start[32];
+	uint8_t len_extra_bit_count[32];
+	uint16_t len_start[32];
 
+};
+
+/* The following tables are based on the tables in the deflate standard,
+ * RFC 1951 page 11. */
+static struct rfc1951_tables rfc_lookup_table = {
+	.dist_extra_bit_count = {
+				 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x02, 0x02,
+				 0x03, 0x03, 0x04, 0x04, 0x05, 0x05, 0x06, 0x06,
+				 0x07, 0x07, 0x08, 0x08, 0x09, 0x09, 0x0a, 0x0a,
+				 0x0b, 0x0b, 0x0c, 0x0c, 0x0d, 0x0d, 0x00, 0x00},
+
+	.dist_start = {
+		       0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0007, 0x0009, 0x000d,
+		       0x0011, 0x0019, 0x0021, 0x0031, 0x0041, 0x0061, 0x0081, 0x00c1,
+		       0x0101, 0x0181, 0x0201, 0x0301, 0x0401, 0x0601, 0x0801, 0x0c01,
+		       0x1001, 0x1801, 0x2001, 0x3001, 0x4001, 0x6001, 0x0000, 0x0000},
+
+	.len_extra_bit_count = {
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x01, 0x01, 0x01, 0x01, 0x02, 0x02, 0x02, 0x02,
+				0x03, 0x03, 0x03, 0x03, 0x04, 0x04, 0x04, 0x04,
+				0x05, 0x05, 0x05, 0x05, 0x00, 0x00, 0x00, 0x00},
+
+	.len_start = {
+		      0x0003, 0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x0009, 0x000a,
+		      0x000b, 0x000d, 0x000f, 0x0011, 0x0013, 0x0017, 0x001b, 0x001f,
+		      0x0023, 0x002b, 0x0033, 0x003b, 0x0043, 0x0053, 0x0063, 0x0073,
+		      0x0083, 0x00a3, 0x00c3, 0x00e3, 0x0102, 0x0000, 0x0000, 0x0000}
+};
+
+/*Performs a copy of length repeat_length data starting at dest -
+ * lookback_distance into dest. This copy copies data previously copied when the
+ * src buffer and the dest buffer overlap. */
 void inline byte_copy(uint8_t * dest, uint64_t lookback_distance, int repeat_length)
 {
 	uint8_t *src = dest - lookback_distance;
@@ -49,12 +66,14 @@ uint16_t inline bit_reverse2(uint16_t bits, uint8_t length)
 	return bits >> (16 - length);
 }
 
+/* Initialize a struct in_buffer for use */
 void inline init_inflate_in_buffer(struct inflate_in_buffer *inflate_in)
 {
 	inflate_in->read_in = 0;
 	inflate_in->read_in_length = 0;
 }
 
+/* Set up the in_stream used for the in_buffer*/
 void inline set_inflate_in_buffer(struct inflate_in_buffer *inflate_in, uint8_t * in_stream,
 				  uint32_t in_size)
 {
@@ -62,13 +81,16 @@ void inline set_inflate_in_buffer(struct inflate_in_buffer *inflate_in, uint8_t 
 	inflate_in->avail_in = in_size;
 }
 
+/* Set up the out_stream used for the out_buffer */
 void inline set_inflate_out_buffer(struct inflate_out_buffer *inflate_out,
 				   uint8_t * out_stream, uint32_t out_size)
 {
+	inflate_out->start_out = out_stream;
 	inflate_out->next_out = out_stream;
 	inflate_out->avail_out = out_size;
 	inflate_out->total_out = 0;
 }
+
 
 void inline inflate_in_clear_bits(struct inflate_in_buffer *inflate_in)
 {
@@ -82,6 +104,7 @@ void inline inflate_in_clear_bits(struct inflate_in_buffer *inflate_in)
 	inflate_in->avail_in += bytes;
 }
 
+/* Load data from the in_stream into a buffer to allow for handling unaligned data*/
 void inline inflate_in_load(struct inflate_in_buffer *inflate_in, int min_required)
 {
 	uint64_t temp = 0;
@@ -112,6 +135,7 @@ void inline inflate_in_load(struct inflate_in_buffer *inflate_in, int min_requir
 
 }
 
+/* Returns the next bit_count bits from the in stream*/
 uint64_t inline inflate_in_peek_bits(struct inflate_in_buffer *inflate_in, uint8_t bit_count)
 {
 	assert(bit_count < 57);
@@ -123,6 +147,7 @@ uint64_t inline inflate_in_peek_bits(struct inflate_in_buffer *inflate_in, uint8
 	return (inflate_in->read_in) & ((1 << bit_count) - 1);
 }
 
+/* Shifts the in stream over by bit-count bits */
 void inline inflate_in_shift_bits(struct inflate_in_buffer *inflate_in, uint8_t bit_count)
 {
 
@@ -130,6 +155,9 @@ void inline inflate_in_shift_bits(struct inflate_in_buffer *inflate_in, uint8_t 
 	inflate_in->read_in_length -= bit_count;
 }
 
+/* Returns the next bit_count bits from the in stream and shifts the stream over
+ * by bit-count bits */
+uint64_t inflate_in_read_bits(struct inflate_in_buffer *inflate_in, uint8_t bit_count);
 uint64_t inline inflate_in_read_bits(struct inflate_in_buffer *inflate_in, uint8_t bit_count)
 {
 	uint64_t ret;
@@ -146,48 +174,10 @@ uint64_t inline inflate_in_read_bits(struct inflate_in_buffer *inflate_in, uint8
 	return ret;
 }
 
-int inline setup_static_header(struct inflate_state *state)
-{
-	/* This could be turned into a memcpy of this functions output for
-	 * higher speed, but then DECODE_LOOKUP_SIZE couldn't be changed without
-	 * regenerating the table. */
 
-	int i;
-	struct huff_code lit_code[LIT_LEN + 2];
-	struct huff_code dist_code[DIST_LEN + 2];
-
-	/* These tables are based on the static huffman tree described in RFC
-	 * 1951 */
-	uint16_t lit_count[16] = {
-		0, 0, 0, 0, 0, 0, 0, 24, 152, 112, 0, 0, 0, 0, 0, 0
-	};
-	uint16_t dist_count[16] = {
-		0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	};
-
-	/* These for loops set the code lengths for the static literal/length
-	 * and distance codes defined in the deflate standard RFC 1951 */
-	for (i = 0; i < 144; i++)
-		lit_code[i].length = 8;
-
-	for (i = 144; i < 256; i++)
-		lit_code[i].length = 9;
-
-	for (i = 256; i < 280; i++)
-		lit_code[i].length = 7;
-
-	for (i = 280; i < LIT_LEN + 2; i++)
-		lit_code[i].length = 8;
-
-	for (i = 0; i < DIST_LEN + 2; i++)
-		dist_code[i].length = 5;
-
-	make_inflate_huff_code(&state->lit_huff_code, lit_code, LIT_LEN + 2, lit_count);
-	make_inflate_huff_code(&state->dist_huff_code, dist_code, DIST_LEN + 2, dist_count);
-
-	return 0;
-}
-
+/* Sets result to the inflate_huff_code corresponding to the huffcode defined by
+ * the lengths in huff_code_table,where count is a histogram of the appearance
+ * of each code length */
 void inline make_inflate_huff_code(struct inflate_huff_code *result,
 				   struct huff_code *huff_code_table, int table_length,
 				   uint16_t * count)
@@ -205,8 +195,6 @@ void inline make_inflate_huff_code(struct inflate_huff_code *result,
 	uint32_t code_length;
 	uint16_t long_bits;
 	uint16_t min_increment;
-
-	memset(result, 0, sizeof(struct inflate_huff_code));
 
 	next_code[0] = code;
 
@@ -289,6 +277,53 @@ void inline make_inflate_huff_code(struct inflate_huff_code *result,
 	}
 }
 
+/* Sets the inflate_huff_codes in state to be the huffcodes corresponding to the
+ * deflate static header */
+int inline setup_static_header(struct inflate_state *state)
+{
+	/* This could be turned into a memcpy of this functions output for
+	 * higher speed, but then DECODE_LOOKUP_SIZE couldn't be changed without
+	 * regenerating the table. */
+
+	int i;
+	struct huff_code lit_code[LIT_LEN + 2];
+	struct huff_code dist_code[DIST_LEN + 2];
+
+	/* These tables are based on the static huffman tree described in RFC
+	 * 1951 */
+	uint16_t lit_count[16] = {
+		0, 0, 0, 0, 0, 0, 0, 24, 152, 112, 0, 0, 0, 0, 0, 0
+	};
+	uint16_t dist_count[16] = {
+		0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	};
+
+	/* These for loops set the code lengths for the static literal/length
+	 * and distance codes defined in the deflate standard RFC 1951 */
+	for (i = 0; i < 144; i++)
+		lit_code[i].length = 8;
+
+	for (i = 144; i < 256; i++)
+		lit_code[i].length = 9;
+
+	for (i = 256; i < 280; i++)
+		lit_code[i].length = 7;
+
+	for (i = 280; i < LIT_LEN + 2; i++)
+		lit_code[i].length = 8;
+
+	for (i = 0; i < DIST_LEN + 2; i++)
+		dist_code[i].length = 5;
+
+	make_inflate_huff_code(&state->lit_huff_code, lit_code, LIT_LEN + 2, lit_count);
+	make_inflate_huff_code(&state->dist_huff_code, dist_code, DIST_LEN + 2, dist_count);
+
+	return 0;
+}
+
+/* Decodes the next symbol symbol in in_buffer using the huff code defined by
+ * huff_code */
+uint16_t decode_next(struct inflate_in_buffer *in_buffer, struct inflate_huff_code *huff_code);
 uint16_t inline decode_next(struct inflate_in_buffer *in_buffer,
 			    struct inflate_huff_code *huff_code)
 {
@@ -325,6 +360,8 @@ uint16_t inline decode_next(struct inflate_in_buffer *in_buffer,
 	}
 }
 
+/* Reads data from the in_buffer and sets the huff code corresponding to that
+ * data */
 int inline setup_dynamic_header(struct inflate_state *state)
 {
 	int i, j;
@@ -465,6 +502,8 @@ int inline setup_dynamic_header(struct inflate_state *state)
 	return 0;
 }
 
+/* Reads in the header pointed to by in_stream and sets up state to reflect that
+ * header information*/
 int read_header(struct inflate_state *state)
 {
 	state->new_block = 0;
@@ -491,7 +530,131 @@ int read_header(struct inflate_state *state)
 	return INVALID_BLOCK_HEADER;
 }
 
-void igzip_inflate_init(struct inflate_state *state, uint8_t * in_stream, uint32_t in_size,
+int inline decode_literal_block(struct inflate_state *state)
+{
+	uint16_t len, nlen;
+	/* If the block is uncompressed, perform a memcopy while
+	 * updating state data */
+	if (state->in_buffer.avail_in < 4)
+		return END_OF_INPUT;
+
+	len = *(uint16_t *) state->in_buffer.next_in;
+	state->in_buffer.next_in += 2;
+	nlen = *(uint16_t *) state->in_buffer.next_in;
+	state->in_buffer.next_in += 2;
+
+	/* Check if len and nlen match */
+	if (len != (~nlen & 0xffff))
+		return INVALID_NON_COMPRESSED_BLOCK_LENGTH;
+
+	if (state->out_buffer.avail_out < len)
+		return OUT_BUFFER_OVERFLOW;
+
+	if (state->in_buffer.avail_in < len)
+		len = state->in_buffer.avail_in;
+
+	else
+		state->new_block = 1;
+
+	memcpy(state->out_buffer.next_out, state->in_buffer.next_in, len);
+
+	state->out_buffer.next_out += len;
+	state->out_buffer.avail_out -= len;
+	state->out_buffer.total_out += len;
+	state->in_buffer.next_in += len;
+	state->in_buffer.avail_in -= len + 4;
+
+	if (state->in_buffer.avail_in == 0 && state->new_block == 0)
+		return END_OF_INPUT;
+
+	return 0;
+
+}
+
+/* Decodes the next block if it was encoded using a huffman code */
+int decode_huffman_code_block_stateless_base(struct inflate_state *state)
+{
+	uint16_t next_lit;
+	uint8_t next_dist;
+	uint32_t repeat_length;
+	uint32_t look_back_dist;
+
+	while (state->new_block == 0) {
+		/* While not at the end of block, decode the next
+		 * symbol */
+
+		next_lit = decode_next(&state->in_buffer, &state->lit_huff_code);
+
+		if (state->in_buffer.read_in_length < 0)
+			return END_OF_INPUT;
+
+		if (next_lit < 256) {
+			/* If the next symbol is a literal,
+			 * write out the symbol and update state
+			 * data accordingly. */
+			if (state->out_buffer.avail_out < 1)
+				return OUT_BUFFER_OVERFLOW;
+
+			*state->out_buffer.next_out = next_lit;
+			state->out_buffer.next_out++;
+			state->out_buffer.avail_out--;
+			state->out_buffer.total_out++;
+
+		} else if (next_lit == 256) {
+			/* If the next symbol is the end of
+			 * block, update the state data
+			 * accordingly */
+			state->new_block = 1;
+
+		} else if (next_lit < 286) {
+			/* Else if the next symbol is a repeat
+			 * length, read in the length extra
+			 * bits, the distance code, the distance
+			 * extra bits. Then write out the
+			 * corresponding data and update the
+			 * state data accordingly*/
+			repeat_length =
+			    rfc_lookup_table.len_start[next_lit - 257] +
+			    inflate_in_read_bits(&state->in_buffer,
+						 rfc_lookup_table.
+						 len_extra_bit_count[next_lit - 257]);
+
+			if (state->out_buffer.avail_out < repeat_length)
+				return OUT_BUFFER_OVERFLOW;
+
+			next_dist = decode_next(&state->in_buffer, &state->dist_huff_code);
+
+			look_back_dist = rfc_lookup_table.dist_start[next_dist] +
+			    inflate_in_read_bits(&state->in_buffer,
+						 rfc_lookup_table.
+						 dist_extra_bit_count[next_dist]);
+
+			if (state->in_buffer.read_in_length < 0)
+				return END_OF_INPUT;
+
+			if (look_back_dist > state->out_buffer.total_out)
+				return INVALID_LOOK_BACK_DISTANCE;
+
+			if (look_back_dist > repeat_length)
+				memcpy(state->out_buffer.next_out,
+				       state->out_buffer.next_out -
+				       look_back_dist, repeat_length);
+			else
+				byte_copy(state->out_buffer.next_out,
+					  look_back_dist, repeat_length);
+
+			state->out_buffer.next_out += repeat_length;
+			state->out_buffer.avail_out -= repeat_length;
+			state->out_buffer.total_out += repeat_length;
+		} else
+			/* Else the read in bits do not
+			 * correspond to any valid symbol */
+			return INVALID_SYMBOL;
+	}
+	return 0;
+}
+
+void isal_inflate_init(struct inflate_state *state, uint8_t * in_stream, uint32_t in_size,
 			uint8_t * out_stream, uint64_t out_size)
 {
 
@@ -504,165 +667,31 @@ void igzip_inflate_init(struct inflate_state *state, uint8_t * in_stream, uint32
 	state->bfinal = 0;
 }
 
-int igzip_inflate(struct inflate_state *state)
+int isal_inflate_stateless(struct inflate_state *state)
 {
-	/* The following tables are based on the tables in the deflate standard,
-	 * RFC 1951 page 11. */
-	const uint16_t len_start[29] = {
-		0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
-		0x0b, 0x0d, 0x0f, 0x11, 0x13, 0x17, 0x1b, 0x1f,
-		0x23, 0x2b, 0x33, 0x3b, 0x43, 0x53, 0x63, 0x73,
-		0x83, 0xa3, 0xc3, 0xe3, 0x102
-	};
-	const uint8_t len_extra_bit_count[29] = {
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-		0x1, 0x1, 0x1, 0x1, 0x2, 0x2, 0x2, 0x2,
-		0x3, 0x3, 0x3, 0x3, 0x4, 0x4, 0x4, 0x4,
-		0x5, 0x5, 0x5, 0x5, 0x0
-	};
-	const uint32_t dist_start[30] = {
-		0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0007, 0x0009, 0x000d,
-		0x0011, 0x0019, 0x0021, 0x0031, 0x0041, 0x0061, 0x0081, 0x00c1,
-		0x0101, 0x0181, 0x0201, 0x0301, 0x0401, 0x0601, 0x0801, 0x0c01,
-		0x1001, 0x1801, 0x2001, 0x3001, 0x4001, 0x6001
-	};
-	const uint8_t dist_extra_bit_count[30] = {
-		0x0, 0x0, 0x0, 0x0, 0x1, 0x1, 0x2, 0x2,
-		0x3, 0x3, 0x4, 0x4, 0x5, 0x5, 0x6, 0x6,
-		0x7, 0x7, 0x8, 0x8, 0x9, 0x9, 0xa, 0xa,
-		0xb, 0xb, 0xc, 0xc, 0xd, 0xd
-	};
-
-	uint16_t next_lit, len, nlen;
-	uint8_t next_dist;
-	uint32_t repeat_length;
-	uint32_t look_back_dist;
-	uint32_t tmp;
+	uint32_t ret;
 
 	while (state->new_block == 0 || state->bfinal == 0) {
 		if (state->new_block != 0) {
-			tmp = read_header(state);
+			ret = read_header(state);
 
-			if (tmp)
-				return tmp;
+			if (ret)
+				return ret;
 		}
 
-		if (state->btype == 0) {
-			/* If the block is uncompressed, perform a memcopy while
-			 * updating state data */
-			if (state->in_buffer.avail_in < 4)
-				return END_OF_INPUT;
+		if (state->btype == 0)
+			ret = decode_literal_block(state);
+		else
+			ret = decode_huffman_code_block_stateless(state);
 
-			len = *(uint16_t *) state->in_buffer.next_in;
-			state->in_buffer.next_in += 2;
-			nlen = *(uint16_t *) state->in_buffer.next_in;
-			state->in_buffer.next_in += 2;
-
-			/* Check if len and nlen match */
-			if (len != (~nlen & 0xffff))
-				return INVALID_NON_COMPRESSED_BLOCK_LENGTH;
-
-			if (state->out_buffer.avail_out < len)
-				return OUT_BUFFER_OVERFLOW;
-
-			if (state->in_buffer.avail_in < len)
-				len = state->in_buffer.avail_in;
-
-			else
-				state->new_block = 1;
-
-			memcpy(state->out_buffer.next_out, state->in_buffer.next_in, len);
-
-			state->out_buffer.next_out += len;
-			state->out_buffer.avail_out -= len;
-			state->out_buffer.total_out += len;
-			state->in_buffer.next_in += len;
-			state->in_buffer.avail_in -= len + 4;
-
-			if (state->in_buffer.avail_in == 0 && state->new_block == 0)
-				return END_OF_INPUT;
-
-		} else {
-			/* Else decode a huffman encoded block */
-			while (state->new_block == 0) {
-				/* While not at the end of block, decode the next
-				 * symbol */
-
-				next_lit =
-				    decode_next(&state->in_buffer, &state->lit_huff_code);
-
-				if (state->in_buffer.read_in_length < 0)
-					return END_OF_INPUT;
-
-				if (next_lit < 256) {
-					/* If the next symbol is a literal,
-					 * write out the symbol and update state
-					 * data accordingly. */
-					if (state->out_buffer.avail_out < 1)
-						return OUT_BUFFER_OVERFLOW;
-
-					*state->out_buffer.next_out = next_lit;
-					state->out_buffer.next_out++;
-					state->out_buffer.avail_out--;
-					state->out_buffer.total_out++;
-
-				} else if (next_lit == 256) {
-					/* If the next symbol is the end of
-					 * block, update the state data
-					 * accordingly */
-					state->new_block = 1;
-
-				} else if (next_lit < 286) {
-					/* Else if the next symbol is a repeat
-					 * length, read in the length extra
-					 * bits, the distance code, the distance
-					 * extra bits. Then write out the
-					 * corresponding data and update the
-					 * state data accordingly*/
-					repeat_length =
-					    len_start[next_lit - 257] +
-					    inflate_in_read_bits(&state->in_buffer,
-								 len_extra_bit_count[next_lit -
-										     257]);
-
-					if (state->out_buffer.avail_out < repeat_length)
-						return OUT_BUFFER_OVERFLOW;
-
-					next_dist = decode_next(&state->in_buffer,
-								&state->dist_huff_code);
-
-					look_back_dist = dist_start[next_dist] +
-					    inflate_in_read_bits(&state->in_buffer,
-								 dist_extra_bit_count
-								 [next_dist]);
-
-					if (state->in_buffer.read_in_length < 0)
-						return END_OF_INPUT;
-
-					if (look_back_dist > state->out_buffer.total_out)
-						return INVALID_LOOK_BACK_DISTANCE;
-
-					if (look_back_dist > repeat_length) {
-						memcpy(state->out_buffer.next_out,
-						       state->out_buffer.next_out -
-						       look_back_dist, repeat_length);
-					} else
-						byte_copy(state->out_buffer.next_out,
-							  look_back_dist, repeat_length);
-
-					state->out_buffer.next_out += repeat_length;
-					state->out_buffer.avail_out -= repeat_length;
-					state->out_buffer.total_out += repeat_length;
-
-				} else
-					/* Else the read in bits do not
-					 * correspond to any valid symbol */
-					return INVALID_SYMBOL;
-			}
-		}
+		if (ret)
+			return ret;
 	}
+
+	/* Undo count stuff of bytes read into the read buffer */
 	state->in_buffer.next_in -= state->in_buffer.read_in_length / 8;
 	state->in_buffer.avail_in += state->in_buffer.read_in_length / 8;
 
 	return DECOMPRESSION_FINISHED;
 }
+

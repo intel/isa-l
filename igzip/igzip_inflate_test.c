@@ -30,8 +30,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <zlib.h>
-#include "igzip_inflate_ref.h"
+#include "inflate.h"
 #include "huff_codes.h"
+
+#define OUT_BUFFER_SLOP 16
 
 /*Don't use file larger memory can support because compression and decompression
  * are done in a stateless manner. */
@@ -39,7 +41,7 @@
 
 int test(uint8_t * compressed_stream, uint64_t * compressed_length,
 	 uint8_t * uncompressed_stream, int uncompressed_length,
-	 uint8_t * uncompressed_test_stream)
+	 uint8_t * uncompressed_test_stream, int uncompressed_test_stream_length)
 {
 	struct inflate_state state;
 	int ret;
@@ -51,9 +53,9 @@ int test(uint8_t * compressed_stream, uint64_t * compressed_length,
 		return ret;
 	}
 
-	igzip_inflate_init(&state, compressed_stream + 2, *compressed_length - 2,
-			   uncompressed_test_stream, uncompressed_length);
-	ret = igzip_inflate(&state);
+	isal_inflate_init(&state, compressed_stream + 2, *compressed_length - 2,
+			  uncompressed_test_stream, uncompressed_test_stream_length);
+	ret = isal_inflate_stateless(&state);
 
 	switch (ret) {
 	case 0:
@@ -95,6 +97,13 @@ int test(uint8_t * compressed_stream, uint64_t * compressed_length,
 		return -1;
 	}
 	if (memcmp(uncompressed_stream, uncompressed_test_stream, uncompressed_length)) {
+		int i;
+		for (i = 0; i < uncompressed_length; i++) {
+			if (uncompressed_stream[i] != uncompressed_test_stream[i]) {
+				printf("first error at %d, 0x%x != 0x%x\n", i,
+				       uncompressed_stream[i], uncompressed_test_stream[i]);
+			}
+		}
 		printf(" decompressed data is not the same as the compressed data\n");
 		return -1;
 	}
@@ -104,9 +113,12 @@ int test(uint8_t * compressed_stream, uint64_t * compressed_length,
 int main(int argc, char **argv)
 {
 	int i, j, ret = 0, fin_ret = 0;
-	FILE *file;
-	uint64_t compressed_length, file_length, uncompressed_length;
-	uint8_t *uncompressed_stream, *compressed_stream, *uncompressed_test_stream;
+	FILE *file = NULL;
+	uint64_t compressed_length, file_length;
+	uint64_t uncompressed_length, uncompressed_test_stream_length;
+	uint8_t *uncompressed_stream = NULL;
+	uint8_t *compressed_stream = NULL;
+	uint8_t *uncompressed_test_stream = NULL;
 
 	if (argc == 1)
 		printf("Error, no input file\n");
@@ -128,12 +140,15 @@ int main(int argc, char **argv)
 			fclose(file);
 			continue;
 		}
-		compressed_length = compressBound(file_length);
-		uncompressed_stream = malloc(file_length);
-		compressed_stream = malloc(compressed_length);
-		uncompressed_test_stream = malloc(file_length);
 
-		if (uncompressed_stream == NULL) {
+		compressed_length = compressBound(file_length);
+		if (file_length != 0) {
+			uncompressed_stream = malloc(file_length);
+			uncompressed_test_stream = malloc(file_length);
+		}
+		compressed_stream = malloc(compressed_length);
+
+		if (uncompressed_stream == NULL && file_length != 0) {
 			printf("Failed to allocate memory\n");
 			exit(0);
 		}
@@ -149,9 +164,12 @@ int main(int argc, char **argv)
 		}
 
 		uncompressed_length = fread(uncompressed_stream, 1, file_length, file);
+		uncompressed_test_stream_length = uncompressed_length + OUT_BUFFER_SLOP;
+
 		ret =
 		    test(compressed_stream, &compressed_length, uncompressed_stream,
-			 uncompressed_length, uncompressed_test_stream);
+			 uncompressed_length, uncompressed_test_stream,
+			 uncompressed_test_stream_length);
 		if (ret) {
 			for (j = 0; j < compressed_length; j++) {
 				if ((j & 31) == 0)
@@ -165,10 +183,13 @@ int main(int argc, char **argv)
 
 		}
 
+		fflush(0);
 		fclose(file);
 		free(compressed_stream);
-		free(uncompressed_stream);
-		free(uncompressed_test_stream);
+		if (uncompressed_stream != NULL)
+			free(uncompressed_stream);
+		if (uncompressed_test_stream != NULL)
+			free(uncompressed_test_stream);
 
 		if (ret) {
 			printf(" ... Fail with exit code %d\n", ret);
