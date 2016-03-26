@@ -1,5 +1,5 @@
 ########################################################################
-#  Copyright(c) 2011-2015 Intel Corporation All rights reserved.
+#  Copyright(c) 2011-2018 Intel Corporation All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions
@@ -27,29 +27,19 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ########################################################################
 
-units     = erasure_code raid crc igzip programs mem
+lsrc        += 	mem/mem_zero_detect_base.c
 
-default: lib
+lsrc_base_aliases += mem/mem_zero_detect_base_aliases.c
 
-ifeq (,$(findstring crc,$(units)))
- ifneq (,$(findstring igzip,$(units)))
-  override  units += crc
- endif
-endif
+lsrc_x86_64 += 	mem/mem_zero_detect_avx.asm \
+		mem/mem_zero_detect_sse.asm \
+		mem/mem_multibinary.asm
 
-include $(foreach unit,$(units), $(unit)/Makefile.am)
+extern_hdrs +=	include/mem_routines.h
 
-ifneq (,$(findstring igzip,$(units)))
- include tests/fuzz/Makefile.am
-endif
+other_src   +=  include/test.h \
+		include/types.h
 
-ifneq (,$(findstring erasure_code,$(units)))
- include examples/ec/Makefile.am
-endif
+check_tests  +=  mem/mem_zero_detect_test
 
-# Override individual lib names to make one inclusive library.
-lib_name := bin/isa-l.a
-
-include make.inc
-
-VPATH = . $(units) include tests/fuzz examples/ec
+perf_tests  +=  mem/mem_zero_detect_perf
