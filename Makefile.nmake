@@ -27,9 +27,10 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ########################################################################
 
-objs = bin\ec_base.obj bin\ec_highlevel_func.obj bin\ec_multibinary.obj bin\gf_2vect_dot_prod_avx.obj bin\gf_2vect_dot_prod_avx2.obj bin\gf_2vect_dot_prod_avx512.obj bin\gf_2vect_dot_prod_sse.obj bin\gf_2vect_mad_avx.obj bin\gf_2vect_mad_avx2.obj bin\gf_2vect_mad_avx512.obj bin\gf_2vect_mad_sse.obj bin\gf_3vect_dot_prod_avx.obj bin\gf_3vect_dot_prod_avx2.obj bin\gf_3vect_dot_prod_avx512.obj bin\gf_3vect_dot_prod_sse.obj bin\gf_3vect_mad_avx.obj bin\gf_3vect_mad_avx2.obj bin\gf_3vect_mad_avx512.obj bin\gf_3vect_mad_sse.obj bin\gf_4vect_dot_prod_avx.obj bin\gf_4vect_dot_prod_avx2.obj bin\gf_4vect_dot_prod_avx512.obj bin\gf_4vect_dot_prod_sse.obj bin\gf_4vect_mad_avx.obj bin\gf_4vect_mad_avx2.obj bin\gf_4vect_mad_avx512.obj bin\gf_4vect_mad_sse.obj bin\gf_5vect_dot_prod_avx.obj bin\gf_5vect_dot_prod_avx2.obj bin\gf_5vect_dot_prod_sse.obj bin\gf_5vect_mad_avx.obj bin\gf_5vect_mad_avx2.obj bin\gf_5vect_mad_sse.obj bin\gf_6vect_dot_prod_avx.obj bin\gf_6vect_dot_prod_avx2.obj bin\gf_6vect_dot_prod_sse.obj bin\gf_6vect_mad_avx.obj bin\gf_6vect_mad_avx2.obj bin\gf_6vect_mad_sse.obj bin\gf_vect_dot_prod_avx.obj bin\gf_vect_dot_prod_avx2.obj bin\gf_vect_dot_prod_avx512.obj bin\gf_vect_dot_prod_sse.obj bin\gf_vect_mad_avx.obj bin\gf_vect_mad_avx2.obj bin\gf_vect_mad_avx512.obj bin\gf_vect_mad_sse.obj bin\gf_vect_mul_avx.obj bin\gf_vect_mul_sse.obj
 
-INCLUDES  = -I./ -Ierasure_code/ -Iinclude/
+objs = bin\ec_base.obj bin\ec_highlevel_func.obj bin\ec_multibinary.obj bin\gf_2vect_dot_prod_avx.obj bin\gf_2vect_dot_prod_avx2.obj bin\gf_2vect_dot_prod_avx512.obj bin\gf_2vect_dot_prod_sse.obj bin\gf_2vect_mad_avx.obj bin\gf_2vect_mad_avx2.obj bin\gf_2vect_mad_avx512.obj bin\gf_2vect_mad_sse.obj bin\gf_3vect_dot_prod_avx.obj bin\gf_3vect_dot_prod_avx2.obj bin\gf_3vect_dot_prod_avx512.obj bin\gf_3vect_dot_prod_sse.obj bin\gf_3vect_mad_avx.obj bin\gf_3vect_mad_avx2.obj bin\gf_3vect_mad_avx512.obj bin\gf_3vect_mad_sse.obj bin\gf_4vect_dot_prod_avx.obj bin\gf_4vect_dot_prod_avx2.obj bin\gf_4vect_dot_prod_avx512.obj bin\gf_4vect_dot_prod_sse.obj bin\gf_4vect_mad_avx.obj bin\gf_4vect_mad_avx2.obj bin\gf_4vect_mad_avx512.obj bin\gf_4vect_mad_sse.obj bin\gf_5vect_dot_prod_avx.obj bin\gf_5vect_dot_prod_avx2.obj bin\gf_5vect_dot_prod_sse.obj bin\gf_5vect_mad_avx.obj bin\gf_5vect_mad_avx2.obj bin\gf_5vect_mad_sse.obj bin\gf_6vect_dot_prod_avx.obj bin\gf_6vect_dot_prod_avx2.obj bin\gf_6vect_dot_prod_sse.obj bin\gf_6vect_mad_avx.obj bin\gf_6vect_mad_avx2.obj bin\gf_6vect_mad_sse.obj bin\gf_vect_dot_prod_avx.obj bin\gf_vect_dot_prod_avx2.obj bin\gf_vect_dot_prod_avx512.obj bin\gf_vect_dot_prod_sse.obj bin\gf_vect_mad_avx.obj bin\gf_vect_mad_avx2.obj bin\gf_vect_mad_avx512.obj bin\gf_vect_mad_sse.obj bin\gf_vect_mul_avx.obj bin\gf_vect_mul_sse.obj bin\pq_check_sse.obj bin\pq_gen_avx.obj bin\pq_gen_avx2.obj bin\pq_gen_sse.obj bin\raid_base.obj bin\raid_multibinary.obj bin\xor_check_sse.obj bin\xor_gen_avx.obj bin\xor_gen_sse.obj
+
+INCLUDES  = -I./ -Ierasure_code/ -Iraid/ -Iinclude/
 LINKFLAGS = /nologo
 CFLAGS   = -O2 -D NDEBUG /nologo -D_USE_MATH_DEFINES -Qstd=c99 $(INCLUDES) $(D)
 AFLAGS   = -f win64 $(INCLUDES) $(D)
@@ -53,13 +54,24 @@ isa-l.dll: $(objs)
 {erasure_code}.asm.obj:
 	$(AS) $(AFLAGS) -o $@ $?
 
+{raid}.c.obj:
+	$(CC) $(CFLAGS) /c -Fo$@ $?
+{raid}.asm.obj:
+	$(AS) $(AFLAGS) -o $@ $?
 
+
+# Examples
+ex = xor_example.exe
+ex: lib $(ex)
+
+$(ex): $(@B).obj
 
 .obj.exe:
 	link /out:$@ $(LINKFLAGS) isa-l.lib $?
 
 # Check tests
-checks = erasure_code_test.exe erasure_code_update_test.exe gf_inverse_test.exe gf_vect_mul_test.exe
+checks = erasure_code_test.exe erasure_code_update_test.exe gf_inverse_test.exe gf_vect_mul_test.exe \
+	pq_check_test.exe pq_gen_test.exe xor_check_test.exe xor_gen_test.exe
 
 checks: lib $(checks)
 $(checks): $(@B).obj
@@ -73,7 +85,7 @@ tests: lib $(tests)
 $(tests): $(@B).obj
 
 # Performance tests
-perfs = erasure_code_base_perf.exe erasure_code_perf.exe erasure_code_sse_perf.exe erasure_code_update_perf.exe gf_2vect_dot_prod_sse_perf.exe gf_3vect_dot_prod_sse_perf.exe gf_4vect_dot_prod_sse_perf.exe gf_5vect_dot_prod_sse_perf.exe gf_6vect_dot_prod_sse_perf.exe gf_vect_dot_prod_1tbl.exe gf_vect_dot_prod_avx_perf.exe gf_vect_dot_prod_perf.exe gf_vect_dot_prod_sse_perf.exe gf_vect_mad_perf.exe gf_vect_mul_avx_perf.exe gf_vect_mul_perf.exe gf_vect_mul_sse_perf.exe
+perfs = erasure_code_base_perf.exe erasure_code_perf.exe erasure_code_sse_perf.exe erasure_code_update_perf.exe gf_2vect_dot_prod_sse_perf.exe gf_3vect_dot_prod_sse_perf.exe gf_4vect_dot_prod_sse_perf.exe gf_5vect_dot_prod_sse_perf.exe gf_6vect_dot_prod_sse_perf.exe gf_vect_dot_prod_1tbl.exe gf_vect_dot_prod_avx_perf.exe gf_vect_dot_prod_perf.exe gf_vect_dot_prod_sse_perf.exe gf_vect_mad_perf.exe gf_vect_mul_avx_perf.exe gf_vect_mul_perf.exe gf_vect_mul_sse_perf.exe pq_gen_perf.exe xor_gen_perf.exe
 
 perfs: lib $(perfs)
 $(perfs): $(@B).obj

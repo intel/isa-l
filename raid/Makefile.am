@@ -27,15 +27,19 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ########################################################################
 
-units     = erasure_code raid
+lsrc        += 	raid/xor_gen_sse.asm raid/pq_gen_sse.asm raid/xor_check_sse.asm \
+		raid/pq_check_sse.asm raid/pq_gen_avx.asm \
+		raid/xor_gen_avx.asm raid/pq_gen_avx2.asm \
+		raid/raid_base.c raid/raid_multibinary.asm
 
-default: lib
+extern_hdrs +=	include/raid.h
 
-include $(foreach unit,$(units), $(unit)/Makefile.am)
+other_src   +=  include/test.h include/types.h
 
-# Override individual lib names to make one inclusive library.
-lib_name := bin/isa-l.a
+check_tests +=  raid/xor_gen_test raid/pq_gen_test raid/xor_check_test raid/pq_check_test
 
-include make.inc
+perf_tests  +=  raid/xor_gen_perf raid/pq_gen_perf
 
-VPATH = . $(units) include
+examples    += 	raid/xor_example
+
+lsrc32       += xor_gen_sse.asm pq_gen_sse_i32.asm xor_check_sse.asm pq_check_sse_i32.asm raid_base.c
