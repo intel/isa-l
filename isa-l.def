@@ -69,3 +69,9 @@ pq_gen_base             @65
 xor_gen_base            @66
 xor_check_base          @67
 pq_check_base           @68
+crc16_t10dif            @69
+crc32_ieee              @70
+crc32_iscsi             @71
+crc16_t10dif_base       @72
+crc32_ieee_base         @73
+crc32_iscsi_base        @74

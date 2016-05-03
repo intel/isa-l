@@ -2,7 +2,7 @@
 #  Copyright(c) 2011-2015 Intel Corporation All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
-#  modification, are permitted provided that the following conditions 
+#  modification, are permitted provided that the following conditions
 #  are met:
 #    * Redistributions of source code must retain the above copyright
 #      notice, this list of conditions and the following disclaimer.
@@ -27,15 +27,22 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ########################################################################
 
-units     = erasure_code raid crc
+lsrc  += \
+	crc/crc16_t10dif_01.asm \
+	crc/crc16_t10dif_by4.asm \
+	crc/crc32_ieee_01.asm \
+	crc/crc32_ieee_by4.asm \
+	crc/crc32_iscsi_01.asm \
+	crc/crc32_iscsi_00.asm \
+	crc/crc_multibinary.asm \
+	crc/crc_base.c
 
-default: lib
+extern_hdrs +=  include/crc.h
 
-include $(foreach unit,$(units), $(unit)/Makefile.am)
+other_src   +=  include/reg_sizes.asm include/types.h include/test.h
 
-# Override individual lib names to make one inclusive library.
-lib_name := bin/isa-l.a
+check_tests +=  crc/crc16_t10dif_test crc/crc32_ieee_test crc/crc32_iscsi_test
 
-include make.inc
+perf_tests  +=  crc/crc16_t10dif_perf crc/crc32_ieee_perf crc/crc32_iscsi_perf
 
-VPATH = . $(units) include
+examples    +=  crc/crc_simple_test
