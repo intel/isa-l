@@ -75,3 +75,9 @@ crc32_iscsi             @71
 crc16_t10dif_base       @72
 crc32_ieee_base         @73
 crc32_iscsi_base        @74
+isal_deflate_stateless  @75
+isal_deflate            @76
+isal_deflate_init       @77
+isal_update_histogram   @78
+isal_create_hufftables  @79
+isal_create_hufftables_subset   @80

@@ -1,3 +1,4 @@
+/**********************************************************************
   Copyright(c) 2011-2016 Intel Corporation All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -24,3 +25,62 @@
   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+**********************************************************************/
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include "igzip_lib.h"
+
+#define BUF_SIZE 8192
+
+struct isal_zstream stream;
+
+int main(int argc, char *argv[])
+{
+	uint8_t inbuf[BUF_SIZE], outbuf[BUF_SIZE];
+	FILE *in, *out;
+
+	if (argc != 3) {
+		fprintf(stderr, "Usage: igzip_example infile outfile\n");
+		exit(0);
+	}
+	in = fopen(argv[1], "rb");
+	if (!in) {
+		fprintf(stderr, "Can't open %s for reading\n", argv[1]);
+		exit(0);
+	}
+	out = fopen(argv[2], "wb");
+	if (!out) {
+		fprintf(stderr, "Can't open %s for writing\n", argv[2]);
+		exit(0);
+	}
+
+	printf("igzip_example\nWindow Size: %d K\n", HIST_SIZE);
+	fflush(0);
+
+	isal_deflate_init(&stream);
+	stream.end_of_stream = 0;
+	stream.flush = NO_FLUSH;
+
+	do {
+		stream.avail_in = (uint32_t) fread(inbuf, 1, BUF_SIZE, in);
+		stream.end_of_stream = feof(in);
+		stream.next_in = inbuf;
+		do {
+			stream.avail_out = BUF_SIZE;
+			stream.next_out = outbuf;
+
+			isal_deflate(&stream);
+
+			fwrite(outbuf, 1, BUF_SIZE - stream.avail_out, out);
+		} while (stream.avail_out == 0);
+
+		assert(stream.avail_in == 0);
+	} while (stream.internal_state.state != ZSTATE_END);
+
+	fclose(out);
+	fclose(in);
+
+	printf("End of igzip_example\n\n");
+	return 0;
+}

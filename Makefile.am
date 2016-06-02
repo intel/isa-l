@@ -27,6 +27,7 @@ perf_tests32=
 include erasure_code/Makefile.am
 include raid/Makefile.am
 include crc/Makefile.am
+include igzip/Makefile.am
 
 # LIB version info not necessarily the same as package version
 LIBISAL_CURRENT=2

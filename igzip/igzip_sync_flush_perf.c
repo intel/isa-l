@@ -1,3 +1,4 @@
+/**********************************************************************
   Copyright(c) 2011-2016 Intel Corporation All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -24,3 +25,72 @@
   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+**********************************************************************/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+#include "igzip_lib.h"
+#include "test.h"
+
+#define TEST_LEN   (1024*1024)
+#define IBUF_SIZE  (1024*1024)
+#define OBUF_SIZE  (1024*1024)
+
+#define TEST_LOOPS   400
+#define TEST_TYPE_STR "_warm"
+
+void create_data(unsigned char *data, int size)
+{
+	char c = 'a';
+	while (size--)
+		*data++ = c = c < 'z' ? c + 1 : 'a';
+}
+
+int main(int argc, char *argv[])
+{
+	int i = 1;
+	struct isal_zstream stream;
+	unsigned char inbuf[IBUF_SIZE], zbuf[OBUF_SIZE];
+	struct perf start, stop;
+
+	create_data(inbuf, TEST_LEN);
+	printf("Window Size: %d K\n", HIST_SIZE);
+	printf("igzip_sync_flush_perf: \n");
+	fflush(0);
+
+	perf_start(&start);
+
+	for (i = 0; i < TEST_LOOPS; i++) {
+		isal_deflate_init(&stream);
+
+		stream.avail_in = TEST_LEN;
+		if (i == (TEST_LOOPS - 1))
+			stream.end_of_stream = 1;
+		else
+			stream.end_of_stream = 0;
+		stream.next_in = inbuf;
+		stream.flush = SYNC_FLUSH;
+
+		do {
+			stream.avail_out = OBUF_SIZE;
+			stream.next_out = zbuf;
+			isal_deflate(&stream);
+		} while (stream.avail_out == 0);
+
+	}
+
+	perf_stop(&stop);
+
+	printf("igzip_sync_flush_perf" TEST_TYPE_STR ": ");
+	perf_print(stop, start, (long long)(TEST_LEN) * (i));
+
+	if (!stream.end_of_stream) {
+		printf("error: compression test could not fit into allocated buffers\n");
+		return -1;
+	}
+	printf("End of igzip_sync_flush_perf\n\n");
+	fflush(0);
+	return 0;
+}

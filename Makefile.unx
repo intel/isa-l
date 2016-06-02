@@ -27,7 +27,7 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ########################################################################
 
-units     = erasure_code raid crc
+units     = erasure_code raid crc igzip
 
 default: lib
 

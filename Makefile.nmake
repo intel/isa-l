@@ -1,5 +1,5 @@
 ########################################################################
-#  Copyright(c) 2011-2015 Intel Corporation All rights reserved.
+#  Copyright(c) 2011-2016 Intel Corporation All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions 
@@ -27,11 +27,91 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ########################################################################
 
+objs =  \
+	bin\ec_base.obj \
+	bin\ec_highlevel_func.obj \
+	bin\ec_multibinary.obj \
+	bin\gf_2vect_dot_prod_avx.obj \
+	bin\gf_2vect_dot_prod_avx2.obj \
+	bin\gf_2vect_dot_prod_avx512.obj \
+	bin\gf_2vect_dot_prod_sse.obj \
+	bin\gf_2vect_mad_avx.obj \
+	bin\gf_2vect_mad_avx2.obj \
+	bin\gf_2vect_mad_avx512.obj \
+	bin\gf_2vect_mad_sse.obj \
+	bin\gf_3vect_dot_prod_avx.obj \
+	bin\gf_3vect_dot_prod_avx2.obj \
+	bin\gf_3vect_dot_prod_avx512.obj \
+	bin\gf_3vect_dot_prod_sse.obj \
+	bin\gf_3vect_mad_avx.obj \
+	bin\gf_3vect_mad_avx2.obj \
+	bin\gf_3vect_mad_avx512.obj \
+	bin\gf_3vect_mad_sse.obj \
+	bin\gf_4vect_dot_prod_avx.obj \
+	bin\gf_4vect_dot_prod_avx2.obj \
+	bin\gf_4vect_dot_prod_avx512.obj \
+	bin\gf_4vect_dot_prod_sse.obj \
+	bin\gf_4vect_mad_avx.obj \
+	bin\gf_4vect_mad_avx2.obj \
+	bin\gf_4vect_mad_avx512.obj \
+	bin\gf_4vect_mad_sse.obj \
+	bin\gf_5vect_dot_prod_avx.obj \
+	bin\gf_5vect_dot_prod_avx2.obj \
+	bin\gf_5vect_dot_prod_sse.obj \
+	bin\gf_5vect_mad_avx.obj \
+	bin\gf_5vect_mad_avx2.obj \
+	bin\gf_5vect_mad_sse.obj \
+	bin\gf_6vect_dot_prod_avx.obj \
+	bin\gf_6vect_dot_prod_avx2.obj \
+	bin\gf_6vect_dot_prod_sse.obj \
+	bin\gf_6vect_mad_avx.obj \
+	bin\gf_6vect_mad_avx2.obj \
+	bin\gf_6vect_mad_sse.obj \
+	bin\gf_vect_dot_prod_avx.obj \
+	bin\gf_vect_dot_prod_avx2.obj \
+	bin\gf_vect_dot_prod_avx512.obj \
+	bin\gf_vect_dot_prod_sse.obj \
+	bin\gf_vect_mad_avx.obj \
+	bin\gf_vect_mad_avx2.obj \
+	bin\gf_vect_mad_avx512.obj \
+	bin\gf_vect_mad_sse.obj \
+	bin\gf_vect_mul_avx.obj \
+	bin\gf_vect_mul_sse.obj \
+	bin\pq_check_sse.obj \
+	bin\pq_gen_avx.obj \
+	bin\pq_gen_avx2.obj \
+	bin\pq_gen_sse.obj \
+	bin\raid_base.obj \
+	bin\raid_multibinary.obj \
+	bin\xor_check_sse.obj \
+	bin\xor_gen_avx.obj \
+	bin\xor_gen_sse.obj \
+	bin\crc16_t10dif_01.obj \
+	bin\crc16_t10dif_by4.obj \
+	bin\crc32_gzip.obj \
+	bin\crc32_ieee_01.obj \
+	bin\crc32_ieee_by4.obj \
+	bin\crc32_iscsi_00.obj \
+	bin\crc32_iscsi_01.obj \
+	bin\crc_base.obj \
+	bin\crc_data.obj \
+	bin\crc_multibinary.obj \
+	bin\huff_codes.obj \
+	bin\hufftables_c.obj \
+	bin\igzip.obj \
+	bin\igzip_base.obj \
+	bin\igzip_body_01.obj \
+	bin\igzip_body_04.obj \
+	bin\igzip_finish.obj \
+	bin\igzip_multibinary.obj \
+	bin\igzip_stateless_01.obj \
+	bin\igzip_stateless_04.obj \
+	bin\igzip_stateless_base.obj \
+	bin\crc_utils_01.obj \
+	bin\crc_utils_04.obj \
+	bin\detect_repeated_char.obj
 
-objs = bin\ec_base.obj bin\ec_highlevel_func.obj bin\ec_multibinary.obj bin\gf_2vect_dot_prod_avx.obj bin\gf_2vect_dot_prod_avx2.obj bin\gf_2vect_dot_prod_avx512.obj bin\gf_2vect_dot_prod_sse.obj bin\gf_2vect_mad_avx.obj bin\gf_2vect_mad_avx2.obj bin\gf_2vect_mad_avx512.obj bin\gf_2vect_mad_sse.obj bin\gf_3vect_dot_prod_avx.obj bin\gf_3vect_dot_prod_avx2.obj bin\gf_3vect_dot_prod_avx512.obj bin\gf_3vect_dot_prod_sse.obj bin\gf_3vect_mad_avx.obj bin\gf_3vect_mad_avx2.obj bin\gf_3vect_mad_avx512.obj bin\gf_3vect_mad_sse.obj bin\gf_4vect_dot_prod_avx.obj bin\gf_4vect_dot_prod_avx2.obj bin\gf_4vect_dot_prod_avx512.obj bin\gf_4vect_dot_prod_sse.obj bin\gf_4vect_mad_avx.obj bin\gf_4vect_mad_avx2.obj bin\gf_4vect_mad_avx512.obj bin\gf_4vect_mad_sse.obj bin\gf_5vect_dot_prod_avx.obj bin\gf_5vect_dot_prod_avx2.obj bin\gf_5vect_dot_prod_sse.obj bin\gf_5vect_mad_avx.obj bin\gf_5vect_mad_avx2.obj bin\gf_5vect_mad_sse.obj bin\gf_6vect_dot_prod_avx.obj bin\gf_6vect_dot_prod_avx2.obj bin\gf_6vect_dot_prod_sse.obj bin\gf_6vect_mad_avx.obj bin\gf_6vect_mad_avx2.obj bin\gf_6vect_mad_sse.obj bin\gf_vect_dot_prod_avx.obj bin\gf_vect_dot_prod_avx2.obj bin\gf_vect_dot_prod_avx512.obj bin\gf_vect_dot_prod_sse.obj bin\gf_vect_mad_avx.obj bin\gf_vect_mad_avx2.obj bin\gf_vect_mad_avx512.obj bin\gf_vect_mad_sse.obj bin\gf_vect_mul_avx.obj bin\gf_vect_mul_sse.obj bin\pq_check_sse.obj bin\pq_gen_avx.obj bin\pq_gen_avx2.obj bin\pq_gen_sse.obj bin\raid_base.obj bin\raid_multibinary.obj bin\xor_check_sse.obj bin\xor_gen_avx.obj bin\xor_gen_sse.obj bin/crc16_t10dif_01.obj bin/crc16_t10dif_by4.obj bin/crc32_ieee_01.obj bin/crc32_ieee_by4.obj bin/crc32_iscsi_01.obj bin/crc32_iscsi_00.obj bin/crc_multibinary.obj bin/crc_base.obj
-
-
-INCLUDES  = -I./ -Ierasure_code/ -Iraid/ -Icrc/ -Iinclude/
+INCLUDES  = -I./ -Ierasure_code/ -Iraid/ -Icrc/ -Iigzip/ -Iinclude/
 LINKFLAGS = /nologo
 CFLAGS   = -O2 -D NDEBUG /nologo -D_USE_MATH_DEFINES -Qstd=c99 $(INCLUDES) $(D)
 AFLAGS   = -f win64 $(INCLUDES) $(D)
@@ -65,9 +145,14 @@ isa-l.dll: $(objs)
 {crc}.asm.obj:
 	$(AS) $(AFLAGS) -o $@ $?
 
+{igzip}.c.obj:
+	$(CC) $(CFLAGS) /c -Fo$@ $?
+{igzip}.asm.obj:
+	$(AS) $(AFLAGS) -o $@ $?
+
 
 # Examples
-ex = xor_example.exe crc_simple_test.exe
+ex = xor_example.exe crc_simple_test.exe igzip_example.exe igzip_sync_flush_example.exe
 ex: lib $(ex)
 
 $(ex): $(@B).obj
@@ -76,9 +161,19 @@ $(ex): $(@B).obj
 	link /out:$@ $(LINKFLAGS) isa-l.lib $?
 
 # Check tests
-checks = erasure_code_test.exe erasure_code_update_test.exe gf_inverse_test.exe gf_vect_mul_test.exe \
-	pq_check_test.exe pq_gen_test.exe xor_check_test.exe xor_gen_test.exe \
-	crc16_t10dif_test.exe crc32_ieee_test.exe crc32_iscsi_test.exe
+checks = \
+	gf_vect_mul_test.exe \
+	erasure_code_test.exe \
+	gf_inverse_test.exe \
+	erasure_code_update_test.exe \
+	xor_gen_test.exe \
+	pq_gen_test.exe \
+	xor_check_test.exe \
+	pq_check_test.exe \
+	crc16_t10dif_test.exe \
+	crc32_ieee_test.exe \
+	crc32_iscsi_test.exe \
+	igzip_check.exe
 
 checks: lib $(checks)
 $(checks): $(@B).obj
@@ -86,13 +181,53 @@ check: $(checks)
 	!$?
 
 # Unit tests
-tests = erasure_code_base_test.exe erasure_code_sse_test.exe gf_2vect_dot_prod_sse_test.exe gf_3vect_dot_prod_sse_test.exe gf_4vect_dot_prod_sse_test.exe gf_5vect_dot_prod_sse_test.exe gf_6vect_dot_prod_sse_test.exe gf_vect_dot_prod_avx_test.exe gf_vect_dot_prod_base_test.exe gf_vect_dot_prod_sse_test.exe gf_vect_dot_prod_test.exe gf_vect_mad_test.exe gf_vect_mul_avx_test.exe gf_vect_mul_base_test.exe gf_vect_mul_sse_test.exe
+tests = \
+	gf_vect_mul_sse_test.exe \
+	gf_vect_mul_avx_test.exe \
+	gf_vect_mul_base_test.exe \
+	gf_vect_dot_prod_sse_test.exe \
+	gf_vect_dot_prod_avx_test.exe \
+	gf_2vect_dot_prod_sse_test.exe \
+	gf_3vect_dot_prod_sse_test.exe \
+	gf_4vect_dot_prod_sse_test.exe \
+	gf_5vect_dot_prod_sse_test.exe \
+	gf_6vect_dot_prod_sse_test.exe \
+	gf_vect_dot_prod_base_test.exe \
+	gf_vect_dot_prod_test.exe \
+	gf_vect_mad_test.exe \
+	erasure_code_base_test.exe \
+	erasure_code_sse_test.exe \
+	igzip_rand_test.exe
 
 tests: lib $(tests)
 $(tests): $(@B).obj
 
 # Performance tests
-perfs = erasure_code_base_perf.exe erasure_code_perf.exe erasure_code_sse_perf.exe erasure_code_update_perf.exe gf_2vect_dot_prod_sse_perf.exe gf_3vect_dot_prod_sse_perf.exe gf_4vect_dot_prod_sse_perf.exe gf_5vect_dot_prod_sse_perf.exe gf_6vect_dot_prod_sse_perf.exe gf_vect_dot_prod_1tbl.exe gf_vect_dot_prod_avx_perf.exe gf_vect_dot_prod_perf.exe gf_vect_dot_prod_sse_perf.exe gf_vect_mad_perf.exe gf_vect_mul_avx_perf.exe gf_vect_mul_perf.exe gf_vect_mul_sse_perf.exe pq_gen_perf.exe xor_gen_perf.exe crc16_t10dif_perf.exe crc32_ieee_perf.exe crc32_iscsi_perf.exe
+perfs = \
+	gf_vect_mul_perf.exe \
+	gf_vect_mul_sse_perf.exe \
+	gf_vect_mul_avx_perf.exe \
+	gf_vect_dot_prod_sse_perf.exe \
+	gf_vect_dot_prod_avx_perf.exe \
+	gf_2vect_dot_prod_sse_perf.exe \
+	gf_3vect_dot_prod_sse_perf.exe \
+	gf_4vect_dot_prod_sse_perf.exe \
+	gf_5vect_dot_prod_sse_perf.exe \
+	gf_6vect_dot_prod_sse_perf.exe \
+	gf_vect_dot_prod_perf.exe \
+	gf_vect_dot_prod_1tbl.exe \
+	gf_vect_mad_perf.exe \
+	erasure_code_perf.exe \
+	erasure_code_base_perf.exe \
+	erasure_code_sse_perf.exe \
+	erasure_code_update_perf.exe \
+	xor_gen_perf.exe \
+	pq_gen_perf.exe \
+	crc16_t10dif_perf.exe \
+	crc32_ieee_perf.exe \
+	crc32_iscsi_perf.exe \
+	igzip_perf.exe \
+	igzip_sync_flush_perf.exe
 
 perfs: lib $(perfs)
 $(perfs): $(@B).obj
@@ -105,3 +240,10 @@ clean:
 	-if exist isa-l.lib del isa-l.lib
 	-if exist isa-l.dll del isa-l.dll
 
+zlib.lib:
+igzip_rand_test.exe: igzip_inflate_ref.obj
+igzip_inflate_perf.exe: igzip_inflate_ref.obj
+igzip_inflate_perf.exe:  zlib.lib
+igzip_inflate_test.exe: igzip_inflate_ref.obj
+igzip_inflate_test.exe:  zlib.lib
+igzip_check.exe: igzip_inflate_ref.obj
