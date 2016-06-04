@@ -1,4 +1,4 @@
-EXTRA_DIST = autogen.sh Makefile.unx make.inc Makefile.nmake isa-l.def LICENSE
+EXTRA_DIST = autogen.sh Makefile.unx make.inc Makefile.nmake isa-l.def LICENSE README.md
 CLEANFILES =
 LDADD =
 AM_MAKEFLAGS = --no-print-directory
