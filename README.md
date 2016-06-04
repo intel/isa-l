@@ -24,7 +24,8 @@ the following:
     make
     sudo make install
 
-Other targets include: make check, make tests and make perfs.
+Other targets include: make check, make tests, make perfs, make ex (examples)
+and make other.
 
 Windows
 -------

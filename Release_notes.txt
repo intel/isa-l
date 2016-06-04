@@ -1,5 +1,5 @@
 =============================================================================
-v2.15 Intel Intelligent Storage Acceleration Library Release Notes
+v2.16 Intel Intelligent Storage Acceleration Library Release Notes
       Open Source Version
 =============================================================================
 
@@ -43,6 +43,10 @@ v2.10
 =============================================================================
 3. CHANGE LOG & FEATURES ADDED 
 =============================================================================
+v2.16
+
+* Units added: crc, raid, igzip (deflate compression).
+
 v2.15
 
 * Erasure code updates. New AVX512 versions.
