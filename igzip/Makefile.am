@@ -36,7 +36,10 @@ lsrc        += 	igzip/igzip.c igzip/hufftables_c.c \
 		igzip/crc32_gzip.asm igzip/detect_repeated_char.asm \
 		igzip/igzip_multibinary.asm \
 		igzip/igzip_stateless_base.c \
-		igzip/igzip_base.c
+		igzip/igzip_base.c \
+		igzip/igzip_update_histogram_01.asm \
+		igzip/igzip_update_histogram_04.asm \
+		igzip/rfc1951_lookup.asm
 
 src_include += -I $(srcdir)/igzip
 extern_hdrs +=	include/igzip_lib.h
@@ -49,7 +52,7 @@ check_tests +=  igzip/igzip_check
 
 perf_tests  +=  igzip/igzip_perf igzip/igzip_sync_flush_perf
 
-other_tests +=  igzip/igzip_file_perf igzip/igzip_sync_flush_file_perf igzip/igzip_stateless_file_perf
+other_tests +=  igzip/igzip_file_perf igzip/igzip_sync_flush_file_perf igzip/igzip_stateless_file_perf igzip/igzip_hist_perf
 
 other_src   += 	igzip/bitbuf2.asm igzip/data_struct2.asm \
 		igzip/igzip_buffer_utils_01.asm \
@@ -59,6 +62,7 @@ other_src   += 	igzip/bitbuf2.asm igzip/data_struct2.asm \
 		igzip/bitbuf2.h igzip/repeated_char_result.h \
 		igzip/igzip_body.asm \
 		igzip/igzip_stateless.asm \
+		igzip/igzip_update_histogram.asm \
 		igzip/huffman.asm \
 		include/reg_sizes.asm \
 		include/multibinary.asm \
@@ -94,3 +98,5 @@ igzip_igzip_inflate_test_LDADD = igzip/igzip_inflate_ref.lo libisal.la
 igzip_igzip_inflate_test_LDFLAGS = -lz
 igzip_check: igzip_inflate_ref.o
 igzip_igzip_check_LDADD = igzip/igzip_inflate_ref.lo libisal.la
+igzip_hist_perf: igzip_inflate_ref.o
+igzip_igzip_hist_perf_LDADD = igzip/igzip_inflate_ref.lo libisal.la

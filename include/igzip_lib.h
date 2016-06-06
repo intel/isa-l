@@ -190,6 +190,7 @@ enum isal_zstate_state {
 struct isal_huff_histogram {
 	uint64_t lit_len_histogram[IGZIP_LIT_LEN];
 	uint64_t dist_histogram[IGZIP_DIST_LEN];
+	uint16_t hash_table[HASH_SIZE];
 };
 
 /** @brief Holds Bit Buffer information*/

@@ -142,8 +142,8 @@ void append_to_back(struct linked_list *list, struct linked_list_node *new_eleme
 	return;
 }
 
-void isal_update_histogram(uint8_t * start_stream, int length,
-			   struct isal_huff_histogram *histogram)
+void isal_update_histogram_base(uint8_t * start_stream, int length,
+				struct isal_huff_histogram *histogram)
 {
 	uint32_t literal = 0, hash;
 	uint8_t *last_seen[HASH_SIZE];

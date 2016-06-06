@@ -51,6 +51,10 @@ extern isal_deflate_finish_01
 extern get_crc_base
 extern get_crc_01
 
+extern isal_update_histogram_base
+extern isal_update_histogram_01
+extern isal_update_histogram_04
+
 extern isal_deflate_init_base
 extern isal_deflate_init_01
 
@@ -71,3 +75,6 @@ mbin_dispatch_init5	isal_deflate_finish, isal_deflate_finish_base, isal_deflate_
 
 mbin_interface		get_crc
 mbin_dispatch_init5	get_crc, get_crc_base, get_crc_01, get_crc_01, get_crc_01
+
+mbin_interface		isal_update_histogram
+mbin_dispatch_init5	isal_update_histogram, isal_update_histogram_base, isal_update_histogram_01, isal_update_histogram_01, isal_update_histogram_04
