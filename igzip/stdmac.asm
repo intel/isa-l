@@ -205,3 +205,69 @@ ssc:
 	mov	rbx, rax
 	ret
 %endm
+
+;; Implement BZHI instruction on older architectures
+;; Clobbers rcx, unless rcx is %%index
+%macro	BZHI	4
+%define	%%dest		%1
+%define	%%src		%2
+%define	%%index		%3
+%define	%%tmp1		%4
+
+%ifdef USE_HSWNI
+	bzhi	%%src, %%dest, %%index
+%else
+%ifnidn	%%index, rcx
+	mov	rcx, %%index
+%endif
+	mov	%%tmp1, 1
+	shl	%%tmp1, cl
+	sub	%%tmp1, 1
+
+%ifnidn	%%src, %%dest
+	mov	%%dest, %%src
+%endif
+
+	and	%%dest, %%tmp1
+%endif
+%endm
+
+;; Implement shrx instruction on older architectures
+;; Clobbers rcx, unless rcx is %%index
+%macro	SHRX	3
+%define	%%dest		%1
+%define	%%src		%2
+%define	%%index		%3
+
+%ifdef USE_HSWNI
+	shrx	%%dest, %%src, %%index
+%else
+%ifnidn	%%src, %%dest
+	mov	%%dest, %%src
+%endif
+%ifnidn	%%index, rcx
+	mov	rcx, %%index
+%endif
+	shr	%%dest, cl
+%endif
+%endm
+
+;; Implement shlx instruction on older architectures
+;; Clobbers rcx, unless rcx is %%index
+%macro	SHLX	3
+%define	%%dest		%1
+%define	%%src		%2
+%define	%%index		%3
+
+%ifdef USE_HSWNI
+	shlx	%%dest, %%src, %%index
+%else
+%ifnidn	%%src, %%dest
+	mov	%%dest, %%src
+%endif
+%ifnidn	%%index, rcx
+	mov	rcx, %%index
+%endif
+	shl	%%dest, cl
+%endif
+%endm
