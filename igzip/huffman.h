@@ -138,7 +138,6 @@ static inline void get_lit_code(struct isal_hufftables *hufftables, uint32_t lit
  */
 static inline uint32_t compute_hash(uint32_t data)
 {
-	data &= 0x00FFFFFF;
 #ifdef __SSE4_2__
 
 	return _mm_crc32_u32(0, data);

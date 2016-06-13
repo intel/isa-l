@@ -124,7 +124,7 @@ extern "C" {
 #define HASH_SIZE  IGZIP_D
 #define HASH_MASK  (HASH_SIZE - 1)
 
-#define SHORTEST_MATCH  3
+#define SHORTEST_MATCH  4
 
 #define IGZIP_MAX_DEF_HDR_SIZE 328
 

@@ -185,7 +185,7 @@ skip_SLOP:
 
 	; for (f_i = f_start_i; f_i < f_end_i; f_i++) {
 MARK __stateless_compute_hash_ %+ ARCH
-	mov	curr_data %+ d, [file_start + f_i]
+	mov	curr_data, [file_start + f_i]
 
 	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
 	ja	end
@@ -202,8 +202,7 @@ MARK __stateless_compute_hash_ %+ ARCH
 
 loop2:
 	shr	curr_data2, 8
-	xor	hash2 %+ d, hash2 %+ d
-	crc32	hash2 %+ d, curr_data2 %+ d
+	compute_hash	hash2, curr_data2
 
 	; hash = compute_hash(state->file_start + f_i) & HASH_MASK;
 	and	hash %+ d, HASH_MASK
@@ -261,11 +260,6 @@ MARK __stateless_compare_ %+ ARCH
 	xor	len, [tmp2]
 	jz	compare_loop
 
-%ifdef USE_HSWNI
-	blsmsk	tmp3, len
-	or	tmp3, 0xFFFFFF
-%endif
-
 	lea	tmp1, [file_start + f_i]
 	mov	tmp2, tmp1
 	sub	tmp2, dist2
@@ -278,27 +272,12 @@ MARK __stateless_compare_ %+ ARCH
 	xor	len2, [tmp2]
 	jz	compare_loop2
 
-%ifdef	USE_HSWNI
-	;; Check for len/dist match for first literal
-	test	tmp3, len2
-	jz	len_dist_lit_huffman_pre
-
-	cmp	tmp3, 0xFFFFFF
-	je	encode_2_literals
-	jmp	len_dist_huffman_pre
-
-
-MARK __stateless_len_dist_lit_huffman_ %+ ARCH
-len_dist_lit_huffman_pre:
-	movzx	tmp1, curr_data %+ b
-	get_lit_code	tmp1, code3, code_len3, hufftables
-%else
 	;; Specutively load the code for the first literal
 	movzx   tmp1, curr_data %+ b
 	get_lit_code    tmp1, code3, rcx, hufftables
 
 	;; Check for len/dist match for first literal
-	test    len, 0xFFFFFF
+	test    len %+ d, 0xFFFFFFFF
 	jz      len_dist_huffman_pre
 
 	;; Specutively load the code for the second literal
@@ -311,13 +290,12 @@ len_dist_lit_huffman_pre:
 	add     code_len2, rcx
 
 	;; Check for len/dist match for second literal
-	test    len2, 0xFFFFFF
+	test    len2 %+ d, 0xFFFFFFFF
 	jnz     write_lit_bits
 
 MARK __stateless_len_dist_lit_huffman_ %+ ARCH
 len_dist_lit_huffman_pre:
 	mov     code_len3, rcx
-%endif
 	bsf	len2, len2
 	shr	len2, 3
 
@@ -355,7 +333,7 @@ len_dist_lit_huffman:
 	add	f_i, len2
 
 	; hash = compute_hash(state->file_start + k) & HASH_MASK;
-	mov	tmp5 %+ d, [file_start + tmp3]
+	mov	tmp5, [file_start + tmp3]
 	mov	tmp7, tmp5
 	shr	tmp7, 8
 
@@ -402,11 +380,11 @@ len_dist_huffman:
 	;; Setup for updateing hash
 	lea	tmp3, [f_i + 2]	; tmp3 <= k
 	add	f_i, len
-	mov	tmp7 %+ d, [file_start + tmp3]
+	mov	tmp7, [file_start + tmp3]
 
 MARK __stateless_update_hash_for_symbol_ %+ ARCH
 update_hash_for_symbol:
-	mov	curr_data %+ d, [file_start + f_i]
+	mov	curr_data, [file_start + f_i]
 	mov	curr_data2, curr_data
 	compute_hash	hash, curr_data
 %ifdef LIMIT_HASH_UPDATE
@@ -421,7 +399,7 @@ update_hash_for_symbol:
 %else
 loop3:
 	; hash = compute_hash(state->file_start + k) & HASH_MASK;
-	mov	tmp7 %+ d, [file_start + tmp3]
+	mov	tmp7, [file_start + tmp3]
 	compute_hash	hash2, tmp7
 	and	hash2 %+ d, HASH_MASK
 	; state->head[hash] = k;
@@ -443,24 +421,10 @@ MARK __stateless_write_len_dist_bits_ %+ ARCH
 
 
 MARK __stateless_write_lit_bits_ %+ ARCH
-%ifdef USE_HSWNI
-encode_2_literals:
-	movzx	tmp1, curr_data %+ b
-	get_lit_code	tmp1, code3, rcx, hufftables
-
-	shr	curr_data, 8
-	and	curr_data, 0xff
-	get_lit_code	curr_data, code2, code_len2, hufftables
-
-	;; Calculate code associated with both literals
-	shlx	code2, code2, rcx
-	or	code2, code3
-	add	code_len2, rcx
-%endif
 write_lit_bits:
 	mov	f_end_i, [rsp + f_end_i_mem_offset]
 	add	f_i, 1
-	mov	curr_data %+ d, [file_start + f_i]
+	mov	curr_data, [file_start + f_i]
 	mov	curr_data2, curr_data
 
 	compute_hash	hash, curr_data
@@ -483,7 +447,7 @@ loop2_finish:
 	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
 	ja	end
 
-	mov	curr_data %+ d, [file_start + f_i]
+	mov	curr_data, [file_start + f_i]
 	compute_hash	hash, curr_data
 	and	hash %+ d, HASH_MASK
 

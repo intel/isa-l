@@ -127,7 +127,7 @@ skip_SLOP:
 	cmp	f_i, f_end_i
 	jge	end_loop_2
 
-	mov	tmp1 %+ d, [file_start + f_i]
+	mov	tmp1, [file_start + f_i]
 
 loop2:
 	; if (state->bitbuf.is_full()) {
@@ -200,7 +200,7 @@ loop2:
 	; only update hash twice
 
 	; hash = compute_hash(state->file_start + k) & HASH_MASK;
-	mov	tmp6 %+ d, [file_start + tmp3]
+	mov	tmp6, [file_start + tmp3]
 	compute_hash	hash, tmp6
 	and	hash %+ d, HASH_MASK
 	; state->head[hash] = k;
@@ -209,7 +209,7 @@ loop2:
 	add	tmp3, 1
 
 	; hash = compute_hash(state->file_start + k) & HASH_MASK;
-	mov	tmp6 %+ d, [file_start + tmp3]
+	mov	tmp6, [file_start + tmp3]
 	compute_hash	hash, tmp6
 	and	hash %+ d, HASH_MASK
 	; state->head[hash] = k;
@@ -218,7 +218,7 @@ loop2:
 %else
 loop3:
 	; hash = compute_hash(state->file_start + k) & HASH_MASK;
-	mov	tmp6 %+ d, [file_start + tmp3]
+	mov	tmp6, [file_start + tmp3]
 	compute_hash	hash, tmp6
 	and	hash %+ d, HASH_MASK
 	; state->head[hash] = k;

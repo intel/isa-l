@@ -202,7 +202,6 @@
 %define %%result	%1d	; 32-bit reg
 %define %%data		%2d	; 32-bit reg (low byte not clobbered)
 
-	and	%%data, 0x00FFFFFF
 	xor	%%result, %%result
 	crc32	%%result, %%data
 %endm

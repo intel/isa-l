@@ -39,6 +39,6 @@
 %assign HASH_SIZE  D
 %assign HASH_MASK  (HASH_SIZE - 1)
 
-%assign SHORTEST_MATCH  3
+%assign SHORTEST_MATCH  4
 
 %assign SLOP 8
