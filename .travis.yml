@@ -1,6 +1,7 @@
 sudo: required
 dist: trusty
 before_script:
+    - sudo apt-get -q update
     - sudo apt-get install -y yasm nasm
     - ./autogen.sh
 script: ./configure && make && make check
@@ -8,6 +9,3 @@ language: c
 compiler:
     - clang
     - gcc
-env:
-    - AS=yasm
-    - AS=nasm
