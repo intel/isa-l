@@ -54,6 +54,7 @@ global %1
 
 %define	curr_data2	r8
 %define	len2		r8
+%define	tmp4		r8
 
 %define	tmp1		r11
 
@@ -341,7 +342,7 @@ end_loop_2:
 	jge	final_bytes
 
 loop2_finish:
-	mov	curr_data, [file_start + f_i]
+	mov	curr_data %+ d, dword [file_start + f_i]
 	compute_hash	hash, curr_data
 	and	hash %+ d, HASH_MASK
 
@@ -358,12 +359,12 @@ loop2_finish:
 	inc	dist
 
 	;; Check if look back distance is a match
-	lea	tmp3, [file_length + LAST_BYTES_COUNT]
-	sub	tmp3, f_i
+	lea	tmp4, [file_length + LAST_BYTES_COUNT]
+	sub	tmp4, f_i
 	lea	tmp1, [file_start + f_i]
 	mov	tmp2, tmp1
 	sub	tmp2, dist
-	compare	tmp3, tmp1, tmp2, len, tmp3
+	compare	tmp4, tmp1, tmp2, len, tmp3
 
 	;; Limit len to maximum value of 258
 	mov	tmp2, 258
