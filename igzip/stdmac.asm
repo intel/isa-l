@@ -271,3 +271,79 @@ ssc:
 	shl	%%dest, cl
 %endif
 %endm
+
+%macro	MOVDQU	2
+%define	%%dest	%1
+%define	%%src	%2
+%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
+	vmovdqu	%%dest, %%src
+%else
+	movdqu	%%dest, %%src
+%endif
+%endm
+
+%macro	MOVD	2
+%define	%%dest	%1
+%define	%%src	%2
+%if (ARCH == 02 || ARCH == 03 || ARCH == 04)
+	vmovd	%%dest, %%src
+%else
+	movd	%%dest, %%src
+%endif
+%endm
+
+%macro	MOVQ	2
+%define	%%dest	%1
+%define	%%src	%2
+%if (ARCH == 02 || ARCH == 03 || ARCH == 04)
+	vmovq	%%dest, %%src
+%else
+	movq	%%dest, %%src
+%endif
+%endm
+
+%macro	PINSRD	3
+%define	%%dest	%1
+%define	%%src	%2
+%define	%%offset	%3
+%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
+	vpinsrd	%%dest, %%src, %%offset
+%else
+	pinsrd	%%dest, %%src, %%offset
+%endif
+%endm
+
+%macro	PEXTRD	3
+%define	%%dest	%1
+%define	%%src	%2
+%define	%%offset	%3
+%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
+	vpextrd	%%dest, %%src, %%offset
+%else
+	pextrd	%%dest, %%src, %%offset
+%endif
+%endm
+
+%macro	PSRLDQ	2
+%define	%%dest	%1
+%define	%%offset	%2
+%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
+	vpsrldq	%%dest, %%offset
+%else
+	psrldq	%%dest, %%offset
+%endif
+%endm
+
+%macro	PAND	3
+%define	%%dest	%1
+%define	%%src1	%2
+%define	%%src2	%3
+%if (ARCH == 02 || ARCH == 03 || ARCH == 04)
+	vpand	%%dest, %%src1, %%src2
+%else
+%ifnidn	%%dest, %%src1
+	movdqa	%%dest, %%src1
+%endif
+	pand	%%dest, %%src2
+%endif
+%endm

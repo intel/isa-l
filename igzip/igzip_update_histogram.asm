@@ -14,7 +14,7 @@ extern rfc1951_lookup_table
 _len_to_code_offset	equ	0
 
 %define LAST_BYTES_COUNT	3 ; Bytes to prevent reading out of array bounds
-%define LA_STATELESS	264	  ; Max number of bytes read in loop2 rounded up to 8 byte boundary
+%define LA_STATELESS	280	  ; Max number of bytes read in loop2 rounded up to 8 byte boundary
 %define LIT_LEN 286
 %define DIST_LEN 30
 %define HIST_ELEM_SIZE	8

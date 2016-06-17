@@ -38,7 +38,7 @@
 %include "stdmac.asm"
 
 %define LAST_BYTES_COUNT	3 ; Bytes to prevent reading out of array bounds
-%define LA_STATELESS	264	  ; Max number of bytes read in loop2 rounded up to 8 byte boundary
+%define LA_STATELESS	280	  ; Max number of bytes read in loop2 rounded up to 8 byte boundary
 
 %ifdef DEBUG
 %macro MARK 1
@@ -105,6 +105,7 @@ global %1
 %define xtmp1		xmm1	; tmp
 %define	xhash		xmm2
 %define	xmask		xmm3
+%define	xdata		xmm4
 
 %define ytmp0		ymm0	; tmp
 %define ytmp1		ymm1	; tmp
@@ -158,7 +159,7 @@ skip1:
 	mov	stream, rcx
 	mov	dword [stream + _internal_state_has_eob], 0
 
-	vmovdqu	xmask, [mask]
+	MOVDQU	xmask, [mask]
 
 	; state->bitbuf.set_buf(stream->next_out, stream->avail_out);
 	mov	m_out_buf, [stream + _next_out]
@@ -209,9 +210,9 @@ MARK __stateless_compute_hash_ %+ ARCH
 	shr	tmp6, 8
 	compute_hash	hash2, tmp6
 
-	vmovd	xhash, hash %+ d
-	vpinsrd	xhash, hash2 %+ d, 1
-	vpand	xhash, xhash, xmask
+	MOVD	xhash, hash %+ d
+	PINSRD	xhash, hash2 %+ d, 1
+	PAND	xhash, xhash, xmask
 
 	jmp	write_lit_bits
 
@@ -240,7 +241,8 @@ loop2:
 	mov	[stream + _internal_state_head + 2 * hash2], f_i %+ w
 	dec	dist2
 
-	mov	tmp8, [file_start + f_i + 1]
+	MOVQ	tmp8, xdata
+	shr	tmp8, 16
 	mov	tmp6, tmp8
 	compute_hash	tmp2, tmp8
 
@@ -258,18 +260,20 @@ loop2:
 	shr	tmp6, 8
 	compute_hash	tmp3, tmp6
 
-	vmovd	xhash, tmp2 %+ d
-	vpinsrd	xhash, tmp3 %+ d, 1
-	vpand	xhash, xmask
+	MOVD	xhash, tmp2 %+ d
+	PINSRD	xhash, tmp3 %+ d, 1
+	PAND	xhash, xhash, xmask
 
 MARK __stateless_compare_ %+ ARCH
 	;; Check for long len/dist match (>7) with first literal
-	mov	len, [tmp1]
+	MOVQ	len, xdata
+	mov	curr_data, len
+	PSRLDQ	xdata, 1
 	xor	len, [tmp1 + dist]
 	jz	compare_loop
 
 	;; Check for len/dist match (>7) with second literal
-	mov	len2, [tmp1 + 1]
+	MOVQ	len2, xdata
 	xor	len2, [tmp1 + dist2 + 1]
 	jz	compare_loop2
 
@@ -300,7 +304,6 @@ len_dist_lit_huffman_pre:
 	bsf	len2, len2
 	shr	len2, 3
 
-
 len_dist_lit_huffman:
 	neg	dist2
 %ifndef LONGER_HUFFTABLE
@@ -317,7 +320,8 @@ len_dist_lit_huffman:
 
 	mov	rcx, code_len3
 
-	mov	tmp5, [file_start + f_i + 3]
+	MOVQ	tmp5, xdata
+	shr	tmp5, 24
 	compute_hash	tmp4, tmp5
 	and	tmp4, HASH_MASK
 
@@ -329,11 +333,12 @@ len_dist_lit_huffman:
 	lea	tmp3, [f_i + 1]	; tmp3 <= k
 
 	add	f_i, len2
+	MOVDQU	xdata, [file_start + f_i]
 	mov	curr_data, [file_start + f_i]
 	mov	curr_data2, curr_data
 
-	vmovd	hash %+ d, xhash
-	vpextrd	hash2 %+ d, xhash, 1
+	MOVD	hash %+ d, xhash
+	PEXTRD	hash2 %+ d, xhash, 1
 	mov	[stream + _internal_state_head + 2 * hash], tmp3 %+ w
 
 	compute_hash	hash, curr_data
@@ -403,12 +408,13 @@ len_dist_huffman:
 	lea	tmp3, [f_i + 2]	; tmp3 <= k
 	add	f_i, len
 
-	vmovd	hash %+ d, xhash
-	vpextrd	hash2 %+ d, xhash, 1
+	MOVD	hash %+ d, xhash
+	PEXTRD	hash2 %+ d, xhash, 1
 	mov	[stream + _internal_state_head + 2 * hash], tmp3 %+ w
 	add	tmp3,1
 	mov	[stream + _internal_state_head + 2 * hash2], tmp3 %+ w
 
+	MOVDQU	xdata, [file_start + f_i]
 	mov	curr_data, [file_start + f_i]
 	mov	curr_data2, curr_data
 	compute_hash	hash, curr_data
@@ -441,18 +447,18 @@ loop4_done:
 	jl	loop2
 	jmp	end_loop_2
 
-
 MARK __stateless_write_lit_bits_ %+ ARCH
 write_lit_bits:
+	MOVDQU	xdata, [file_start + f_i + 1]
 	mov	f_end_i, [rsp + f_end_i_mem_offset]
 	add	f_i, 1
 	mov	curr_data, [file_start + f_i]
 
-	vmovd	hash %+ d, xhash
+	MOVD	hash %+ d, xhash
 
 	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf, tmp3
 
-	vpextrd	hash2 %+ d, xhash, 1
+	PEXTRD	hash2 %+ d, xhash, 1
 
 	; continue
 	cmp	f_i, f_end_i
