@@ -236,15 +236,15 @@ loop2:
 
 	inc	f_i
 
+	MOVQ	tmp6, xdata
+	shr	tmp5, 16
+	mov	tmp8, tmp5
+	compute_hash	tmp6, tmp5
+
 	mov	dist2 %+ w, f_i %+ w
 	sub	dist2 %+ w, word [stream + _internal_state_head + 2 * hash2]
 	mov	[stream + _internal_state_head + 2 * hash2], f_i %+ w
 	dec	dist2
-
-	MOVQ	tmp8, xdata
-	shr	tmp8, 16
-	mov	tmp6, tmp8
-	compute_hash	tmp2, tmp8
 
 	; if ((dist-1) < (D-1)) {
 	cmp	dist %+ d, (D-1)
@@ -252,17 +252,13 @@ loop2:
 	add	dist, 1
 	neg	dist
 
+	shr	tmp8, 8
+	compute_hash	tmp2, tmp8
+
 	cmp	dist2 %+ d, (D-1)
 	cmovae	dist2, tmp3
 	add	dist2, 1
 	neg	dist2
-
-	shr	tmp6, 8
-	compute_hash	tmp3, tmp6
-
-	MOVD	xhash, tmp2 %+ d
-	PINSRD	xhash, tmp3 %+ d, 1
-	PAND	xhash, xhash, xmask
 
 MARK __stateless_compare_ %+ ARCH
 	;; Check for long len/dist match (>7) with first literal
@@ -271,6 +267,10 @@ MARK __stateless_compare_ %+ ARCH
 	PSRLDQ	xdata, 1
 	xor	len, [tmp1 + dist]
 	jz	compare_loop
+
+	MOVD	xhash, tmp6 %+ d
+	PINSRD	xhash, tmp2 %+ d, 1
+	PAND	xhash, xhash, xmask
 
 	;; Check for len/dist match (>7) with second literal
 	MOVQ	len2, xdata
@@ -605,6 +605,9 @@ end:
 
 MARK __stateless_compare_loops_ %+ ARCH
 compare_loop:
+	MOVD	xhash, tmp6 %+ d
+	PINSRD	xhash, tmp2 %+ d, 1
+	PAND	xhash, xhash, xmask
 	lea	tmp2, [tmp1 + dist]
 %if (COMPARE_TYPE == 1)
 	compare250	tmp1, tmp2, len, tmp3
