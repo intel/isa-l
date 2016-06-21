@@ -255,9 +255,6 @@ loop2:
 	;; Store first literal
 	inc	qword [histogram + _lit_len_offset + HIST_ELEM_SIZE * tmp1]
 
-	;; Specutively load the code for the second literal
-	and     curr_data, 0xff
-
 	;; Check for len/dist match for second literal
 	test    len2 %+ d, 0xFFFFFFFF
 	jnz     lit_lit_huffman
@@ -267,16 +264,23 @@ len_dist_lit_huffman_pre:
 	shr	len2, 3
 
 len_dist_lit_huffman:
+	mov	curr_data, [file_start + f_i + 3]
+	compute_hash hash3, curr_data
+
 	;; Store updated hashes
 	mov	[histogram + _hash_offset + 2 * hash], tmp3 %+ w
 	add	tmp3,1
 	mov	[histogram + _hash_offset + 2 * hash2], tmp3 %+ w
+	add	tmp3, 1
 
 	add	f_i, len2
 
 	mov	curr_data, [file_start + f_i]
 	mov	tmp1, curr_data
 	compute_hash	hash, curr_data
+
+	and	hash3, HASH_MASK
+	mov	[histogram + _hash_offset + 2 * hash3], tmp3 %+ w
 
 	dist_to_dist_code2 dist_code2, dist2
 
@@ -302,6 +306,8 @@ len_dist_huffman_pre:
 
 len_dist_huffman:
 	mov	[histogram + _hash_offset + 2 * hash], tmp3 %+ w
+	add	tmp3,1
+	mov	[histogram + _hash_offset + 2 * hash2], tmp3 %+ w
 
 	dec	f_i
 	add	f_i, len
@@ -328,6 +334,7 @@ len_dist_huffman:
 	jmp	end_loop_2
 
 lit_lit_huffman:
+	and     curr_data, 0xff
 	add	f_i, 1
 	inc	qword [histogram + _lit_len_offset + HIST_ELEM_SIZE * curr_data]
 
@@ -429,6 +436,7 @@ end:
 
 compare_loop:
 	and	hash %+ d, HASH_MASK
+	and	hash2 %+ d, HASH_MASK
 	lea	tmp2, [tmp1 + dist - 1]
 %if (COMPARE_TYPE == 1)
 	compare250	tmp1, tmp2, len, tmp3
