@@ -35,7 +35,7 @@
 #include "test.h"
 
 #define BUF_SIZE 1024
-#define MIN_TEST_LOOPS   100
+#define MIN_TEST_LOOPS   8
 #ifndef RUN_MEM_SIZE
 # define RUN_MEM_SIZE 500000000
 #endif

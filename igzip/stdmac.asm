@@ -27,7 +27,8 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
+%ifndef STDMAC_ASM
+%define STDMAC_ASM
 ;; internal macro used by push_all
 ;; push args L to R
 %macro push_all_ 1-*
@@ -347,3 +348,29 @@ ssc:
 	pand	%%dest, %%src2
 %endif
 %endm
+
+%macro	PCMPEQB	3
+%define	%%dest	%1
+%define	%%src1	%2
+%define	%%src2	%3
+%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
+	vpcmpeqb	%%dest, %%src1, %%src2
+%else
+%ifnidn	%%dest, %%src1
+	movdqa	%%dest, %%src1
+%endif
+	pcmpeqb	%%dest, %%src2
+%endif
+%endm
+
+%macro	PMOVMSKB	2
+%define	%%dest	%1
+%define	%%src	%2
+%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
+	vpmovmskb	%%dest, %%src
+%else
+	pmovmskb	%%dest, %%src
+%endif
+%endm
+
+%endif 	;; ifndef STDMAC_ASM

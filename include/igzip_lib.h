@@ -118,7 +118,7 @@ extern "C" {
 
 #define IGZIP_K  1024
 #define IGZIP_D  (HIST_SIZE * IGZIP_K)	/* Amount of history */
-#define IGZIP_LA (17 * 16)		/* Max look-ahead, rounded up to 32 byte boundary */
+#define IGZIP_LA (18 * 16)		/* Max look-ahead, rounded up to 32 byte boundary */
 #define BSIZE  (2*IGZIP_D + IGZIP_LA)	/* Nominal buffer size */
 
 #define HASH_SIZE  IGZIP_D

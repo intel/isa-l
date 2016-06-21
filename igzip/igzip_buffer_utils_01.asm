@@ -467,7 +467,7 @@ align 16
 
 ;%assign K   1024;
 ;%assign D   8 * K;       ; Amount of history
-;%assign LA  17 * 16;     ; Max look-ahead, rounded up to 32 byte boundary
+;%assign LA  18 * 16;     ; Max look-ahead, rounded up to 32 byte boundary
 
 ; copy D + LA bytes from src to dst
 ; dst is aligned

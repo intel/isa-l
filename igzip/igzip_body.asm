@@ -77,6 +77,7 @@ global %1
 %define len              rdx
 %define hash             rdx
 %define code_len3        rdx
+%define	tmp8             rdx
 
 %define tmp1             rsi
 %define code_len2        rsi
@@ -120,11 +121,14 @@ global %1
 %define xtmp2		xmm7	; tmp
 %define xtmp3		xmm8	; tmp
 %define xtmp4		xmm9	; tmp
+%define	xhash		xmm10
+%define	xmask		xmm11
+%define	xdata		xmm12
 
 %define ytmp0		ymm5	; tmp
 %define ytmp1		ymm6	; tmp
 
-%if (ARCH == 04)
+%if ( ARCH == 02 || ARCH == 04)
 %define vtmp0		ymm5	; tmp
 %define vtmp1		ymm6	; tmp
 %define vtmp2		ymm7	; tmp
@@ -148,8 +152,8 @@ in_buf_mem_offset   equ  8
 f_end_i_mem_offset  equ 16
 empty_buffer_flag   equ	24
 gpr_save_mem_offset equ 32       ; gpr save area (8*8 bytes)
-xmm_save_mem_offset equ 32 + 8*8 ; xmm save area (4*16 bytes) (16 byte aligned)
-stack_size          equ 4*8 + 8*8 + 4*16 + 8
+xmm_save_mem_offset equ 32 + 8*8 ; xmm save area (8*16 bytes) (16 byte aligned)
+stack_size          equ 4*8 + 8*8 + 8*16 + 8
 ;;; 8 because stack address is odd multiple of 8 after a function call and
 ;;; we want it aligned to 16 bytes
 
@@ -197,8 +201,12 @@ skip1:
 	MOVDQA	[rsp + xmm_save_mem_offset + 1*16], xmm7
 	MOVDQA	[rsp + xmm_save_mem_offset + 2*16], xmm8
 	MOVDQA	[rsp + xmm_save_mem_offset + 3*16], xmm9
+	MOVDQA	[rsp + xmm_save_mem_offset + 4*16], xmm10
+	MOVDQA	[rsp + xmm_save_mem_offset + 5*16], xmm11
+	MOVDQA	[rsp + xmm_save_mem_offset + 6*16], xmm12
 
 	mov	stream, rcx
+	MOVDQU	xmask, [mask]
 
 	MOVDQA	crc_0, [stream + _internal_state_crc + 0*16]
 	MOVDQA	crc_1, [stream + _internal_state_crc + 1*16]
@@ -334,26 +342,27 @@ skip_move_zero:
 	jge	end_loop_2
 
 MARK __misc_compute_hash_lookup_ %+ ARCH
+	MOVDQU	xdata, [file_start + f_i]
 	mov	curr_data, [file_start + f_i]
+	mov	tmp3, curr_data
+	mov	tmp6, curr_data
+
+	compute_hash	hash, curr_data
+
+	shr	tmp3, 8
+	compute_hash	hash2, tmp3
+
+	and	hash, HASH_MASK
+	and	hash2, HASH_MASK
 
 	cmp	dword [rsp + empty_buffer_flag], 0
 	jne	write_first_byte
 
-	mov	curr_data2, curr_data
-
-	compute_hash	hash, curr_data
 	jmp	loop2
 
 	align	16
 
 loop2:
-	shr	curr_data2, 8
-	compute_hash	hash2, curr_data2
-
-	; hash = compute_hash(state->file_start + f_i) & HASH_MASK;
-	and	hash %+ d, HASH_MASK
-	and	hash2 %+ d, HASH_MASK
-
 	; if (state->bitbuf.is_full()) {
 	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
 	ja	bitbuf_full
@@ -363,59 +372,53 @@ loop2:
 	xor	tmp3, tmp3
 
 	lea	tmp1, [file_start + f_i]
-	lea	tmp6, [tmp1 - 1]
 
 	mov	dist %+ w, f_i %+ w
 	sub	dist %+ w, word [stream + _internal_state_head + 2 * hash]
-
-	; state->head[hash] = (uint16_t) f_i;
 	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
+	dec	dist
 
 	inc	f_i
 
+	MOVQ	tmp6, xdata
+	shr	tmp5, 16
+	mov	tmp8, tmp5
+	compute_hash	tmp6, tmp5
+
 	mov	dist2 %+ w, f_i %+ w
 	sub	dist2 %+ w, word [stream + _internal_state_head + 2 * hash2]
-	dec	dist2
-
-	; state->head[hash2] = (uint16_t) f_i;
 	mov	[stream + _internal_state_head + 2 * hash2], f_i %+ w
-
-	mov	tmp2, tmp1
-	sub	tmp2, dist
-	dec	dist
+	dec	dist2
 
 	; if ((dist-1) < (D-1)) {
 	cmp	dist %+ d, (D-1)
-	cmovae	tmp2, tmp6
 	cmovae	dist, tmp3
-	inc	dist
+	add	dist, 1
+	neg	dist
+
+	shr	tmp8, 8
+	compute_hash	tmp2, tmp8
 
 	cmp	dist2 %+ d, (D-1)
 	cmovae	dist2, tmp3
-	inc	dist2
+	add	dist2, 1
+	neg	dist2
 
 MARK __compare_ %+ ARCH
-	; len = compare258(state->file_start + f_i,
-	;                  state->file_start + f_i - dist);
-
-	;; Specutively load distance code (except for when large windows are used)
-	get_packed_dist_code	dist, code2, hufftables
-
 	;; Check for long len/dist match (>7) with first literal
-	mov	len, [tmp1]
-	xor	len, [tmp2]
+	MOVQ	len, xdata
+	mov	curr_data, len
+	PSRLDQ	xdata, 1
+	xor	len, [tmp1 + dist]
 	jz	compare_loop
 
-	lea	tmp1, [file_start + f_i]
-	mov	tmp2, tmp1
-	sub	tmp2, dist2
-
-	;; Specutively load distance code (except for when large windows are used)
-	get_packed_dist_code	dist2, code4, hufftables
+	MOVD	xhash, tmp6 %+ d
+	PINSRD	xhash, tmp2 %+ d, 1
+	PAND	xhash, xhash, xmask
 
 	;; Check for len/dist match (>7) with second literal
-	mov	len2, [tmp1]
-	xor	len2, [tmp2]
+	MOVQ	len2, xdata
+	xor	len2, [tmp1 + dist2 + 1]
 	jz	compare_loop2
 
 	;; Specutively load the code for the first literal
@@ -446,51 +449,77 @@ len_dist_lit_huffman_pre:
 	shr	len2, 3
 
 len_dist_lit_huffman:
+	neg	dist2
 %ifndef LONGER_HUFFTABLE
 	mov	tmp4, dist2
 	get_dist_code	tmp4, code4, code_len2, hufftables ;; clobbers dist, rcx
 %else
-	unpack_dist_code	code4, code_len2
+	get_dist_code	dist2, code4, code_len2, hufftables
 %endif
 	get_len_code	len2, code, rcx, hufftables ;; rcx is code_len
 
-%ifdef USE_HSWNI
-	shlx	code4, code4, rcx
-%else
-	shl	code4, cl
-%endif
+	SHLX	code4, code4, rcx
 	or	code4, code
 	add	code_len2, rcx
 
 	mov	rcx, code_len3
 
-%ifdef USE_HSWNI
-	shlx	code4, code4, rcx
-%else
-	shl	code4, cl
-%endif
+	MOVQ	tmp5, xdata
+	shr	tmp5, 24
+	compute_hash	tmp4, tmp5
+	and	tmp4, HASH_MASK
+
+	SHLX	code4, code4, rcx
 	or	code4, code3
 	add	code_len2, rcx
 
-	mov	code2, code4
 	;; Setup for updating hash
 	lea	tmp3, [f_i + 1]	; tmp3 <= k
+
 	add	f_i, len2
+	MOVDQU	xdata, [file_start + f_i]
+	mov	curr_data, [file_start + f_i]
+	mov	curr_data2, curr_data
 
-	; hash = compute_hash(state->file_start + k) & HASH_MASK;
-	mov	tmp5, [file_start + tmp3]
-	mov	tmp7, tmp5
-	shr	tmp7, 8
-
-	compute_hash	hash, tmp5
-	and	hash %+ d, HASH_MASK
-
-	; state->head[hash] = k;
+	MOVD	hash %+ d, xhash
+	PEXTRD	hash2 %+ d, xhash, 1
 	mov	[stream + _internal_state_head + 2 * hash], tmp3 %+ w
 
-	add	tmp3,1
+	compute_hash	hash, curr_data
 
-	jmp update_hash_for_symbol
+	add	tmp3,1
+	mov	[stream + _internal_state_head + 2 * hash2], tmp3 %+ w
+
+	add	tmp3, 1
+	mov	[stream + _internal_state_head + 2 * tmp4], tmp3 %+ w
+
+	write_bits	m_bits, m_bit_count, code4, code_len2, m_out_buf, tmp4
+	mov	f_end_i, [rsp + f_end_i_mem_offset]
+
+	shr	curr_data2, 8
+	compute_hash	hash2, curr_data2
+
+%ifdef NO_LIMIT_HASH_UPDATE
+loop3:
+	add	tmp3,1
+	cmp	tmp3, f_i
+	jae	loop3_done
+	mov	tmp6, [file_start + tmp3]
+	compute_hash	tmp4, tmp6
+	and	tmp4 %+ d, HASH_MASK
+	; state->head[hash] = k;
+	mov	[stream + _internal_state_head + 2 * tmp4], tmp3 %+ w
+	jmp	loop3
+loop3_done:
+%endif
+	; hash = compute_hash(state->file_start + f_i) & HASH_MASK;
+	and	hash %+ d, HASH_MASK
+	and	hash2 %+ d, HASH_MASK
+
+	; continue
+	cmp	f_i, f_end_i
+	jl	loop2
+	jmp	end_loop_2
 	;; encode as dist/len
 
 MARK __len_dist_huffman_ %+ ARCH
@@ -498,14 +527,15 @@ len_dist_huffman_pre:
 	bsf	len, len
 	shr	len, 3
 len_dist_huffman:
-	dec f_i
+	dec	f_i
+	neg	dist
 
 	; get_dist_code(dist, &code2, &code_len2);
 %ifndef LONGER_HUFFTABLE
 	mov tmp3, dist	; since code2 and dist are rbx
 	get_dist_code	tmp3, code2, code_len2, hufftables ;; clobbers dist, rcx
 %else
-	unpack_dist_code	code2, code_len2
+	get_dist_code	dist, code2, code_len2, hufftables
 %endif
 	; get_len_code(len, &code, &code_len);
 	get_len_code	len, code, rcx, hufftables ;; rcx is code_len
@@ -513,67 +543,65 @@ len_dist_huffman:
 	; code2 <<= code_len
 	; code2 |= code
 	; code_len2 += code_len
-%ifdef USE_HSWNI
-	shlx	code2, code2, rcx
-%else
-	shl	code2, cl
-%endif
+	SHLX	code2, code2, rcx
 	or	code2, code
 	add	code_len2, rcx
 
 	;; Setup for updateing hash
 	lea	tmp3, [f_i + 2]	; tmp3 <= k
 	add	f_i, len
-	mov	tmp7, [file_start + tmp3]
 
-MARK __update_hash_for_symbol_ %+ ARCH
-update_hash_for_symbol:
+	MOVD	hash %+ d, xhash
+	PEXTRD	hash2 %+ d, xhash, 1
+	mov	[stream + _internal_state_head + 2 * hash], tmp3 %+ w
+	add	tmp3,1
+	mov	[stream + _internal_state_head + 2 * hash2], tmp3 %+ w
+
+	MOVDQU	xdata, [file_start + f_i]
 	mov	curr_data, [file_start + f_i]
 	mov	curr_data2, curr_data
 	compute_hash	hash, curr_data
-%ifdef LIMIT_HASH_UPDATE
-	; only update hash twice, first hash was already calculated.
 
-	; hash = compute_hash(state->file_start + k) & HASH_MASK;
-	compute_hash	hash2, tmp7
-	and	hash2 %+ d, HASH_MASK
-	; state->head[hash] = k;
-	mov	[stream + _internal_state_head + 2 * hash2], tmp3 %+ w
+	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf, tmp7
+	mov	f_end_i, [rsp + f_end_i_mem_offset]
 
-%else
-loop3:
-	; hash = compute_hash(state->file_start + k) & HASH_MASK;
-	mov	tmp7, [file_start + tmp3]
-	compute_hash	hash2, tmp7
-	and	hash2 %+ d, HASH_MASK
-	; state->head[hash] = k;
-	mov	[stream + _internal_state_head + 2 * hash2], tmp3 %+ w
+	shr	curr_data2, 8
+	compute_hash	hash2, curr_data2
+
+%ifdef NO_LIMIT_HASH_UPDATE
+loop4:
 	add	tmp3,1
+
 	cmp	tmp3, f_i
-	jl	loop3
+	jae	loop4_done
+	mov	tmp6, [file_start + tmp3]
+	compute_hash	tmp4, tmp6
+	and	tmp4, HASH_MASK
+	mov	[stream + _internal_state_head + 2 * tmp4], tmp3 %+ w
+	jmp	loop4
+loop4_done:
 %endif
 
-
-MARK __write_len_dist_bits_ %+ ARCH
-	mov	f_end_i, [rsp + f_end_i_mem_offset]
-	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf, tmp3
+	and	hash, HASH_MASK
+	and	hash2, HASH_MASK
 
 	; continue
 	cmp	f_i, f_end_i
 	jl	loop2
 	jmp	end_loop_2
 
-
 MARK __write_lit_bits_ %+ ARCH
 write_lit_bits:
+	MOVDQU	xdata, [file_start + f_i + 1]
 	mov	f_end_i, [rsp + f_end_i_mem_offset]
 	add	f_i, 1
 	mov	curr_data, [file_start + f_i]
-	mov	curr_data2, curr_data
 
-	compute_hash	hash, curr_data
+	MOVD	hash %+ d, xhash
 
 	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf, tmp3
+
+	PEXTRD	hash2 %+ d, xhash, 1
 
 	; continue
 	cmp	f_i, f_end_i
@@ -647,6 +675,9 @@ skip2:
 	MOVDQA	xmm7, [rsp + xmm_save_mem_offset + 1*16]
 	MOVDQA	xmm8, [rsp + xmm_save_mem_offset + 2*16]
 	MOVDQA	xmm9, [rsp + xmm_save_mem_offset + 3*16]
+	MOVDQA	xmm10, [rsp + xmm_save_mem_offset + 4*16]
+	MOVDQA	xmm11, [rsp + xmm_save_mem_offset + 5*16]
+	MOVDQA	xmm12, [rsp + xmm_save_mem_offset + 6*16]
 
 %ifndef ALIGN_STACK
 	add	rsp, stack_size
@@ -668,6 +699,10 @@ bitbuf_full:
 
 MARK __compare_loops_ %+ ARCH
 compare_loop:
+	MOVD	xhash, tmp6 %+ d
+	PINSRD	xhash, tmp2 %+ d, 1
+	PAND	xhash, xhash, xmask
+	lea	tmp2, [tmp1 + dist]
 %if (COMPARE_TYPE == 1)
 	compare250	tmp1, tmp2, len, tmp3
 %elif (COMPARE_TYPE == 2)
@@ -681,6 +716,8 @@ compare_loop:
 	jmp	len_dist_huffman
 
 compare_loop2:
+	add     tmp1, 1
+	lea     tmp2, [tmp1 + dist2]
 %if (COMPARE_TYPE == 1)
 	compare250	tmp1, tmp2, len2, tmp3
 %elif (COMPARE_TYPE == 2)
@@ -701,15 +738,24 @@ write_first_byte:
 	ja	bitbuf_full
 
 	mov	dword [rsp + empty_buffer_flag], 0
-	compute_hash	hash, curr_data
-	and	hash %+ d, HASH_MASK
+
 	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
+
+	mov	hash, hash2
+	shr	tmp6, 16
+	compute_hash	hash2, tmp6
+
+	MOVD	xhash, hash %+ d
+	PINSRD	xhash, hash2 %+ d, 1
+	PAND	xhash, xhash, xmask
+
 	and	curr_data, 0xff
 	get_lit_code	curr_data, code2, code_len2, hufftables
 	jmp	write_lit_bits
 
 section .data
-	align 4
+	align 16
+mask:	dd	HASH_MASK, HASH_MASK, HASH_MASK, HASH_MASK
 const_D: dq	D
 
 %endif ;; ifndef TEST

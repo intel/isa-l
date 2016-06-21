@@ -45,6 +45,7 @@ extern isal_deflate_body_stateless_04
 
 extern isal_deflate_body_base
 extern isal_deflate_body_01
+extern isal_deflate_body_02
 extern isal_deflate_body_04
 extern isal_deflate_finish_base
 extern isal_deflate_finish_01
@@ -70,7 +71,7 @@ mbin_interface		isal_deflate_body_stateless
 mbin_dispatch_init5	isal_deflate_body_stateless, isal_deflate_body_stateless_base, isal_deflate_body_stateless_01, isal_deflate_body_stateless_02, isal_deflate_body_stateless_04
 
 mbin_interface		isal_deflate_body
-mbin_dispatch_init5	isal_deflate_body, isal_deflate_body_base, isal_deflate_body_01, isal_deflate_body_01, isal_deflate_body_04
+mbin_dispatch_init5	isal_deflate_body, isal_deflate_body_base, isal_deflate_body_01, isal_deflate_body_02, isal_deflate_body_04
 mbin_interface		isal_deflate_finish
 mbin_dispatch_init5	isal_deflate_finish, isal_deflate_finish_base, isal_deflate_finish_01, isal_deflate_finish_01, isal_deflate_finish_01
 

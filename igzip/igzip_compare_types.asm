@@ -28,6 +28,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %include "options.asm"
+%include "stdmac.asm"
+
 %ifndef UTILS_ASM
 %define UTILS_ASM
 ; compare macro
@@ -141,18 +143,18 @@
 
 	xor	%%result, %%result
 %%loop1:
-	movdqu		%%xtmp, [%%src1 + %%result]
-	movdqu		%%xtmp2, [%%src2 + %%result]
-	pcmpeqb		%%xtmp, %%xtmp2
-	pmovmskb	%%tmp32, %%xtmp
+	MOVDQU		%%xtmp, [%%src1 + %%result]
+	MOVDQU		%%xtmp2, [%%src2 + %%result]
+	PCMPEQB		%%xtmp, %%xtmp, %%xtmp2
+	PMOVMSKB	%%tmp32, %%xtmp
 	xor		%%tmp, 0xFFFF
 	jnz		%%miscompare
 	add		%%result, 16
 
-	movdqu		%%xtmp, [%%src1 + %%result]
-	movdqu		%%xtmp2, [%%src2 + %%result]
-	pcmpeqb		%%xtmp, %%xtmp2
-	pmovmskb	%%tmp32, %%xtmp
+	MOVDQU		%%xtmp, [%%src1 + %%result]
+	MOVDQU		%%xtmp2, [%%src2 + %%result]
+	PCMPEQB		%%xtmp, %%xtmp, %%xtmp2
+	PMOVMSKB	%%tmp32, %%xtmp
 	xor		%%tmp, 0xFFFF
 	jnz		%%miscompare
 	add		%%result, 16
@@ -195,26 +197,26 @@
 %define %%xtmp2		%6
 
 	mov	%%result, 8
-	movdqu		%%xtmp, [%%src1 + 8]
-	movdqu		%%xtmp2, [%%src2 + 8]
-	pcmpeqb		%%xtmp, %%xtmp2
-	pmovmskb	%%tmp32, %%xtmp
+	MOVDQU		%%xtmp, [%%src1 + 8]
+	MOVDQU		%%xtmp2, [%%src2 + 8]
+	PCMPEQB		%%xtmp, %%xtmp, %%xtmp2
+	PMOVMSKB	%%tmp32, %%xtmp
 	xor		%%tmp, 0xFFFF
 	jnz		%%miscompare
 	add		%%result, 16
 %%loop1:
-	movdqu		%%xtmp, [%%src1 + %%result]
-	movdqu		%%xtmp2, [%%src2 + %%result]
-	pcmpeqb		%%xtmp, %%xtmp2
-	pmovmskb	%%tmp32, %%xtmp
+	MOVDQU		%%xtmp, [%%src1 + %%result]
+	MOVDQU		%%xtmp2, [%%src2 + %%result]
+	PCMPEQB		%%xtmp, %%xtmp, %%xtmp2
+	PMOVMSKB	%%tmp32, %%xtmp
 	xor		%%tmp, 0xFFFF
 	jnz		%%miscompare
 	add		%%result, 16
 
-	movdqu		%%xtmp, [%%src1 + %%result]
-	movdqu		%%xtmp2, [%%src2 + %%result]
-	pcmpeqb		%%xtmp, %%xtmp2
-	pmovmskb	%%tmp32, %%xtmp
+	MOVDQU		%%xtmp, [%%src1 + %%result]
+	MOVDQU		%%xtmp2, [%%src2 + %%result]
+	PCMPEQB		%%xtmp, %%xtmp, %%xtmp2
+	PMOVMSKB	%%tmp32, %%xtmp
 	xor		%%tmp, 0xFFFF
 	jnz		%%miscompare
 	add		%%result, 16
@@ -222,10 +224,10 @@
 	cmp	%%result, 258 - 16
 	jb	%%loop1
 
-	movdqu		%%xtmp, [%%src1 + %%result]
-	movdqu		%%xtmp2, [%%src2 + %%result]
-	pcmpeqb		%%xtmp, %%xtmp2
-	pmovmskb	%%tmp32, %%xtmp
+	MOVDQU		%%xtmp, [%%src1 + %%result]
+	MOVDQU		%%xtmp2, [%%src2 + %%result]
+	PCMPEQB		%%xtmp, %%xtmp, %%xtmp2
+	PMOVMSKB	%%tmp32, %%xtmp
 	xor		%%tmp, 0xFFFF
 	jnz		%%miscompare_last
 	; no miscompares, return 258

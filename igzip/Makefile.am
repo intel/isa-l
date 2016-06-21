@@ -30,7 +30,10 @@
 lsrc        += 	igzip/igzip.c igzip/hufftables_c.c \
 		igzip/crc_utils_01.asm \
 		igzip/crc_utils_04.asm \
-		igzip/igzip_body_01.asm igzip/igzip_body_04.asm igzip/igzip_finish.asm \
+		igzip/igzip_body_01.asm \
+		igzip/igzip_body_02.asm \
+		igzip/igzip_body_04.asm \
+		igzip/igzip_finish.asm \
 		igzip/igzip_stateless_01.asm \
 		igzip/igzip_stateless_02.asm \
 		igzip/igzip_stateless_04.asm \
