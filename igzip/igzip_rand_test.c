@@ -1362,9 +1362,10 @@ int create_custom_hufftables(struct isal_hufftables *hufftables_custom, int argc
 		fread(stream, 1, file_length, file);
 
 		if (ferror(file)) {
-			printf("Error occurred when reading file");
+			printf("Error occurred when reading file\n");
 			fclose(file);
 			free(stream);
+			stream = NULL;
 			return 1;
 		}
 
@@ -1373,7 +1374,10 @@ int create_custom_hufftables(struct isal_hufftables *hufftables_custom, int argc
 		isal_update_histogram(stream, file_length, &histogram);
 
 		fclose(file);
-		free(stream);
+		if (stream != NULL) {
+			free(stream);
+			stream = NULL;
+		}
 		argc--;
 	}
 
