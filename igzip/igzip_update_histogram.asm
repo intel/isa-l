@@ -66,6 +66,7 @@ global %1
 
 %define	xtmp0		xmm0
 %define	xtmp1		xmm1
+%define	xdata		xmm2
 
 %define	ytmp0		ymm0
 %define	ytmp1		ymm1
@@ -194,6 +195,7 @@ init_hash_table:
 	inc	f_i
 
 	;; Setup to begin loop 2
+	MOVDQU	xdata, [file_start + f_i]
 	mov	curr_data, [file_start + f_i]
 	mov	curr_data2, curr_data
 	compute_hash	hash, curr_data
@@ -209,6 +211,9 @@ loop2:
 
 	lea	tmp1, [file_start + f_i]
 
+	MOVQ	curr_data, xdata
+	PSRLDQ	xdata, 1
+
 	;; Load possible look back distances and update hash data
 	mov	dist %+ w, f_i %+ w
 	sub	dist %+ w, word [histogram + _hash_offset + 2 * hash]
@@ -222,8 +227,9 @@ loop2:
 
 	;; Start computing hashes to be used in either the next loop or
 	;; for updating the hash if a match is found
-	mov	curr_data2, [file_start + f_i + 1]
-	mov	tmp2, curr_data2
+	MOVQ	curr_data2, xdata
+	MOVQ	tmp2, xdata
+	shr	curr_data2, 8
 	compute_hash	hash, curr_data2
 
 	;; Check if look back distances are valid. Load a junk distance of 1
@@ -238,18 +244,18 @@ loop2:
 	cmovae	dist2, tmp3
 	neg	dist2
 
-	shr	tmp2, 8
+	shr	tmp2, 16
 	compute_hash	hash2, tmp2
 
 	;; Check for long len/dist matches (>7)
-	mov	len, [tmp1]
+	mov	len, curr_data
 	xor	len, [tmp1 + dist - 1]
 	jz	compare_loop
 
 	and	hash %+ d, HASH_MASK
 	and	hash2 %+ d, HASH_MASK
 
-	mov	len2, [tmp1 + 1]
+	MOVQ	len2, xdata
 	xor	len2, [tmp1 + dist2]
 	jz	compare_loop2
 
@@ -275,7 +281,8 @@ len_dist_lit_huffman_pre:
 	shr	len2, 3
 
 len_dist_lit_huffman:
-	mov	curr_data, [file_start + f_i + 3]
+	MOVQ	curr_data, xdata
+	shr	curr_data, 24
 	compute_hash hash3, curr_data
 
 	;; Store updated hashes
@@ -286,6 +293,7 @@ len_dist_lit_huffman:
 
 	add	f_i, len2
 
+	MOVDQU	xdata, [file_start + f_i]
 	mov	curr_data, [file_start + f_i]
 	mov	tmp1, curr_data
 	compute_hash	hash, curr_data
@@ -323,6 +331,7 @@ len_dist_huffman:
 	dec	f_i
 	add	f_i, len
 
+	MOVDQU	xdata, [file_start + f_i]
 	mov	curr_data, [file_start + f_i]
 	mov	tmp1, curr_data
 	compute_hash	hash, curr_data
@@ -345,11 +354,10 @@ len_dist_huffman:
 	jmp	end_loop_2
 
 lit_lit_huffman:
+	MOVDQU	xdata, [file_start + f_i + 1]
 	and     curr_data, 0xff
 	add	f_i, 1
 	inc	qword [histogram + _lit_len_offset + HIST_ELEM_SIZE * curr_data]
-
-	mov	curr_data %+ d, [file_start + f_i]
 
 	cmp	f_i, file_length
 	jl	loop2
