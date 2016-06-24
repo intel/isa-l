@@ -70,6 +70,15 @@ global %1
 %define	ytmp0		ymm0
 %define	ytmp1		ymm1
 
+%if(ARCH == 01)
+%define	vtmp0	xtmp0
+%define	vtmp1	xtmp1
+%define	V_LENGTH	16
+%else
+%define	vtmp0	ytmp0
+%define	vtmp1	ytmp1
+%define	V_LENGTH	32
+%endif
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -162,10 +171,12 @@ skip1:
 	lea	rfc_lookup, [rfc1951_lookup_table]
 
 	;; Init hash_table
-	mov	rcx, (HASH_SIZE-1)
+	MOVDQU	vtmp0, [D_vector]
+	mov	rcx, (HASH_SIZE - V_LENGTH)
 init_hash_table:
-	mov	word [histogram + _hash_offset + 2*rcx], -(D+1)
-	sub	rcx, 1
+	MOVDQU	[histogram + _hash_offset + 2 * rcx], vtmp0
+	MOVDQU	[histogram + _hash_offset + 2 * (rcx + V_LENGTH / 2)], vtmp0
+	sub	rcx, V_LENGTH
 	jge	init_hash_table
 
 	sub	file_length, LA_STATELESS
@@ -471,6 +482,8 @@ compare_loop2:
 	jmp	len_dist_lit_huffman
 
 section .data
-	align 4
-const_D:	dq	D
-const_30:	dq	30
+	align 32
+D_vector:	dw	-(D + 1), -(D + 1), -(D + 1), -(D + 1)
+		dw	-(D + 1), -(D + 1), -(D + 1), -(D + 1)
+		dw	-(D + 1), -(D + 1), -(D + 1), -(D + 1)
+		dw	-(D + 1), -(D + 1), -(D + 1), -(D + 1)
