@@ -27,6 +27,8 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+%include "reg_sizes.asm"
+
 ;; START_FIELDS
 %macro START_FIELDS 0
 %assign _FIELD_OFFSET 0

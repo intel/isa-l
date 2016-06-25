@@ -28,6 +28,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %include "options.asm"
+%include "reg_sizes.asm"
 %ifndef UTILS_ASM
 %define UTILS_ASM
 ; compare macro
