@@ -47,7 +47,7 @@ int test(uint8_t * compressed_stream, uint64_t * compressed_length,
 	int ret;
 	ret =
 	    compress2(compressed_stream, compressed_length, uncompressed_stream,
-		      uncompressed_length, 9);
+		      uncompressed_length, 6);
 	if (ret) {
 		printf("Failed compressing input with exit code %d", ret);
 		return ret;

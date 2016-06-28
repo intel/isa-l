@@ -10,7 +10,7 @@ default rel
 %define INVALID_NON_COMPRESSED_BLOCK_LENGTH 5
 %define INVALID_LOOK_BACK_DISTANCE 6
 
-%define DECODE_LOOKUP_SIZE 10
+%define DECODE_LOOKUP_SIZE 12
 
 %if DECODE_LOOKUP_SIZE > 15
 %undef DECODE_LOOKUP_SIZE
@@ -37,19 +37,18 @@ extern rfc1951_lookup_table
 ;; rax
 %define	tmp3		rax
 %define	look_back_dist	rax
-%define	next_bits2	rax
 
 ;; rcx
 ;; rdx	arg3
-%define	next_sym	rdx
-%define	tmp4		rdx
+%define	next_sym2	rdx
+%define copy_start	rdx
 
 ;; rdi	arg1
 %define	tmp1		rdi
+%define look_back_dist2 rdi
 
 ;; rsi	arg2
 %define	tmp2		rsi
-%define copy_start	rsi
 %define	next_bits	rsi
 
 ;; rbx ; Saved
@@ -77,7 +76,7 @@ extern rfc1951_lookup_table
 %define	end_out		r13
 
 ;; r14 ; Saved
-%define	start_out	r14
+%define	next_sym	r14
 
 ;; r15 ; Saved
 %define rfc_lookup	r15
@@ -154,17 +153,14 @@ extern rfc1951_lookup_table
 
 ;; Decode next symbol
 ;; Clobber rcx
-%macro decode_next		8
+%macro decode_next		7
 %define	%%state			%1 ; State structure associated with compressed stream
 %define	%%state_offset		%2 ; Type of huff code, should be either LIT or DIST
 %define %%read_in		%3 ; Bits read in from compressed stream
 %define %%read_in_length	%4 ; Number of valid bits in read_in
 %define %%next_sym		%5 ; Returned symobl
-%define %%tmp1			%6 ; Tmp registers
-%define %%tmp2			%7
-%define %%next_bits		%7
-%define %%tmp3			%8
-%define	%%next_bits2		%8
+%define %%next_bits		%6
+%define	%%next_bits2		%7
 
 	;; Lookup possible next symbol
 	mov	%%next_bits, %%read_in
@@ -184,9 +180,63 @@ extern rfc1951_lookup_table
 	mov	%%next_bits2, %%read_in
 
 	;; Extract the 15-DECODE_LOOKUP_SIZE bits beyond the first DECODE_LOOKUP_SIZE bits.
+%ifdef USE_HSWNI
+	and	rcx, 0x1F
+	bzhi	%%next_bits2, %%next_bits2, rcx
+%else
 	neg	rcx
-	SHLX	%%next_bits2, %%next_bits2, rcx
-	SHRX	%%next_bits2, %%next_bits2, rcx
+	shl	%%next_bits2, cl
+	shr	%%next_bits2, cl
+%endif
+	shr	%%next_bits2, DECODE_LOOKUP_SIZE
+
+	add	%%next_bits2, %%next_sym
+
+	;; Lookup actual next symbol
+	movzx	%%next_sym, word [%%state + %%state_offset + 2 * %%next_bits2 + 2 * ((1 << DECODE_LOOKUP_SIZE) - 0x8000)]
+
+	;; Save length associated with symbol
+	mov	rcx, %%next_sym
+	shr	rcx, 9
+	and	%%next_sym, 0x1FF
+%%end:
+	;; Updated read_in to reflect the bits which were decoded
+	sub	%%read_in_length, rcx
+	SHRX	%%read_in, %%read_in, rcx
+%endm
+
+
+;; Decode next symbol
+;; Clobber rcx
+%macro decode_next2		6
+%define	%%state			%1 ; State structure associated with compressed stream
+%define	%%state_offset		%2 ; Type of huff code, should be either LIT or DIST
+%define %%read_in		%3 ; Bits read in from compressed stream
+%define %%read_in_length	%4 ; Number of valid bits in read_in
+%define %%next_sym		%5 ; Returned symobl
+%define	%%next_bits2		%6
+
+	;; Save length associated with symbol
+	mov	rcx, %%next_sym
+	shr	rcx, 9
+
+	;; Check if symbol or hint was looked up
+	and	%%next_sym, 0x81FF
+	cmp	%%next_sym, 0x8000
+	jl	%%end
+
+
+	;; Extract the 15-DECODE_LOOKUP_SIZE bits beyond the first DECODE_LOOKUP_SIZE bits.
+%ifdef USE_HSWNI
+	and	rcx, 0x1F
+	bzhi	%%next_bits2, %%read_in, rcx
+%else
+	;; Decode next_sym using hint
+	mov	%%next_bits2, %%read_in
+	neg	rcx
+	shl	%%next_bits2, cl
+	shr	%%next_bits2, cl
+%endif
 	shr	%%next_bits2, DECODE_LOOKUP_SIZE
 
 	add	%%next_bits2, %%next_sym
@@ -204,7 +254,6 @@ extern rfc1951_lookup_table
 	sub	%%read_in_length, rcx
 %endm
 
-
 global decode_huffman_code_block_stateless_ %+ ARCH
 decode_huffman_code_block_stateless_ %+ ARCH %+ :
 
@@ -220,7 +269,6 @@ decode_huffman_code_block_stateless_ %+ ARCH %+ :
 
 	mov	read_in,[state + _in_buffer_read_in]
 	mov	read_in_length %+ d, dword [state + _in_buffer_read_in_length]
-	mov	start_out, [state + _out_buffer_start_out]
 	mov	next_out, [state + _out_buffer_next_out]
 	mov	end_out %+ d, dword [state + _out_buffer_avail_out]
 	add	end_out, next_out
@@ -236,6 +284,10 @@ decode_huffman_code_block_stateless_ %+ ARCH %+ :
 
 	inflate_in_load	next_in, end_in, read_in, read_in_length, tmp1, tmp2
 
+	mov	tmp3, read_in
+	and	tmp3, (1 << DECODE_LOOKUP_SIZE) - 1
+	movzx	next_sym, word [state + _lit_huff_code + 2 * tmp3]
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Main Loop
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -247,25 +299,32 @@ loop_block:
 	jg	end_loop_block_pre
 
 	;; Decode next symbol and reload the read_in buffer
-	decode_next	state, _lit_huff_code, read_in, read_in_length, next_sym, tmp1, tmp2, tmp3
+	decode_next2	state, _lit_huff_code, read_in, read_in_length, next_sym, tmp1
+
+	mov	next_sym2, next_sym
+
+	mov	tmp3, read_in
+	and	tmp3, (1 << DECODE_LOOKUP_SIZE) - 1
+	movzx	next_sym, word [state + _lit_huff_code + 2 * tmp3]
+
 	inflate_in_load	next_in, end_in, read_in, read_in_length, tmp1, tmp2
 
-	;; Specutively write next_sym if it is a literal
-	mov	[next_out], next_sym
-	add	next_out, 1
-
-	;; Specutively load the length extra bits if next_sym is a length
+	;; Specutively load the length extra bits if next_sym2 is a length
 	mov	next_bits, read_in
 
-	movzx	repeat_length, word [rfc_lookup + _len_start + 2 * (next_sym - 257)]
-	movzx	rcx, byte [rfc_lookup + _len_extra_bit_count + next_sym - 257]
+	movzx	repeat_length, word [rfc_lookup + _len_start + 2 * (next_sym2 - 257)]
+	movzx	rcx, byte [rfc_lookup + _len_extra_bit_count + next_sym2 - 257]
+
+	;; Specutively write next_sym2 if it is a literal
+	mov	[next_out], next_sym2
+	add	next_out, 1
 
 	;; Specutively calculate the repeat length
 	BZHI	next_bits, next_bits, rcx, tmp1
 	add	repeat_length, next_bits
 
-	;; Check if next_sym is a literal, length, or end of block symbol
-	cmp	next_sym, 256
+	;; Check if next_sym2 is a literal, length, or end of block symbol
+	cmp	next_sym2, 256
 	jl	loop_block
 	je	end_symbol_pre
 
@@ -275,45 +334,50 @@ decode_len_dist:
 	sub	read_in_length, rcx
 
 	;; Decode distance code
-	decode_next state, _dist_huff_code, read_in, read_in_length, next_sym, tmp1, tmp2, tmp3
+	decode_next state, _dist_huff_code, read_in, read_in_length, next_sym, tmp1, tmp2
 
 	;; Load distance code extra bits
 	mov	next_bits, read_in
 
-	mov	look_back_dist %+ d, [rfc_lookup + _dist_start + 4 * next_sym]
+	mov	look_back_dist2 %+ d, [rfc_lookup + _dist_start + 4 * next_sym]
 	movzx	rcx, byte [rfc_lookup + _dist_extra_bit_count + next_sym]
 
 	;; Determine next_out after the copy is finished
-	lea	next_out, [next_out + repeat_length - 1]
+	add	next_out, repeat_length
+	sub	next_out, 1
 
 	;; Calculate the look back distance
-	BZHI	next_bits, next_bits, rcx, tmp1
+	BZHI	next_bits, next_bits, rcx, tmp3
 	SHRX	read_in, read_in, rcx
 	sub	read_in_length, rcx
-	add	look_back_dist, next_bits
+	add	look_back_dist2, next_bits
 
 	mov	copy_start, next_out
 	sub	copy_start, repeat_length
-	sub	copy_start, look_back_dist
+	sub	copy_start, look_back_dist2
 
-	;; Check if a valid look back distances was decoded
-	cmp	copy_start, start_out
+	;; ;; Check if a valid look back distances was decoded
+	cmp	copy_start, [state + _out_buffer_start_out]
 	jl	invalid_look_back_distance
 	vmovdqu	xmm1, [copy_start]
 
-	;; Set tmp4 to be the minimum of COPY_SIZE and repeat_length
+	;; Set tmp2 to be the minimum of COPY_SIZE and repeat_length
 	;; This is to decrease use of small_byte_copy branch
-	mov	tmp4, COPY_SIZE
-	cmp	tmp4, repeat_length
-	cmovg	tmp4, repeat_length
+	mov	tmp2, COPY_SIZE
+	cmp	tmp2, repeat_length
+	cmovg	tmp2, repeat_length
+
+	mov	tmp3, read_in
+	and	tmp3, (1 << DECODE_LOOKUP_SIZE) - 1
+	movzx	next_sym, word [state + _lit_huff_code + 2 * tmp3]
 
 	;; Check for overlapping memory in the copy
-	cmp	look_back_dist, tmp4
+	cmp	look_back_dist2, tmp2
 	jl	small_byte_copy_pre
 
 large_byte_copy:
 	;; Copy length distance pair when memory overlap is not an issue
-	vmovdqu [copy_start + look_back_dist], xmm1
+	vmovdqu [copy_start + look_back_dist2], xmm1
 
 	sub	repeat_length, COPY_SIZE
 	jle	loop_block
@@ -324,16 +388,16 @@ large_byte_copy:
 
 small_byte_copy_pre:
 	;; Copy length distance pair when source and destination overlap
-	add	repeat_length, look_back_dist
+	add	repeat_length, look_back_dist2
 small_byte_copy:
-	vmovdqu [copy_start + look_back_dist], xmm1
+	vmovdqu [copy_start + look_back_dist2], xmm1
 
-	shl	look_back_dist, 1
+	shl	look_back_dist2, 1
 	vmovdqu	xmm1, [copy_start]
-	cmp	look_back_dist, COPY_SIZE
+	cmp	look_back_dist2, COPY_SIZE
 	jl	small_byte_copy
 
-	sub	repeat_length, look_back_dist
+	sub	repeat_length, look_back_dist2
 	jge	large_byte_copy
 	jmp	loop_block
 
@@ -347,7 +411,7 @@ end_loop_block_pre:
 end_loop_block:
 	;; Load read in buffer and decode next lit/len symbol
 	inflate_in_small_load	next_in, end_in, read_in, read_in_length, tmp1, tmp2
-	decode_next state, _lit_huff_code, read_in, read_in_length, next_sym, tmp1, tmp2, tmp3
+	decode_next state, _lit_huff_code, read_in, read_in_length, next_sym, tmp1, tmp2
 
 	;; Check that enough input was available to decode symbol
 	cmp	read_in_length, 0
@@ -374,7 +438,7 @@ decode_len_dist_2:
 	sub	read_in_length, rcx
 
 	;; Decode distance code
-	decode_next state, _dist_huff_code, read_in, read_in_length, next_sym, tmp1, tmp2, tmp3
+	decode_next state, _dist_huff_code, read_in, read_in_length, next_sym, tmp1, tmp2
 
 	;; Load distance code extra bits
 	mov	next_bits, read_in
@@ -401,7 +465,7 @@ decode_len_dist_2:
 	jg	out_buffer_overflow
 
 	;; Check if a valid look back distance was decoded
-	cmp	rsi, start_out
+	cmp	rsi, [state + _out_buffer_start_out]
 	jl	invalid_look_back_distance
 
 	rep	movsb
@@ -444,7 +508,7 @@ end:
 	mov	[state + _out_buffer_next_out], next_out
 	sub	end_out, next_out
 	mov	dword [state + _out_buffer_avail_out], end_out %+ d
-	sub	next_out, start_out
+	sub	next_out, [state + _out_buffer_start_out]
 	mov	[state + _out_buffer_total_out], next_out %+ d
 	mov	[state + _in_buffer_next_in], next_in
 	sub	end_in, next_in
