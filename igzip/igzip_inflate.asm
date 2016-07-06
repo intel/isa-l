@@ -17,11 +17,7 @@ default rel
 %define DECODE_LOOKUP_SIZE 15
 %endif
 
-%if DECODE_LOOKUP_SIZE > 7
-%define MAX_LONG_CODE (((2 << 8) + 1) * (2 << (15 - DECODE_LOOKUP_SIZE)) + 32)
-%else
-%define MAX_LONG_CODE (2 << (15 - DECODE_LOOKUP_SIZE)) + (2 << (8 + DECODE_LOOKUP_SIZE)) + 32
-%endif
+%define MAX_LONG_CODE (288 + (1 << (15 - DECODE_LOOKUP_SIZE)))
 
 %define COPY_SIZE 16
 %define	COPY_LEN_MAX 258
