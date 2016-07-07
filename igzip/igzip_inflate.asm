@@ -81,6 +81,9 @@ extern rfc1951_lookup_table
 ;; r15 ; Saved
 %define rfc_lookup	r15
 
+start_out_mem_offset	equ	0
+stack_size		equ	8
+
 %define	_dist_extra_bit_count	264
 %define	_dist_start		_dist_extra_bit_count + 1*32
 %define	_len_extra_bit_count	_dist_start + 4*32
@@ -264,17 +267,25 @@ decode_huffman_code_block_stateless_ %+ ARCH %+ :
 	push	r14
 	push	r15
 
+	sub	rsp, stack_size
+
 	mov	state, rdi
 	lea	rfc_lookup, [rfc1951_lookup_table]
 
-	mov	read_in,[state + _in_buffer_read_in]
-	mov	read_in_length %+ d, dword [state + _in_buffer_read_in_length]
-	mov	next_out, [state + _out_buffer_next_out]
-	mov	end_out %+ d, dword [state + _out_buffer_avail_out]
+	mov	read_in,[state + _read_in]
+	mov	read_in_length %+ d, dword [state + _read_in_length]
+	mov	next_out, [state + _next_out]
+	mov	end_out %+ d, dword [state + _avail_out]
 	add	end_out, next_out
-	mov	next_in, [state + _in_buffer_next_in]
-	mov	end_in %+ d, dword [state + _in_buffer_avail_in]
+	mov	next_in, [state + _next_in]
+	mov	end_in %+ d, dword [state + _avail_in]
 	add	end_in, next_in
+
+	mov	tmp3 %+ d, dword [state + _total_out]
+	sub	tmp3, next_out
+	neg	tmp3
+
+	mov	[rsp + start_out_mem_offset], tmp3
 
 	sub	end_out, OUT_BUFFER_SLOP
 	sub	end_in, IN_BUFFER_SLOP
@@ -386,7 +397,7 @@ decode_len_dist:
 	sub	copy_start, look_back_dist2
 
 	;; ;; Check if a valid look back distances was decoded
-	cmp	copy_start, [state + _out_buffer_start_out]
+	cmp	copy_start, [rsp + start_out_mem_offset]
 	jl	invalid_look_back_distance
 	vmovdqu	xmm1, [copy_start]
 
@@ -490,7 +501,7 @@ decode_len_dist_2:
 	jg	out_buffer_overflow
 
 	;; Check if a valid look back distance was decoded
-	cmp	rsi, [state + _out_buffer_start_out]
+	cmp	rsi, [rsp + start_out_mem_offset]
 	jl	invalid_look_back_distance
 
 	rep	movsb
@@ -527,17 +538,18 @@ end_symbol:
 	xor	rax, rax
 end:
 	;; Save current buffer states
-	mov	[state + _in_buffer_read_in], read_in
-	mov	[state + _in_buffer_read_in_length], read_in_length %+ d
-	mov	[state + _out_buffer_next_out], next_out
+	mov	[state + _read_in], read_in
+	mov	[state + _read_in_length], read_in_length %+ d
+	mov	[state + _next_out], next_out
 	sub	end_out, next_out
-	mov	dword [state + _out_buffer_avail_out], end_out %+ d
-	sub	next_out, [state + _out_buffer_start_out]
-	mov	[state + _out_buffer_total_out], next_out %+ d
-	mov	[state + _in_buffer_next_in], next_in
+	mov	dword [state + _avail_out], end_out %+ d
+	sub	next_out, [rsp + start_out_mem_offset]
+	mov	[state + _total_out], next_out %+ d
+	mov	[state + _next_in], next_in
 	sub	end_in, next_in
-	mov	[state + _in_buffer_avail_in], end_in %+ d
+	mov	[state + _avail_in], end_in %+ d
 
+	add	rsp, stack_size
 	pop	r15
 	pop	r14
 	pop	r13

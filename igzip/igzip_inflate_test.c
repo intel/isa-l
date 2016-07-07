@@ -33,8 +33,6 @@
 #include "inflate.h"
 #include "huff_codes.h"
 
-#define OUT_BUFFER_SLOP 16
-
 /*Don't use file larger memory can support because compression and decompression
  * are done in a stateless manner. */
 #define MAX_INPUT_FILE_SIZE 2L*1024L*1024L*1024L
@@ -90,9 +88,9 @@ int test(uint8_t * compressed_stream, uint64_t * compressed_length,
 		break;
 	}
 
-	if (state.out_buffer.total_out != uncompressed_length) {
+	if (state.total_out != uncompressed_length) {
 		printf("incorrect amount of data was decompressed from compressed data\n");
-		printf("%d decompressed of %d compressed", state.out_buffer.total_out,
+		printf("%d decompressed of %d compressed", state.total_out,
 		       uncompressed_length);
 		return -1;
 	}
@@ -164,7 +162,7 @@ int main(int argc, char **argv)
 		}
 
 		uncompressed_length = fread(uncompressed_stream, 1, file_length, file);
-		uncompressed_test_stream_length = uncompressed_length + OUT_BUFFER_SLOP;
+		uncompressed_test_stream_length = uncompressed_length;
 
 		ret =
 		    test(compressed_stream, &compressed_length, uncompressed_stream,

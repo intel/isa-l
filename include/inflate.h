@@ -13,27 +13,11 @@
 
 #define DECODE_LOOKUP_SIZE 12
 
-#if DECODE_LOOKUP_SIZE > 15
+#define DEFLATE_CODE_MAX_LENGTH 15
+#if DECODE_LOOKUP_SIZE > DEFLATE_CODE_MAX_LENGTH
 # undef DECODE_LOOKUP_SIZE
-# define DECODE_LOOKUP_SIZE 15
+# define DECODE_LOOKUP_SIZE DEFLATE_CODE_MAX_LENGTH
 #endif
-
-/* Buffer used to manage decompressed output */
-struct inflate_out_buffer{
-	uint8_t *start_out;
-	uint8_t *next_out;
-	uint32_t avail_out;
-	uint32_t total_out;
-};
-
-/* Buffer used to manager compressed input */
-struct inflate_in_buffer{
-	uint8_t *start;
-	uint8_t *next_in;
-	uint32_t avail_in;
-	uint64_t read_in;
-	int32_t read_in_length;
-};
 
 /*
  * Data structure used to store a Huffman code for fast lookup. It works by
@@ -80,6 +64,7 @@ struct inflate_in_buffer{
  * small_lookup_code is 9 bits long because the increasing relationship between
  * code length and code value forces the maximum offset to be less than 288.
  */
+
 struct inflate_huff_code{
 	uint16_t small_code_lookup[ 1 << (DECODE_LOOKUP_SIZE)];
 	uint16_t long_code_lookup[288 + (1 << (15 - DECODE_LOOKUP_SIZE))];
@@ -87,8 +72,13 @@ struct inflate_huff_code{
 
 /* Structure contained current state of decompression of data */
 struct inflate_state {
-	struct inflate_out_buffer out_buffer;
-	struct inflate_in_buffer in_buffer;
+	uint8_t *next_out;
+	uint32_t avail_out;
+	uint32_t total_out;
+	uint8_t *next_in;
+	uint64_t read_in;
+	uint32_t avail_in;
+	int32_t read_in_length;
 	struct inflate_huff_code lit_huff_code;
 	struct inflate_huff_code dist_huff_code;
 	uint8_t new_block;

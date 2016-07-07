@@ -311,11 +311,11 @@ uint32_t check_gzip_trl(struct inflate_state * gstream)
 	uint8_t *index = NULL;
 	uint32_t crc, ret = 0;
 
-	index = gstream->out_buffer.next_out - gstream->out_buffer.total_out;
-	crc = find_crc(index, gstream->out_buffer.total_out);
+	index = gstream->next_out - gstream->total_out;
+	crc = find_crc(index, gstream->total_out);
 
-	if (gstream->out_buffer.total_out != *(uint32_t *) (gstream->in_buffer.next_in + 4) ||
-	    crc != *(uint32_t *) gstream->in_buffer.next_in)
+	if (gstream->total_out != *(uint32_t *) (gstream->next_in + 4) ||
+	    crc != *(uint32_t *) gstream->next_in)
 		ret = INCORRECT_GZIP_TRAILER;
 
 	return ret;
@@ -371,8 +371,8 @@ int inflate_check(uint8_t * z_buf, int z_size, uint8_t * in_buf, int in_size)
 
 #ifndef DEFLATE
 	gzip_trl_result = check_gzip_trl(&gstream);
-	gstream.in_buffer.avail_in -= gzip_trl_bytes;
-	gstream.in_buffer.next_in += gzip_trl_bytes;
+	gstream.avail_in -= gzip_trl_bytes;
+	gstream.next_in += gzip_trl_bytes;
 #endif
 
 	if (test_buf != NULL)
@@ -404,10 +404,10 @@ int inflate_check(uint8_t * z_buf, int z_size, uint8_t * in_buf, int in_size)
 		break;
 	}
 
-	if (gstream.in_buffer.avail_in != 0)
+	if (gstream.avail_in != 0)
 		return INFLATE_LEFTOVER_INPUT;
 
-	if (gstream.out_buffer.total_out != in_size)
+	if (gstream.total_out != in_size)
 		return INFLATE_INCORRECT_OUTPUT_SIZE;
 
 	if (mem_result)

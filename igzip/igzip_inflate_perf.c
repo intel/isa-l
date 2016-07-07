@@ -218,7 +218,7 @@ int main(int argc, char *argv[])
 	}
 	perf_stop(&stop);
 	printf("  file %s - in_size=%d out_size=%d iter=%d\n", argv[1],
-	       infile_size, state.out_buffer.total_out, i);
+	       infile_size, state.total_out, i);
 
 	printf("igzip_file: ");
 	perf_print(stop, start, (long long)infile_size * i);

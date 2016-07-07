@@ -41,9 +41,9 @@
 # define RUN_MEM_SIZE 2000000000
 #endif
 
-extern uint64_t inflate_in_read_bits(struct inflate_in_buffer *, uint8_t);
+extern uint64_t inflate_in_read_bits(struct inflate_state *, uint8_t);
 extern int read_header(struct inflate_state *);
-extern uint16_t decode_next(struct inflate_in_buffer *, struct inflate_huff_code *);
+extern uint16_t decode_next(struct inflate_state *, struct inflate_huff_code *);
 
 /* Inflates and fills a histogram of lit, len, and dist codes seen in non-type 0 blocks.*/
 int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *histogram)
@@ -92,28 +92,28 @@ int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *h
 
 		if (state->btype == 0) {
 			/* If the block is uncompressed, update state data accordingly */
-			if (state->in_buffer.avail_in < 4)
+			if (state->avail_in < 4)
 				return END_OF_INPUT;
 
-			len = *(uint16_t *) state->in_buffer.next_in;
-			state->in_buffer.next_in += 2;
-			nlen = *(uint16_t *) state->in_buffer.next_in;
-			state->in_buffer.next_in += 2;
+			len = *(uint16_t *) state->next_in;
+			state->next_in += 2;
+			nlen = *(uint16_t *) state->next_in;
+			state->next_in += 2;
 
 			/* Check if len and nlen match */
 			if (len != (~nlen & 0xffff))
 				return INVALID_NON_COMPRESSED_BLOCK_LENGTH;
 
-			if (state->in_buffer.avail_in < len)
-				len = state->in_buffer.avail_in;
+			if (state->avail_in < len)
+				len = state->avail_in;
 			else
 				state->new_block = 1;
 
-			state->out_buffer.total_out += len;
-			state->in_buffer.next_in += len;
-			state->in_buffer.avail_in -= len + 4;
+			state->total_out += len;
+			state->next_in += len;
+			state->avail_in -= len + 4;
 
-			if (state->in_buffer.avail_in == 0 && state->new_block == 0)
+			if (state->avail_in == 0 && state->new_block == 0)
 				return END_OF_INPUT;
 
 		} else {
@@ -122,16 +122,16 @@ int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *h
 				/* While not at the end of block, decode the next
 				 * symbol */
 				next_lit =
-				    decode_next(&state->in_buffer, &state->lit_huff_code);
+				    decode_next(state, &state->lit_huff_code);
 
 				histogram->lit_len_histogram[next_lit] += 1;
 
-				if (state->in_buffer.read_in_length < 0)
+				if (state->read_in_length < 0)
 					return END_OF_INPUT;
 
 				if (next_lit < 256)
 					/* Next symbol is a literal */
-					state->out_buffer.total_out++;
+					state->total_out++;
 
 				else if (next_lit == 256)
 					/* Next symbol is end of block */
@@ -142,35 +142,35 @@ int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *h
 					   lookback distance */
 					repeat_length =
 					    len_start[next_lit - 257] +
-					    inflate_in_read_bits(&state->in_buffer,
+					    inflate_in_read_bits(state,
 								 len_extra_bit_count[next_lit -
 										     257]);
 
-					next_dist = decode_next(&state->in_buffer,
+					next_dist = decode_next(state,
 								&state->dist_huff_code);
 
 					histogram->dist_histogram[next_dist] += 1;
 
 					look_back_dist = dist_start[next_dist] +
-					    inflate_in_read_bits(&state->in_buffer,
+					    inflate_in_read_bits(state,
 								 dist_extra_bit_count
 								 [next_dist]);
 
-					if (state->in_buffer.read_in_length < 0)
+					if (state->read_in_length < 0)
 						return END_OF_INPUT;
 
-					if (look_back_dist > state->out_buffer.total_out)
+					if (look_back_dist > state->total_out)
 						return INVALID_LOOK_BACK_DISTANCE;
 
-					state->out_buffer.total_out += repeat_length;
+					state->total_out += repeat_length;
 
 				} else
 					return INVALID_SYMBOL;
 			}
 		}
 	}
-	state->in_buffer.next_in -= state->in_buffer.read_in_length / 8;
-	state->in_buffer.avail_in += state->in_buffer.read_in_length / 8;
+	state->next_in -= state->read_in_length / 8;
+	state->avail_in += state->read_in_length / 8;
 
 	return DECOMPRESSION_FINISHED;
 }
