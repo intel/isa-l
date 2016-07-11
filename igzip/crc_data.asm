@@ -1,3 +1,5 @@
+%include "reg_sizes.asm"
+
 %ifndef CRC_DATA
 
 %define CRC_DATA
