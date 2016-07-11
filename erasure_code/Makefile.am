@@ -120,6 +120,7 @@ perf_tests32 += erasure_code/gf_vect_mul_perf \
 		erasure_code/gf_3vect_dot_prod_sse_perf \
 		erasure_code/gf_4vect_dot_prod_sse_perf
 
+src_include += -I $(srcdir)/erasure_code
 extern_hdrs  += include/erasure_code.h \
 		include/gf_vect_mul.h
 

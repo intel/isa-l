@@ -6,9 +6,9 @@ noinst_HEADERS =
 pkginclude_HEADERS = include/test.h
 noinst_LTLIBRARIES =
 INCLUDE = -I $(srcdir)/include/
-AM_CFLAGS = ${my_CFLAGS} ${INCLUDE} ${D}
 
 lsrc=
+src_include=
 extern_hdrs=
 other_src=
 check_tests=
@@ -75,12 +75,13 @@ if USE_YASM
 endif
 if USE_NASM
   as_filter = ${srcdir}/tools/nasm-filter.sh
-  as_include = $(addprefix -I ${srcdir}/,$(sort $(dir $(lsrc))))
 endif
 
 CCAS = $(as_filter)
 EXTRA_DIST += tools/yasm-filter.sh tools/nasm-filter.sh
-AM_CCASFLAGS = ${yasm_args} ${INCLUDE} ${as_include} ${DEFS} ${D}
+
+AM_CFLAGS = ${my_CFLAGS} ${INCLUDE} $(src_include) ${D}
+AM_CCASFLAGS = ${yasm_args} ${INCLUDE} ${src_include} ${DEFS} ${D}
 
 .asm.s:
 	@echo "  MKTMP   " $@;

@@ -37,6 +37,7 @@ lsrc  += \
 	crc/crc_multibinary.asm \
 	crc/crc_base.c
 
+src_include += -I $(srcdir)/crc
 extern_hdrs +=  include/crc.h
 
 other_src   +=  include/reg_sizes.asm include/types.h include/test.h

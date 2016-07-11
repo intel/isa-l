@@ -38,6 +38,7 @@ lsrc        += 	igzip/igzip.c igzip/hufftables_c.c \
 		igzip/igzip_stateless_base.c \
 		igzip/igzip_base.c
 
+src_include += -I $(srcdir)/igzip
 extern_hdrs +=	include/igzip_lib.h
 
 pkginclude_HEADERS += include/types.h
