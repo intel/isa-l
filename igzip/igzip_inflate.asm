@@ -221,6 +221,9 @@ extern rfc1951_lookup_table
 %define	%%next_bits2		%6
 
 	;; Save length associated with symbol
+	mov	%%next_bits2, %%read_in
+	shr	%%next_bits2, DECODE_LOOKUP_SIZE
+
 	mov	rcx, %%next_sym
 	shr	rcx, 9
 
@@ -230,22 +233,20 @@ extern rfc1951_lookup_table
 	jl	%%end
 
 	;; Extract the 15-DECODE_LOOKUP_SIZE bits beyond the first DECODE_LOOKUP_SIZE bits.
+	lea	%%next_sym, [%%state + 2 * %%next_sym]
+	sub	rcx, 0x40 + DECODE_LOOKUP_SIZE
+
 %ifdef USE_HSWNI
-	and	rcx, 0x1F
-	bzhi	%%next_bits2, %%read_in, rcx
+	bzhi	%%next_bits2, %%next_bits2, rcx
 %else
 	;; Decode next_sym using hint
-	mov	%%next_bits2, %%read_in
 	neg	rcx
 	shl	%%next_bits2, cl
 	shr	%%next_bits2, cl
 %endif
-	shr	%%next_bits2, DECODE_LOOKUP_SIZE
-
-	add	%%next_bits2, %%next_sym
 
 	;; Lookup actual next symbol
-	movzx	%%next_sym, word [%%state + %%state_offset + 2 * %%next_bits2 + 2 * ((1 << DECODE_LOOKUP_SIZE) - 0x8000)]
+	movzx	%%next_sym, word [%%next_sym + %%state_offset + 2 * %%next_bits2 + 2 * ((1 << DECODE_LOOKUP_SIZE) - 0x8000)]
 
 	;; Save length associated with symbol
 	mov	rcx, %%next_sym
@@ -312,7 +313,8 @@ loop_block:
 	and	tmp3, (1 << DECODE_LOOKUP_SIZE) - 1
 
 	;; Start reloading read_in
-	SHLX	tmp1, [next_in], read_in_length
+	mov	tmp1, [next_in]
+	SHLX	tmp1, tmp1, read_in_length
 	or	read_in, tmp1
 
 	;; Specutively load data associated with length symbol
