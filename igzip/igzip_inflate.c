@@ -66,7 +66,6 @@ uint16_t inline bit_reverse2(uint16_t bits, uint8_t length)
 	return bits >> (16 - length);
 }
 
-
 /* Load data from the in_stream into a buffer to allow for handling unaligned data*/
 void inline inflate_in_load(struct inflate_state *state, int min_required)
 {
@@ -117,7 +116,6 @@ uint64_t inline inflate_in_read_bits(struct inflate_state *state, uint8_t bit_co
 	return ret;
 }
 
-
 /* Sets result to the inflate_huff_code corresponding to the huffcode defined by
  * the lengths in huff_code_table,where count is a histogram of the appearance
  * of each code length */
@@ -125,7 +123,7 @@ void inline make_inflate_huff_code(struct inflate_huff_code *result,
 				   struct huff_code *huff_code_table, int table_length,
 				   uint16_t * count)
 {
-	int i, j;
+	int i, j, k;
 	uint16_t code = 0;
 	uint16_t next_code[MAX_HUFF_TREE_DEPTH + 1];
 	uint16_t long_code_list[LIT_LEN];
@@ -138,43 +136,83 @@ void inline make_inflate_huff_code(struct inflate_huff_code *result,
 	uint32_t code_length;
 	uint16_t long_bits;
 	uint16_t min_increment;
+	uint32_t code_list[LIT_LEN];
+	uint32_t code_list_len;
+	uint32_t count_total[17];
+	uint32_t insert_index;
+	uint32_t last_length;
+	uint32_t copy_size;
+	uint16_t *small_code_lookup = result->small_code_lookup;
+
+	count_total[0] = 0;
+	count_total[1] = 0;
+	for (i = 2; i < 17; i++)
+		count_total[i] = count_total[i - 1] + count[i - 1];
+
+	code_list_len = count_total[16];
+	for (i = 0; i < table_length; i++) {
+		code_length = huff_code_table[i].length;
+		if (code_length > 0) {
+			insert_index = count_total[code_length];
+			code_list[insert_index] = i;
+			count_total[code_length]++;
+		}
+	}
 
 	next_code[0] = code;
-
 	for (i = 1; i < MAX_HUFF_TREE_DEPTH + 1; i++)
 		next_code[i] = (next_code[i - 1] + count[i - 1]) << 1;
 
-	for (i = 0; i < table_length; i++) {
-		if (huff_code_table[i].length != 0) {
-			/* Determine the code for symbol i */
-			huff_code_table[i].code =
-			    bit_reverse2(next_code[huff_code_table[i].length],
-					huff_code_table[i].length);
+	last_length = huff_code_table[code_list[0]].length;
+	copy_size = (1 << last_length);
 
-			next_code[huff_code_table[i].length] += 1;
+	for (k = 0; k < code_list_len; k++) {
+		i = code_list[k];
+		if (huff_code_table[i].length > DECODE_LOOKUP_SIZE)
+			break;
 
-			if (huff_code_table[i].length <= DECODE_LOOKUP_SIZE) {
-				/* Set lookup table to return the current symbol
-				 * concatenated with the code length when the
-				 * first DECODE_LENGTH bits of the address are
-				 * the same as the code for the current
-				 * symbol. The first 9 bits are the code, bits
-				 * 14:10 are the code length, bit 15 is a flag
-				 * representing this is a symbol*/
-				for (j = 0; j < (1 << (DECODE_LOOKUP_SIZE -
-						       huff_code_table[i].length)); j++)
-
-					result->small_code_lookup[(j <<
-								   huff_code_table[i].length) +
-								  huff_code_table[i].code]
-					    = i | (huff_code_table[i].length) << 9;
-
-			} else {
-				/* Store the element in a list of elements with long codes. */
-				long_code_list[long_code_length] = i;
-				long_code_length++;
-			}
+		while (huff_code_table[i].length > last_length) {
+			memcpy(small_code_lookup + copy_size, small_code_lookup,
+			       sizeof(*small_code_lookup) * copy_size);
+			last_length++;
+			copy_size <<= 1;
 		}
+
+		huff_code_table[i].code =
+		    bit_reverse2(next_code[huff_code_table[i].length],
+				 huff_code_table[i].length);
+
+		next_code[huff_code_table[i].length] += 1;
+
+		/* Set lookup table to return the current symbol concatenated
+		 * with the code length when the first DECODE_LENGTH bits of the
+		 * address are the same as the code for the current symbol. The
+		 * first 9 bits are the code, bits 14:10 are the code length,
+		 * bit 15 is a flag representing this is a symbol*/
+		small_code_lookup[huff_code_table[i].code] =
+		    i | (huff_code_table[i].length) << 9;
+
+	}
+
+	while (DECODE_LOOKUP_SIZE > last_length) {
+		memcpy(small_code_lookup + copy_size, small_code_lookup,
+		       sizeof(*small_code_lookup) * copy_size);
+		last_length++;
+		copy_size <<= 1;
+	}
+
+	while (k < code_list_len) {
+		i = code_list[k];
+		huff_code_table[i].code =
+		    bit_reverse2(next_code[huff_code_table[i].length],
+				 huff_code_table[i].length);
+
+		next_code[huff_code_table[i].length] += 1;
+
+		/* Store the element in a list of elements with long codes. */
+		long_code_list[long_code_length] = i;
+		long_code_length++;
+		k++;
 	}
 
 	for (i = 0; i < long_code_length; i++) {
@@ -266,9 +304,8 @@ int inline setup_static_header(struct inflate_state *state)
 
 /* Decodes the next symbol symbol in in_buffer using the huff code defined by
  * huff_code */
-uint16_t decode_next(struct inflate_state *state, struct inflate_huff_code *huff_code);
-uint16_t inline decode_next(struct inflate_state *state,
-			    struct inflate_huff_code *huff_code)
+uint16_t decode_next(struct inflate_state * state, struct inflate_huff_code * huff_code);
+uint16_t inline decode_next(struct inflate_state *state, struct inflate_huff_code *huff_code)
 {
 	uint16_t next_bits;
 	uint16_t next_sym;
@@ -348,8 +385,7 @@ int inline setup_dynamic_header(struct inflate_state *state)
 
 	/* Create the code huffman code for decoding the lit/len and dist huffman codes */
 	for (i = 0; i < hclen + 4; i++) {
-		code_huff[code_length_code_order[i]].length =
-		    inflate_in_read_bits(state, 3);
+		code_huff[code_length_code_order[i]].length = inflate_in_read_bits(state, 3);
 
 		code_count[code_huff[code_length_code_order[i]].length] += 1;
 	}
@@ -577,8 +613,8 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state)
 			repeat_length =
 			    rfc_lookup_table.len_start[next_lit - 257] +
 			    inflate_in_read_bits(state,
-						 rfc_lookup_table.
-						 len_extra_bit_count[next_lit - 257]);
+						 rfc_lookup_table.len_extra_bit_count[next_lit
+										      - 257]);
 
 			if (state->avail_out < repeat_length)
 				return OUT_BUFFER_OVERFLOW;
@@ -587,8 +623,8 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state)
 
 			look_back_dist = rfc_lookup_table.dist_start[next_dist] +
 			    inflate_in_read_bits(state,
-						 rfc_lookup_table.
-						 dist_extra_bit_count[next_dist]);
+						 rfc_lookup_table.dist_extra_bit_count
+						 [next_dist]);
 
 			if (state->read_in_length < 0)
 				return END_OF_INPUT;
@@ -598,11 +634,9 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state)
 
 			if (look_back_dist > repeat_length)
 				memcpy(state->next_out,
-				       state->next_out -
-				       look_back_dist, repeat_length);
+				       state->next_out - look_back_dist, repeat_length);
 			else
-				byte_copy(state->next_out,
-					  look_back_dist, repeat_length);
+				byte_copy(state->next_out, look_back_dist, repeat_length);
 
 			state->next_out += repeat_length;
 			state->avail_out -= repeat_length;
@@ -616,9 +650,8 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state)
 }
 
 void isal_inflate_init(struct inflate_state *state, uint8_t * in_stream, uint32_t in_size,
-			uint8_t * out_stream, uint64_t out_size)
+		       uint8_t * out_stream, uint64_t out_size)
 {
-
 
 	state->read_in = 0;
 	state->read_in_length = 0;
@@ -658,4 +691,3 @@ int isal_inflate_stateless(struct inflate_state *state)
 
 	return DECOMPRESSION_FINISHED;
 }
-
