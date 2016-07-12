@@ -45,8 +45,8 @@ lsrc        += 	igzip/igzip.c igzip/hufftables_c.c \
 		igzip/igzip_base.c \
 		igzip/igzip_update_histogram_01.asm \
 		igzip/igzip_update_histogram_04.asm \
-		igzip/igzip_inflate_01.asm \
-		igzip/igzip_inflate_04.asm \
+		igzip/igzip_decode_block_stateless_01.asm \
+		igzip/igzip_decode_block_stateless_04.asm \
 		igzip/igzip_inflate_multibinary.asm
 
 src_include += -I $(srcdir)/igzip
@@ -77,11 +77,10 @@ other_src   += 	igzip/bitbuf2.asm igzip/data_struct2.asm \
 		include/multibinary.asm \
 		include/test.h \
 		igzip/huffman.h \
-		igzip/igzip_inflate.asm
+		igzip/igzip_decode_block_stateless.asm
 
 examples    += 	igzip/igzip_example igzip/igzip_sync_flush_example
 
-igzip_rand_test:
 igzip_igzip_rand_test_LDADD = libisal.la
 
 # Include tools to make custom Huffman tables based on sample data
@@ -102,7 +101,5 @@ igzip_igzip_inflate_perf_LDFLAGS = -lz
 igzip_inflate_test: LDLIBS += -lz
 igzip_igzip_inflate_test_LDADD = libisal.la
 igzip_igzip_inflate_test_LDFLAGS = -lz
-igzip_check:
 igzip_igzip_check_LDADD = libisal.la
-igzip_hist_perf: igzip_inflate.o
-igzip_igzip_hist_perf_LDADD = igzip/igzip_inflate.lo libisal.la
+igzip_igzip_hist_perf_LDADD = libisal.la
