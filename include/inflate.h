@@ -63,13 +63,13 @@
  */
 
 struct inflate_huff_code_large{
-	uint16_t small_code_lookup[ 1 << (DECODE_LOOKUP_SIZE_LARGE)];
+	uint16_t short_code_lookup[ 1 << (DECODE_LOOKUP_SIZE_LARGE)];
 	uint16_t long_code_lookup[288 + (1 << (15 - DECODE_LOOKUP_SIZE_LARGE))];
 };
 
 
 struct inflate_huff_code_small{
-	uint16_t small_code_lookup[ 1 << (DECODE_LOOKUP_SIZE_SMALL)];
+	uint16_t short_code_lookup[ 1 << (DECODE_LOOKUP_SIZE_SMALL)];
 	uint16_t long_code_lookup[32 + (1 << (15 - DECODE_LOOKUP_SIZE_SMALL))];
 };
 

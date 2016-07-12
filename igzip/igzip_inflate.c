@@ -142,7 +142,7 @@ void inline make_inflate_huff_code_large(struct inflate_huff_code_large *result,
 	uint32_t insert_index;
 	uint32_t last_length;
 	uint32_t copy_size;
-	uint16_t *small_code_lookup = result->small_code_lookup;
+	uint16_t *short_code_lookup = result->short_code_lookup;
 
 	count_total[0] = 0;
 	count_total[1] = 0;
@@ -172,8 +172,8 @@ void inline make_inflate_huff_code_large(struct inflate_huff_code_large *result,
 			break;
 
 		while (huff_code_table[i].length > last_length) {
-			memcpy(small_code_lookup + copy_size, small_code_lookup,
-			       sizeof(*small_code_lookup) * copy_size);
+			memcpy(short_code_lookup + copy_size, short_code_lookup,
+			       sizeof(*short_code_lookup) * copy_size);
 			last_length++;
 			copy_size <<= 1;
 		}
@@ -189,14 +189,14 @@ void inline make_inflate_huff_code_large(struct inflate_huff_code_large *result,
 		 * address are the same as the code for the current symbol. The
 		 * first 9 bits are the code, bits 14:10 are the code length,
 		 * bit 15 is a flag representing this is a symbol*/
-		small_code_lookup[huff_code_table[i].code] =
+		short_code_lookup[huff_code_table[i].code] =
 		    i | (huff_code_table[i].length) << 9;
 
 	}
 
 	while (DECODE_LOOKUP_SIZE_LARGE > last_length) {
-		memcpy(small_code_lookup + copy_size, small_code_lookup,
-		       sizeof(*small_code_lookup) * copy_size);
+		memcpy(short_code_lookup + copy_size, short_code_lookup,
+		       sizeof(*short_code_lookup) * copy_size);
 		last_length++;
 		copy_size <<= 1;
 	}
@@ -224,8 +224,8 @@ void inline make_inflate_huff_code_large(struct inflate_huff_code_large *result,
 
 		max_length = huff_code_table[long_code_list[i]].length;
 		first_bits =
-		    huff_code_table[long_code_list[i]].
-		    code & ((1 << DECODE_LOOKUP_SIZE_LARGE) - 1);
+		    huff_code_table[long_code_list[i]].code
+		    & ((1 << DECODE_LOOKUP_SIZE_LARGE) - 1);
 
 		temp_code_list[0] = long_code_list[i];
 		temp_code_length = 1;
@@ -243,8 +243,8 @@ void inline make_inflate_huff_code_large(struct inflate_huff_code_large *result,
 		for (j = 0; j < temp_code_length; j++) {
 			code_length = huff_code_table[temp_code_list[j]].length;
 			long_bits =
-			    huff_code_table[temp_code_list[j]].
-			    code >> DECODE_LOOKUP_SIZE_LARGE;
+			    huff_code_table[temp_code_list[j]].code >>
+			    DECODE_LOOKUP_SIZE_LARGE;
 			min_increment = 1 << (code_length - DECODE_LOOKUP_SIZE_LARGE);
 			for (; long_bits < (1 << (max_length - DECODE_LOOKUP_SIZE_LARGE));
 			     long_bits += min_increment) {
@@ -253,7 +253,7 @@ void inline make_inflate_huff_code_large(struct inflate_huff_code_large *result,
 			}
 			huff_code_table[temp_code_list[j]].code = 0xFFFF;
 		}
-		result->small_code_lookup[first_bits] =
+		result->short_code_lookup[first_bits] =
 		    long_code_lookup_length | (max_length << 9) | 0x8000;
 		long_code_lookup_length += 1 << (max_length - DECODE_LOOKUP_SIZE_LARGE);
 
@@ -283,7 +283,7 @@ void inline make_inflate_huff_code_small(struct inflate_huff_code_small *result,
 	uint32_t insert_index;
 	uint32_t last_length;
 	uint32_t copy_size;
-	uint16_t *small_code_lookup = result->small_code_lookup;
+	uint16_t *short_code_lookup = result->short_code_lookup;
 
 	count_total[0] = 0;
 	count_total[1] = 0;
@@ -313,8 +313,8 @@ void inline make_inflate_huff_code_small(struct inflate_huff_code_small *result,
 			break;
 
 		while (huff_code_table[i].length > last_length) {
-			memcpy(small_code_lookup + copy_size, small_code_lookup,
-			       sizeof(*small_code_lookup) * copy_size);
+			memcpy(short_code_lookup + copy_size, short_code_lookup,
+			       sizeof(*short_code_lookup) * copy_size);
 			last_length++;
 			copy_size <<= 1;
 		}
@@ -330,14 +330,14 @@ void inline make_inflate_huff_code_small(struct inflate_huff_code_small *result,
 		 * address are the same as the code for the current symbol. The
 		 * first 9 bits are the code, bits 14:10 are the code length,
 		 * bit 15 is a flag representing this is a symbol*/
-		small_code_lookup[huff_code_table[i].code] =
+		short_code_lookup[huff_code_table[i].code] =
 		    i | (huff_code_table[i].length) << 9;
 
 	}
 
 	while (DECODE_LOOKUP_SIZE_SMALL > last_length) {
-		memcpy(small_code_lookup + copy_size, small_code_lookup,
-		       sizeof(*small_code_lookup) * copy_size);
+		memcpy(short_code_lookup + copy_size, short_code_lookup,
+		       sizeof(*short_code_lookup) * copy_size);
 		last_length++;
 		copy_size <<= 1;
 	}
@@ -365,8 +365,8 @@ void inline make_inflate_huff_code_small(struct inflate_huff_code_small *result,
 
 		max_length = huff_code_table[long_code_list[i]].length;
 		first_bits =
-		    huff_code_table[long_code_list[i]].
-		    code & ((1 << DECODE_LOOKUP_SIZE_SMALL) - 1);
+		    huff_code_table[long_code_list[i]].code
+		    & ((1 << DECODE_LOOKUP_SIZE_SMALL) - 1);
 
 		temp_code_list[0] = long_code_list[i];
 		temp_code_length = 1;
@@ -384,8 +384,8 @@ void inline make_inflate_huff_code_small(struct inflate_huff_code_small *result,
 		for (j = 0; j < temp_code_length; j++) {
 			code_length = huff_code_table[temp_code_list[j]].length;
 			long_bits =
-			    huff_code_table[temp_code_list[j]].
-			    code >> DECODE_LOOKUP_SIZE_SMALL;
+			    huff_code_table[temp_code_list[j]].code >>
+			    DECODE_LOOKUP_SIZE_SMALL;
 			min_increment = 1 << (code_length - DECODE_LOOKUP_SIZE_SMALL);
 			for (; long_bits < (1 << (max_length - DECODE_LOOKUP_SIZE_SMALL));
 			     long_bits += min_increment) {
@@ -394,7 +394,7 @@ void inline make_inflate_huff_code_small(struct inflate_huff_code_small *result,
 			}
 			huff_code_table[temp_code_list[j]].code = 0xFFFF;
 		}
-		result->small_code_lookup[first_bits] =
+		result->short_code_lookup[first_bits] =
 		    long_code_lookup_length | (max_length << 9) | 0x8000;
 		long_code_lookup_length += 1 << (max_length - DECODE_LOOKUP_SIZE_SMALL);
 
@@ -469,7 +469,7 @@ uint16_t inline decode_next_large(struct inflate_state *state,
 	 * a symbol, it provides a hint of where the large symbols containin
 	 * this code are located. Note the hint is at largest the location the
 	 * first actual symbol in the long code list.*/
-	next_sym = huff_code->small_code_lookup[next_bits];
+	next_sym = huff_code->short_code_lookup[next_bits];
 
 	if (next_sym < 0x8000) {
 		/* Return symbol found if next_code is a complete huffman code
@@ -518,7 +518,7 @@ uint16_t inline decode_next_small(struct inflate_state *state,
 	 * a symbol, it provides a hint of where the large symbols containin
 	 * this code are located. Note the hint is at largest the location the
 	 * first actual symbol in the long code list.*/
-	next_sym = huff_code->small_code_lookup[next_bits];
+	next_sym = huff_code->short_code_lookup[next_bits];
 
 	if (next_sym < 0x8000) {
 		/* Return symbol found if next_code is a complete huffman code
