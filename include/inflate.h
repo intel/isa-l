@@ -11,13 +11,10 @@
 #define INVALID_NON_COMPRESSED_BLOCK_LENGTH 5
 #define INVALID_LOOK_BACK_DISTANCE 6
 
-#define DECODE_LOOKUP_SIZE 12
-
 #define DEFLATE_CODE_MAX_LENGTH 15
-#if DECODE_LOOKUP_SIZE > DEFLATE_CODE_MAX_LENGTH
-# undef DECODE_LOOKUP_SIZE
-# define DECODE_LOOKUP_SIZE DEFLATE_CODE_MAX_LENGTH
-#endif
+
+#define DECODE_LOOKUP_SIZE_LARGE 13
+#define DECODE_LOOKUP_SIZE_SMALL 10
 
 /*
  * Data structure used to store a Huffman code for fast lookup. It works by
@@ -65,9 +62,15 @@
  * code length and code value forces the maximum offset to be less than 288.
  */
 
-struct inflate_huff_code{
-	uint16_t small_code_lookup[ 1 << (DECODE_LOOKUP_SIZE)];
-	uint16_t long_code_lookup[288 + (1 << (15 - DECODE_LOOKUP_SIZE))];
+struct inflate_huff_code_large{
+	uint16_t small_code_lookup[ 1 << (DECODE_LOOKUP_SIZE_LARGE)];
+	uint16_t long_code_lookup[288 + (1 << (15 - DECODE_LOOKUP_SIZE_LARGE))];
+};
+
+
+struct inflate_huff_code_small{
+	uint16_t small_code_lookup[ 1 << (DECODE_LOOKUP_SIZE_SMALL)];
+	uint16_t long_code_lookup[32 + (1 << (15 - DECODE_LOOKUP_SIZE_SMALL))];
 };
 
 /* Structure contained current state of decompression of data */
@@ -79,8 +82,8 @@ struct inflate_state {
 	uint64_t read_in;
 	uint32_t avail_in;
 	int32_t read_in_length;
-	struct inflate_huff_code lit_huff_code;
-	struct inflate_huff_code dist_huff_code;
+	struct inflate_huff_code_large lit_huff_code;
+	struct inflate_huff_code_small dist_huff_code;
 	uint8_t new_block;
 	uint8_t bfinal;
 	uint8_t btype;

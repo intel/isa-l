@@ -43,7 +43,8 @@
 
 extern uint64_t inflate_in_read_bits(struct inflate_state *, uint8_t);
 extern int read_header(struct inflate_state *);
-extern uint16_t decode_next(struct inflate_state *, struct inflate_huff_code *);
+extern uint16_t decode_next_large(struct inflate_state *, struct inflate_huff_code_large *);
+extern uint16_t decode_next_small(struct inflate_state *, struct inflate_huff_code_small *);
 
 /* Inflates and fills a histogram of lit, len, and dist codes seen in non-type 0 blocks.*/
 int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *histogram)
@@ -121,8 +122,7 @@ int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *h
 			while (state->new_block == 0) {
 				/* While not at the end of block, decode the next
 				 * symbol */
-				next_lit =
-				    decode_next(state, &state->lit_huff_code);
+				next_lit = decode_next_large(state, &state->lit_huff_code);
 
 				histogram->lit_len_histogram[next_lit] += 1;
 
@@ -146,8 +146,8 @@ int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *h
 								 len_extra_bit_count[next_lit -
 										     257]);
 
-					next_dist = decode_next(state,
-								&state->dist_huff_code);
+					next_dist = decode_next_small(state,
+								      &state->dist_huff_code);
 
 					histogram->dist_histogram[next_dist] += 1;
 
