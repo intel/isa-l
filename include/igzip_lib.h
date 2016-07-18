@@ -318,6 +318,15 @@ void isal_deflate_init(struct isal_zstream *stream);
 
 
 /**
+ * @brief Initialize compression stream data structure
+ *
+ * @param stream Structure holding state information on the compression streams.
+ * @returns none
+ */
+void isal_deflate_stateless_init(struct isal_zstream *stream);
+
+
+/**
  * @brief Fast data (deflate) compression for storage applications.
  *
  * On entry to isal_deflate(), next_in points to an input buffer and avail_in
