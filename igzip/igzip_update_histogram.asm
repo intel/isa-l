@@ -491,7 +491,8 @@ compare_loop2:
 
 section .data
 	align 32
-D_vector:	dw	-(D + 1), -(D + 1), -(D + 1), -(D + 1)
-		dw	-(D + 1), -(D + 1), -(D + 1), -(D + 1)
-		dw	-(D + 1), -(D + 1), -(D + 1), -(D + 1)
-		dw	-(D + 1), -(D + 1), -(D + 1), -(D + 1)
+D_vector:
+	dw	-(D + 1) & 0xFFFF, -(D + 1) & 0xFFFF, -(D + 1) & 0xFFFF, -(D + 1) & 0xFFFF
+	dw	-(D + 1) & 0xFFFF, -(D + 1) & 0xFFFF, -(D + 1) & 0xFFFF, -(D + 1) & 0xFFFF
+	dw	-(D + 1) & 0xFFFF, -(D + 1) & 0xFFFF, -(D + 1) & 0xFFFF, -(D + 1) & 0xFFFF
+	dw	-(D + 1) & 0xFFFF, -(D + 1) & 0xFFFF, -(D + 1) & 0xFFFF, -(D + 1) & 0xFFFF
