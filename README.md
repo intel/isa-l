@@ -4,6 +4,24 @@ Intel(R) Intelligent Storage Acceleration Library
 
 [![Build Status](https://travis-ci.org/01org/isa-l.svg?branch=master)](https://travis-ci.org/01org/isa-l)
 
+ISA-L is a collection of optimized low-level functions targeting storage
+applications.  ISA-L includes:
+
+* Erasure codes - Fast block Reed-Solomon type erasure codes for any
+  encode/decode matrix in GF(2^8).
+
+* CRC - Fast implementations of cyclic redundancy check.  Three different
+  polynomials supported.
+  - iscsi, ieee, t10dif
+
+* Raid - calculate and operate on XOR and P+Q parity found in common RAID
+  implementations.
+
+* Compression - Fast deflate-compatible data compression.
+
+See [ISA-L for updates.](https://github.com/01org/isa-l)
+For crypto functions see [isa-l_crypto on github.](https://github.com/01org/isa-l_crypto)
+
 Build Prerequisites
 ===================
 
