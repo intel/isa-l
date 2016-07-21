@@ -72,6 +72,9 @@ void inline inflate_in_load(struct inflate_state *state, int min_required)
 	uint64_t temp = 0;
 	uint8_t new_bytes;
 
+	if (state->read_in_length >= 64)
+		return;
+
 	if (state->avail_in >= 8) {
 		/* If there is enough space to load a 64 bits, load the data and use
 		 * that to fill read_in */
@@ -94,7 +97,6 @@ void inline inflate_in_load(struct inflate_state *state, int min_required)
 
 		}
 	}
-
 }
 
 /* Returns the next bit_count bits from the in stream and shifts the stream over
@@ -443,6 +445,8 @@ int inline setup_static_header(struct inflate_state *state)
 	make_inflate_huff_code_small(&state->dist_huff_code, dist_code, DIST_LEN + 2,
 				     dist_count);
 
+	state->block_state = ISAL_BLOCK_CODED;
+
 	return 0;
 }
 
@@ -686,6 +690,8 @@ int inline setup_dynamic_header(struct inflate_state *state)
 	make_inflate_huff_code_small(&state->dist_huff_code, &lit_and_dist_huff[LIT_LEN],
 				     DIST_LEN, dist_count);
 
+	state->block_state = ISAL_BLOCK_CODED;
+
 	return 0;
 }
 
@@ -694,61 +700,133 @@ int inline setup_dynamic_header(struct inflate_state *state)
 int read_header(struct inflate_state *state)
 {
 	uint8_t bytes;
-
-	state->new_block = 0;
+	uint32_t btype;
+	uint16_t len, nlen;
+	int ret = 0;
 
 	/* btype and bfinal are defined in RFC 1951, bfinal represents whether
 	 * the current block is the end of block, and btype represents the
 	 * encoding method on the current block. */
+
 	state->bfinal = inflate_in_read_bits(state, 1);
-	state->btype = inflate_in_read_bits(state, 2);
+	btype = inflate_in_read_bits(state, 2);
 
 	if (state->read_in_length < 0)
-		return END_OF_INPUT;
+		ret = END_OF_INPUT;
 
-	if (state->btype == 0) {
+	else if (btype == 0) {
+		inflate_in_load(state, 40);
 		bytes = state->read_in_length / 8;
 
-		state->read_in = 0;
-		state->read_in_length = 0;
+		if (bytes < 4)
+			return END_OF_INPUT;
+
+		state->read_in >>= state->read_in_length % 8;
+		state->read_in_length = bytes * 8;
+
+		len = state->read_in & 0xFFFF;
+		state->read_in >>= 16;
+		nlen = state->read_in & 0xFFFF;
+		state->read_in >>= 16;
+		state->read_in_length -= 32;
+
+		bytes = state->read_in_length / 8;
+
 		state->next_in -= bytes;
 		state->avail_in += bytes;
-		return 0;
+		state->read_in = 0;
+		state->read_in_length = 0;
 
-	} else if (state->btype == 1)
-		return setup_static_header(state);
+		/* Check if len and nlen match */
+		if (len != (~nlen & 0xffff))
+			return INVALID_NON_COMPRESSED_BLOCK_LENGTH;
 
-	else if (state->btype == 2)
-		return setup_dynamic_header(state);
+		state->type0_block_len = len;
+		state->block_state = ISAL_BLOCK_TYPE0;
 
-	return INVALID_BLOCK_HEADER;
+		ret = 0;
+
+	} else if (btype == 1)
+		ret = setup_static_header(state);
+
+	else if (btype == 2)
+		ret = setup_dynamic_header(state);
+
+	else
+		ret = INVALID_BLOCK_HEADER;
+
+	return ret;
+}
+
+/* Reads in the header pointed to by in_stream and sets up state to reflect that
+ * header information*/
+int read_header_stateful(struct inflate_state *state)
+{
+	uint64_t read_in_start = state->read_in;
+	int32_t read_in_length_start = state->read_in_length;
+	uint8_t *next_in_start = state->next_in;
+	uint32_t avail_in_start = state->avail_in;
+	int block_state_start = state->block_state;
+	int ret;
+	int copy_size;
+	int bytes_read;
+
+	if (block_state_start == ISAL_BLOCK_HDR) {
+		/* Setup so read_header decodes data in tmp_in_buffer */
+		copy_size = ISAL_INFLATE_MAX_HDR_SIZE - state->tmp_in_size;
+		if (copy_size > state->avail_in)
+			copy_size = state->avail_in;
+
+		memcpy(&state->tmp_in_buffer[state->tmp_in_size], state->next_in, copy_size);
+		state->next_in = state->tmp_in_buffer;
+		state->avail_in = state->tmp_in_size + copy_size;
+	}
+
+	ret = read_header(state);
+
+	if (block_state_start == ISAL_BLOCK_HDR) {
+		/* Setup so state is restored to a valid state */
+		bytes_read = state->next_in - state->tmp_in_buffer - state->tmp_in_size;
+		if (bytes_read < 0)
+			bytes_read = 0;
+		state->next_in = next_in_start + bytes_read;
+		state->avail_in = avail_in_start - bytes_read;
+	}
+
+	if (ret == END_OF_INPUT) {
+		/* Save off data so header can be decoded again with more data */
+		state->read_in = read_in_start;
+		state->read_in_length = read_in_length_start;
+		memcpy(&state->tmp_in_buffer[state->tmp_in_size], next_in_start,
+		       avail_in_start);
+		state->tmp_in_size += avail_in_start;
+		state->avail_in = 0;
+		state->next_in = next_in_start + avail_in_start;
+		state->block_state = ISAL_BLOCK_HDR;
+	} else
+		state->tmp_in_size = 0;
+
+	return ret;
+
 }
 
 int inline decode_literal_block(struct inflate_state *state)
 {
-	uint16_t len, nlen;
+	uint32_t len = state->type0_block_len;
 	/* If the block is uncompressed, perform a memcopy while
 	 * updating state data */
-	if (state->avail_in < 4)
-		return END_OF_INPUT;
 
-	len = *(uint16_t *) state->next_in;
-	state->next_in += 2;
-	nlen = *(uint16_t *) state->next_in;
-	state->next_in += 2;
+	state->block_state = ISAL_BLOCK_NEW_HDR;
 
-	/* Check if len and nlen match */
-	if (len != (~nlen & 0xffff))
-		return INVALID_NON_COMPRESSED_BLOCK_LENGTH;
+	if (state->avail_out < len) {
+		len = state->avail_out;
+		state->block_state = ISAL_BLOCK_TYPE0;
+	}
 
-	if (state->avail_out < len)
-		return OUT_BUFFER_OVERFLOW;
-
-	if (state->avail_in < len)
+	if (state->avail_in < len) {
 		len = state->avail_in;
-
-	else
-		state->new_block = 1;
+		state->block_state = ISAL_BLOCK_TYPE0;
+	}
 
 	memcpy(state->next_out, state->next_in, len);
 
@@ -756,10 +834,14 @@ int inline decode_literal_block(struct inflate_state *state)
 	state->avail_out -= len;
 	state->total_out += len;
 	state->next_in += len;
-	state->avail_in -= len + 4;
+	state->avail_in -= len;
+	state->type0_block_len -= len;
 
-	if (state->avail_in == 0 && state->new_block == 0)
+	if (state->avail_in == 0 && state->block_state != ISAL_BLOCK_NEW_HDR)
 		return END_OF_INPUT;
+
+	if (state->avail_out == 0 && state->type0_block_len > 0)
+		return OUT_BUFFER_OVERFLOW;
 
 	return 0;
 
@@ -772,22 +854,45 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state)
 	uint8_t next_dist;
 	uint32_t repeat_length;
 	uint32_t look_back_dist;
+	uint64_t read_in_tmp;
+	int32_t read_in_length_tmp;
+	uint8_t *next_in_tmp;
+	uint32_t avail_in_tmp;
 
-	while (state->new_block == 0) {
+	state->copy_overflow_length = 0;
+	state->copy_overflow_distance = 0;
+
+	while (state->block_state == ISAL_BLOCK_CODED) {
 		/* While not at the end of block, decode the next
 		 * symbol */
+		inflate_in_load(state, 0);
+
+		read_in_tmp = state->read_in;
+		read_in_length_tmp = state->read_in_length;
+		next_in_tmp = state->next_in;
+		avail_in_tmp = state->avail_in;
 
 		next_lit = decode_next_large(state, &state->lit_huff_code);
 
-		if (state->read_in_length < 0)
+		if (state->read_in_length < 0) {
+			state->read_in = read_in_tmp;
+			state->read_in_length = read_in_length_tmp;
+			state->next_in = next_in_tmp;
+			state->avail_in = avail_in_tmp;
 			return END_OF_INPUT;
+		}
 
 		if (next_lit < 256) {
 			/* If the next symbol is a literal,
 			 * write out the symbol and update state
 			 * data accordingly. */
-			if (state->avail_out < 1)
+			if (state->avail_out < 1) {
+				state->read_in = read_in_tmp;
+				state->read_in_length = read_in_length_tmp;
+				state->next_in = next_in_tmp;
+				state->avail_in = avail_in_tmp;
 				return OUT_BUFFER_OVERFLOW;
+			}
 
 			*state->next_out = next_lit;
 			state->next_out++;
@@ -798,7 +903,7 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state)
 			/* If the next symbol is the end of
 			 * block, update the state data
 			 * accordingly */
-			state->new_block = 1;
+			state->block_state = ISAL_BLOCK_NEW_HDR;
 
 		} else if (next_lit < 286) {
 			/* Else if the next symbol is a repeat
@@ -812,10 +917,6 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state)
 			    inflate_in_read_bits(state,
 						 rfc_lookup_table.len_extra_bit_count[next_lit
 										      - 257]);
-
-			if (state->avail_out < repeat_length)
-				return OUT_BUFFER_OVERFLOW;
-
 			next_dist = decode_next_small(state, &state->dist_huff_code);
 
 			look_back_dist = rfc_lookup_table.dist_start[next_dist] +
@@ -823,11 +924,22 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state)
 						 rfc_lookup_table.dist_extra_bit_count
 						 [next_dist]);
 
-			if (state->read_in_length < 0)
+			if (state->read_in_length < 0) {
+				state->read_in = read_in_tmp;
+				state->read_in_length = read_in_length_tmp;
+				state->next_in = next_in_tmp;
+				state->avail_in = avail_in_tmp;
 				return END_OF_INPUT;
+			}
 
 			if (look_back_dist > state->total_out)
 				return INVALID_LOOK_BACK_DISTANCE;
+
+			if (state->avail_out < repeat_length) {
+				state->copy_overflow_length = repeat_length - state->avail_out;
+				state->copy_overflow_distance = look_back_dist;
+				repeat_length = state->avail_out;
+			}
 
 			if (look_back_dist > repeat_length)
 				memcpy(state->next_out,
@@ -838,6 +950,9 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state)
 			state->next_out += repeat_length;
 			state->avail_out -= repeat_length;
 			state->total_out += repeat_length;
+
+			if (state->copy_overflow_length > 0)
+				return OUT_BUFFER_OVERFLOW;
 		} else
 			/* Else the read in bits do not
 			 * correspond to any valid symbol */
@@ -846,45 +961,206 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state)
 	return 0;
 }
 
-void isal_inflate_init(struct inflate_state *state, uint8_t * in_stream, uint32_t in_size,
-		       uint8_t * out_stream, uint64_t out_size)
+void isal_inflate_init(struct inflate_state *state)
 {
 
 	state->read_in = 0;
 	state->read_in_length = 0;
-	state->next_in = in_stream;
-	state->avail_in = in_size;
-	state->next_out = out_stream;
-	state->avail_out = out_size;
+	state->next_in = NULL;
+	state->avail_in = 0;
+	state->next_out = NULL;
+	state->avail_out = 0;
 	state->total_out = 0;
-	state->new_block = 1;
+	state->block_state = ISAL_BLOCK_NEW_HDR;
 	state->bfinal = 0;
+	state->type0_block_len = 0;
+	state->copy_overflow_length = 0;
+	state->copy_overflow_distance = 0;
+	state->tmp_in_size = 0;
+	state->tmp_out_processed = 0;
+	state->tmp_out_valid = 0;
 }
 
 int isal_inflate_stateless(struct inflate_state *state)
 {
-	uint32_t ret;
+	uint32_t ret = 0;
 
-	while (state->new_block == 0 || state->bfinal == 0) {
-		if (state->new_block != 0) {
+	state->read_in = 0;
+	state->read_in_length = 0;
+	state->block_state = ISAL_BLOCK_NEW_HDR;
+	state->bfinal = 0;
+	state->total_out = 0;
+
+	while (state->block_state != ISAL_BLOCK_INPUT_DONE) {
+		if (state->block_state == ISAL_BLOCK_NEW_HDR) {
 			ret = read_header(state);
 
 			if (ret)
-				return ret;
+				break;
 		}
 
-		if (state->btype == 0)
+		if (state->block_state == ISAL_BLOCK_TYPE0)
 			ret = decode_literal_block(state);
 		else
 			ret = decode_huffman_code_block_stateless(state);
 
 		if (ret)
-			return ret;
+			break;
+		if (state->bfinal != 0 && state->block_state == ISAL_BLOCK_NEW_HDR)
+			state->block_state = ISAL_BLOCK_INPUT_DONE;
 	}
 
 	/* Undo count stuff of bytes read into the read buffer */
 	state->next_in -= state->read_in_length / 8;
 	state->avail_in += state->read_in_length / 8;
+
+	return ret;
+}
+
+int isal_inflate(struct inflate_state *state)
+{
+
+	uint8_t *next_out = state->next_out;
+	uint32_t avail_out = state->avail_out;
+	uint32_t copy_size = 0;
+	int32_t shift_size = 0;
+	int ret = 0;
+
+	if (state->block_state != ISAL_BLOCK_FINISH) {
+		/* If space in tmp_out buffer, decompress into the tmp_out_buffer */
+		if (state->tmp_out_valid < 2 * ISAL_INFLATE_HIST_SIZE) {
+			/* Setup to start decoding into temp buffer */
+			state->next_out = &state->tmp_out_buffer[state->tmp_out_valid];
+			state->avail_out =
+			    sizeof(state->tmp_out_buffer) - ISAL_INFLATE_SLOP -
+			    state->tmp_out_valid;
+
+			if ((int32_t) state->avail_out < 0)
+				state->avail_out = 0;
+
+			/* Decode into internal buffer until exit */
+			while (state->block_state != ISAL_BLOCK_INPUT_DONE) {
+				if (state->block_state == ISAL_BLOCK_NEW_HDR
+				    || state->block_state == ISAL_BLOCK_HDR) {
+					ret = read_header_stateful(state);
+
+					if (ret)
+						break;
+				}
+
+				if (state->block_state == ISAL_BLOCK_TYPE0) {
+					ret = decode_literal_block(state);
+				} else
+					ret = decode_huffman_code_block_stateless(state);
+
+				if (ret)
+					break;
+				if (state->bfinal != 0
+				    && state->block_state == ISAL_BLOCK_NEW_HDR)
+					state->block_state = ISAL_BLOCK_INPUT_DONE;
+			}
+
+			/* Copy valid data from internal buffer into out_buffer */
+			if (state->copy_overflow_length != 0) {
+				byte_copy(state->next_out, state->copy_overflow_distance,
+					  state->copy_overflow_length);
+				state->tmp_out_valid += state->copy_overflow_length;
+				state->next_out += state->copy_overflow_length;
+				state->total_out += state->copy_overflow_length;
+				state->copy_overflow_distance = 0;
+				state->copy_overflow_length = 0;
+			}
+
+			state->tmp_out_valid = state->next_out - state->tmp_out_buffer;
+
+			/* Setup state for decompressing into out_buffer */
+			state->next_out = next_out;
+			state->avail_out = avail_out;
+		}
+
+		/* Copy data from tmp_out buffer into out_buffer */
+		copy_size = state->tmp_out_valid - state->tmp_out_processed;
+		if (copy_size > avail_out)
+			copy_size = avail_out;
+
+		memcpy(state->next_out,
+		       &state->tmp_out_buffer[state->tmp_out_processed], copy_size);
+
+		state->tmp_out_processed += copy_size;
+		state->avail_out -= copy_size;
+		state->next_out += copy_size;
+
+		if (ret == INVALID_LOOK_BACK_DISTANCE || ret == INVALID_BLOCK_HEADER
+		    || ret == INVALID_NON_COMPRESSED_BLOCK_LENGTH) {
+			/* Set total_out to not count data in tmp_out_buffer */
+			state->total_out -= state->tmp_out_valid - state->tmp_out_processed;
+			return ret;
+		}
+
+		/* If all data from tmp_out buffer has been processed, start
+		 * decompressing into the out buffer */
+		if (state->tmp_out_processed == state->tmp_out_valid) {
+			while (state->block_state != ISAL_BLOCK_INPUT_DONE) {
+				if (state->block_state == ISAL_BLOCK_NEW_HDR
+				    || state->block_state == ISAL_BLOCK_HDR) {
+					ret = read_header_stateful(state);
+					if (ret)
+						break;
+				}
+
+				if (state->block_state == ISAL_BLOCK_TYPE0)
+					ret = decode_literal_block(state);
+				else
+					ret = decode_huffman_code_block_stateless(state);
+				if (ret)
+					break;
+				if (state->bfinal != 0
+				    && state->block_state == ISAL_BLOCK_NEW_HDR)
+					state->block_state = ISAL_BLOCK_INPUT_DONE;
+			}
+		}
+
+		if (state->block_state != ISAL_BLOCK_INPUT_DONE) {
+			/* Save decompression history in tmp_out buffer */
+			if (state->tmp_out_valid == state->tmp_out_processed
+			    && avail_out - state->avail_out >= ISAL_INFLATE_HIST_SIZE) {
+				memcpy(state->tmp_out_buffer,
+				       state->next_out - ISAL_INFLATE_HIST_SIZE,
+				       ISAL_INFLATE_HIST_SIZE);
+				state->tmp_out_valid = ISAL_INFLATE_HIST_SIZE;
+				state->tmp_out_processed = ISAL_INFLATE_HIST_SIZE;
+
+			} else if (state->tmp_out_processed >= ISAL_INFLATE_HIST_SIZE) {
+				shift_size = state->tmp_out_valid - ISAL_INFLATE_HIST_SIZE;
+				if (shift_size > state->tmp_out_processed)
+					shift_size = state->tmp_out_processed;
+
+				memmove(state->tmp_out_buffer,
+					&state->tmp_out_buffer[shift_size],
+					state->tmp_out_valid - shift_size);
+				state->tmp_out_valid -= shift_size;
+				state->tmp_out_processed -= shift_size;
+
+			}
+
+			if (state->copy_overflow_length != 0) {
+				byte_copy(&state->tmp_out_buffer[state->tmp_out_valid],
+					  state->copy_overflow_distance,
+					  state->copy_overflow_length);
+				state->tmp_out_valid += state->copy_overflow_length;
+				state->total_out += state->copy_overflow_length;
+				state->copy_overflow_distance = 0;
+				state->copy_overflow_length = 0;
+			}
+
+			if (ret == INVALID_LOOK_BACK_DISTANCE
+			    || ret == INVALID_BLOCK_HEADER
+			    || ret == INVALID_NON_COMPRESSED_BLOCK_LENGTH)
+				return ret;
+
+		} else if (state->tmp_out_valid == state->tmp_out_processed)
+			state->block_state = ISAL_BLOCK_FINISH;
+	}
 
 	return DECOMPRESSION_FINISHED;
 }

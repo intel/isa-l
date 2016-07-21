@@ -348,7 +348,12 @@ int inflate_check(uint8_t * z_buf, int z_size, uint8_t * in_buf, int in_size)
 	z_size -= gzip_hdr_bytes;
 #endif
 
-	isal_inflate_init(&gstream, z_buf, z_size, test_buf, test_size);
+	isal_inflate_init(&gstream);
+	gstream.next_in = z_buf;
+	gstream.avail_in = z_size;
+	gstream.next_out = test_buf;
+	gstream.avail_out = test_size;
+
 	ret = isal_inflate_stateless(&gstream);
 
 	if (test_buf != NULL)

@@ -208,9 +208,13 @@ int main(int argc, char *argv[])
 	perf_start(&start);
 
 	for (i = 0; i < iterations; i++) {
-		isal_inflate_init(&state, inbuf, inbuf_size, outbuf, outbuf_size);
+		isal_inflate_init(&state);
+		state.next_in = inbuf;
+		state.avail_in = inbuf_size;
+		state.next_out = outbuf;
+		state.avail_out = outbuf_size;
 
-		check = isal_inflate_stateless(&state);
+		check = isal_inflate(&state);
 		if (check) {
 			printf("Error in decompression with error %d\n", check);
 			break;

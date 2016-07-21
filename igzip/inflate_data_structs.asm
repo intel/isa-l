@@ -61,9 +61,11 @@ FIELD	_avail_in,	4,	4
 FIELD	_read_in_length,4,	4
 FIELD	_lit_huff_code,	_inflate_huff_code_large_size,	_inflate_huff_code_large_align
 FIELD	_dist_huff_code,_inflate_huff_code_small_size,	_inflate_huff_code_small_align
-FIELD	_new_block,	1,	1
-FIELD	_bfinal,	1,	1
-FIELD	_btype,		1,	1
+FIELD	_block_state,	4,	4
+FIELD	_bfinal,	4,	4
+FIELD	_type0_block_len,	4, 	4
+FIELD	_copy_overflow_len,  	4,	4
+FIELD	_copy_overflow_dist,	4,	4
 
 %assign _inflate_state_size		_FIELD_OFFSET
 %assign _inflate_state_align	_STRUCT_ALIGN
@@ -74,7 +76,12 @@ _lit_huff_code_long_code_lookup		equ	_lit_huff_code+_long_code_lookup_large
 _dist_huff_code_small_code_lookup	equ	_dist_huff_code+_small_code_lookup_small
 _dist_huff_code_long_code_lookup	equ	_dist_huff_code+_long_code_lookup_small
 
-
+ISAL_BLOCK_NEW_HDR	equ	0
+ISAL_BLOCK_HDR		equ	1
+ISAL_BLOCK_TYPE0	equ	2
+ISAL_BLOCK_CODED	equ	3
+ISAL_BLOCK_END		equ	4
+ISAL_BLOCK_FINISH	equ	5
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

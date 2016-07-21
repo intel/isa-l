@@ -83,15 +83,15 @@ int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *h
 	uint32_t tmp;
 
 	memset(histogram, 0, sizeof(struct isal_huff_histogram));
-	while (state->new_block == 0 || state->bfinal == 0) {
-		if (state->new_block != 0) {
+	while (state->block_state != ISAL_BLOCK_INPUT_DONE) {
+		if (state->block_state == ISAL_BLOCK_NEW_HDR) {
 			tmp = read_header(state);
 
 			if (tmp)
 				return tmp;
 		}
 
-		if (state->btype == 0) {
+		if (state->block_state == ISAL_BLOCK_TYPE0) {
 			/* If the block is uncompressed, update state data accordingly */
 			if (state->avail_in < 4)
 				return END_OF_INPUT;
@@ -108,18 +108,18 @@ int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *h
 			if (state->avail_in < len)
 				len = state->avail_in;
 			else
-				state->new_block = 1;
+				state->block_state = ISAL_BLOCK_NEW_HDR;
 
 			state->total_out += len;
 			state->next_in += len;
 			state->avail_in -= len + 4;
 
-			if (state->avail_in == 0 && state->new_block == 0)
+			if (state->avail_in == 0 && state->block_state == 0)
 				return END_OF_INPUT;
 
 		} else {
 			/* Else decode a huffman encoded block */
-			while (state->new_block == 0) {
+			while (state->block_state == ISAL_BLOCK_CODED) {
 				/* While not at the end of block, decode the next
 				 * symbol */
 				next_lit = decode_next_large(state, &state->lit_huff_code);
@@ -135,7 +135,7 @@ int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *h
 
 				else if (next_lit == 256)
 					/* Next symbol is end of block */
-					state->new_block = 1;
+					state->block_state = ISAL_BLOCK_NEW_HDR;
 
 				else if (next_lit < 286) {
 					/* Next symbol is a repeat length followed by a 
@@ -168,6 +168,9 @@ int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *h
 					return INVALID_SYMBOL;
 			}
 		}
+
+		if (state->bfinal != 0 && state->block_state == ISAL_BLOCK_NEW_HDR)
+			state->block_state = ISAL_BLOCK_INPUT_DONE;
 	}
 	state->next_in -= state->read_in_length / 8;
 	state->avail_in += state->read_in_length / 8;
@@ -340,7 +343,9 @@ int main(int argc, char *argv[])
 	stream.hufftables = &hufftables_custom;
 	isal_deflate_stateless(&stream);
 
-	isal_inflate_init(&gstream, outbuf, stream.total_out, NULL, 0);
+	isal_inflate_init(&gstream);
+	gstream.next_in = outbuf;
+	gstream.avail_in = outbuf_size;
 	isal_inflate_hist(&gstream, &histogram2);
 
 	printf("Histogram Error \n");

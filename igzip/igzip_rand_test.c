@@ -113,6 +113,8 @@ const int gzip_extra_bytes = 0;
 
 #endif
 
+int inflate_type = 0;
+
 struct isal_hufftables *hufftables = NULL;
 
 #define HISTORY_SIZE 32*1024
@@ -306,21 +308,185 @@ uint32_t check_gzip_header(uint8_t * z_buf)
 	return ret;
 }
 
-uint32_t check_gzip_trl(struct inflate_state * gstream)
+uint32_t check_gzip_trl(uint64_t gzip_crc, uint8_t * uncompress_buf, uint32_t uncompress_len)
 {
-	uint8_t *index = NULL;
-	uint32_t crc, ret = 0;
+	uint64_t crc, ret = 0;
 
-	index = gstream->next_out - gstream->total_out;
-	crc = find_crc(index, gstream->total_out);
+	crc = find_crc(uncompress_buf, uncompress_len);
 
-	if (gstream->total_out != *(uint32_t *) (gstream->next_in + 4) ||
-	    crc != *(uint32_t *) gstream->next_in)
+	crc = ((uint64_t) uncompress_len << 32) | crc;
+
+	if (crc != gzip_crc)
 		ret = INCORRECT_GZIP_TRAILER;
 
 	return ret;
 }
 #endif
+
+int inflate_stateless_pass(uint8_t * compress_buf, uint64_t compress_len,
+			   uint8_t * uncompress_buf, uint32_t * uncompress_len)
+{
+	struct inflate_state state;
+	int ret = 0;
+
+	state.next_in = compress_buf;
+	state.avail_in = compress_len;
+	state.next_out = uncompress_buf;
+	state.avail_out = *uncompress_len;
+
+	ret = isal_inflate_stateless(&state);
+
+	*uncompress_len = state.total_out;
+
+#ifndef DEFLATE
+	if (!ret)
+		ret =
+		    check_gzip_trl(*(uint64_t *) state.next_in, uncompress_buf,
+				   *uncompress_len);
+	state.avail_in -= 8;
+#endif
+
+	if (ret == 0 && state.avail_in != 0)
+		ret = INFLATE_LEFTOVER_INPUT;
+
+	return ret;
+}
+
+int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
+		       uint8_t * uncompress_buf, uint32_t * uncompress_len)
+{
+	struct inflate_state *state = NULL;
+	int ret = 0;
+	uint8_t *comp_tmp = NULL, *uncomp_tmp = NULL;
+	uint32_t comp_tmp_size = 0, uncomp_tmp_size = 0;
+	uint32_t comp_processed = 0, uncomp_processed = 0;
+	int32_t read_in_old = 0;
+
+	state = malloc(sizeof(struct inflate_state));
+	if (state == NULL) {
+		printf("Failed to allocate memory\n");
+		exit(0);
+	}
+
+	isal_inflate_init(state);
+
+	state->next_in = NULL;
+	state->next_out = NULL;
+	state->avail_in = 0;
+	state->avail_out = 0;
+
+#ifndef DEFLATE
+	compress_len -= 8;
+#endif
+
+	while (1) {
+		if (state->avail_in == 0) {
+			comp_tmp_size = rand() % (compress_len + 1);
+
+			if (comp_tmp_size >= compress_len - comp_processed)
+				comp_tmp_size = compress_len - comp_processed;
+
+			if (comp_tmp_size != 0) {
+				if (comp_tmp != NULL) {
+					free(comp_tmp);
+					comp_tmp = NULL;
+				}
+
+				comp_tmp = malloc(comp_tmp_size);
+
+				if (comp_tmp == NULL) {
+					printf("Failed to allocate memory\n");
+					return MALLOC_FAILED;
+				}
+
+				memcpy(comp_tmp, compress_buf + comp_processed, comp_tmp_size);
+				comp_processed += comp_tmp_size;
+
+				state->next_in = comp_tmp;
+				state->avail_in = comp_tmp_size;
+			}
+		}
+
+		if (state->avail_out == 0) {
+			/* Save uncompressed data into uncompress_buf */
+			if (uncomp_tmp != NULL) {
+				memcpy(uncompress_buf + uncomp_processed, uncomp_tmp,
+				       uncomp_tmp_size);
+				uncomp_processed += uncomp_tmp_size;
+			}
+
+			uncomp_tmp_size = rand() % (*uncompress_len + 1);
+
+			/* Limit size of buffer to be smaller than maximum */
+			if (uncomp_tmp_size > *uncompress_len - uncomp_processed)
+				uncomp_tmp_size = *uncompress_len - uncomp_processed;
+
+			if (uncomp_tmp_size != 0) {
+
+				if (uncomp_tmp != NULL) {
+					fflush(0);
+					free(uncomp_tmp);
+					uncomp_tmp = NULL;
+				}
+
+				uncomp_tmp = malloc(uncomp_tmp_size);
+				if (uncomp_tmp == NULL) {
+					printf("Failed to allocate memory\n");
+					return MALLOC_FAILED;
+				}
+
+				state->avail_out = uncomp_tmp_size;
+				state->next_out = uncomp_tmp;
+			}
+		}
+
+		ret = isal_inflate(state);
+
+		if (state->block_state == ISAL_BLOCK_FINISH || ret != 0) {
+			memcpy(uncompress_buf + uncomp_processed, uncomp_tmp, uncomp_tmp_size);
+			*uncompress_len = state->total_out;
+			break;
+		}
+
+		if (*uncompress_len - uncomp_processed == 0 && state->avail_out == 0
+		    && state->tmp_out_valid - state->tmp_out_processed > 0) {
+			ret = INFLATE_OUT_BUFFER_OVERFLOW;
+			break;
+		}
+
+		if (compress_len - comp_processed == 0 && state->avail_in == 0
+		    && (state->block_state != ISAL_BLOCK_INPUT_DONE)
+		    && state->tmp_out_valid - state->tmp_out_processed == 0) {
+			if (state->read_in_length == read_in_old) {
+				ret = INFLATE_END_OF_INPUT;
+				break;
+			}
+			read_in_old = state->read_in_length;
+		}
+	}
+
+#ifndef DEFLATE
+	if (!ret)
+		ret =
+		    check_gzip_trl(*(uint64_t *) & compress_buf[compress_len],
+				   uncompress_buf, *uncompress_len);
+#endif
+	if (ret == 0 && state->avail_in != 0)
+		ret = INFLATE_LEFTOVER_INPUT;
+
+	if (comp_tmp != NULL) {
+		free(comp_tmp);
+		comp_tmp = NULL;
+	}
+
+	if (uncomp_tmp != NULL) {
+		free(uncomp_tmp);
+		uncomp_tmp = NULL;
+	}
+
+	free(state);
+	return ret;
+}
 
 /* Inflate the  compressed data and check that the decompressed data agrees with the input data */
 int inflate_check(uint8_t * z_buf, int z_size, uint8_t * in_buf, int in_size)
@@ -328,7 +494,6 @@ int inflate_check(uint8_t * z_buf, int z_size, uint8_t * in_buf, int in_size)
 	/* Test inflate with reference inflate */
 
 	int ret = 0;
-	struct inflate_state gstream;
 	uint32_t test_size = in_size;
 	uint8_t *test_buf = NULL;
 	int mem_result = 0;
@@ -336,23 +501,27 @@ int inflate_check(uint8_t * z_buf, int z_size, uint8_t * in_buf, int in_size)
 	if (in_size > 0) {
 		assert(in_buf != NULL);
 		test_buf = malloc(test_size);
-
 		if (test_buf == NULL)
 			return MALLOC_FAILED;
 	}
+
 	if (test_buf != NULL)
 		memset(test_buf, 0xff, test_size);
 
 #ifndef DEFLATE
-	int gzip_hdr_result, gzip_trl_result;
-
+	int gzip_hdr_result = 0, gzip_trl_result = 0;
 	gzip_hdr_result = check_gzip_header(z_buf);
 	z_buf += gzip_hdr_bytes;
 	z_size -= gzip_hdr_bytes;
 #endif
 
-	isal_inflate_init(&gstream, z_buf, z_size, test_buf, test_size);
-	ret = isal_inflate_stateless(&gstream);
+	if (inflate_type == 0) {
+		ret = inflate_stateless_pass(z_buf, z_size, test_buf, &test_size);
+		inflate_type = 1;
+	} else {
+		ret = inflate_multi_pass(z_buf, z_size, test_buf, &test_size);
+		inflate_type = 0;
+	}
 
 	if (test_buf != NULL)
 		mem_result = memcmp(in_buf, test_buf, in_size);
@@ -362,22 +531,16 @@ int inflate_check(uint8_t * z_buf, int z_size, uint8_t * in_buf, int in_size)
 	if (mem_result)
 		for (i = 0; i < in_size; i++) {
 			if (in_buf[i] != test_buf[i]) {
-				printf("First incorrect data at 0x%x of 0x%x, 0x%x != 0x%x\n",
-				       i, in_size, in_buf[i], test_buf[i]);
+				printf
+				    ("First incorrect data at 0x%x of 0x%x, 0x%x != 0x%x\n",
+				     i, in_size, in_buf[i], test_buf[i]);
 				break;
 			}
 		}
 #endif
 
-#ifndef DEFLATE
-	gzip_trl_result = check_gzip_trl(&gstream);
-	gstream.avail_in -= gzip_trl_bytes;
-	gstream.next_in += gzip_trl_bytes;
-#endif
-
 	if (test_buf != NULL)
 		free(test_buf);
-
 	switch (ret) {
 	case 0:
 		break;
@@ -399,17 +562,22 @@ int inflate_check(uint8_t * z_buf, int z_size, uint8_t * in_buf, int in_size)
 	case INVALID_LOOK_BACK_DISTANCE:
 		return INFLATE_INVALID_LOOK_BACK_DISTANCE;
 		break;
+	case INFLATE_LEFTOVER_INPUT:
+		return INFLATE_LEFTOVER_INPUT;
+		break;
+
+#ifndef DEFLATE
+	case INCORRECT_GZIP_TRAILER:
+		gzip_trl_result = INCORRECT_GZIP_TRAILER;
+		break;
+
+#endif
 	default:
 		return INFLATE_GENERAL_ERROR;
 		break;
 	}
 
-	if (gstream.avail_in != 0) {
-		printf("leftover = %d\n", gstream.avail_in);
-		return INFLATE_LEFTOVER_INPUT;
-	}
-
-	if (gstream.total_out != in_size)
+	if (test_size != in_size)
 		return INFLATE_INCORRECT_OUTPUT_SIZE;
 
 	if (mem_result)

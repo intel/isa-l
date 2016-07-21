@@ -16,6 +16,18 @@
 #define DECODE_LOOKUP_SIZE_LARGE 13
 #define DECODE_LOOKUP_SIZE_SMALL 10
 
+#define ISAL_INFLATE_HIST_SIZE (32*1024)
+#define ISAL_INFLATE_SLOP 17*16
+#define ISAL_INFLATE_MAX_HDR_SIZE 360
+enum isal_block_state {
+	ISAL_BLOCK_NEW_HDR,	/* Just starting a new block */
+	ISAL_BLOCK_HDR,		/* In the middle of reading in a block header */
+	ISAL_BLOCK_TYPE0,	/* Decoding a type 0 block */
+	ISAL_BLOCK_CODED,	/* Decoding a huffman coded block */
+	ISAL_BLOCK_INPUT_DONE,	/* Decompression of input is completed */
+	ISAL_BLOCK_FINISH	/* Decompression of input is completed and all data has been flushed to output */
+};
+
 /*
  * Data structure used to store a Huffman code for fast lookup. It works by
  * performing a lookup in small_code_lookup that hopefully yields the correct
@@ -62,14 +74,13 @@
  * code length and code value forces the maximum offset to be less than 288.
  */
 
-struct inflate_huff_code_large{
-	uint16_t short_code_lookup[ 1 << (DECODE_LOOKUP_SIZE_LARGE)];
+struct inflate_huff_code_large {
+	uint16_t short_code_lookup[1 << (DECODE_LOOKUP_SIZE_LARGE)];
 	uint16_t long_code_lookup[288 + (1 << (15 - DECODE_LOOKUP_SIZE_LARGE))];
 };
 
-
-struct inflate_huff_code_small{
-	uint16_t short_code_lookup[ 1 << (DECODE_LOOKUP_SIZE_SMALL)];
+struct inflate_huff_code_small {
+	uint16_t short_code_lookup[1 << (DECODE_LOOKUP_SIZE_SMALL)];
 	uint16_t long_code_lookup[32 + (1 << (15 - DECODE_LOOKUP_SIZE_SMALL))];
 };
 
@@ -84,18 +95,27 @@ struct inflate_state {
 	int32_t read_in_length;
 	struct inflate_huff_code_large lit_huff_code;
 	struct inflate_huff_code_small dist_huff_code;
-	uint8_t new_block;
-	uint8_t bfinal;
-	uint8_t btype;
+	enum isal_block_state block_state;
+	uint32_t bfinal;
+	int32_t type0_block_len;
+	int32_t copy_overflow_length;
+	int32_t copy_overflow_distance;
+	int32_t tmp_in_size;
+	int32_t tmp_out_valid;
+	int32_t tmp_out_processed;
+	uint8_t tmp_in_buffer[ISAL_INFLATE_MAX_HDR_SIZE];
+	uint8_t tmp_out_buffer[2 * ISAL_INFLATE_HIST_SIZE + ISAL_INFLATE_SLOP];
 };
 
 /* Initialize a struct inflate_state for deflate compressed input data at in_stream and to output
  * data into out_stream */
-void isal_inflate_init(struct inflate_state *state, uint8_t *in_stream, uint32_t in_size,
-			uint8_t *out_stream, uint64_t out_size);
+void isal_inflate_init(struct inflate_state *state);
 
 /* Decompress a deflate data. This function assumes a call to igzip_inflate_init
  * has been made to set up the state structure to allow for decompression.*/
 int isal_inflate_stateless(struct inflate_state *state);
 
+/* Decompress a deflate data. This function assumes a call to igzip_inflate_init
+ * has been made to set up the state structure to allow for decompression.*/
+int isal_inflate(struct inflate_state *state);
 #endif
