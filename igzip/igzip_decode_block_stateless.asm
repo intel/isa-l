@@ -398,7 +398,7 @@ decode_len_dist:
 	;; ;; Check if a valid look back distances was decoded
 	cmp	copy_start, [rsp + start_out_mem_offset]
 	jl	invalid_look_back_distance
-	vmovdqu	xmm1, [copy_start]
+	MOVDQU	xmm1, [copy_start]
 
 	;; Set tmp2 to be the minimum of COPY_SIZE and repeat_length
 	;; This is to decrease use of small_byte_copy branch
@@ -412,23 +412,23 @@ decode_len_dist:
 
 large_byte_copy:
 	;; Copy length distance pair when memory overlap is not an issue
-	vmovdqu [copy_start + look_back_dist2], xmm1
+	MOVDQU [copy_start + look_back_dist2], xmm1
 
 	sub	repeat_length, COPY_SIZE
 	jle	loop_block
 
 	add	copy_start, COPY_SIZE
-	vmovdqu	xmm1, [copy_start]
+	MOVDQU	xmm1, [copy_start]
 	jmp	large_byte_copy
 
 small_byte_copy_pre:
 	;; Copy length distance pair when source and destination overlap
 	add	repeat_length, look_back_dist2
 small_byte_copy:
-	vmovdqu [copy_start + look_back_dist2], xmm1
+	MOVDQU [copy_start + look_back_dist2], xmm1
 
 	shl	look_back_dist2, 1
-	vmovdqu	xmm1, [copy_start]
+	MOVDQU	xmm1, [copy_start]
 	cmp	look_back_dist2, COPY_SIZE
 	jl	small_byte_copy
 
