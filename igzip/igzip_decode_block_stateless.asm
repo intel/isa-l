@@ -81,12 +81,92 @@ extern rfc1951_lookup_table
 start_out_mem_offset	equ	0
 read_in_mem_offset	equ	8
 read_in_length_mem_offset	equ	16
-stack_size		equ	4 * 8 + 8
+gpr_save_mem_offset	equ	24
+stack_size		equ	3 * 8 + 8 * 8
 
 %define	_dist_extra_bit_count	264
 %define	_dist_start		_dist_extra_bit_count + 1*32
 %define	_len_extra_bit_count	_dist_start + 4*32
 %define	_len_start		_len_extra_bit_count + 1*32
+
+%ifidn __OUTPUT_FORMAT__, elf64
+%define arg0	rdi
+
+%macro FUNC_SAVE 0
+%ifdef ALIGN_STACK
+	push	rbp
+	mov	rbp, rsp
+	sub	rsp, stack_size
+	and	rsp, ~15
+%else
+	sub	rsp, stack_size
+%endif
+
+	mov [rsp + gpr_save_mem_offset + 0*8], rbx
+	mov [rsp + gpr_save_mem_offset + 1*8], rbp
+	mov [rsp + gpr_save_mem_offset + 2*8], r12
+	mov [rsp + gpr_save_mem_offset + 3*8], r13
+	mov [rsp + gpr_save_mem_offset + 4*8], r14
+	mov [rsp + gpr_save_mem_offset + 5*8], r15
+%endm
+
+%macro FUNC_RESTORE 0
+	mov	rbx, [rsp + gpr_save_mem_offset + 0*8]
+	mov	rbp, [rsp + gpr_save_mem_offset + 1*8]
+	mov	r12, [rsp + gpr_save_mem_offset + 2*8]
+	mov	r13, [rsp + gpr_save_mem_offset + 3*8]
+	mov	r14, [rsp + gpr_save_mem_offset + 4*8]
+	mov	r15, [rsp + gpr_save_mem_offset + 5*8]
+
+%ifndef ALIGN_STACK
+	add	rsp, stack_size
+%else
+	mov	rsp, rbp
+	pop	rbp
+%endif
+%endm
+%endif
+
+%ifidn __OUTPUT_FORMAT__, win64
+%define arg0	rcx
+%macro FUNC_SAVE 0
+%ifdef ALIGN_STACK
+	push	rbp
+	mov	rbp, rsp
+	sub	rsp, stack_size
+	and	rsp, ~15
+%else
+	sub	rsp, stack_size
+%endif
+
+	mov [rsp + gpr_save_mem_offset + 0*8], rbx
+	mov [rsp + gpr_save_mem_offset + 1*8], rsi
+	mov [rsp + gpr_save_mem_offset + 2*8], rdi
+	mov [rsp + gpr_save_mem_offset + 3*8], rbp
+	mov [rsp + gpr_save_mem_offset + 4*8], r12
+	mov [rsp + gpr_save_mem_offset + 5*8], r13
+	mov [rsp + gpr_save_mem_offset + 6*8], r14
+	mov [rsp + gpr_save_mem_offset + 7*8], r15
+%endm
+
+%macro FUNC_RESTORE 0
+	mov	rbx, [rsp + gpr_save_mem_offset + 0*8]
+	mov	rsi, [rsp + gpr_save_mem_offset + 1*8]
+	mov	rdi, [rsp + gpr_save_mem_offset + 2*8]
+	mov	rbp, [rsp + gpr_save_mem_offset + 3*8]
+	mov	r12, [rsp + gpr_save_mem_offset + 4*8]
+	mov	r13, [rsp + gpr_save_mem_offset + 5*8]
+	mov	r14, [rsp + gpr_save_mem_offset + 6*8]
+	mov	r15, [rsp + gpr_save_mem_offset + 7*8]
+
+%ifndef ALIGN_STACK
+	add	rsp, stack_size
+%else
+	mov	rsp, rbp
+	pop	rbp
+%endif
+%endm
+%endif
 
 ;; Load read_in and updated in_buffer accordingly
 ;; when there are at least 8 bytes in the in buffer
@@ -261,16 +341,9 @@ stack_size		equ	4 * 8 + 8
 global decode_huffman_code_block_stateless_ %+ ARCH
 decode_huffman_code_block_stateless_ %+ ARCH %+ :
 
-	push	rbx
-	push	rbp
-	push	r12
-	push	r13
-	push	r14
-	push	r15
+	FUNC_SAVE
 
-	sub	rsp, stack_size
-
-	mov	state, rdi
+	mov	state, arg0
 	lea	rfc_lookup, [rfc1951_lookup_table]
 
 	mov	read_in,[state + _read_in]
@@ -581,12 +654,6 @@ end:
 	sub	end_in, next_in
 	mov	[state + _avail_in], end_in %+ d
 
-	add	rsp, stack_size
-	pop	r15
-	pop	r14
-	pop	r13
-	pop	r12
-	pop	rbp
-	pop	rbx
+	FUNC_RESTORE
 
 	ret

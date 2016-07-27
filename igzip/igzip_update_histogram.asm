@@ -83,8 +83,6 @@ global %1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
 _eob_count_offset   equ  0	 ; local variable (8 bytes)
 f_end_i_mem_offset  equ  8
 gpr_save_mem_offset equ 16       ; gpr save area (8*8 bytes)
@@ -92,9 +90,96 @@ xmm_save_mem_offset equ 16 + 8*8 ; xmm save area (4*16 bytes) (16 byte aligned)
 stack_size          equ 2*8 + 8*8 + 4*16 + 8
 ;;; 8 because stack address is odd multiple of 8 after a function call and
 ;;; we want it aligned to 16 bytes
+
+%ifidn __OUTPUT_FORMAT__, elf64
+%define arg0	rdi
+%define	arg1	rsi
+%define arg2	rdx
+
+%macro FUNC_SAVE 0
+%ifdef ALIGN_STACK
+	push	rbp
+	mov	rbp, rsp
+	sub	rsp, stack_size
+	and	rsp, ~15
+%else
+	sub	rsp, stack_size
+%endif
+
+	mov [rsp + gpr_save_mem_offset + 0*8], rbx
+	mov [rsp + gpr_save_mem_offset + 1*8], rbp
+	mov [rsp + gpr_save_mem_offset + 2*8], r12
+	mov [rsp + gpr_save_mem_offset + 3*8], r13
+	mov [rsp + gpr_save_mem_offset + 4*8], r14
+	mov [rsp + gpr_save_mem_offset + 5*8], r15
+%endm
+
+%macro FUNC_RESTORE 0
+	mov	rbx, [rsp + gpr_save_mem_offset + 0*8]
+	mov	rbp, [rsp + gpr_save_mem_offset + 1*8]
+	mov	r12, [rsp + gpr_save_mem_offset + 2*8]
+	mov	r13, [rsp + gpr_save_mem_offset + 3*8]
+	mov	r14, [rsp + gpr_save_mem_offset + 4*8]
+	mov	r15, [rsp + gpr_save_mem_offset + 5*8]
+
+%ifndef ALIGN_STACK
+	add	rsp, stack_size
+%else
+	mov	rsp, rbp
+	pop	rbp
+%endif
+%endm
+%endif
+
+%ifidn __OUTPUT_FORMAT__, win64
+%define arg0	rcx
+%define	arg1	rdx
+%define	arg2	r8
+
+%macro FUNC_SAVE 0
+%ifdef ALIGN_STACK
+	push	rbp
+	mov	rbp, rsp
+	sub	rsp, stack_size
+	and	rsp, ~15
+%else
+	sub	rsp, stack_size
+%endif
+
+	mov [rsp + gpr_save_mem_offset + 0*8], rbx
+	mov [rsp + gpr_save_mem_offset + 1*8], rsi
+	mov [rsp + gpr_save_mem_offset + 2*8], rdi
+	mov [rsp + gpr_save_mem_offset + 3*8], rbp
+	mov [rsp + gpr_save_mem_offset + 4*8], r12
+	mov [rsp + gpr_save_mem_offset + 5*8], r13
+	mov [rsp + gpr_save_mem_offset + 6*8], r14
+	mov [rsp + gpr_save_mem_offset + 7*8], r15
+%endm
+
+%macro FUNC_RESTORE 0
+	mov	rbx, [rsp + gpr_save_mem_offset + 0*8]
+	mov	rsi, [rsp + gpr_save_mem_offset + 1*8]
+	mov	rdi, [rsp + gpr_save_mem_offset + 2*8]
+	mov	rbp, [rsp + gpr_save_mem_offset + 3*8]
+	mov	r12, [rsp + gpr_save_mem_offset + 4*8]
+	mov	r13, [rsp + gpr_save_mem_offset + 5*8]
+	mov	r14, [rsp + gpr_save_mem_offset + 6*8]
+	mov	r15, [rsp + gpr_save_mem_offset + 7*8]
+
+%ifndef ALIGN_STACK
+	add	rsp, stack_size
+%else
+	mov	rsp, rbp
+	pop	rbp
+%endif
+%endm
+%endif
+
+
 _lit_len_offset	equ	0
 _dist_offset	equ	(8 * LIT_LEN)
 _hash_offset	equ	(_dist_offset + 8 * DIST_LEN)
+
 
 %macro len_to_len_code 3
 %define %%len_code	%1 	; Output
@@ -145,24 +230,18 @@ isal_update_histogram_ %+ ARCH %+ :
 	jne	skip1
 	ret
 skip1:
+	FUNC_SAVE
 
-%ifdef ALIGN_STACK
-	push	rbp
-	mov	rbp, rsp
-	sub	rsp, stack_size
-	and	rsp, ~15
-%else
-	sub	rsp, stack_size
+%ifnidn	file_start, arg0
+	mov	file_start, arg0
+%endif
+%ifnidn	file_length, arg1
+	mov	file_length, arg1
+%endif
+%ifnidn	histogram, arg2
+	mov	histogram, arg2
 %endif
 
-	mov [rsp + gpr_save_mem_offset + 0*8], rbx
-	mov [rsp + gpr_save_mem_offset + 1*8], rsi
-	mov [rsp + gpr_save_mem_offset + 2*8], rdi
-	mov [rsp + gpr_save_mem_offset + 3*8], rbp
-	mov [rsp + gpr_save_mem_offset + 4*8], r12
-	mov [rsp + gpr_save_mem_offset + 5*8], r13
-	mov [rsp + gpr_save_mem_offset + 6*8], r14
-	mov [rsp + gpr_save_mem_offset + 7*8], r15
 	mov	f_i, 0
 
 	mov	tmp1, qword [histogram + _lit_len_offset + 8*256]
@@ -436,21 +515,8 @@ end:
 	mov	tmp1, [rsp + _eob_count_offset]
 	mov	qword [histogram + _lit_len_offset + HIST_ELEM_SIZE * 256], tmp1
 
-	mov	rbx, [rsp + gpr_save_mem_offset + 0*8]
-	mov	rsi, [rsp + gpr_save_mem_offset + 1*8]
-	mov	rdi, [rsp + gpr_save_mem_offset + 2*8]
-	mov	rbp, [rsp + gpr_save_mem_offset + 3*8]
-	mov	r12, [rsp + gpr_save_mem_offset + 4*8]
-	mov	r13, [rsp + gpr_save_mem_offset + 5*8]
-	mov	r14, [rsp + gpr_save_mem_offset + 6*8]
-	mov	r15, [rsp + gpr_save_mem_offset + 7*8]
+	FUNC_RESTORE
 
-%ifndef ALIGN_STACK
-	add	rsp, stack_size
-%else
-	mov	rsp, rbp
-	pop	rbp
-%endif
 	ret
 
 compare_loop:

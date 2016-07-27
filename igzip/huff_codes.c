@@ -42,6 +42,18 @@
 static const uint8_t code_length_code_order[] =
     { 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15 };
 
+struct slver {
+	uint16_t snum;
+	uint8_t ver;
+	uint8_t core;
+};
+
+/* Version info */
+struct slver isal_update_histogram_slver_00010085;
+struct slver isal_update_histogram_slver = { 0x0085, 0x01, 0x00 };
+struct slver isal_create_hufftables_slver_00010086;
+struct slver isal_create_hufftables_slver = { 0x0086, 0x01, 0x00 };
+
 int heap_push(struct huff_tree element, struct histheap *heap)
 {
 	uint16_t index;

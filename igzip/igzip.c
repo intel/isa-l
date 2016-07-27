@@ -97,6 +97,9 @@ struct slver {
 struct slver isal_deflate_init_slver_01030081;
 struct slver isal_deflate_init_slver = { 0x0081, 0x03, 0x01 };
 
+struct slver isal_deflate_stateless_init_slver_00010084;
+struct slver isal_deflate_stateless_init_slver = { 0x0084, 0x01, 0x00 };
+
 struct slver isal_deflate_slver_01030082;
 struct slver isal_deflate_slver = { 0x0082, 0x03, 0x01 };
 

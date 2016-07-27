@@ -43,6 +43,22 @@ static struct rfc1951_tables rfc_lookup_table = {
 		      0x0083, 0x00a3, 0x00c3, 0x00e3, 0x0102, 0x0000, 0x0000, 0x0000}
 };
 
+
+struct slver {
+       uint16_t snum;
+       uint8_t ver;
+       uint8_t core;
+};
+
+/* Version info */
+struct slver isal_inflate_init_slver_00010088;
+struct slver isal_inflate_init_slver = { 0x0088, 0x01, 0x00 };
+struct slver isal_inflate_stateless_slver_00010089;
+struct slver isal_inflate_stateless_slver = { 0x0089, 0x01, 0x00 };
+struct slver isal_inflate_slver_0001008a;
+struct slver isal_inflate_slver = { 0x008a, 0x01, 0x00 };
+
+
 /*Performs a copy of length repeat_length data starting at dest -
  * lookback_distance into dest. This copy copies data previously copied when the
  * src buffer and the dest buffer overlap. */
