@@ -230,9 +230,9 @@ loop2:
 	lea	tmp1, [file_start + f_i]
 
 	mov	dist %+ w, f_i %+ w
+	dec	dist
 	sub	dist %+ w, word [stream + _internal_state_head + 2 * hash]
 	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
-	dec	dist
 
 	inc	f_i
 
@@ -242,22 +242,18 @@ loop2:
 	compute_hash	tmp6, tmp5
 
 	mov	dist2 %+ w, f_i %+ w
+	dec	dist2
 	sub	dist2 %+ w, word [stream + _internal_state_head + 2 * hash2]
 	mov	[stream + _internal_state_head + 2 * hash2], f_i %+ w
-	dec	dist2
 
 	; if ((dist-1) < (D-1)) {
-	cmp	dist %+ d, (D-1)
-	cmovae	dist, tmp3
-	add	dist, 1
+	and	dist %+ d, (D-1)
 	neg	dist
 
 	shr	tmp8, 8
 	compute_hash	tmp2, tmp8
 
-	cmp	dist2 %+ d, (D-1)
-	cmovae	dist2, tmp3
-	add	dist2, 1
+	and	dist2 %+ d, (D-1)
 	neg	dist2
 
 MARK __stateless_compare_ %+ ARCH
@@ -265,7 +261,7 @@ MARK __stateless_compare_ %+ ARCH
 	MOVQ	len, xdata
 	mov	curr_data, len
 	PSRLDQ	xdata, 1
-	xor	len, [tmp1 + dist]
+	xor	len, [tmp1 + dist - 1]
 	jz	compare_loop
 
 	MOVD	xhash, tmp6 %+ d
@@ -274,7 +270,7 @@ MARK __stateless_compare_ %+ ARCH
 
 	;; Check for len/dist match (>7) with second literal
 	MOVQ	len2, xdata
-	xor	len2, [tmp1 + dist2 + 1]
+	xor	len2, [tmp1 + dist2]
 	jz	compare_loop2
 
 	;; Specutively load the code for the first literal
@@ -290,7 +286,7 @@ MARK __stateless_compare_ %+ ARCH
 	and     curr_data, 0xff
 	get_lit_code    curr_data, code2, code_len2, hufftables
 
-	shl     code2, cl
+	SHLX    code2, code2, rcx
 	or      code2, code3
 	add     code_len2, rcx
 
@@ -306,6 +302,7 @@ len_dist_lit_huffman_pre:
 
 len_dist_lit_huffman:
 	neg	dist2
+	add	dist2, 1
 %ifndef LONGER_HUFFTABLE
 	mov	tmp4, dist2
 	get_dist_code	tmp4, code4, code_len2, hufftables ;; clobbers dist, rcx
@@ -318,21 +315,21 @@ len_dist_lit_huffman:
 	or	code4, code
 	add	code_len2, rcx
 
-	mov	rcx, code_len3
+	add	f_i, len2
+	neg	len2
 
 	MOVQ	tmp5, xdata
 	shr	tmp5, 24
 	compute_hash	tmp4, tmp5
 	and	tmp4, HASH_MASK
 
-	SHLX	code4, code4, rcx
+	SHLX	code4, code4, code_len3
 	or	code4, code3
-	add	code_len2, rcx
+	add	code_len2, code_len3
 
 	;; Setup for updating hash
-	lea	tmp3, [f_i + 1]	; tmp3 <= k
+	lea	tmp3, [f_i + len2 + 1]	; tmp3 <= k
 
-	add	f_i, len2
 	MOVDQU	xdata, [file_start + f_i]
 	mov	curr_data, [file_start + f_i]
 	mov	curr_data2, curr_data
@@ -386,6 +383,7 @@ len_dist_huffman_pre:
 len_dist_huffman:
 	dec	f_i
 	neg	dist
+	add	dist, 1
 
 	; get_dist_code(dist, &code2, &code_len2);
 %ifndef LONGER_HUFFTABLE
@@ -517,11 +515,7 @@ loop2_finish:
 	get_len_code	len, code, rcx, hufftables		;; rcx is code_len
 
 	;; Combine length and distance code for writing it out
-%ifdef USE_HSWNI
-	shlx	code2, code2, rcx
-%else
-	shl	code2, cl
-%endif
+	SHLX	code2, code2, rcx
 	or	code2, code
 	add	code_len2, rcx
 	write_bits m_bits, m_bit_count, code2, code_len2, m_out_buf, tmp3
@@ -608,7 +602,7 @@ compare_loop:
 	MOVD	xhash, tmp6 %+ d
 	PINSRD	xhash, tmp2 %+ d, 1
 	PAND	xhash, xhash, xmask
-	lea	tmp2, [tmp1 + dist]
+	lea	tmp2, [tmp1 + dist - 1]
 %if (COMPARE_TYPE == 1)
 	compare250	tmp1, tmp2, len, tmp3
 %elif (COMPARE_TYPE == 2)
@@ -622,8 +616,8 @@ compare_loop:
 	jmp	len_dist_huffman
 
 compare_loop2:
-	add	tmp1, 1
 	lea	tmp2, [tmp1 + dist2]
+	add	tmp1, 1
 %if (COMPARE_TYPE == 1)
 	compare250	tmp1, tmp2, len2, tmp3
 %elif (COMPARE_TYPE == 2)

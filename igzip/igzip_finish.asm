@@ -129,6 +129,19 @@ skip_SLOP:
 
 	mov	tmp1, [file_start + f_i]
 
+	cmp	dword [stream + _internal_state_b_bytes_processed], 0
+	jne	skip_write_first_byte
+
+	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
+	ja	end_loop_2
+
+	compute_hash	hash, tmp1
+	and	hash %+ d, HASH_MASK
+	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
+	jmp	encode_literal
+
+skip_write_first_byte:
+
 loop2:
 	; if (state->bitbuf.is_full()) {
 	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
@@ -185,11 +198,7 @@ loop2:
 	; code2 <<= code_len
 	; code2 |= code
 	; code_len2 += code_len
-%ifdef USE_HSWNI
-	shlx	code2, code2, rcx
-%else
-	shl	code2, cl
-%endif
+	SHLX	code2, code2, rcx
 	or	code2, code
 	add	code_len2, rcx
 

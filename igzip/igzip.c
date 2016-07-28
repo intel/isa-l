@@ -152,6 +152,9 @@ void sync_flush(struct isal_zstream *stream)
 		if (stream->flush == FULL_FLUSH) {
 			/* Clear match history so there are no cross
 			 * block length distance pairs */
+			state->file_start -= state->b_bytes_processed;
+			state->b_bytes_valid -= state->b_bytes_processed;
+			state->b_bytes_processed = 0;
 			reset_match_history(stream);
 		}
 	}
@@ -392,10 +395,7 @@ static int isal_deflate_int_stateless(struct isal_zstream *stream, uint8_t * nex
 	if (stream->avail_out < 8)
 		return STATELESS_OVERFLOW;
 
-	stream->internal_state.file_start = (uint8_t *) & stream->internal_state.buffer;
-	stream->internal_state.b_bytes_processed = 0;
-	reset_match_history(stream);
-
+	memset(stream->internal_state.head, 0, sizeof(stream->internal_state.head));
 	isal_deflate_body_stateless(stream);
 
 	if (!stream->internal_state.has_eob)
@@ -496,7 +496,7 @@ static inline void reset_match_history(struct isal_zstream *stream)
 	for (i = 0; i < sizeof(state->head) / 2; i++) {
 		head[i] =
 		    (uint16_t) (state->b_bytes_processed + state->buffer - state->file_start -
-				(IGZIP_D + 1));
+				IGZIP_D);
 	}
 }
 
@@ -529,7 +529,7 @@ void isal_deflate_init_01(struct isal_zstream *stream)
 	memset(state->crc, 0, sizeof(state->crc));
 	*state->crc = 0x9db42487;
 
-	reset_match_history(stream);
+	memset(state->head, 0, sizeof(state->head));
 
 	return;
 }
