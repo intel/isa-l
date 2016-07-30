@@ -444,7 +444,7 @@ len_dist_lit_huffman_pre:
 
 len_dist_lit_huffman:
 	neg	dist2
-	add	dist2, 1
+
 %ifndef LONGER_HUFFTABLE
 	mov	tmp4, dist2
 	get_dist_code	tmp4, code4, code_len2, hufftables ;; clobbers dist, rcx
@@ -524,7 +524,6 @@ len_dist_huffman_pre:
 len_dist_huffman:
 	dec	f_i
 	neg	dist
-	add	dist, 1
 
 	; get_dist_code(dist, &code2, &code_len2);
 %ifndef LONGER_HUFFTABLE

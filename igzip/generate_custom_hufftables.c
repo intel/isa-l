@@ -84,7 +84,7 @@
  * hufftables.asm. The deflate standard max is 15.*/
 
 #define LONG_DCODE_OFFSET 26
-#define SHORT_DCODE_OFFSET 20
+#define SHORT_DCODE_OFFSET 0
 
 #define MAX_HEADER_SIZE IGZIP_MAX_DEF_HDR_SIZE
 

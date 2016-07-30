@@ -44,10 +44,20 @@ default rel
 ; l - use longer huffman table
 ; f - fix cache read
 
-%ifdef LARGE_WINDOW
+%ifndef HIST_SIZE
+%define HIST_SIZE	32
+%endif
+
+%if (HIST_SIZE > 32)
+%undef HIST_SIZE
 %define HIST_SIZE 32
-%else
+%endif
+
+%ifdef LONGER_HUFFTABLE
+%if (HIST_SIZE > 8)
+%undef HIST_SIZE
 %define HIST_SIZE 8
+%endif
 %endif
 
 %ifdef USE_BITBUFB
@@ -62,15 +72,8 @@ default rel
 ; (h) limit hash update
 %define LIMIT_HASH_UPDATE
 
-; (l) longer huffman table
-%define LONGER_HUFFTABLE
-
 ; (f) fix cache read problem
 %define FIX_CACHE_READ
-
-%if (HIST_SIZE > 8)
-%undef LONGER_HUFFTABLE
-%endif
 
 %define IGZIP_MAX_DEF_HDR_SIZE 328
 

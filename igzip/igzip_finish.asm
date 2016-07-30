@@ -190,6 +190,7 @@ loop2:
 	;; encode as dist/len
 
 	; get_dist_code(dist, &code2, &code_len2);
+	dec	dist
 	get_dist_code	dist, code2, code_len2, hufftables ;; clobbers dist, rcx
 
 	; get_len_code(len, &code, &code_len);

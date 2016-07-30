@@ -41,8 +41,8 @@
 		%define DECODE_OFFSET     26
 	%endif
 %else
-	%define DIST_TABLE_SIZE 1024
-	%define DECODE_OFFSET     20
+	%define DIST_TABLE_SIZE 2
+	%define DECODE_OFFSET     0
 %endif
 
 %define LEN_TABLE_SIZE 256
@@ -90,7 +90,7 @@
 %define %%len  %3d	; 32-bit OUT
 %define %%hufftables %4	; address of the hufftable
 
-	mov	%%len, [%%hufftables + DIST_TABLE_OFFSET + 4*%%dist ]
+	mov	%%len, [%%hufftables + DIST_TABLE_OFFSET + 4*(%%dist + 1) ]
 	mov	%%code, %%len
 	and	%%len, 0x1F;
 	shr	%%code, 5
@@ -117,45 +117,43 @@
 ; Uses RCX, clobbers dist
 ; void compute_dist_code	dist, code, len
 %macro compute_dist_code 4
-%define %%dist %1d	; IN, clobbered
+%define %%dist %1	; IN, clobbered
 %define %%distq %1
 %define %%code %2	; OUT
 %define %%len  %3	; OUT
 %define %%hufftables %4
 
-	dec	%%dist
-	bsr	ecx, %%dist	; ecx = msb = bsr(dist)
-	dec	ecx		; ecx = num_extra_bits = msb - N
-	mov	%%code, 1
-	shl	%%code, CL
-	dec	%%code		; code = ((1 << num_extra_bits) - 1)
-	and	%%code, %%dist	; code = extra_bits
-	shr	%%dist, CL	; dist >>= num_extra_bits
-	lea	%%dist, [%%dist + 2*ecx] ; dist = sym = dist + num_extra_bits*2
-	mov	%%len, ecx	; len = num_extra_bits
-	movzx	ecx, byte [hufftables + DCODE_TABLE_SIZE_OFFSET + %%distq WRT_OPT]
+	bsr	rcx, %%dist	; ecx = msb = bsr(dist)
+	dec	rcx		; ecx = num_extra_bits = msb - N
+	BZHI	%%code, %%dist, rcx, %%len
+	SHRX	%%dist, %%dist, rcx	; dist >>= num_extra_bits
+	lea	%%dist, [%%dist + 2*rcx] ; dist = sym = dist + num_extra_bits*2
+	mov	%%len, rcx	; len = num_extra_bits
+	movzx	rcx, byte [hufftables + DCODE_TABLE_SIZE_OFFSET + %%distq WRT_OPT]
 	movzx	%%dist, word [hufftables + DCODE_TABLE_OFFSET + 2 * %%distq WRT_OPT]
-	shl	%%code, CL	; code = extra_bits << (sym & 0xF)
+	SHLX	%%code, %%code, rcx	; code = extra_bits << (sym & 0xF)
 	or	%%code, %%dist	; code = (sym >> 4) | (extra_bits << (sym & 0xF))
-	add	%%len, ecx	; len = num_extra_bits + (sym & 0xF)
+	add	%%len, rcx	; len = num_extra_bits + (sym & 0xF)
 %endm
 
 ; Uses RCX, clobbers dist
 ; get_dist_code	dist, code, len
 %macro get_dist_code 4
-%define %%dist %1d	; 32-bit IN, clobbered
+%define %%dist %1	; 32-bit IN, clobbered
 %define %%distq %1	; 64-bit IN, clobbered
-%define %%code %2d	; 32-bit OUT
-%define %%len  %3d	; 32-bit OUT
+%define %%code %2	; 32-bit OUT
+%define %%len  %3	; 32-bit OUT
 %define %%hufftables %4
 
-	cmp	%%dist, DIST_TABLE_SIZE
+	cmp	%%dist, DIST_TABLE_SIZE - 1
 	jg	%%do_compute
-	mov	%%len, [hufftables + DIST_TABLE_OFFSET + 4*%%distq WRT_OPT]
+%ifndef IACA
+	mov	%%len %+ d, dword [hufftables + DIST_TABLE_OFFSET + 4*(%%distq + 1) WRT_OPT]
 	mov	%%code, %%len
 	and	%%len, 0x1F;
 	shr	%%code, 5
 	jmp	%%done
+%endif
 %%do_compute:
 	compute_dist_code	%%distq, %%code, %%len, %%hufftables
 %%done:

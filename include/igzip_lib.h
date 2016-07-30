@@ -50,22 +50,25 @@
  *   in sync flush but also ensures that subsequent block's history does not
  *   look back beyond this point and new blocks are fully independent.
  *
- * Igzip's default configuration is:
+ * Igzip contians some behaviour configurable at compile time. These
+ * configureable options are:
  *
- * - 8K window size
+ * - HIST_SIZE - Defines the window size in 1K increments. The default value is
+ *  32, but 8 is also supported. Powers of 2 which are at most 32 may also work.
  *
- * This option can be overridden to enable:
+ * - LONGER_HUFFTABLES - Defines whether to use a larger hufftables structure
+ *   which may increase performance with smaller HIST_SIZE values. By default
+ *   this optoin is not defined. This define sets HIST_SIZE to be 8 if HIST_SIZE
+ *   > 8.
  *
- * - 32K window size, by adding \#define LARGE_WINDOW 1 in igzip_lib.h and
- *   \%define LARGE_WINDOW in options.asm, or via the command line with
- *   @verbatim gmake D="-D LARGE_WINDOW" @endverbatim on Linux and FreeBSD, or
- *   with @verbatim nmake -f Makefile.nmake D="-D LARGE_WINDOW" @endverbatim on
- *   Windows.
+ * - IGZIP_USE_GZIP_FORMAT - Defines whether the compression should add gzip
+ *   header and trailer to compressed data. By default this option is not
+ *   defined
  *
- * KNOWN ISSUES:
- * - If building the code on Windows with the 32K window enabled, the
- *   /LARGEADDRESSAWARE:NO link option must be added.
- * - The 32K window isn't supported when used in a shared library.
+ *   As an example, to compile gzip with an 8K window size and add the gzip
+ *   header and trailer, in a terminal run @verbatim gmake D="-D HIST_SIZE=8 -D
+ *   IGZIP_USE_GZIP_FORMAT" @endverbatim on Linux and FreeBSD, or with @verbatim
+ *   nmake -f Makefile.nmake D="-D HIST_SIZE=8" @endverbatim on Windows.
  *
  */
 #include <stdint.h>
@@ -83,10 +86,21 @@ extern "C" {
 // l - use longer huffman table
 // f - fix cache read
 
-#if defined(LARGE_WINDOW)
-# define HIST_SIZE 32
-#else
-# define HIST_SIZE 8
+#ifndef HIST_SIZE
+#define HIST_SIZE 32
+#endif
+
+#if (HIST_SIZE > 32)
+#undef HIST_SIZE
+#define HIST_SIZE 32
+#endif
+
+
+#ifdef LONGER_HUFFTABLE
+#if (HIST_SIZE > 8)
+#undef HIST_SIZE
+#define HIST_SIZE 8
+#endif
 #endif
 
 /* bit buffer types
@@ -106,22 +120,19 @@ extern "C" {
  */
 # define LIMIT_HASH_UPDATE
 
-/* (l) longer huffman table */
-#define LONGER_HUFFTABLE
-
 /* (f) fix cache read problem */
 #define FIX_CACHE_READ
 
-#if (HIST_SIZE > 8)
-# undef LONGER_HUFFTABLE
-#endif
 
 #define IGZIP_K  1024
 #define IGZIP_D  (HIST_SIZE * IGZIP_K)	/* Amount of history */
 #define IGZIP_LA (18 * 16)		/* Max look-ahead, rounded up to 32 byte boundary */
 #define BSIZE  (2*IGZIP_D + IGZIP_LA)	/* Nominal buffer size */
 
-#define HASH_SIZE  IGZIP_D
+#ifndef HASH_SIZE
+#define HASH_SIZE  (8 * IGZIP_K)
+#endif
+
 #define HASH_MASK  (HASH_SIZE - 1)
 
 #define SHORTEST_MATCH  4
@@ -134,9 +145,9 @@ enum {DIST_TABLE_SIZE = 8*1024};
 /* DECODE_OFFSET is dist code index corresponding to DIST_TABLE_SIZE + 1 */
 enum { DECODE_OFFSET = 26 };
 #else
-enum {DIST_TABLE_SIZE = 1024};
+enum {DIST_TABLE_SIZE = 2};
 /* DECODE_OFFSET is dist code index corresponding to DIST_TABLE_SIZE + 1 */
-enum { DECODE_OFFSET = 20 };
+enum { DECODE_OFFSET = 0 };
 #endif
 enum {LEN_TABLE_SIZE = 256};
 enum {LIT_TABLE_SIZE = 257};

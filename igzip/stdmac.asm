@@ -216,7 +216,7 @@ ssc:
 %define	%%tmp1		%4
 
 %ifdef USE_HSWNI
-	bzhi	%%src, %%dest, %%index
+	bzhi	%%dest, %%src, %%index
 %else
 %ifnidn	%%index, rcx
 	mov	rcx, %%index

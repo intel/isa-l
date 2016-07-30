@@ -36,7 +36,10 @@
 %define LAST_BYTES_COUNT	3 ;; Bytes to prevent reading out of array bounds
 %define LA_STATELESS	258	;; No round up since no data is copied to a buffer
 
-%assign HASH_SIZE  D
+%ifndef HASH_SIZE
+%assign HASH_SIZE  (8 * K)
+%endif
+
 %assign HASH_MASK  (HASH_SIZE - 1)
 
 %assign SHORTEST_MATCH  4
