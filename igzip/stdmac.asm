@@ -373,4 +373,17 @@ ssc:
 %endif
 %endm
 
+%macro PXOR	3
+%define	%%dest	%1
+%define %%src1	%2
+%define	%%src2	%3
+%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
+	vpxor	%%dest, %%src1, %%src2
+%else
+%ifnidn	%%dest, %%src1
+	movdqa	%%dest, %%src1
+%endif
+	pxor	%%dest, %%src2
+%endif
+%endm
 %endif 	;; ifndef STDMAC_ASM

@@ -251,7 +251,7 @@ skip1:
 	lea	rfc_lookup, [rfc1951_lookup_table]
 
 	;; Init hash_table
-	MOVDQU	vtmp0, [D_vector]
+	PXOR	vtmp0, vtmp0, vtmp0
 	mov	rcx, (HASH_SIZE - V_LENGTH)
 init_hash_table:
 	MOVDQU	[histogram + _hash_offset + 2 * rcx], vtmp0
@@ -295,12 +295,14 @@ loop2:
 
 	;; Load possible look back distances and update hash data
 	mov	dist %+ w, f_i %+ w
+	sub	dist, 1
 	sub	dist %+ w, word [histogram + _hash_offset + 2 * hash]
 	mov	[histogram + _hash_offset + 2 * hash], f_i %+ w
 
 	add	f_i, 1
 
 	mov	dist2 %+ w, f_i %+ w
+	sub	dist2, 1
 	sub	dist2 %+ w, word [histogram + _hash_offset + 2 * hash2]
 	mov	[histogram + _hash_offset + 2 * hash2], f_i %+ w
 
@@ -313,14 +315,10 @@ loop2:
 
 	;; Check if look back distances are valid. Load a junk distance of 1
 	;; if the look back distance is too long for speculative lookups.
-	sub	dist, 1
-	cmp	dist %+ d, (D-1)
-	cmovae	dist, tmp3
+	and	dist %+ d, (D-1)
 	neg	dist
 
-	sub	dist2, 1
-	cmp	dist2 %+ d, (D-1)
-	cmovae	dist2, tmp3
+	and	dist2 %+ d, (D-1)
 	neg	dist2
 
 	shr	tmp2, 16
