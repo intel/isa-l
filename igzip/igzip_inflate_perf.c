@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
 	struct isal_hufftables hufftables_custom;
 
 	memset(&histogram, 0, sizeof(histogram));
-	isal_update_histogram(inbuf, infile_size, &histogram);
+	isal_update_histogram(tempbuf, infile_size, &histogram);
 	isal_create_hufftables(&hufftables_custom, &histogram);
 	stream.hufftables = &hufftables_custom;
 #endif
