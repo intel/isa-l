@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
-	printf("igzip_sync_flush_example\nWindow Size: %d K\n", HIST_SIZE);
+	printf("igzip_sync_flush_example\nWindow Size: %d K\n", IGZIP_HIST_SIZE / 1024);
 	fflush(0);
 
 	isal_deflate_init(&stream);

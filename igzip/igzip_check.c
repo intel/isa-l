@@ -32,7 +32,6 @@
 #include <string.h>
 #include <assert.h>
 #include "igzip_lib.h"
-#include "inflate.h"
 #include "crc_inflate.h"
 #include <math.h>
 
@@ -383,22 +382,19 @@ int inflate_check(uint8_t * z_buf, int z_size, uint8_t * in_buf, int in_size)
 	switch (ret) {
 	case 0:
 		break;
-	case END_OF_INPUT:
+	case ISAL_END_INPUT:
 		return INFLATE_END_OF_INPUT;
 		break;
-	case INVALID_BLOCK_HEADER:
+	case ISAL_INVALID_BLOCK:
 		return INFLATE_INVALID_BLOCK_HEADER;
 		break;
-	case INVALID_SYMBOL:
+	case ISAL_INVALID_SYMBOL:
 		return INFLATE_INVALID_SYMBOL;
 		break;
-	case OUT_BUFFER_OVERFLOW:
+	case ISAL_OUT_OVERFLOW:
 		return INFLATE_OUT_BUFFER_OVERFLOW;
 		break;
-	case INVALID_NON_COMPRESSED_BLOCK_LENGTH:
-		return INFLATE_INVALID_NON_COMPRESSED_BLOCK_LENGTH;
-		break;
-	case INVALID_LOOK_BACK_DISTANCE:
+	case ISAL_INVALID_LOOKBACK:
 		return INFLATE_INVALID_LOOK_BACK_DISTANCE;
 		break;
 	default:
@@ -1165,7 +1161,7 @@ int main(int argc, char *argv[])
 	setbuf(stdout, NULL);
 #endif
 
-	printf("Window Size: %d K\n", HIST_SIZE);
+	printf("Window Size: %d K\n", IGZIP_HIST_SIZE / 1024);
 	printf("Test Seed  : %d\n", TEST_SEED);
 	printf("Randoms    : %d\n", RANDOMS);
 	srand(TEST_SEED);

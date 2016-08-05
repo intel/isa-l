@@ -2,19 +2,18 @@ default rel
 
 %include "reg_sizes.asm"
 
-%define DECOMPRESSION_FINISHED 0
-%define END_OF_INPUT 1
-%define OUT_BUFFER_OVERFLOW 2
-%define INVALID_BLOCK_HEADER 3
-%define INVALID_SYMBOL 4
-%define INVALID_NON_COMPRESSED_BLOCK_LENGTH 5
-%define INVALID_LOOK_BACK_DISTANCE 6
+%define DECOMP_OK 0
+%define END_INPUT 1
+%define OUT_OVERFLOW 2
+%define INVALID_BLOCK -1
+%define INVALID_SYMBOL -2
+%define INVALID_LOOKBACK -3
 
-%define DECODE_LOOKUP_SIZE_LARGE 12
-%define DECODE_LOOKUP_SIZE_SMALL 10
+%define ISAL_DECODE_LONG_BITS 12
+%define ISAL_DECODE_SHORT_BITS 10
 
-%define MAX_LONG_CODE_LARGE (288 + (1 << (15 - DECODE_LOOKUP_SIZE_LARGE)))
-%define MAX_LONG_CODE_SMALL (32 + (1 << (15 - DECODE_LOOKUP_SIZE_SMALL)))
+%define MAX_LONG_CODE_LARGE (288 + (1 << (15 - ISAL_DECODE_LONG_BITS)))
+%define MAX_LONG_CODE_SMALL (32 + (1 << (15 - ISAL_DECODE_SHORT_BITS)))
 
 %define COPY_SIZE 16
 %define	COPY_LEN_MAX 258
@@ -377,7 +376,7 @@ decode_huffman_code_block_stateless_ %+ ARCH %+ :
 
 skip_load:
 	mov	tmp3, read_in
-	and	tmp3, (1 << DECODE_LOOKUP_SIZE_LARGE) - 1
+	and	tmp3, (1 << ISAL_DECODE_LONG_BITS) - 1
 	movzx	next_sym, word [state + _lit_huff_code + 2 * tmp3]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -391,14 +390,14 @@ loop_block:
 	jg	end_loop_block_pre
 
 	;; Decode next symbol and reload the read_in buffer
-	decode_next2	state, DECODE_LOOKUP_SIZE_LARGE, _lit_huff_code, read_in, read_in_length, next_sym, tmp1
+	decode_next2	state, ISAL_DECODE_LONG_BITS, _lit_huff_code, read_in, read_in_length, next_sym, tmp1
 
 	;; Save next_sym in next_sym2 so next_sym can be preloaded
 	mov	next_sym2, next_sym
 
 	;; Find index to specutively preload next_sym from
 	mov	tmp3, read_in
-	and	tmp3, (1 << DECODE_LOOKUP_SIZE_LARGE) - 1
+	and	tmp3, (1 << ISAL_DECODE_LONG_BITS) - 1
 
 	;; Start reloading read_in
 	mov	tmp1, [next_in]
@@ -426,7 +425,7 @@ loop_block:
 	;; Specultively load next dist code
 	SHRX	read_in_2, read_in, rcx
 	mov	next_bits2, read_in_2
-	and	next_bits2, (1 << DECODE_LOOKUP_SIZE_SMALL) - 1
+	and	next_bits2, (1 << ISAL_DECODE_SHORT_BITS) - 1
 	movzx	next_sym3, word [state + _dist_huff_code + 2 * next_bits2]
 
 	;; Specutively write next_sym2 if it is a literal
@@ -447,7 +446,7 @@ decode_len_dist:
 	sub	read_in_length, rcx
 
 	;; Decode distance code
-	decode_next2 state, DECODE_LOOKUP_SIZE_SMALL, _dist_huff_code, read_in_2, read_in_length, next_sym3, tmp2
+	decode_next2 state, ISAL_DECODE_SHORT_BITS, _dist_huff_code, read_in_2, read_in_length, next_sym3, tmp2
 
 	movzx	rcx, byte [rfc_lookup + _dist_extra_bit_count + next_sym3]
 	mov	look_back_dist2 %+ d, [rfc_lookup + _dist_start + 4 * next_sym3]
@@ -465,7 +464,7 @@ decode_len_dist:
 
 	;; Setup next_sym, read_in, and read_in_length for next loop
 	mov	read_in, read_in_2
-	and	read_in_2, (1 << DECODE_LOOKUP_SIZE_LARGE) - 1
+	and	read_in_2, (1 << ISAL_DECODE_LONG_BITS) - 1
 	movzx	next_sym, word [state + _lit_huff_code + 2 * read_in_2]
 	sub	read_in_length, rcx
 
@@ -532,7 +531,7 @@ end_loop_block:
 	mov	[rsp + read_in_mem_offset], read_in
 	mov	[rsp + read_in_length_mem_offset], read_in_length
 
-	decode_next state, DECODE_LOOKUP_SIZE_LARGE, _lit_huff_code, read_in, read_in_length, next_sym, tmp1, tmp2
+	decode_next state, ISAL_DECODE_LONG_BITS, _lit_huff_code, read_in, read_in_length, next_sym, tmp1, tmp2
 
 	;; Check that enough input was available to decode symbol
 	cmp	read_in_length, 0
@@ -558,7 +557,7 @@ decode_len_dist_2:
 	sub	read_in_length, rcx
 
 	;; Decode distance code
-	decode_next state, DECODE_LOOKUP_SIZE_SMALL, _dist_huff_code, read_in, read_in_length, next_sym, tmp1, tmp2
+	decode_next state, ISAL_DECODE_SHORT_BITS, _dist_huff_code, read_in, read_in_length, next_sym, tmp1, tmp2
 
 	;; Load distance code extra bits
 	mov	next_bits, read_in
@@ -605,7 +604,7 @@ decode_literal:
 end_of_input:
 	mov	read_in, [rsp + read_in_mem_offset]
 	mov	read_in_length, [rsp + read_in_length_mem_offset]
-	mov	rax, END_OF_INPUT
+	mov	rax, END_INPUT
 	jmp	end
 
 out_buffer_overflow_repeat:
@@ -620,17 +619,17 @@ out_buffer_overflow_repeat:
 
 	mov	next_out, end_out
 
-	mov	rax, OUT_BUFFER_OVERFLOW
+	mov	rax, OUT_OVERFLOW
 	jmp	end
 
 out_buffer_overflow_lit:
 	mov	read_in, [rsp + read_in_mem_offset]
 	mov	read_in_length, [rsp + read_in_length_mem_offset]
-	mov	rax, OUT_BUFFER_OVERFLOW
+	mov	rax, OUT_OVERFLOW
 	jmp	end
 
 invalid_look_back_distance:
-	mov	rax, INVALID_LOOK_BACK_DISTANCE
+	mov	rax, INVALID_LOOKBACK
 	jmp	end
 
 end_symbol_pre:

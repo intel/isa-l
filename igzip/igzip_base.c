@@ -36,8 +36,8 @@ void isal_deflate_init_base(struct isal_zstream *stream)
 
 	*crc = ~0;
 
-	for (i = 0; i < HASH_SIZE; i++)
-		state->head[i] = (uint16_t) - (IGZIP_D + 1);
+	for (i = 0; i < IGZIP_HASH_SIZE; i++)
+		state->head[i] = (uint16_t) - (IGZIP_HIST_SIZE + 1);
 	return;
 }
 
@@ -82,16 +82,17 @@ void isal_deflate_body_base(struct isal_zstream *stream)
 
 	while (stream->avail_in != 0) {
 		bytes_to_buffer =
-		    IGZIP_D + IGZIP_LA - (state->b_bytes_valid - state->b_bytes_processed);
+		    IGZIP_HIST_SIZE + ISAL_LOOK_AHEAD - (state->b_bytes_valid -
+							 state->b_bytes_processed);
 
-		if (bytes_to_buffer > IGZIP_D)
-			bytes_to_buffer = IGZIP_D;
+		if (bytes_to_buffer > IGZIP_HIST_SIZE)
+			bytes_to_buffer = IGZIP_HIST_SIZE;
 
-		if (stream->avail_in < IGZIP_D)
+		if (stream->avail_in < IGZIP_HIST_SIZE)
 			bytes_to_buffer = stream->avail_in;
 
-		if (bytes_to_buffer > BSIZE - state->b_bytes_valid) {
-			if (state->b_bytes_valid - state->b_bytes_processed > IGZIP_LA) {
+		if (bytes_to_buffer > sizeof(state->buffer) - state->b_bytes_valid) {
+			if (state->b_bytes_valid - state->b_bytes_processed > ISAL_LOOK_AHEAD) {
 				/* There was an out buffer overflow last round,
 				 * complete the processing of data */
 				bytes_to_buffer = 0;
@@ -99,9 +100,9 @@ void isal_deflate_body_base(struct isal_zstream *stream)
 			} else {
 				/* Not enough room in the buffer, shift the
 				 * buffer down to make space for the new data */
-				offset = state->b_bytes_processed - IGZIP_D;	// state->b_bytes_valid - (IGZIP_D + IGZIP_LA);
+				offset = state->b_bytes_processed - IGZIP_HIST_SIZE;	// state->b_bytes_valid - (IGZIP_HIST_SIZE + ISAL_LOOK_AHEAD);
 				memmove(state->buffer, state->buffer + offset,
-					IGZIP_D + IGZIP_LA);
+					IGZIP_HIST_SIZE + ISAL_LOOK_AHEAD);
 
 				state->b_bytes_processed -= offset;
 				state->b_bytes_valid -= offset;
@@ -124,7 +125,7 @@ void isal_deflate_body_base(struct isal_zstream *stream)
 
 		state->b_bytes_valid += bytes_to_buffer;
 
-		end_in = state->buffer + state->b_bytes_valid - IGZIP_LA;
+		end_in = state->buffer + state->b_bytes_valid - ISAL_LOOK_AHEAD;
 
 		next_in = state->b_bytes_processed + state->buffer;
 
@@ -141,7 +142,7 @@ void isal_deflate_body_base(struct isal_zstream *stream)
 			dist = (next_in - state->file_start - last_seen[hash]) & 0xFFFF;
 			last_seen[hash] = (uint64_t) (next_in - state->file_start);
 
-			if (dist - 1 < IGZIP_D - 1) {	/* The -1 are to handle the case when dist = 0 */
+			if (dist - 1 < IGZIP_HIST_SIZE - 1) {	/* The -1 are to handle the case when dist = 0 */
 				assert(next_in - dist >= state->buffer);
 				assert(dist != 0);
 
@@ -149,7 +150,7 @@ void isal_deflate_body_base(struct isal_zstream *stream)
 
 				if (match_length >= SHORTEST_MATCH) {
 					next_hash = next_in;
-#ifdef LIMIT_HASH_UPDATE
+#ifdef ISAL_LIMIT_HASH_UPDATE
 					end = next_hash + 3;
 #else
 					end = next_hash + match_length;
@@ -229,13 +230,13 @@ void isal_deflate_finish_base(struct isal_zstream *stream)
 		dist = (next_in - state->file_start - last_seen[hash]) & 0xFFFF;
 		last_seen[hash] = (uint64_t) (next_in - state->file_start);
 
-		if (dist - 1 < IGZIP_D - 1) {	/* The -1 are to handle the case when dist = 0 */
+		if (dist - 1 < IGZIP_HIST_SIZE - 1) {	/* The -1 are to handle the case when dist = 0 */
 			assert(next_in - dist >= state->buffer);
 			match_length = compare258(next_in - dist, next_in, end_in - next_in);
 
 			if (match_length >= SHORTEST_MATCH) {
 				next_hash = next_in;
-#ifdef LIMIT_HASH_UPDATE
+#ifdef ISAL_LIMIT_HASH_UPDATE
 				end = next_hash + 3;
 #else
 				end = next_hash + match_length;

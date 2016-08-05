@@ -48,7 +48,7 @@
 %define LEN_TABLE_SIZE 256
 %define LIT_TABLE_SIZE 257
 
-%define DIST_TABLE_START (IGZIP_MAX_DEF_HDR_SIZE + 8)
+%define DIST_TABLE_START (ISAL_DEF_MAX_HDR_SIZE + 8)
 %define DIST_TABLE_OFFSET (DIST_TABLE_START + - 4 * 1)
 %define LEN_TABLE_OFFSET (DIST_TABLE_START + DIST_TABLE_SIZE * 4 - 4*3)
 %define LIT_TABLE_OFFSET (DIST_TABLE_START + 4 * DIST_TABLE_SIZE + 4 * LEN_TABLE_SIZE)
@@ -58,7 +58,7 @@
 ;; /** @brief Holds the huffman tree used to huffman encode the input stream **/
 ;; struct isal_hufftables {
 ;;	// deflate huffman tree header
-;; 	uint8_t deflate_huff_hdr[IGZIP_MAX_DEF_HDR_SIZE];
+;; 	uint8_t deflate_huff_hdr[ISAL_DEF_MAX_HDR_SIZE];
 ;;
 ;;	//!< Number of whole bytes in deflate_huff_hdr
 ;;	uint32_t deflate_huff_hdr_count;

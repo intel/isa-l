@@ -30,7 +30,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <zlib.h>
-#include "inflate.h"
+#include "igzip_lib.h"
 #include "huff_codes.h"
 
 /*Don't use file larger memory can support because compression and decompression
@@ -163,29 +163,25 @@ int test(uint8_t * compressed_stream,
 	switch (ret) {
 	case 0:
 		break;
-	case END_OF_INPUT:
+	case ISAL_END_INPUT:
 		printf(" did not decompress all input\n");
-		return END_OF_INPUT;
+		return ISAL_END_INPUT;
 		break;
-	case INVALID_BLOCK_HEADER:
+	case ISAL_INVALID_BLOCK:
 		printf("  invalid header\n");
-		return INVALID_BLOCK_HEADER;
+		return ISAL_INVALID_BLOCK;
 		break;
-	case INVALID_SYMBOL:
+	case ISAL_INVALID_SYMBOL:
 		printf(" invalid symbol\n");
-		return INVALID_SYMBOL;
+		return ISAL_INVALID_SYMBOL;
 		break;
-	case OUT_BUFFER_OVERFLOW:
+	case ISAL_OUT_OVERFLOW:
 		printf(" out buffer overflow\n");
-		return OUT_BUFFER_OVERFLOW;
+		return ISAL_OUT_OVERFLOW;
 		break;
-	case INVALID_NON_COMPRESSED_BLOCK_LENGTH:
-		printf("Invalid length bits in non-compressed block\n");
-		return INVALID_NON_COMPRESSED_BLOCK_LENGTH;
-		break;
-	case INVALID_LOOK_BACK_DISTANCE:
+	case ISAL_INVALID_LOOKBACK:
 		printf("Invalid lookback distance");
-		return INVALID_LOOK_BACK_DISTANCE;
+		return ISAL_INVALID_LOOKBACK;
 		break;
 	default:
 		printf(" error\n");

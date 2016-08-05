@@ -44,19 +44,19 @@ default rel
 ; l - use longer huffman table
 ; f - fix cache read
 
-%ifndef HIST_SIZE
-%define HIST_SIZE	32
+%ifndef IGZIP_HIST_SIZE
+%define IGZIP_HIST_SIZE (32 * 1024)
 %endif
 
-%if (HIST_SIZE > 32)
-%undef HIST_SIZE
-%define HIST_SIZE 32
+%if (IGZIP_HIST_SIZE > (32 * 1024))
+%undef IGZIP_HIST_SIZE
+%define IGZIP_HIST_SIZE (32 * 1024)
 %endif
 
 %ifdef LONGER_HUFFTABLE
-%if (HIST_SIZE > 8)
-%undef HIST_SIZE
-%define HIST_SIZE 8
+%if (IGZIP_HIST_SIZE > 8 * 1024)
+%undef IGZIP_HIST_SIZE
+%define IGZIP_HIST_SIZE (8 * 1024)
 %endif
 %endif
 
@@ -75,7 +75,7 @@ default rel
 ; (f) fix cache read problem
 %define FIX_CACHE_READ
 
-%define IGZIP_MAX_DEF_HDR_SIZE 328
+%define ISAL_DEF_MAX_HDR_SIZE 328
 
 %ifidn __OUTPUT_FORMAT__, elf64
 %ifndef __NASM_VER__

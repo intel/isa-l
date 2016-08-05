@@ -30,7 +30,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include "huff_codes.h"
-#include "inflate.h"
+#include "igzip_lib.h"
 #include "test.h"
 
 #if defined(ZLIB_9) || defined(ZLIB_1) || defined(ZLIB_COMPARE)

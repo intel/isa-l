@@ -45,13 +45,13 @@
  * generate_custom_hufftables are the same as the default parameters used by
  * igzip.
  *
- * *WARNING* generate custom hufftables must be compiled with a HIST_SIZE that
- * is at least as large as the HIST_SIZE used by igzip. By default HIST_SIZE is
- * 8, the maximum usable HIST_SIZE is 32. The reason for this is to generate
- * better compression. Igzip cannot produce look back distances with sizes
- * larger than the HIST_SIZE * 1024 igzip was compiled with, so look back
- * distances with sizes larger than HIST_SIZE * 1024 are not assigned a huffman
- * code.
+ * *WARNING* generate custom hufftables must be compiled with a IGZIP_HIST_SIZE
+ * that is at least as large as the IGZIP_HIST_SIZE used by igzip. By default
+ * IGZIP_HIST_SIZE is 8K, the maximum usable IGZIP_HIST_SIZE is 32K. The reason
+ * for this is to generate better compression. Igzip cannot produce look back
+ * distances with sizes larger than the IGZIP_HIST_SIZE igzip was compiled with,
+ * so look back distances with sizes larger than IGZIP_HIST_SIZE are not
+ * assigned a huffman code.
  *
  * To improve compression ratio, the compile time option LIT_SUB is provided to
  * allow generating custom hufftables which only use a subset of all possible
@@ -86,7 +86,7 @@
 #define LONG_DCODE_OFFSET 26
 #define SHORT_DCODE_OFFSET 0
 
-#define MAX_HEADER_SIZE IGZIP_MAX_DEF_HDR_SIZE
+#define MAX_HEADER_SIZE ISAL_DEF_MAX_HDR_SIZE
 
 #define GZIP_HEADER_SIZE 10
 #define GZIP_TRAILER_SIZE 8

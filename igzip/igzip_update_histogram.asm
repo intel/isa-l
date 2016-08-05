@@ -252,7 +252,7 @@ skip1:
 
 	;; Init hash_table
 	PXOR	vtmp0, vtmp0, vtmp0
-	mov	rcx, (HASH_SIZE - V_LENGTH)
+	mov	rcx, (IGZIP_HASH_SIZE - V_LENGTH)
 init_hash_table:
 	MOVDQU	[histogram + _hash_offset + 2 * rcx], vtmp0
 	MOVDQU	[histogram + _hash_offset + 2 * (rcx + V_LENGTH / 2)], vtmp0

@@ -45,14 +45,14 @@ void isal_deflate_body_stateless_base(struct isal_zstream *stream)
 		dist = (uint64_t) (stream->next_in - last_seen[hash]) & 0xFFFF;
 		last_seen[hash] = (uint64_t) stream->next_in;
 
-		if (dist - 1 < IGZIP_D - 1 && stream->next_in - dist >= start_in) {	/* The -1 are to handle the case when dist = 0 */
+		if (dist - 1 < IGZIP_HIST_SIZE - 1 && stream->next_in - dist >= start_in) {	/* The -1 are to handle the case when dist = 0 */
 			match_length =
 			    compare258(stream->next_in - dist, stream->next_in,
 				       end_in - stream->next_in);
 
 			if (match_length >= SHORTEST_MATCH) {
 				next_hash = stream->next_in;
-#ifdef LIMIT_HASH_UPDATE
+#ifdef ISAL_LIMIT_HASH_UPDATE
 				end = next_hash + 3;
 #else
 				end = next_hash + match_length;
@@ -99,7 +99,7 @@ void isal_deflate_body_stateless_base(struct isal_zstream *stream)
 	hash = compute_hash(literal) & HASH_MASK;
 	dist = (uint64_t) (stream->next_in - last_seen[hash]) & 0xFFFF;
 
-	if (dist - 1 < IGZIP_D - 1 && stream->next_in - dist >= start_in) {
+	if (dist - 1 < IGZIP_HIST_SIZE - 1 && stream->next_in - dist >= start_in) {
 		match_length =
 		    compare258(stream->next_in - dist, stream->next_in,
 			       end_in - stream->next_in);

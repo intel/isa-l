@@ -33,7 +33,6 @@
 #include <string.h>
 #include "igzip_lib.h"
 #include "test.h"
-#include "inflate.h"
 
 #define BUF_SIZE 1024
 #define MIN_TEST_LOOPS   8
@@ -94,7 +93,7 @@ int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *h
 		if (state->block_state == ISAL_BLOCK_TYPE0) {
 			/* If the block is uncompressed, update state data accordingly */
 			if (state->avail_in < 4)
-				return END_OF_INPUT;
+				return ISAL_END_INPUT;
 
 			len = *(uint16_t *) state->next_in;
 			state->next_in += 2;
@@ -103,7 +102,7 @@ int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *h
 
 			/* Check if len and nlen match */
 			if (len != (~nlen & 0xffff))
-				return INVALID_NON_COMPRESSED_BLOCK_LENGTH;
+				return ISAL_INVALID_BLOCK;
 
 			if (state->avail_in < len)
 				len = state->avail_in;
@@ -115,7 +114,7 @@ int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *h
 			state->avail_in -= len + 4;
 
 			if (state->avail_in == 0 && state->block_state == 0)
-				return END_OF_INPUT;
+				return ISAL_END_INPUT;
 
 		} else {
 			/* Else decode a huffman encoded block */
@@ -127,7 +126,7 @@ int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *h
 				histogram->lit_len_histogram[next_lit] += 1;
 
 				if (state->read_in_length < 0)
-					return END_OF_INPUT;
+					return ISAL_END_INPUT;
 
 				if (next_lit < 256)
 					/* Next symbol is a literal */
@@ -157,15 +156,15 @@ int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *h
 								 [next_dist]);
 
 					if (state->read_in_length < 0)
-						return END_OF_INPUT;
+						return ISAL_END_INPUT;
 
 					if (look_back_dist > state->total_out)
-						return INVALID_LOOK_BACK_DISTANCE;
+						return ISAL_INVALID_LOOKBACK;
 
 					state->total_out += repeat_length;
 
 				} else
-					return INVALID_SYMBOL;
+					return ISAL_INVALID_SYMBOL;
 			}
 		}
 
@@ -175,7 +174,7 @@ int isal_inflate_hist(struct inflate_state *state, struct isal_huff_histogram *h
 	state->next_in -= state->read_in_length / 8;
 	state->avail_in += state->read_in_length / 8;
 
-	return DECOMPRESSION_FINISHED;
+	return ISAL_DECOMP_OK;
 }
 
 int get_filesize(FILE * f)
@@ -193,7 +192,7 @@ void print_histogram(struct isal_huff_histogram *histogram)
 {
 	int i;
 	printf("Lit Len histogram");
-	for (i = 0; i < IGZIP_LIT_LEN; i++) {
+	for (i = 0; i < ISAL_DEF_LIT_LEN_SYMBOLS; i++) {
 		if (i % 16 == 0)
 			printf("\n");
 		else
@@ -203,7 +202,7 @@ void print_histogram(struct isal_huff_histogram *histogram)
 	printf("\n");
 
 	printf("Dist histogram");
-	for (i = 0; i < IGZIP_DIST_LEN; i++) {
+	for (i = 0; i < ISAL_DEF_DIST_SYMBOLS; i++) {
 		if (i % 16 == 0)
 			printf("\n");
 		else
@@ -219,7 +218,7 @@ void print_diff_histogram(struct isal_huff_histogram *histogram1,
 	int i;
 	double relative_error;
 	printf("Lit Len histogram relative error");
-	for (i = 0; i < IGZIP_LIT_LEN; i++) {
+	for (i = 0; i < ISAL_DEF_LIT_LEN_SYMBOLS; i++) {
 		if (i % 16 == 0)
 			printf("\n");
 		else
@@ -239,7 +238,7 @@ void print_diff_histogram(struct isal_huff_histogram *histogram1,
 	printf("\n");
 
 	printf("Dist histogram relative error");
-	for (i = 0; i < IGZIP_DIST_LEN; i++) {
+	for (i = 0; i < ISAL_DEF_DIST_SYMBOLS; i++) {
 		if (i % 16 == 0)
 			printf("\n");
 		else

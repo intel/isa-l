@@ -33,8 +33,8 @@
 /**
  * @file igzip_lib.h
  *
- * @brief This file defines the igzip compression interface, a high performance
- * deflate compression interface for storage applications.
+ * @brief This file defines the igzip compression and decompression interface, a
+ * high performance deflate compression interface for storage applications.
  *
  * Deflate is a widely used compression standard that can be used standalone, it
  * also forms the basis of gzip and zlib compression formats. Igzip supports the
@@ -53,22 +53,24 @@
  * Igzip contians some behaviour configurable at compile time. These
  * configureable options are:
  *
- * - HIST_SIZE - Defines the window size in 1K increments. The default value is
- *  32, but 8 is also supported. Powers of 2 which are at most 32 may also work.
+ * - IGZIP_HIST_SIZE - Defines the window size. The default value is 32K (note K
+ *   represents 1024), but 8K is also supported. Powers of 2 which are at most
+ *   32K may also work.
  *
  * - LONGER_HUFFTABLES - Defines whether to use a larger hufftables structure
- *   which may increase performance with smaller HIST_SIZE values. By default
- *   this optoin is not defined. This define sets HIST_SIZE to be 8 if HIST_SIZE
- *   > 8.
+ *   which may increase performance with smaller IGZIP_HIST_SIZE values. By
+ *   default this optoin is not defined. This define sets IGZIP_HIST_SIZE to be
+ *   8 if IGZIP_HIST_SIZE > 8K.
  *
  * - IGZIP_USE_GZIP_FORMAT - Defines whether the compression should add gzip
  *   header and trailer to compressed data. By default this option is not
  *   defined
  *
  *   As an example, to compile gzip with an 8K window size and add the gzip
- *   header and trailer, in a terminal run @verbatim gmake D="-D HIST_SIZE=8 -D
- *   IGZIP_USE_GZIP_FORMAT" @endverbatim on Linux and FreeBSD, or with @verbatim
- *   nmake -f Makefile.nmake D="-D HIST_SIZE=8" @endverbatim on Windows.
+ *   header and trailer, in a terminal run @verbatim gmake D="-D
+ *   IGZIP_HIST_SIZE=8*1024 -D IGZIP_USE_GZIP_FORMAT" @endverbatim on Linux and
+ *   FreeBSD, or with @verbatim nmake -f Makefile.nmake D="-D
+ *   IGZIP_HIST_SIZE=8*1024" @endverbatim on Windows.
  *
  */
 #include <stdint.h>
@@ -78,82 +80,59 @@
 extern "C" {
 #endif
 
-// Options:dir
-// m - reschedule mem reads
-// e b - bitbuff style
-// t s x - compare style
-// h - limit hash updates
-// l - use longer huffman table
-// f - fix cache read
-
-#ifndef HIST_SIZE
-#define HIST_SIZE 32
-#endif
-
-#if (HIST_SIZE > 32)
-#undef HIST_SIZE
-#define HIST_SIZE 32
-#endif
-
-
-#ifdef LONGER_HUFFTABLE
-#if (HIST_SIZE > 8)
-#undef HIST_SIZE
-#define HIST_SIZE 8
-#endif
-#endif
-
-/* bit buffer types
- * BITBUF8: (e) Always write 8 bytes of data
- * BITBUFB: (b) Always write data
- */
-#if !(defined(USE_BITBUFB) || defined(USE_BITBUF8) || defined(USE_BITBUF_ELSE))
-# define USE_BITBUFB
-#endif
-
-/* compare types
- * 1: ( ) original
- * 2: (t) with CMOV
- * 3: (s) with sttni
- * 4: (x) with xmm / pmovbmsk
- * 5: (y) with ymm / pmovbmsk (32-bytes at a time)
- */
-# define LIMIT_HASH_UPDATE
-
-/* (f) fix cache read problem */
-#define FIX_CACHE_READ
-
-
+/******************************************************************************/
+/* Deflate Compression Standard Defines */
+/******************************************************************************/
 #define IGZIP_K  1024
-#define IGZIP_D  (HIST_SIZE * IGZIP_K)	/* Amount of history */
-#define IGZIP_LA (18 * 16)		/* Max look-ahead, rounded up to 32 byte boundary */
-#define BSIZE  (2*IGZIP_D + IGZIP_LA)	/* Nominal buffer size */
+#define ISAL_DEF_MAX_HDR_SIZE 328
+#define ISAL_DEF_MAX_CODE_LEN 15
+#define ISAL_DEF_HIST_SIZE (32*IGZIP_K)
 
-#ifndef HASH_SIZE
-#define HASH_SIZE  (8 * IGZIP_K)
+#define ISAL_DEF_LIT_SYMBOLS 257
+#define ISAL_DEF_LEN_SYMBOLS 29
+#define ISAL_DEF_DIST_SYMBOLS 30
+#define ISAL_DEF_LIT_LEN_SYMBOLS (ISAL_DEF_LIT_SYMBOLS + ISAL_DEF_LEN_SYMBOLS)
+
+#define ISAL_LOOK_AHEAD (18 * 16)	/* Max repeat length, rounded up to 32 byte boundary */
+
+/******************************************************************************/
+/* Deflate Implemenation Specific Defines */
+/******************************************************************************/
+/* Note IGZIP_HIST_SIZE must be a power of two */
+#ifndef IGZIP_HIST_SIZE
+#define IGZIP_HIST_SIZE ISAL_DEF_HIST_SIZE
 #endif
 
-#define HASH_MASK  (HASH_SIZE - 1)
-
-#define SHORTEST_MATCH  4
-
-#define IGZIP_MAX_DEF_HDR_SIZE 328
+#if (IGZIP_HIST_SIZE > ISAL_DEF_HIST_SIZE)
+#undef IGZIP_HIST_SIZE
+#define IGZIP_HIST_SIZE ISAL_DEF_HIST_SIZE
+#endif
 
 #ifdef LONGER_HUFFTABLE
-enum {DIST_TABLE_SIZE = 8*1024};
-
-/* DECODE_OFFSET is dist code index corresponding to DIST_TABLE_SIZE + 1 */
-enum { DECODE_OFFSET = 26 };
-#else
-enum {DIST_TABLE_SIZE = 2};
-/* DECODE_OFFSET is dist code index corresponding to DIST_TABLE_SIZE + 1 */
-enum { DECODE_OFFSET = 0 };
+#if (IGZIP_HIST_SIZE > 8 * IGZIP_K)
+#undef IGZIP_HIST_SIZE
+#define IGZIP_HIST_SIZE (8 * IGZIP_K)
 #endif
-enum {LEN_TABLE_SIZE = 256};
-enum {LIT_TABLE_SIZE = 257};
+#endif
 
-#define IGZIP_LIT_LEN 286
-#define IGZIP_DIST_LEN 30
+#define ISAL_LIMIT_HASH_UPDATE
+
+#ifndef IGZIP_HASH_SIZE
+#define IGZIP_HASH_SIZE  (8 * IGZIP_K)
+#endif
+
+#ifdef LONGER_HUFFTABLE
+enum {IGZIP_DIST_TABLE_SIZE = 8*1024};
+
+/* DECODE_OFFSET is dist code index corresponding to DIST_TABLE_SIZE + 1 */
+enum { IGZIP_DECODE_OFFSET = 26 };
+#else
+enum {IGZIP_DIST_TABLE_SIZE = 2};
+/* DECODE_OFFSET is dist code index corresponding to DIST_TABLE_SIZE + 1 */
+enum { IGZIP_DECODE_OFFSET = 0 };
+#endif
+enum {IGZIP_LEN_TABLE_SIZE = 256};
+enum {IGZIP_LIT_TABLE_SIZE = ISAL_DEF_LIT_SYMBOLS};
 
 /* Flush Flags */
 #define NO_FLUSH	0	/* Default */
@@ -161,12 +140,12 @@ enum {LIT_TABLE_SIZE = 257};
 #define FULL_FLUSH	2
 #define FINISH_FLUSH	0	/* Deprecated */
 
-/* Return values */
+/* Compression Return values */
 #define COMP_OK 0
 #define INVALID_FLUSH -7
 #define INVALID_PARAM -8
 #define STATELESS_OVERFLOW -1
-#define DEFLATE_HDR_LEN 3
+
 /**
  *  @enum isal_zstate
  *  @brief Compression State please note ZSTATE_TRL only applies for GZIP compression
@@ -196,12 +175,41 @@ enum isal_zstate_state {
 };
 
 /* Offset used to switch between TMP states and non-tmp states */
-#define TMP_OFFSET_SIZE ZSTATE_TMP_HDR - ZSTATE_HDR
+#define ZSTATE_TMP_OFFSET ZSTATE_TMP_HDR - ZSTATE_HDR
 
+/******************************************************************************/
+/* Inflate Implementation Specific Defines */
+/******************************************************************************/
+#define ISAL_DECODE_LONG_BITS 12
+#define ISAL_DECODE_SHORT_BITS 10
+
+/* Current state of decompression */
+enum isal_block_state {
+	ISAL_BLOCK_NEW_HDR,	/* Just starting a new block */
+	ISAL_BLOCK_HDR,		/* In the middle of reading in a block header */
+	ISAL_BLOCK_TYPE0,	/* Decoding a type 0 block */
+	ISAL_BLOCK_CODED,	/* Decoding a huffman coded block */
+	ISAL_BLOCK_INPUT_DONE,	/* Decompression of input is completed */
+	ISAL_BLOCK_FINISH	/* Decompression of input is completed and all data has been flushed to output */
+};
+
+/* Inflate Return values */
+#define ISAL_DECOMP_OK 0	/* No errors encountered while decompressing */
+#define ISAL_END_INPUT 1	/* End of input reached */
+#define ISAL_OUT_OVERFLOW 2	/* End of output reached */
+#define ISAL_INVALID_BLOCK -1	/* Invalid deflate block found */
+#define ISAL_INVALID_SYMBOL -2	/* Invalid deflate symbol found */
+#define ISAL_INVALID_LOOKBACK -3	/* Invalid lookback distance found */
+
+
+/******************************************************************************/
+/* Compression structures */
+/******************************************************************************/
+/** @brief Holds histogram of deflate symbols*/
 struct isal_huff_histogram {
-	uint64_t lit_len_histogram[IGZIP_LIT_LEN];
-	uint64_t dist_histogram[IGZIP_DIST_LEN];
-	uint16_t hash_table[HASH_SIZE];
+	uint64_t lit_len_histogram[ISAL_DEF_LIT_LEN_SYMBOLS]; //!< Histogram of Literal/Len symbols seen
+	uint64_t dist_histogram[ISAL_DEF_DIST_SYMBOLS]; //!< Histogram of Distance Symbols seen
+	uint16_t hash_table[IGZIP_HASH_SIZE]; //!< Tmp space used as a hash table
 };
 
 /** @brief Holds Bit Buffer information*/
@@ -236,26 +244,23 @@ struct isal_zstate {
 	uint32_t has_eob_hdr;	//!< keeps track of eob hdr (with BFINAL set)
 	uint32_t left_over;	//!< keeps track of overflow bytes
 
-
-
-	DECLARE_ALIGNED(uint8_t buffer[BSIZE + 16], 32);	//!< Internal buffer
-
-	DECLARE_ALIGNED(uint16_t head[HASH_SIZE], 16);	//!< Hash array
+	DECLARE_ALIGNED(uint8_t buffer[2 * IGZIP_HIST_SIZE + ISAL_LOOK_AHEAD], 32);	//!< Internal buffer
+	DECLARE_ALIGNED(uint16_t head[IGZIP_HASH_SIZE], 16);	//!< Hash array
 
 };
 
 /** @brief Holds the huffman tree used to huffman encode the input stream **/
 struct isal_hufftables {
 
-	uint8_t deflate_hdr[IGZIP_MAX_DEF_HDR_SIZE]; //!< deflate huffman tree header
+	uint8_t deflate_hdr[ISAL_DEF_MAX_HDR_SIZE]; //!< deflate huffman tree header
 	uint32_t deflate_hdr_count; //!< Number of whole bytes in deflate_huff_hdr
 	uint32_t deflate_hdr_extra_bits; //!< Number of bits in the partial byte in header
-	uint32_t dist_table[DIST_TABLE_SIZE]; //!< bits 4:0 are the code length, bits 31:5 are the code
-	uint32_t len_table[LEN_TABLE_SIZE]; //!< bits 4:0 are the code length, bits 31:5 are the code
-	uint16_t lit_table[LIT_TABLE_SIZE]; //!< literal code
-	uint8_t lit_table_sizes[LIT_TABLE_SIZE]; //!< literal code length
-	uint16_t dcodes[30 - DECODE_OFFSET]; //!< distance code
-	uint8_t dcodes_sizes[30 - DECODE_OFFSET]; //!< distance code length
+	uint32_t dist_table[IGZIP_DIST_TABLE_SIZE]; //!< bits 4:0 are the code length, bits 31:5 are the code
+	uint32_t len_table[IGZIP_LEN_TABLE_SIZE]; //!< bits 4:0 are the code length, bits 31:5 are the code
+	uint16_t lit_table[IGZIP_LIT_TABLE_SIZE]; //!< literal code
+	uint8_t lit_table_sizes[IGZIP_LIT_TABLE_SIZE]; //!< literal code length
+	uint16_t dcodes[30 - IGZIP_DECODE_OFFSET]; //!< distance code
+	uint8_t dcodes_sizes[30 - IGZIP_DECODE_OFFSET]; //!< distance code length
 
 };
 
@@ -276,7 +281,93 @@ struct isal_zstream {
 	struct isal_zstate internal_state;	//!< Internal state for this stream
 };
 
+/******************************************************************************/
+/* Inflate structures */
+/******************************************************************************/
+/*
+ * Inflate_huff_code data structures are used to store a Huffman code for fast
+ * lookup. It works by performing a lookup in small_code_lookup that hopefully
+ * yields the correct symbol. Otherwise a lookup into long_code_lookup is
+ * performed to find the correct symbol. The details of how this works follows:
+ *
+ * Let i be some index into small_code_lookup and let e be the associated
+ * element.  Bit 15 in e is a flag. If bit 15 is not set, then index i contains
+ * a Huffman code for a symbol which has length at most DECODE_LOOKUP_SIZE. Bits
+ * 0 through 8 are the symbol associated with that code and bits 9 through 12 of
+ * e represent the number of bits in the code. If bit 15 is set, the i
+ * corresponds to the first DECODE_LOOKUP_SIZE bits of a Huffman code which has
+ * length longer than DECODE_LOOKUP_SIZE. In this case, bits 0 through 8
+ * represent an offset into long_code_lookup table and bits 9 through 12
+ * represent the maximum length of a Huffman code starting with the bits in the
+ * index i. The offset into long_code_lookup is for an array associated with all
+ * codes which start with the bits in i.
+ *
+ * The elements of long_code_lookup are in the same format as small_code_lookup,
+ * except bit 15 is never set. Let i be a number made up of DECODE_LOOKUP_SIZE
+ * bits.  Then all Huffman codes which start with DECODE_LOOKUP_SIZE bits are
+ * stored in an array starting at index h in long_code_lookup. This index h is
+ * stored in bits 0 through 9 at index i in small_code_lookup. The index j is an
+ * index of this array if the number of bits contained in j and i is the number
+ * of bits in the longest huff_code starting with the bits of i. The symbol
+ * stored at index j is the symbol whose huffcode can be found in (j <<
+ * DECODE_LOOKUP_SIZE) | i. Note these arrays will be stored sorted in order of
+ * maximum Huffman code length.
+ *
+ * The following are explanations for sizes of the tables:
+ *
+ * Since small_code_lookup is a lookup on DECODE_LOOKUP_SIZE bits, it must have
+ * size 2^DECODE_LOOKUP_SIZE.
+ *
+ * Since deflate Huffman are stored such that the code size and the code value
+ * form an increasing function, At most 2^(15 - DECODE_LOOKUP_SIZE) - 1 elements
+ * of long_code_lookup duplicate an existing symbol. Since there are at most 285
+ * - DECODE_LOOKUP_SIZE possible symbols contained in long_code lookup. Rounding
+ * this to the nearest 16 byte boundary yields the size of long_code_lookup of
+ * 288 + 2^(15 - DECODE_LOOKUP_SIZE).
+ *
+ * Note that DECODE_LOOKUP_SIZE can be any length even though the offset in
+ * small_lookup_code is 9 bits long because the increasing relationship between
+ * code length and code value forces the maximum offset to be less than 288.
+ */
 
+/* Large lookup table for decoding huffman codes */
+struct inflate_huff_code_large {
+	uint16_t short_code_lookup[1 << (ISAL_DECODE_LONG_BITS)];
+	uint16_t long_code_lookup[288 + (1 << (15 - ISAL_DECODE_LONG_BITS))];
+};
+
+/* Small lookup table for decoding huffman codes */
+struct inflate_huff_code_small {
+	uint16_t short_code_lookup[1 << (ISAL_DECODE_SHORT_BITS)];
+	uint16_t long_code_lookup[32 + (1 << (15 - ISAL_DECODE_SHORT_BITS))];
+};
+
+/** @brief Holds decompression state information*/
+struct inflate_state {
+	uint8_t *next_out;	//!< Next output Byte
+	uint32_t avail_out;	//!< Number of bytes available at next_out 
+	uint32_t total_out;	//!< Total bytes written out so far
+	uint8_t *next_in;	//!< Next input byte
+	uint64_t read_in;	//!< Bits buffered to handle unaligned streams
+	uint32_t avail_in;	//!< Number of bytes available at next_in
+	int32_t read_in_length;	//!< Bits in read_in
+	struct inflate_huff_code_large lit_huff_code;	//!< Structure for decoding lit/len symbols
+	struct inflate_huff_code_small dist_huff_code;	//!< Structure for decoding dist symbols
+	enum isal_block_state block_state;	//!< Current decompression state
+	uint32_t bfinal;	//!< Flag identifying final block
+	int32_t type0_block_len;	//!< Length left to read of type 0 block when outbuffer overflow occured
+	int32_t copy_overflow_length; 	//!< Length left to copy when outbuffer overflow occured
+	int32_t copy_overflow_distance;	//!< Lookback distance when outbuffer overlow occured
+	int32_t tmp_in_size;	//!< Number of bytes in tmp_in_buffer
+	int32_t tmp_out_valid;	//!< Number of bytes in tmp_out_buffer
+	int32_t tmp_out_processed;	//!< Number of bytes processed in tmp_out_buffer
+	uint8_t tmp_in_buffer[ISAL_DEF_MAX_HDR_SIZE];	//!< Temporary buffer containing data from the input stream
+	uint8_t tmp_out_buffer[2 * ISAL_DEF_HIST_SIZE + ISAL_LOOK_AHEAD]; 	//!< Temporary buffer containing data from the output stream
+};
+
+/******************************************************************************/
+/* Compression functions */
+/******************************************************************************/
 /**
  * @brief Updates histograms to include the symbols found in the input
  * stream. Since this function only updates the histograms, it can be called on
@@ -385,6 +476,58 @@ int isal_deflate(struct isal_zstream *stream);
  */
 int isal_deflate_stateless(struct isal_zstream *stream);
 
+
+/******************************************************************************/
+/* Inflate functions */
+/******************************************************************************/
+/**
+ * @brief Initialize decompression state data structure
+ *
+ * @param state Structure holding state information on the compression streams.
+ * @returns none
+ */
+void isal_inflate_init(struct inflate_state *state);
+
+/**
+ * @brief Fast data (deflate) decompression for storage applications.
+ *
+ * On entry to isal_inflate(), next_in points to an input buffer and avail_in
+ * indicates the length of that buffer. Similarly next_out points to an empty
+ * output buffer and avail_out indicates the size of that buffer.
+ *
+ * The fields total_in and total_out start at 0 and are updated by
+ * isal_inflate(). These reflect the total number of bytes read or written so far.
+ *
+ * The call to isal_inflate() will take data from the input buffer (updating
+ * next_in, avail_in and write a decompressed stream to the output buffer
+ * (updating next_out and avail_out). The function returns when the input buffer
+ * is empty, the output buffer is full or invalid data is found. The current
+ * state of the decompression on exit can be read from state->block-state.
+ *
+ * @param  state Structure holding state information on the compression streams.
+ * @return DECOMP_OK (if everything is ok),
+ *         INVALID_BLOCK,
+ *         INVALID_SYMBOL,
+ *         INVALID_LOOKBACK.
+ */
+int isal_inflate(struct inflate_state *state);
+
+/**
+ * @brief Fast data (deflate) stateless decompression for storage applications.
+ *
+ * Stateless (one shot) compression routine with a similar interface to
+ * isal_inflate() but operates on entire input buffer at one time. Parameter
+ * avail_out must be large enough to fit the entire decompressed output.
+ *
+ * @param  state Structure holding state information on the compression streams.
+ * @return ISAL_DECOMP_OK (if everything is ok),
+ *         ISAL_END_INPUT (if all input was decompressed),
+ *         ISAL_OUT_OVERFLOW (if output buffer ran out of space),
+ *         ISAL_INVALID_BLOCK,
+ *         ISAL_INVALID_SYMBOL,
+ *         ISAL_INVALID_LOOKBACK.
+ */
+int isal_inflate_stateless(struct inflate_state *state);
 
 #ifdef __cplusplus
 }

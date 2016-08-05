@@ -1,7 +1,7 @@
 // <COPYRIGHT_TAG>
 
 #include <stdint.h>
-#include "inflate.h"
+#include "igzip_lib.h"
 #include "huff_codes.h"
 
 extern int decode_huffman_code_block_stateless(struct inflate_state *);
@@ -43,21 +43,21 @@ static struct rfc1951_tables rfc_lookup_table = {
 		      0x0083, 0x00a3, 0x00c3, 0x00e3, 0x0102, 0x0000, 0x0000, 0x0000}
 };
 
-
 struct slver {
-       uint16_t snum;
-       uint8_t ver;
-       uint8_t core;
+	uint16_t snum;
+	uint8_t ver;
+	uint8_t core;
 };
 
 /* Version info */
 struct slver isal_inflate_init_slver_00010088;
 struct slver isal_inflate_init_slver = { 0x0088, 0x01, 0x00 };
+
 struct slver isal_inflate_stateless_slver_00010089;
 struct slver isal_inflate_stateless_slver = { 0x0089, 0x01, 0x00 };
+
 struct slver isal_inflate_slver_0001008a;
 struct slver isal_inflate_slver = { 0x008a, 0x01, 0x00 };
-
 
 /*Performs a copy of length repeat_length data starting at dest -
  * lookback_distance into dest. This copy copies data previously copied when the
@@ -146,7 +146,7 @@ void inline make_inflate_huff_code_large(struct inflate_huff_code_large *result,
 	uint16_t next_code[MAX_HUFF_TREE_DEPTH + 1];
 	uint16_t long_code_list[LIT_LEN];
 	uint32_t long_code_length = 0;
-	uint16_t temp_code_list[1 << (15 - DECODE_LOOKUP_SIZE_LARGE)];
+	uint16_t temp_code_list[1 << (15 - ISAL_DECODE_LONG_BITS)];
 	uint32_t temp_code_length;
 	uint32_t long_code_lookup_length = 0;
 	uint32_t max_length;
@@ -186,7 +186,7 @@ void inline make_inflate_huff_code_large(struct inflate_huff_code_large *result,
 
 	for (k = 0; k < code_list_len; k++) {
 		i = code_list[k];
-		if (huff_code_table[i].length > DECODE_LOOKUP_SIZE_LARGE)
+		if (huff_code_table[i].length > ISAL_DECODE_LONG_BITS)
 			break;
 
 		while (huff_code_table[i].length > last_length) {
@@ -212,7 +212,7 @@ void inline make_inflate_huff_code_large(struct inflate_huff_code_large *result,
 
 	}
 
-	while (DECODE_LOOKUP_SIZE_LARGE > last_length) {
+	while (ISAL_DECODE_LONG_BITS > last_length) {
 		memcpy(short_code_lookup + copy_size, short_code_lookup,
 		       sizeof(*short_code_lookup) * copy_size);
 		last_length++;
@@ -243,14 +243,14 @@ void inline make_inflate_huff_code_large(struct inflate_huff_code_large *result,
 		max_length = huff_code_table[long_code_list[i]].length;
 		first_bits =
 		    huff_code_table[long_code_list[i]].code
-		    & ((1 << DECODE_LOOKUP_SIZE_LARGE) - 1);
+		    & ((1 << ISAL_DECODE_LONG_BITS) - 1);
 
 		temp_code_list[0] = long_code_list[i];
 		temp_code_length = 1;
 
 		for (j = i + 1; j < long_code_length; j++) {
 			if ((huff_code_table[long_code_list[j]].code &
-			     ((1 << DECODE_LOOKUP_SIZE_LARGE) - 1)) == first_bits) {
+			     ((1 << ISAL_DECODE_LONG_BITS) - 1)) == first_bits) {
 				if (max_length < huff_code_table[long_code_list[j]].length)
 					max_length = huff_code_table[long_code_list[j]].length;
 				temp_code_list[temp_code_length] = long_code_list[j];
@@ -261,10 +261,9 @@ void inline make_inflate_huff_code_large(struct inflate_huff_code_large *result,
 		for (j = 0; j < temp_code_length; j++) {
 			code_length = huff_code_table[temp_code_list[j]].length;
 			long_bits =
-			    huff_code_table[temp_code_list[j]].code >>
-			    DECODE_LOOKUP_SIZE_LARGE;
-			min_increment = 1 << (code_length - DECODE_LOOKUP_SIZE_LARGE);
-			for (; long_bits < (1 << (max_length - DECODE_LOOKUP_SIZE_LARGE));
+			    huff_code_table[temp_code_list[j]].code >> ISAL_DECODE_LONG_BITS;
+			min_increment = 1 << (code_length - ISAL_DECODE_LONG_BITS);
+			for (; long_bits < (1 << (max_length - ISAL_DECODE_LONG_BITS));
 			     long_bits += min_increment) {
 				result->long_code_lookup[long_code_lookup_length + long_bits] =
 				    temp_code_list[j] | (code_length << 9);
@@ -273,7 +272,7 @@ void inline make_inflate_huff_code_large(struct inflate_huff_code_large *result,
 		}
 		result->short_code_lookup[first_bits] =
 		    long_code_lookup_length | (max_length << 9) | 0x8000;
-		long_code_lookup_length += 1 << (max_length - DECODE_LOOKUP_SIZE_LARGE);
+		long_code_lookup_length += 1 << (max_length - ISAL_DECODE_LONG_BITS);
 
 	}
 }
@@ -287,7 +286,7 @@ void inline make_inflate_huff_code_small(struct inflate_huff_code_small *result,
 	uint16_t next_code[MAX_HUFF_TREE_DEPTH + 1];
 	uint16_t long_code_list[LIT_LEN];
 	uint32_t long_code_length = 0;
-	uint16_t temp_code_list[1 << (15 - DECODE_LOOKUP_SIZE_SMALL)];
+	uint16_t temp_code_list[1 << (15 - ISAL_DECODE_SHORT_BITS)];
 	uint32_t temp_code_length;
 	uint32_t long_code_lookup_length = 0;
 	uint32_t max_length;
@@ -327,7 +326,7 @@ void inline make_inflate_huff_code_small(struct inflate_huff_code_small *result,
 
 	for (k = 0; k < code_list_len; k++) {
 		i = code_list[k];
-		if (huff_code_table[i].length > DECODE_LOOKUP_SIZE_SMALL)
+		if (huff_code_table[i].length > ISAL_DECODE_SHORT_BITS)
 			break;
 
 		while (huff_code_table[i].length > last_length) {
@@ -353,7 +352,7 @@ void inline make_inflate_huff_code_small(struct inflate_huff_code_small *result,
 
 	}
 
-	while (DECODE_LOOKUP_SIZE_SMALL > last_length) {
+	while (ISAL_DECODE_SHORT_BITS > last_length) {
 		memcpy(short_code_lookup + copy_size, short_code_lookup,
 		       sizeof(*short_code_lookup) * copy_size);
 		last_length++;
@@ -384,14 +383,14 @@ void inline make_inflate_huff_code_small(struct inflate_huff_code_small *result,
 		max_length = huff_code_table[long_code_list[i]].length;
 		first_bits =
 		    huff_code_table[long_code_list[i]].code
-		    & ((1 << DECODE_LOOKUP_SIZE_SMALL) - 1);
+		    & ((1 << ISAL_DECODE_SHORT_BITS) - 1);
 
 		temp_code_list[0] = long_code_list[i];
 		temp_code_length = 1;
 
 		for (j = i + 1; j < long_code_length; j++) {
 			if ((huff_code_table[long_code_list[j]].code &
-			     ((1 << DECODE_LOOKUP_SIZE_SMALL) - 1)) == first_bits) {
+			     ((1 << ISAL_DECODE_SHORT_BITS) - 1)) == first_bits) {
 				if (max_length < huff_code_table[long_code_list[j]].length)
 					max_length = huff_code_table[long_code_list[j]].length;
 				temp_code_list[temp_code_length] = long_code_list[j];
@@ -402,10 +401,9 @@ void inline make_inflate_huff_code_small(struct inflate_huff_code_small *result,
 		for (j = 0; j < temp_code_length; j++) {
 			code_length = huff_code_table[temp_code_list[j]].length;
 			long_bits =
-			    huff_code_table[temp_code_list[j]].code >>
-			    DECODE_LOOKUP_SIZE_SMALL;
-			min_increment = 1 << (code_length - DECODE_LOOKUP_SIZE_SMALL);
-			for (; long_bits < (1 << (max_length - DECODE_LOOKUP_SIZE_SMALL));
+			    huff_code_table[temp_code_list[j]].code >> ISAL_DECODE_SHORT_BITS;
+			min_increment = 1 << (code_length - ISAL_DECODE_SHORT_BITS);
+			for (; long_bits < (1 << (max_length - ISAL_DECODE_SHORT_BITS));
 			     long_bits += min_increment) {
 				result->long_code_lookup[long_code_lookup_length + long_bits] =
 				    temp_code_list[j] | (code_length << 9);
@@ -414,7 +412,7 @@ void inline make_inflate_huff_code_small(struct inflate_huff_code_small *result,
 		}
 		result->short_code_lookup[first_bits] =
 		    long_code_lookup_length | (max_length << 9) | 0x8000;
-		long_code_lookup_length += 1 << (max_length - DECODE_LOOKUP_SIZE_SMALL);
+		long_code_lookup_length += 1 << (max_length - ISAL_DECODE_SHORT_BITS);
 
 	}
 }
@@ -478,10 +476,10 @@ uint16_t inline decode_next_large(struct inflate_state *state,
 	uint32_t bit_count;
 	uint32_t bit_mask;
 
-	if (state->read_in_length <= DEFLATE_CODE_MAX_LENGTH)
+	if (state->read_in_length <= ISAL_DEF_MAX_CODE_LEN)
 		inflate_in_load(state, 0);
 
-	next_bits = state->read_in & ((1 << DECODE_LOOKUP_SIZE_LARGE) - 1);
+	next_bits = state->read_in & ((1 << ISAL_DECODE_LONG_BITS) - 1);
 
 	/* next_sym is a possible symbol decoded from next_bits. If bit 15 is 0,
 	 * next_code is a symbol. Bits 9:0 represent the symbol, and bits 14:10
@@ -508,7 +506,7 @@ uint16_t inline decode_next_large(struct inflate_state *state,
 		next_bits = state->read_in & bit_mask;
 		next_sym =
 		    huff_code->long_code_lookup[(next_sym & 0x1FF) +
-						(next_bits >> DECODE_LOOKUP_SIZE_LARGE)];
+						(next_bits >> ISAL_DECODE_LONG_BITS)];
 		bit_count = next_sym >> 9;
 		state->read_in >>= bit_count;
 		state->read_in_length -= bit_count;
@@ -527,10 +525,10 @@ uint16_t inline decode_next_small(struct inflate_state *state,
 	uint32_t bit_count;
 	uint32_t bit_mask;
 
-	if (state->read_in_length <= DEFLATE_CODE_MAX_LENGTH)
+	if (state->read_in_length <= ISAL_DEF_MAX_CODE_LEN)
 		inflate_in_load(state, 0);
 
-	next_bits = state->read_in & ((1 << DECODE_LOOKUP_SIZE_SMALL) - 1);
+	next_bits = state->read_in & ((1 << ISAL_DECODE_SHORT_BITS) - 1);
 
 	/* next_sym is a possible symbol decoded from next_bits. If bit 15 is 0,
 	 * next_code is a symbol. Bits 9:0 represent the symbol, and bits 14:10
@@ -557,7 +555,7 @@ uint16_t inline decode_next_small(struct inflate_state *state,
 		next_bits = state->read_in & bit_mask;
 		next_sym =
 		    huff_code->long_code_lookup[(next_sym & 0x1FF) +
-						(next_bits >> DECODE_LOOKUP_SIZE_SMALL)];
+						(next_bits >> ISAL_DECODE_SHORT_BITS)];
 		bit_count = next_sym >> 9;
 		state->read_in >>= bit_count;
 		state->read_in_length -= bit_count;
@@ -606,7 +604,7 @@ int inline setup_dynamic_header(struct inflate_state *state)
 	}
 
 	if (state->read_in_length < 0)
-		return END_OF_INPUT;
+		return ISAL_END_INPUT;
 
 	make_inflate_huff_code_small(&inflate_code_huff, code_huff, CODE_LEN_CODES,
 				     code_count);
@@ -629,7 +627,7 @@ int inline setup_dynamic_header(struct inflate_state *state)
 		symbol = decode_next_small(state, &inflate_code_huff);
 
 		if (state->read_in_length < 0)
-			return END_OF_INPUT;
+			return ISAL_END_INPUT;
 
 		if (symbol < 16) {
 			/* If a length is found, update the current lit/len/dist
@@ -644,7 +642,7 @@ int inline setup_dynamic_header(struct inflate_state *state)
 			 * length lit/len/dist elements to have the value of the
 			 * repeated length */
 			if (previous == NULL)	/* No elements available to be repeated */
-				return INVALID_BLOCK_HEADER;
+				return ISAL_INVALID_BLOCK;
 
 			i = 3 + inflate_in_read_bits(state, 2);
 			for (j = 0; j < i; j++) {
@@ -694,12 +692,12 @@ int inline setup_dynamic_header(struct inflate_state *state)
 					current++;
 			}
 		} else
-			return INVALID_BLOCK_HEADER;
+			return ISAL_INVALID_BLOCK;
 
 	}
 
 	if (state->read_in_length < 0)
-		return END_OF_INPUT;
+		return ISAL_END_INPUT;
 
 	make_inflate_huff_code_large(&state->lit_huff_code, lit_and_dist_huff, LIT_LEN,
 				     lit_count);
@@ -728,14 +726,14 @@ int read_header(struct inflate_state *state)
 	btype = inflate_in_read_bits(state, 2);
 
 	if (state->read_in_length < 0)
-		ret = END_OF_INPUT;
+		ret = ISAL_END_INPUT;
 
 	else if (btype == 0) {
 		inflate_in_load(state, 40);
 		bytes = state->read_in_length / 8;
 
 		if (bytes < 4)
-			return END_OF_INPUT;
+			return ISAL_END_INPUT;
 
 		state->read_in >>= state->read_in_length % 8;
 		state->read_in_length = bytes * 8;
@@ -755,7 +753,7 @@ int read_header(struct inflate_state *state)
 
 		/* Check if len and nlen match */
 		if (len != (~nlen & 0xffff))
-			return INVALID_NON_COMPRESSED_BLOCK_LENGTH;
+			return ISAL_INVALID_BLOCK;
 
 		state->type0_block_len = len;
 		state->block_state = ISAL_BLOCK_TYPE0;
@@ -769,7 +767,7 @@ int read_header(struct inflate_state *state)
 		ret = setup_dynamic_header(state);
 
 	else
-		ret = INVALID_BLOCK_HEADER;
+		ret = ISAL_INVALID_BLOCK;
 
 	return ret;
 }
@@ -789,7 +787,7 @@ int read_header_stateful(struct inflate_state *state)
 
 	if (block_state_start == ISAL_BLOCK_HDR) {
 		/* Setup so read_header decodes data in tmp_in_buffer */
-		copy_size = ISAL_INFLATE_MAX_HDR_SIZE - state->tmp_in_size;
+		copy_size = ISAL_DEF_MAX_HDR_SIZE - state->tmp_in_size;
 		if (copy_size > state->avail_in)
 			copy_size = state->avail_in;
 
@@ -809,7 +807,7 @@ int read_header_stateful(struct inflate_state *state)
 		state->avail_in = avail_in_start - bytes_read;
 	}
 
-	if (ret == END_OF_INPUT) {
+	if (ret == ISAL_END_INPUT) {
 		/* Save off data so header can be decoded again with more data */
 		state->read_in = read_in_start;
 		state->read_in_length = read_in_length_start;
@@ -854,10 +852,10 @@ int inline decode_literal_block(struct inflate_state *state)
 	state->type0_block_len -= len;
 
 	if (state->avail_in == 0 && state->block_state != ISAL_BLOCK_NEW_HDR)
-		return END_OF_INPUT;
+		return ISAL_END_INPUT;
 
 	if (state->avail_out == 0 && state->type0_block_len > 0)
-		return OUT_BUFFER_OVERFLOW;
+		return ISAL_OUT_OVERFLOW;
 
 	return 0;
 
@@ -895,7 +893,7 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state)
 			state->read_in_length = read_in_length_tmp;
 			state->next_in = next_in_tmp;
 			state->avail_in = avail_in_tmp;
-			return END_OF_INPUT;
+			return ISAL_END_INPUT;
 		}
 
 		if (next_lit < 256) {
@@ -907,7 +905,7 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state)
 				state->read_in_length = read_in_length_tmp;
 				state->next_in = next_in_tmp;
 				state->avail_in = avail_in_tmp;
-				return OUT_BUFFER_OVERFLOW;
+				return ISAL_OUT_OVERFLOW;
 			}
 
 			*state->next_out = next_lit;
@@ -945,11 +943,11 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state)
 				state->read_in_length = read_in_length_tmp;
 				state->next_in = next_in_tmp;
 				state->avail_in = avail_in_tmp;
-				return END_OF_INPUT;
+				return ISAL_END_INPUT;
 			}
 
 			if (look_back_dist > state->total_out)
-				return INVALID_LOOK_BACK_DISTANCE;
+				return ISAL_INVALID_LOOKBACK;
 
 			if (state->avail_out < repeat_length) {
 				state->copy_overflow_length = repeat_length - state->avail_out;
@@ -968,11 +966,11 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state)
 			state->total_out += repeat_length;
 
 			if (state->copy_overflow_length > 0)
-				return OUT_BUFFER_OVERFLOW;
+				return ISAL_OUT_OVERFLOW;
 		} else
 			/* Else the read in bits do not
 			 * correspond to any valid symbol */
-			return INVALID_SYMBOL;
+			return ISAL_INVALID_SYMBOL;
 	}
 	return 0;
 }
@@ -1044,11 +1042,11 @@ int isal_inflate(struct inflate_state *state)
 
 	if (state->block_state != ISAL_BLOCK_FINISH) {
 		/* If space in tmp_out buffer, decompress into the tmp_out_buffer */
-		if (state->tmp_out_valid < 2 * ISAL_INFLATE_HIST_SIZE) {
+		if (state->tmp_out_valid < 2 * ISAL_DEF_HIST_SIZE) {
 			/* Setup to start decoding into temp buffer */
 			state->next_out = &state->tmp_out_buffer[state->tmp_out_valid];
 			state->avail_out =
-			    sizeof(state->tmp_out_buffer) - ISAL_INFLATE_SLOP -
+			    sizeof(state->tmp_out_buffer) - ISAL_LOOK_AHEAD -
 			    state->tmp_out_valid;
 
 			if ((int32_t) state->avail_out < 0)
@@ -1106,8 +1104,7 @@ int isal_inflate(struct inflate_state *state)
 		state->avail_out -= copy_size;
 		state->next_out += copy_size;
 
-		if (ret == INVALID_LOOK_BACK_DISTANCE || ret == INVALID_BLOCK_HEADER
-		    || ret == INVALID_NON_COMPRESSED_BLOCK_LENGTH) {
+		if (ret == ISAL_INVALID_LOOKBACK || ret == ISAL_INVALID_BLOCK) {
 			/* Set total_out to not count data in tmp_out_buffer */
 			state->total_out -= state->tmp_out_valid - state->tmp_out_processed;
 			return ret;
@@ -1139,15 +1136,15 @@ int isal_inflate(struct inflate_state *state)
 		if (state->block_state != ISAL_BLOCK_INPUT_DONE) {
 			/* Save decompression history in tmp_out buffer */
 			if (state->tmp_out_valid == state->tmp_out_processed
-			    && avail_out - state->avail_out >= ISAL_INFLATE_HIST_SIZE) {
+			    && avail_out - state->avail_out >= ISAL_DEF_HIST_SIZE) {
 				memcpy(state->tmp_out_buffer,
-				       state->next_out - ISAL_INFLATE_HIST_SIZE,
-				       ISAL_INFLATE_HIST_SIZE);
-				state->tmp_out_valid = ISAL_INFLATE_HIST_SIZE;
-				state->tmp_out_processed = ISAL_INFLATE_HIST_SIZE;
+				       state->next_out - ISAL_DEF_HIST_SIZE,
+				       ISAL_DEF_HIST_SIZE);
+				state->tmp_out_valid = ISAL_DEF_HIST_SIZE;
+				state->tmp_out_processed = ISAL_DEF_HIST_SIZE;
 
-			} else if (state->tmp_out_processed >= ISAL_INFLATE_HIST_SIZE) {
-				shift_size = state->tmp_out_valid - ISAL_INFLATE_HIST_SIZE;
+			} else if (state->tmp_out_processed >= ISAL_DEF_HIST_SIZE) {
+				shift_size = state->tmp_out_valid - ISAL_DEF_HIST_SIZE;
 				if (shift_size > state->tmp_out_processed)
 					shift_size = state->tmp_out_processed;
 
@@ -1169,14 +1166,12 @@ int isal_inflate(struct inflate_state *state)
 				state->copy_overflow_length = 0;
 			}
 
-			if (ret == INVALID_LOOK_BACK_DISTANCE
-			    || ret == INVALID_BLOCK_HEADER
-			    || ret == INVALID_NON_COMPRESSED_BLOCK_LENGTH)
+			if (ret == ISAL_INVALID_LOOKBACK || ret == ISAL_INVALID_BLOCK)
 				return ret;
 
 		} else if (state->tmp_out_valid == state->tmp_out_processed)
 			state->block_state = ISAL_BLOCK_FINISH;
 	}
 
-	return DECOMPRESSION_FINISHED;
+	return ISAL_DECOMP_OK;
 }

@@ -75,7 +75,7 @@ static inline uint32_t tzcnt(uint64_t val)
 
 static void compute_dist_code(struct isal_hufftables *hufftables, uint16_t dist, uint64_t *p_code, uint64_t *p_len)
 {
-	assert(dist > DIST_TABLE_SIZE);
+	assert(dist > IGZIP_DIST_TABLE_SIZE);
 
 	dist -= 1;
 	uint32_t msb;
@@ -92,8 +92,8 @@ static void compute_dist_code(struct isal_hufftables *hufftables, uint16_t dist,
 	dist >>= num_extra_bits;
 	sym = dist + 2 * num_extra_bits;
 	assert(sym < 30);
-	code = hufftables->dcodes[sym - DECODE_OFFSET];
-	len = hufftables->dcodes_sizes[sym - DECODE_OFFSET];
+	code = hufftables->dcodes[sym - IGZIP_DECODE_OFFSET];
+	len = hufftables->dcodes_sizes[sym - IGZIP_DECODE_OFFSET];
 	*p_code = code | (extra_bits << len);
 	*p_len = len + num_extra_bits;
 }
@@ -104,7 +104,7 @@ static inline void get_dist_code(struct isal_hufftables *hufftables, uint32_t di
 		dist = 0;
 	assert(dist >= 1);
 	assert(dist <= 32768);
-	if (dist <= DIST_TABLE_SIZE) {
+	if (dist <= IGZIP_DIST_TABLE_SIZE) {
 		uint64_t code_len;
 		code_len = hufftables->dist_table[dist - 1];
 		*code = code_len >> 5;

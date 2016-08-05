@@ -43,8 +43,8 @@
 # include <x86intrin.h>
 #endif
 
-#define LIT_LEN IGZIP_LIT_LEN
-#define DIST_LEN IGZIP_DIST_LEN
+#define LIT_LEN ISAL_DEF_LIT_LEN_SYMBOLS
+#define DIST_LEN ISAL_DEF_DIST_SYMBOLS
 #define CODE_LEN_CODES 19
 #define HUFF_LEN 19
 #ifdef LONGER_HUFFTABLE
@@ -55,7 +55,7 @@
 #define DYN_HDR_START_LEN 17
 #define MAX_HISTHEAP_SIZE LIT_LEN
 #define MAX_HUFF_TREE_DEPTH 15
-#define D      IGZIP_D	/* Amount of history */
+#define D      IGZIP_HIST_SIZE	/* Amount of history */
 
 #define MAX_DEFLATE_CODE_LEN 15
 #define MAX_SAFE_LIT_CODE_LEN 13
@@ -75,6 +75,9 @@
 #define INVALID_LIT_LEN_HUFFCODE 1
 #define INVALID_DIST_HUFFCODE 1
 #define INVALID_HUFFCODE 1
+
+#define HASH_MASK  (IGZIP_HASH_SIZE - 1)
+#define SHORTEST_MATCH  4
 
 /**
  * @brief Structure used to store huffman codes

@@ -496,7 +496,7 @@ static inline void reset_match_history(struct isal_zstream *stream)
 	for (i = 0; i < sizeof(state->head) / 2; i++) {
 		head[i] =
 		    (uint16_t) (state->b_bytes_processed + state->buffer - state->file_start -
-				IGZIP_D);
+				IGZIP_HIST_SIZE);
 	}
 }
 
@@ -641,7 +641,7 @@ int isal_deflate(struct isal_zstream *stream)
 
 		state->last_flush = stream->flush;
 
-		if (state->state >= TMP_OFFSET_SIZE) {
+		if (state->state >= ZSTATE_TMP_OFFSET) {
 			size = state->tmp_out_end - state->tmp_out_start;
 			if (size > stream->avail_out)
 				size = stream->avail_out;
@@ -653,7 +653,7 @@ int isal_deflate(struct isal_zstream *stream)
 			state->tmp_out_start += size;
 
 			if (state->tmp_out_start == state->tmp_out_end)
-				state->state -= TMP_OFFSET_SIZE;
+				state->state -= ZSTATE_TMP_OFFSET;
 
 			if (stream->avail_out == 0 || state->state == ZSTATE_END)
 				return ret;
@@ -696,7 +696,7 @@ int isal_deflate(struct isal_zstream *stream)
 				stream->total_out += size;
 				state->tmp_out_start += size;
 				if (state->tmp_out_start != state->tmp_out_end)
-					state->state += TMP_OFFSET_SIZE;
+					state->state += ZSTATE_TMP_OFFSET;
 
 			}
 		}

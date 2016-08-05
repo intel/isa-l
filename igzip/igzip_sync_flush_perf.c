@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 	struct perf start, stop;
 
 	create_data(inbuf, TEST_LEN);
-	printf("Window Size: %d K\n", HIST_SIZE);
+	printf("Window Size: %d K\n", IGZIP_HIST_SIZE / 1024);
 	printf("igzip_sync_flush_perf: \n");
 	fflush(0);
 

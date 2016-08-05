@@ -31,6 +31,14 @@
 
 #include "igzip_lib.h"
 
+/* bit buffer types
+ * BITBUF8: (e) Always write 8 bytes of data
+ * BITBUFB: (b) Always write data
+ */
+#if !(defined(USE_BITBUFB) || defined(USE_BITBUF8) || defined(USE_BITBUF_ELSE))
+# define USE_BITBUFB
+#endif
+
 #if defined (__unix__) || (__APPLE__)
 #define _mm_stream_si64x(dst, src) *((uint64_t*)dst) = src
 #else

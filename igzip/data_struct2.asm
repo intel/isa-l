@@ -85,8 +85,8 @@ FIELD	_has_gzip_hdr,	4,	4
 FIELD	_has_eob,		4,	4
 FIELD	_has_eob_hdr,	4,	4
 FIELD	_left_over, 4,	4
-FIELD	_buffer,	BSIZE+16,	32
-FIELD	_head,		HASH_SIZE*2,	16
+FIELD	_buffer,	BSIZE,	32
+FIELD	_head,		IGZIP_HASH_SIZE*2,	16
 
 %assign _isal_zstate_size	_FIELD_OFFSET
 %assign _isal_zstate_align	_STRUCT_ALIGN

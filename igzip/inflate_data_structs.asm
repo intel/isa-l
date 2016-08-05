@@ -27,7 +27,7 @@
 START_FIELDS	;; inflate huff code
 
 ;;      name				size    align
-FIELD	_small_code_lookup_large,	2 * (1 << (DECODE_LOOKUP_SIZE_LARGE)),	2
+FIELD	_short_code_lookup_large,	2 * (1 << (ISAL_DECODE_LONG_BITS)),	2
 FIELD	_long_code_lookup_large,	2 * MAX_LONG_CODE_LARGE,		2
 
 %assign _inflate_huff_code_large_size	_FIELD_OFFSET
@@ -40,7 +40,7 @@ FIELD	_long_code_lookup_large,	2 * MAX_LONG_CODE_LARGE,		2
 START_FIELDS	;; inflate huff code
 
 ;;      name				size    align
-FIELD	_small_code_lookup_small,	2 * (1 << (DECODE_LOOKUP_SIZE_SMALL)),	2
+FIELD	_short_code_lookup_small,	2 * (1 << (ISAL_DECODE_SHORT_BITS)),	2
 FIELD	_long_code_lookup_small,	2 * MAX_LONG_CODE_SMALL,		2
 
 %assign _inflate_huff_code_small_size	_FIELD_OFFSET
@@ -70,10 +70,10 @@ FIELD	_copy_overflow_dist,	4,	4
 %assign _inflate_state_size		_FIELD_OFFSET
 %assign _inflate_state_align	_STRUCT_ALIGN
 
-_lit_huff_code_small_code_lookup	equ	_lit_huff_code+_small_code_lookup_large
+_lit_huff_code_short_code_lookup	equ	_lit_huff_code+_short_code_lookup_large
 _lit_huff_code_long_code_lookup		equ	_lit_huff_code+_long_code_lookup_large
 
-_dist_huff_code_small_code_lookup	equ	_dist_huff_code+_small_code_lookup_small
+_dist_huff_code_short_code_lookup	equ	_dist_huff_code+_short_code_lookup_small
 _dist_huff_code_long_code_lookup	equ	_dist_huff_code+_long_code_lookup_small
 
 ISAL_BLOCK_NEW_HDR	equ	0

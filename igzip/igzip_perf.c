@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 	struct isal_zstream stream;
 	unsigned char inbuf[IBUF_SIZE], zbuf[OBUF_SIZE];
 
-	printf("Window Size: %d K\n", HIST_SIZE);
+	printf("Window Size: %d K\n", IGZIP_HIST_SIZE / 1024);
 	printf("igzip_perf: \n");
 	fflush(0);
 	create_data(inbuf, TEST_LEN);

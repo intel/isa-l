@@ -50,7 +50,7 @@ lsrc        += 	igzip/igzip.c igzip/hufftables_c.c \
 		igzip/igzip_inflate_multibinary.asm
 
 src_include += -I $(srcdir)/igzip
-extern_hdrs +=	include/igzip_lib.h include/inflate.h
+extern_hdrs +=	include/igzip_lib.h
 
 pkginclude_HEADERS += include/types.h
 

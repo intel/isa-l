@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 		}
 		printf("outfile=%s\n", argv[2]);
 	}
-	printf("Window Size: %d K\n", HIST_SIZE);
+	printf("Window Size: %d K\n", IGZIP_HIST_SIZE / 1024);
 	printf("igzip_file_perf: \n");
 	fflush(0);
 	/* Allocate space for entire input file and output
