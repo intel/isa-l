@@ -146,7 +146,7 @@
 ; mbin_dispatch_init5 parameters
 ; 1-> function name
 ; 2-> base function
-; 3-> SSE4_1 or 00/01 optimized function
+; 3-> SSE4_2 or 00/01 optimized function
 ; 4-> AVX/02 opt func
 ; 5-> AVX2/04 opt func
 ;;;;;
@@ -162,8 +162,8 @@
 
 		mov	eax, 1
 		cpuid
-		; Test for SSE4.1
-		test	ecx, FLAG_CPUID1_ECX_SSE4_1
+		; Test for SSE4.2
+		test	ecx, FLAG_CPUID1_ECX_SSE4_2
 		lea	mbin_rbx, [%3 WRT_OPT] ; SSE opt func
 		cmovne	mbin_rsi, mbin_rbx
 
@@ -203,7 +203,7 @@
 ; mbin_dispatch_init6 parameters
 ; 1-> function name
 ; 2-> base function
-; 3-> SSE4_1 or 00/01 optimized function
+; 3-> SSE4_2 or 00/01 optimized function
 ; 4-> AVX/02 opt func
 ; 5-> AVX2/04 opt func
 ; 6-> AVX512/06 opt func
@@ -222,8 +222,8 @@
 		mov	eax, 1
 		cpuid
 		mov	ebx, ecx ; save cpuid1.ecx
-		test	ecx, FLAG_CPUID1_ECX_SSE4_1
-		je	_%1_init_done	  ; Use base function if no SSE4_1
+		test	ecx, FLAG_CPUID1_ECX_SSE4_2
+		je	_%1_init_done	  ; Use base function if no SSE4_2
 		lea	mbin_rsi, [%3 WRT_OPT] ; SSE possible so use 00/01 opt
 
 		;; Test for XMM_YMM support/AVX
