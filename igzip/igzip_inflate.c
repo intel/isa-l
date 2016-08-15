@@ -62,7 +62,7 @@ struct slver isal_inflate_slver = { 0x008a, 0x01, 0x00 };
 /*Performs a copy of length repeat_length data starting at dest -
  * lookback_distance into dest. This copy copies data previously copied when the
  * src buffer and the dest buffer overlap. */
-void inline byte_copy(uint8_t * dest, uint64_t lookback_distance, int repeat_length)
+static void inline byte_copy(uint8_t * dest, uint64_t lookback_distance, int repeat_length)
 {
 	uint8_t *src = dest - lookback_distance;
 
@@ -73,7 +73,7 @@ void inline byte_copy(uint8_t * dest, uint64_t lookback_distance, int repeat_len
 /*
  * Returns integer with first length bits reversed and all higher bits zeroed
  */
-uint16_t inline bit_reverse2(uint16_t bits, uint8_t length)
+static uint16_t inline bit_reverse2(uint16_t bits, uint8_t length)
 {
 	bits = ((bits >> 1) & 0x55555555) | ((bits & 0x55555555) << 1);	// swap bits
 	bits = ((bits >> 2) & 0x33333333) | ((bits & 0x33333333) << 2);	// swap pairs
@@ -83,7 +83,7 @@ uint16_t inline bit_reverse2(uint16_t bits, uint8_t length)
 }
 
 /* Load data from the in_stream into a buffer to allow for handling unaligned data*/
-void inline inflate_in_load(struct inflate_state *state, int min_required)
+static void inline inflate_in_load(struct inflate_state *state, int min_required)
 {
 	uint64_t temp = 0;
 	uint8_t new_bytes;
@@ -117,8 +117,7 @@ void inline inflate_in_load(struct inflate_state *state, int min_required)
 
 /* Returns the next bit_count bits from the in stream and shifts the stream over
  * by bit-count bits */
-uint64_t inflate_in_read_bits(struct inflate_state *state, uint8_t bit_count);
-uint64_t inline inflate_in_read_bits(struct inflate_state *state, uint8_t bit_count)
+static uint64_t inline inflate_in_read_bits(struct inflate_state *state, uint8_t bit_count)
 {
 	uint64_t ret;
 	assert(bit_count < 57);
@@ -137,9 +136,9 @@ uint64_t inline inflate_in_read_bits(struct inflate_state *state, uint8_t bit_co
 /* Sets result to the inflate_huff_code corresponding to the huffcode defined by
  * the lengths in huff_code_table,where count is a histogram of the appearance
  * of each code length */
-void inline make_inflate_huff_code_large(struct inflate_huff_code_large *result,
-					 struct huff_code *huff_code_table, int table_length,
-					 uint16_t * count)
+static void inline make_inflate_huff_code_large(struct inflate_huff_code_large *result,
+						struct huff_code *huff_code_table,
+						int table_length, uint16_t * count)
 {
 	int i, j, k;
 	uint16_t code = 0;
@@ -277,9 +276,9 @@ void inline make_inflate_huff_code_large(struct inflate_huff_code_large *result,
 	}
 }
 
-void inline make_inflate_huff_code_small(struct inflate_huff_code_small *result,
-					 struct huff_code *huff_code_table, int table_length,
-					 uint16_t * count)
+static void inline make_inflate_huff_code_small(struct inflate_huff_code_small *result,
+						struct huff_code *huff_code_table,
+						int table_length, uint16_t * count)
 {
 	int i, j, k;
 	uint16_t code = 0;
@@ -419,7 +418,7 @@ void inline make_inflate_huff_code_small(struct inflate_huff_code_small *result,
 
 /* Sets the inflate_huff_codes in state to be the huffcodes corresponding to the
  * deflate static header */
-int inline setup_static_header(struct inflate_state *state)
+static int inline setup_static_header(struct inflate_state *state)
 {
 	/* This could be turned into a memcpy of this functions output for
 	 * higher speed, but then DECODE_LOOKUP_SIZE couldn't be changed without
@@ -466,10 +465,8 @@ int inline setup_static_header(struct inflate_state *state)
 
 /* Decodes the next symbol symbol in in_buffer using the huff code defined by
  * huff_code */
-uint16_t decode_next_large(struct inflate_state * state,
-			   struct inflate_huff_code_large * huff_code);
-uint16_t inline decode_next_large(struct inflate_state *state,
-				  struct inflate_huff_code_large *huff_code)
+static uint16_t inline decode_next_large(struct inflate_state *state,
+					 struct inflate_huff_code_large *huff_code)
 {
 	uint16_t next_bits;
 	uint16_t next_sym;
@@ -515,10 +512,8 @@ uint16_t inline decode_next_large(struct inflate_state *state,
 	}
 }
 
-uint16_t decode_next_small(struct inflate_state * state,
-			   struct inflate_huff_code_small * huff_code);
-uint16_t inline decode_next_small(struct inflate_state *state,
-				  struct inflate_huff_code_small *huff_code)
+static uint16_t inline decode_next_small(struct inflate_state *state,
+					 struct inflate_huff_code_small *huff_code)
 {
 	uint16_t next_bits;
 	uint16_t next_sym;
@@ -566,7 +561,7 @@ uint16_t inline decode_next_small(struct inflate_state *state,
 
 /* Reads data from the in_buffer and sets the huff code corresponding to that
  * data */
-int inline setup_dynamic_header(struct inflate_state *state)
+static int inline setup_dynamic_header(struct inflate_state *state)
 {
 	int i, j;
 	struct huff_code code_huff[CODE_LEN_CODES];
@@ -824,7 +819,7 @@ int read_header_stateful(struct inflate_state *state)
 
 }
 
-int inline decode_literal_block(struct inflate_state *state)
+static int inline decode_literal_block(struct inflate_state *state)
 {
 	uint32_t len = state->type0_block_len;
 	/* If the block is uncompressed, perform a memcopy while
