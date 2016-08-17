@@ -566,7 +566,7 @@ static int inline setup_dynamic_header(struct inflate_state *state)
 	int i, j;
 	struct huff_code code_huff[CODE_LEN_CODES];
 	struct huff_code lit_and_dist_huff[LIT_LEN + DIST_LEN];
-	struct huff_code *previous = NULL, *current;
+	struct huff_code *previous = NULL, *current, *end;
 	struct inflate_huff_code_small inflate_code_huff;
 	uint8_t hclen, hdist, hlit;
 	uint16_t code_count[16], lit_count[16], dist_count[16];
@@ -591,12 +591,23 @@ static int inline setup_dynamic_header(struct inflate_state *state)
 	hdist = inflate_in_read_bits(state, 5);
 	hclen = inflate_in_read_bits(state, 4);
 
+	if (hlit > 29 || hdist > 29 || hclen > 15)
+		return ISAL_INVALID_BLOCK;
+
 	/* Create the code huffman code for decoding the lit/len and dist huffman codes */
 	for (i = 0; i < hclen + 4; i++) {
 		code_huff[code_length_code_order[i]].length = inflate_in_read_bits(state, 3);
 
 		code_count[code_huff[code_length_code_order[i]].length] += 1;
 	}
+
+	/* Check that the code huffman code has a symbol */
+	for (i = 1; i < 16; i++) {
+		if (code_count[i] != 0)
+			break;
+	}
+	if (i == 16)
+		return ISAL_INVALID_BLOCK;
 
 	if (state->read_in_length < 0)
 		return ISAL_END_INPUT;
@@ -607,8 +618,9 @@ static int inline setup_dynamic_header(struct inflate_state *state)
 	/* Decode the lit/len and dist huffman codes using the code huffman code */
 	count = lit_count;
 	current = lit_and_dist_huff;
+	end = lit_and_dist_huff + LIT_LEN + hdist + 1;
 
-	while (current < lit_and_dist_huff + LIT_LEN + hdist + 1) {
+	while (current < end) {
 		/* If finished decoding the lit/len huffman code, start decoding
 		 * the distance code these decodings are in the same loop
 		 * because the len/lit and dist huffman codes are run length
@@ -640,6 +652,10 @@ static int inline setup_dynamic_header(struct inflate_state *state)
 				return ISAL_INVALID_BLOCK;
 
 			i = 3 + inflate_in_read_bits(state, 2);
+
+			if (current + i > end)
+				return ISAL_INVALID_BLOCK;
+
 			for (j = 0; j < i; j++) {
 				*current = *previous;
 				count[current->length]++;
@@ -690,6 +706,9 @@ static int inline setup_dynamic_header(struct inflate_state *state)
 			return ISAL_INVALID_BLOCK;
 
 	}
+
+	if (current > end || lit_and_dist_huff[256].length <= 0)
+		return ISAL_INVALID_BLOCK;
 
 	if (state->read_in_length < 0)
 		return ISAL_END_INPUT;
