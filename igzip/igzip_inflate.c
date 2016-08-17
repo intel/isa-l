@@ -1000,7 +1000,7 @@ int isal_inflate_stateless(struct inflate_state *state)
 	state->bfinal = 0;
 	state->total_out = 0;
 
-	while (state->block_state != ISAL_BLOCK_INPUT_DONE) {
+	while (state->block_state != ISAL_BLOCK_FINISH) {
 		if (state->block_state == ISAL_BLOCK_NEW_HDR) {
 			ret = read_header(state);
 
@@ -1016,7 +1016,7 @@ int isal_inflate_stateless(struct inflate_state *state)
 		if (ret)
 			break;
 		if (state->bfinal != 0 && state->block_state == ISAL_BLOCK_NEW_HDR)
-			state->block_state = ISAL_BLOCK_INPUT_DONE;
+			state->block_state = ISAL_BLOCK_FINISH;
 	}
 
 	/* Undo count stuff of bytes read into the read buffer */
