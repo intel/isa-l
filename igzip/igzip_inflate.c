@@ -138,7 +138,8 @@ static uint64_t inline inflate_in_read_bits(struct inflate_state *state, uint8_t
  * of each code length */
 static void inline make_inflate_huff_code_large(struct inflate_huff_code_large *result,
 						struct huff_code *huff_code_table,
-						int table_length, uint16_t * count)
+						int table_length, uint16_t * count,
+						uint32_t max_symbol)
 {
 	int i, j, k;
 	uint16_t code = 0;
@@ -153,7 +154,7 @@ static void inline make_inflate_huff_code_large(struct inflate_huff_code_large *
 	uint32_t code_length;
 	uint16_t long_bits;
 	uint16_t min_increment;
-	uint32_t code_list[LIT_LEN];
+	uint32_t code_list[LIT_LEN + 2];	/* The +2 is for the extra codes in the static header */
 	uint32_t code_list_len;
 	uint32_t count_total[17];
 	uint32_t insert_index;
@@ -167,6 +168,11 @@ static void inline make_inflate_huff_code_large(struct inflate_huff_code_large *
 		count_total[i] = count_total[i - 1] + count[i - 1];
 
 	code_list_len = count_total[16];
+	if (code_list_len == 0) {
+		memset(result->short_code_lookup, 0, sizeof(result->short_code_lookup));
+		return;
+	}
+
 	for (i = 0; i < table_length; i++) {
 		code_length = huff_code_table[i].length;
 		if (code_length > 0) {
@@ -195,6 +201,7 @@ static void inline make_inflate_huff_code_large(struct inflate_huff_code_large *
 			copy_size <<= 1;
 		}
 
+		/* Store codes as zero for invalid codes used in static header construction */
 		huff_code_table[i].code =
 		    bit_reverse2(next_code[huff_code_table[i].length],
 				 huff_code_table[i].length);
@@ -206,8 +213,13 @@ static void inline make_inflate_huff_code_large(struct inflate_huff_code_large *
 		 * address are the same as the code for the current symbol. The
 		 * first 9 bits are the code, bits 14:10 are the code length,
 		 * bit 15 is a flag representing this is a symbol*/
-		short_code_lookup[huff_code_table[i].code] =
-		    i | (huff_code_table[i].length) << 9;
+
+		if (i < max_symbol)
+			short_code_lookup[huff_code_table[i].code] =
+			    i | (huff_code_table[i].length) << 9;
+
+		else
+			short_code_lookup[huff_code_table[i].code] = 0;
 
 	}
 
@@ -278,7 +290,8 @@ static void inline make_inflate_huff_code_large(struct inflate_huff_code_large *
 
 static void inline make_inflate_huff_code_small(struct inflate_huff_code_small *result,
 						struct huff_code *huff_code_table,
-						int table_length, uint16_t * count)
+						int table_length, uint16_t * count,
+						uint32_t max_symbol)
 {
 	int i, j, k;
 	uint16_t code = 0;
@@ -293,7 +306,7 @@ static void inline make_inflate_huff_code_small(struct inflate_huff_code_small *
 	uint32_t code_length;
 	uint16_t long_bits;
 	uint16_t min_increment;
-	uint32_t code_list[LIT_LEN];
+	uint32_t code_list[DIST_LEN + 2];	/* The +2 is for the extra codes in the static header */
 	uint32_t code_list_len;
 	uint32_t count_total[17];
 	uint32_t insert_index;
@@ -307,6 +320,11 @@ static void inline make_inflate_huff_code_small(struct inflate_huff_code_small *
 		count_total[i] = count_total[i - 1] + count[i - 1];
 
 	code_list_len = count_total[16];
+	if (code_list_len == 0) {
+		memset(result->short_code_lookup, 0, sizeof(result->short_code_lookup));
+		return;
+	}
+
 	for (i = 0; i < table_length; i++) {
 		code_length = huff_code_table[i].length;
 		if (code_length > 0) {
@@ -335,6 +353,7 @@ static void inline make_inflate_huff_code_small(struct inflate_huff_code_small *
 			copy_size <<= 1;
 		}
 
+		/* Store codes as zero for invalid codes used in static header construction */
 		huff_code_table[i].code =
 		    bit_reverse2(next_code[huff_code_table[i].length],
 				 huff_code_table[i].length);
@@ -346,9 +365,11 @@ static void inline make_inflate_huff_code_small(struct inflate_huff_code_small *
 		 * address are the same as the code for the current symbol. The
 		 * first 9 bits are the code, bits 14:10 are the code length,
 		 * bit 15 is a flag representing this is a symbol*/
-		short_code_lookup[huff_code_table[i].code] =
-		    i | (huff_code_table[i].length) << 9;
-
+		if (i < max_symbol)
+			short_code_lookup[huff_code_table[i].code] =
+			    i | (huff_code_table[i].length) << 9;
+		else
+			short_code_lookup[huff_code_table[i].code] = 0;
 	}
 
 	while (ISAL_DECODE_SHORT_BITS > last_length) {
@@ -454,9 +475,10 @@ static int inline setup_static_header(struct inflate_state *state)
 	for (i = 0; i < DIST_LEN + 2; i++)
 		dist_code[i].length = 5;
 
-	make_inflate_huff_code_large(&state->lit_huff_code, lit_code, LIT_LEN + 2, lit_count);
+	make_inflate_huff_code_large(&state->lit_huff_code, lit_code, LIT_LEN + 2, lit_count,
+				     LIT_LEN);
 	make_inflate_huff_code_small(&state->dist_huff_code, dist_code, DIST_LEN + 2,
-				     dist_count);
+				     dist_count, DIST_LEN);
 
 	state->block_state = ISAL_BLOCK_CODED;
 
@@ -492,6 +514,9 @@ static uint16_t inline decode_next_large(struct inflate_state *state,
 		bit_count = next_sym >> 9;
 		state->read_in >>= bit_count;
 		state->read_in_length -= bit_count;
+
+		if (bit_count == 0)
+			next_sym = 0x1FF;
 
 		return next_sym & 0x1FF;
 
@@ -539,6 +564,9 @@ static uint16_t inline decode_next_small(struct inflate_state *state,
 		bit_count = next_sym >> 9;
 		state->read_in >>= bit_count;
 		state->read_in_length -= bit_count;
+
+		if (bit_count == 0)
+			next_sym = 0x1FF;
 
 		return next_sym & 0x1FF;
 
@@ -613,7 +641,7 @@ static int inline setup_dynamic_header(struct inflate_state *state)
 		return ISAL_END_INPUT;
 
 	make_inflate_huff_code_small(&inflate_code_huff, code_huff, CODE_LEN_CODES,
-				     code_count);
+				     code_count, CODE_LEN_CODES);
 
 	/* Decode the lit/len and dist huffman codes using the code huffman code */
 	count = lit_count;
@@ -633,8 +661,12 @@ static int inline setup_dynamic_header(struct inflate_state *state)
 
 		symbol = decode_next_small(state, &inflate_code_huff);
 
-		if (state->read_in_length < 0)
+		if (state->read_in_length < 0) {
+			if (current > &lit_and_dist_huff[256]
+			    && lit_and_dist_huff[256].length <= 0)
+				return ISAL_INVALID_BLOCK;
 			return ISAL_END_INPUT;
+		}
 
 		if (symbol < 16) {
 			/* If a length is found, update the current lit/len/dist
@@ -714,9 +746,9 @@ static int inline setup_dynamic_header(struct inflate_state *state)
 		return ISAL_END_INPUT;
 
 	make_inflate_huff_code_large(&state->lit_huff_code, lit_and_dist_huff, LIT_LEN,
-				     lit_count);
+				     lit_count, LIT_LEN);
 	make_inflate_huff_code_small(&state->dist_huff_code, &lit_and_dist_huff[LIT_LEN],
-				     DIST_LEN, dist_count);
+				     DIST_LEN, dist_count, DIST_LEN);
 
 	state->block_state = ISAL_BLOCK_CODED;
 
@@ -947,6 +979,9 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state)
 										      - 257]);
 			next_dist = decode_next_small(state, &state->dist_huff_code);
 
+			if (next_dist >= DIST_LEN)
+				return ISAL_INVALID_SYMBOL;
+
 			look_back_dist = rfc_lookup_table.dist_start[next_dist] +
 			    inflate_in_read_bits(state,
 						 rfc_lookup_table.dist_extra_bit_count
@@ -1118,7 +1153,8 @@ int isal_inflate(struct inflate_state *state)
 		state->avail_out -= copy_size;
 		state->next_out += copy_size;
 
-		if (ret == ISAL_INVALID_LOOKBACK || ret == ISAL_INVALID_BLOCK) {
+		if (ret == ISAL_INVALID_LOOKBACK || ret == ISAL_INVALID_BLOCK
+		    || ret == ISAL_INVALID_SYMBOL) {
 			/* Set total_out to not count data in tmp_out_buffer */
 			state->total_out -= state->tmp_out_valid - state->tmp_out_processed;
 			return ret;
@@ -1180,7 +1216,8 @@ int isal_inflate(struct inflate_state *state)
 				state->copy_overflow_length = 0;
 			}
 
-			if (ret == ISAL_INVALID_LOOKBACK || ret == ISAL_INVALID_BLOCK)
+			if (ret == ISAL_INVALID_LOOKBACK || ret == ISAL_INVALID_BLOCK
+			    || ret == ISAL_INVALID_SYMBOL)
 				return ret;
 
 		} else if (state->tmp_out_valid == state->tmp_out_processed)

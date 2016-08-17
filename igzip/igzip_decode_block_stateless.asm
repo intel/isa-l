@@ -252,6 +252,7 @@ stack_size		equ	3 * 8 + 8 * 8
 	;; Save length associated with symbol
 	mov	rcx, %%next_sym
 	shr	rcx, 9
+	jz	invalid_symbol
 
 	;; Check if symbol or hint was looked up
 	and	%%next_sym, 0x81FF
@@ -305,6 +306,7 @@ stack_size		equ	3 * 8 + 8 * 8
 
 	mov	rcx, %%next_sym
 	shr	rcx, 9
+	jz	invalid_symbol
 
 	;; Check if symbol or hint was looked up
 	and	%%next_sym, 0x81FF
@@ -439,6 +441,7 @@ loop_block:
 decode_len_dist:
 	;; Find length for length/dist pair
 	mov	next_bits, read_in
+
 	BZHI	next_bits, next_bits, rcx, tmp4
 	add	repeat_length, next_bits
 
@@ -476,7 +479,7 @@ decode_len_dist:
 	sub	copy_start, repeat_length
 	sub	copy_start, look_back_dist2
 
-	;; ;; ;; Check if a valid look back distances was decoded
+	;; Check if a valid look back distances was decoded
 	cmp	copy_start, [rsp + start_out_mem_offset]
 	jl	invalid_look_back_distance
 	MOVDQU	xmm1, [copy_start]
@@ -630,6 +633,10 @@ out_buffer_overflow_lit:
 
 invalid_look_back_distance:
 	mov	rax, INVALID_LOOKBACK
+	jmp	end
+
+invalid_symbol:
+	mov	rax, INVALID_SYMBOL
 	jmp	end
 
 end_symbol_pre:
