@@ -1306,6 +1306,7 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 		}
 	}
 
+	print_error(ret);
 	if (ret) {
 		if (z_buf != NULL) {
 			free(z_buf);
@@ -1785,6 +1786,8 @@ int main(int argc, char *argv[])
 	for (i = 0; i < RANDOMS / 16; i++) {
 		create_rand_repeat_data(in_buf, PAGE_SIZE);
 		ret |= test_compress_stateless(in_buf, PAGE_SIZE, NO_FLUSH);	// good for efence
+		if (ret)
+			return ret;
 	}
 
 	fin_ret |= ret;
@@ -1848,8 +1851,9 @@ int main(int argc, char *argv[])
 	for (i = 0; i < RANDOMS / 16; i++) {
 		create_rand_repeat_data(in_buf, PAGE_SIZE);
 		ret |= test_compress_stateless(in_buf, PAGE_SIZE, FULL_FLUSH);	// good for efence
+		if (ret)
+			return ret;
 	}
-
 	fin_ret |= ret;
 
 	printf("%s\n", ret ? "Fail" : "Pass");
