@@ -634,11 +634,12 @@ static int inline setup_dynamic_header(struct inflate_state *state)
 		if (code_count[i] != 0)
 			break;
 	}
-	if (i == 16)
-		return ISAL_INVALID_BLOCK;
 
 	if (state->read_in_length < 0)
 		return ISAL_END_INPUT;
+
+	if (i == 16)
+		return ISAL_INVALID_BLOCK;
 
 	make_inflate_huff_code_small(&inflate_code_huff, code_huff, CODE_LEN_CODES,
 				     code_count, CODE_LEN_CODES);
