@@ -159,8 +159,8 @@ void isal_update_histogram_base(uint8_t * start_stream, int length,
 				struct isal_huff_histogram *histogram)
 {
 	uint32_t literal = 0, hash;
-	uint8_t *last_seen[IGZIP_HASH_SIZE];
-	uint8_t *current, *seen, *end_stream, *next_hash, *end;
+	uint16_t seen, *last_seen = histogram->hash_table;
+	uint8_t *current, *end_stream, *next_hash, *end;
 	uint32_t match_length;
 	uint32_t dist;
 	uint64_t *lit_len_histogram = histogram->lit_len_histogram;
@@ -170,15 +170,16 @@ void isal_update_histogram_base(uint8_t * start_stream, int length,
 		return;
 
 	end_stream = start_stream + length;
-	memset(last_seen, 0, sizeof(last_seen));	/* Initialize last_seen to be 0. */
+	memset(last_seen, 0, sizeof(histogram->hash_table));	/* Initialize last_seen to be 0. */
 	for (current = start_stream; current < end_stream - 3; current++) {
 		literal = *(uint32_t *) current;
 		hash = compute_hash(literal) & HASH_MASK;
 		seen = last_seen[hash];
-		last_seen[hash] = current;
-		dist = current - seen;
-		if (dist < D) {
-			match_length = compare258(seen, current, end_stream - current);
+		last_seen[hash] = (uint64_t) current & 0xFFFF;
+		dist = ((uint64_t) current - seen) & 0xFFFF;
+		if (dist - 1 < D - 1) {
+			match_length =
+			    compare258(current - dist, current, end_stream - current);
 			if (match_length >= SHORTEST_MATCH) {
 				next_hash = current;
 #ifdef ISAL_LIMIT_HASH_UPDATE
@@ -192,7 +193,7 @@ void isal_update_histogram_base(uint8_t * start_stream, int length,
 				for (; next_hash < end; next_hash++) {
 					literal = *(uint32_t *) next_hash;
 					hash = compute_hash(literal) & HASH_MASK;
-					last_seen[hash] = next_hash;
+					last_seen[hash] = (uint64_t) next_hash & 0xFFFF;
 				}
 
 				dist_histogram[convert_dist_to_dist_sym(dist)] += 1;
@@ -207,10 +208,10 @@ void isal_update_histogram_base(uint8_t * start_stream, int length,
 	literal = literal >> 8;
 	hash = compute_hash(literal) & HASH_MASK;
 	seen = last_seen[hash];
-	last_seen[hash] = current;
-	dist = current - seen;
+	last_seen[hash] = (uint64_t) current & 0xFFFF;
+	dist = ((uint64_t) current - seen) & 0xFFFF;
 	if (dist < D) {
-		match_length = compare258(seen, current, end_stream - current);
+		match_length = compare258(current - dist, current, end_stream - current);
 		if (match_length >= SHORTEST_MATCH) {
 			dist_histogram[convert_dist_to_dist_sym(dist)] += 1;
 			lit_len_histogram[convert_length_to_len_sym(match_length)] += 1;
