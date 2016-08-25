@@ -111,6 +111,7 @@ perf_testswin64 = $(perf_tests)
 all_tests = $(notdir $(sort $(perf_tests$(arch)) $(check_tests$(arch)) $(unit_tests$(arch)) $(examples$(arch)) $(other_tests)))
 all_unit_tests = $(notdir $(sort $(check_tests$(arch)) $(unit_tests$(arch))))
 all_perf_tests = $(notdir $(sort $(perf_tests$(arch))))
+all_check_tests = $(notdir $(sort $(check_tests$(arch))))
 
 $(all_unit_tests): % : %.c $(lib_name)
 $(all_perf_tests): % : %.c $(lib_name)
@@ -119,11 +120,13 @@ $(sort $(notdir $(other_tests))): % : %.c $(lib_name)
 
 sim test trace: $(addsuffix .run,$(all_unit_tests))
 perf: $(addsuffix .run,$(all_perf_tests))
+check: $(addsuffix .run,$(all_check_tests))
 ex:   $(notdir $(examples$(arch)))
 all: lib $(all_tests)
 other: $(notdir $(other_tests))
 tests: $(all_unit_tests)
 perfs: $(all_perf_tests)
+checks: $(all_check_tests)
 check test perf: SIM=
 trace: SIMFLAGS = -debugtrace
 check test sim:

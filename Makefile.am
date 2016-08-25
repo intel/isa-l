@@ -59,6 +59,7 @@ CLEANFILES += ${EXTRA_PROGRAMS}
 
 perfs: ${perf_tests}
 tests: ${unit_tests}
+checks: ${check_tests}
 other: ${other_tests}
 perf: $(addsuffix .run,$(perf_tests))
 ex: ${examples}
