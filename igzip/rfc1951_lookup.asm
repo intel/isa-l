@@ -1,3 +1,5 @@
+%include "reg_sizes.asm"
+
 %ifndef	RFC1951_LOOKUP
 %define	RFC1951_LOOKUP
 
