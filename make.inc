@@ -39,11 +39,12 @@
 #	trace - get simulator trace
 #	clean - remove object files
 
-version ?= #auto filled on release
+version ?= 2.16.0
 
 CC  = gcc
 AS  = yasm
 SIM = sde $(SIMFLAGS) --
+AWK = awk
 
 DEBUG      = -g
 DEBUG_yasm = -g dwarf2
@@ -202,6 +203,23 @@ $(so_lib_name): $(shared_objs) $(aobjs)
 	@$(CC) $(CFLAGS) --shared  $(LDFLAGS) -o $@ $^
 	@(cd $(@D); ln -f -s $(so_lib_inst) $(soname))
 
+
+isa-l.h:
+	@echo 'Building $@'
+	@echo ''			>> $@
+	@echo '#ifndef _ISAL_H_'	>> $@
+	@echo '#define _ISAL_H_'	>> $@
+	@echo ''			>> $@
+	@echo '#define.ISAL_MAJOR_VERSION.${version}' |  ${AWK} -F . '{print $$1, $$2, $$3}' >> $@
+	@echo '#define.ISAL_MINOR_VERSION.${version}' |  ${AWK} -F . '{print $$1, $$2, $$4}' >> $@
+	@echo '#define.ISAL_PATCH_VERSION.${version}' |  ${AWK} -F . '{print $$1, $$2, $$5}' >> $@
+	@echo '#define ISAL_MAKE_VERSION(maj, min, patch)  ((maj) * 0x10000 + (min) * 0x100 + (patch))' >> $@
+	@echo '#define ISAL_VERSION ISAL_MAKE_VERSION(ISAL_MAJOR_VERSION, ISAL_MINOR_VERSION, ISAL_PATCH_VERSION)' >> $@
+	@echo ''			>> $@
+	@for unit in $(sort $(extern_hdrs)); do echo "#include <isa-l/$$unit>" | sed -e 's;include/;;' >> $@; done
+	@echo '#endif //_ISAL_H_'	>> $@
+
+
 # Target for install
 prefix = /usr/local
 install_dirs = $(prefix)/lib $(prefix)/include/isa-l
@@ -209,7 +227,8 @@ $(install_dirs): ; mkdir -p $@
 install: $(sort $(extern_hdrs)) | $(install_dirs) $(lib_name) $(so_lib_name) isa-l.h
 	install -m 644 $(lib_name) $(prefix)/lib/libisal.a
 	install -m 644 $^ $(prefix)/include/isa-l/.
-	install -m 664 include/isa-l.h $(prefix)/include/.
+	install -m 664 isa-l.h $(prefix)/include/.
+	install -m 664 include/types.h $(prefix)/include/isa-l/.
 	install -m 664 $(so_lib_name) $(prefix)/lib/$(so_lib_ver)
 	(cd $(prefix)/lib && ln -f -s $(so_lib_ver) $(soname) && ln -f -s $(so_lib_ver) $(so_lib_inst))
 ifeq ($(shell uname),Darwin)
