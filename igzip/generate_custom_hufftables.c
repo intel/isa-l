@@ -363,15 +363,15 @@ int main(int argc, char *argv[])
 
 	if (are_hufftables_useable(lit_huff_table, dist_huff_table)) {
 		if (create_huff_lookup
-		    (lit_huff_table, LIT_LEN, lit_tree, MAX_SAFE_LIT_CODE_LEN) > 0)
+		    (lit_huff_table, LIT_LEN, lit_tree, MAX_SAFE_LIT_CODE_LEN) > 0) {
 			printf("Error, code with invalid length for Deflate standard.\n");
-		return 1;
-
+			return 1;
+		}
 		if (create_huff_lookup
-		    (dist_huff_table, DIST_LEN, dist_tree, MAX_SAFE_DIST_CODE_LEN) > 0)
+		    (dist_huff_table, DIST_LEN, dist_tree, MAX_SAFE_DIST_CODE_LEN) > 0) {
 			printf("Error, code with invalid length for Deflate standard.\n");
-		return 1;
-
+			return 1;
+		}
 		if (are_hufftables_useable(lit_huff_table, dist_huff_table)) {
 			printf("Error, hufftable is not usable\n");
 			return 1;
