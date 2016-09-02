@@ -74,12 +74,20 @@ unit_testsmingw = $(unit_tests)
 examplesmingw = $(examples)
 perf_testsmingw = $(perf_tests)
 
+LDFLAGS_so = -Wl,-soname,$(soname)
+
 ifeq ($(arch),mingw)
   CC=x86_64-w64-mingw32-gcc
   AR=x86_64-w64-mingw32-ar
   LDFLAGS = -Wl,--force-exe-suffix
 endif
 
+ifeq ($(shell uname),Darwin)
+  ASFLAGS_   = -f macho64 --prefix=_
+  ARFLAGS_   = -r $@
+  LDFLAGS_so =
+  STRIP_gcc  =
+endif
 
 INCLUDE   = $(patsubst %,-I%/,$(subst :, ,$(VPATH)))
 CFLAGS   = $(CFLAGS_$(arch)) $(CFLAGS_$(CC)) $(DEBUG) -O2 $(DEFINES) $(INCLUDE)
@@ -197,7 +205,7 @@ endif
 
 $(shared_objs): CFLAGS += -fPIC
 $(shared_objs) $(aobjs): | $(O)
-$(so_lib_name): LDFLAGS+=-Wl,-soname,$(soname)
+$(so_lib_name): LDFLAGS+=$(LDFLAGS_so)
 $(so_lib_name): $(shared_objs) $(aobjs)
 	@echo "  ---> Creating Shared Lib $@"
 	@$(CC) $(CFLAGS) --shared  $(LDFLAGS) -o $@ $^
@@ -233,9 +241,11 @@ install: $(sort $(extern_hdrs)) | $(install_dirs) $(lib_name) $(so_lib_name) isa
 	(cd $(prefix)/lib && ln -f -s $(so_lib_ver) $(soname) && ln -f -s $(so_lib_ver) $(so_lib_inst))
 ifeq ($(shell uname),Darwin)
 	(cd $(prefix)/lib && ln -f -s $(so_lib_ver) $(basename $(so_lib_inst)).dylib)
-endif
+	which glibtool && glibtool --mode=finish $(prefix)/lib
+else
 	which libtool && libtool --mode=finish $(prefix)/lib || \
 	echo 'Lib installed at $(prefix)/lib. Run system-dependent programs to add shared lib path.'
+endif
 
 uninstall:
 	$(RM) $(prefix)/lib/libisal.a
