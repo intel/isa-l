@@ -36,6 +36,7 @@
 
 #define BUF_SIZE 1024
 #define MIN_TEST_LOOPS   8
+#define SMALL_INBUF_SIZE (4 * 1024)
 #ifndef RUN_MEM_SIZE
 # define RUN_MEM_SIZE 500000000
 #endif
@@ -122,6 +123,33 @@ int main(int argc, char *argv[])
 	struct perf start, stop;
 	perf_start(&start);
 
+#ifdef SMALL_IN_BUFFER
+	int avail_in;
+	for (i = 0; i < iterations; i++) {
+		isal_deflate_init(&stream);
+		stream.end_of_stream = 0;
+		stream.flush = NO_FLUSH;
+		stream.next_out = outbuf;
+		stream.avail_out = outbuf_size;
+		stream.next_in = inbuf;
+		avail_in = infile_size;
+
+		while (avail_in > 0) {
+			stream.avail_in =
+			    avail_in >= SMALL_INBUF_SIZE ? SMALL_INBUF_SIZE : avail_in;
+			avail_in -= SMALL_INBUF_SIZE;
+
+			if (avail_in <= 0)
+				stream.end_of_stream = 1;
+
+			isal_deflate(&stream);
+
+			if (stream.avail_in != 0)
+				break;
+		}
+	}
+
+#else
 	for (i = 0; i < iterations; i++) {
 		isal_deflate_init(&stream);
 		stream.end_of_stream = 1;	/* Do the entire file at once */
@@ -134,6 +162,7 @@ int main(int argc, char *argv[])
 		if (stream.avail_in != 0)
 			break;
 	}
+#endif
 	perf_stop(&stop);
 
 	if (stream.avail_in != 0) {
