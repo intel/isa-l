@@ -165,6 +165,10 @@ int main(void)
 	putchar('.');
 	fflush(0);
 
+    if (q_buf != NULL) {
+        free(q_buf);
+    }
+
 	printf("Pass\n");
 
 	return 0;
