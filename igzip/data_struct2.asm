@@ -73,14 +73,13 @@ START_FIELDS	;; isal_zstate
 FIELD	_b_bytes_valid,	4,	4
 FIELD	_b_bytes_processed,	4,	4
 FIELD	_file_start,	8,	8
-FIELD	_crc,		64,	16
+FIELD	_crc,		4,	4
 FIELD	_bitbuf,	_BitBuf2_size,	_BitBuf2_align
 FIELD	_state,		4,	4
 FIELD	_count,		4,	4
 FIELD   _tmp_out_buff,	16,	1
 FIELD   _tmp_out_start,	4,	4
 FIELD	_tmp_out_end,	4,	4
-FIELD	_last_flush,	4,	4
 FIELD	_has_gzip_hdr,	4,	4
 FIELD	_has_eob,		4,	4
 FIELD	_has_eob_hdr,	4,	4
@@ -128,7 +127,6 @@ _internal_state_count			  equ   _internal_state+_count
 _internal_state_tmp_out_buff		  equ   _internal_state+_tmp_out_buff
 _internal_state_tmp_out_start		  equ   _internal_state+_tmp_out_start
 _internal_state_tmp_out_end		  equ   _internal_state+_tmp_out_end
-_internal_state_last_flush		  equ   _internal_state+_last_flush
 _internal_state_has_gzip_hdr		  equ	_internal_state+_has_gzip_hdr
 _internal_state_has_eob		  equ   _internal_state+_has_eob
 _internal_state_has_eob_hdr		  equ   _internal_state+_has_eob_hdr

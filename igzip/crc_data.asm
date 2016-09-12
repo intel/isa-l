@@ -8,43 +8,6 @@ section .data
 
 align 32
 
-global pshufb_shf_table:data internal
-pshufb_shf_table:
-dq 0x8887868584838281, 0x008f8e8d8c8b8a89 ; shl 15 (16-1) / shr1
-dq 0x8988878685848382, 0x01008f8e8d8c8b8a ; shl 14 (16-3) / shr2
-dq 0x8a89888786858483, 0x0201008f8e8d8c8b ; shl 13 (16-4) / shr3
-dq 0x8b8a898887868584, 0x030201008f8e8d8c ; shl 12 (16-4) / shr4
-dq 0x8c8b8a8988878685, 0x04030201008f8e8d ; shl 11 (16-5) / shr5
-dq 0x8d8c8b8a89888786, 0x0504030201008f8e ; shl 10 (16-6) / shr6
-dq 0x8e8d8c8b8a898887, 0x060504030201008f ; shl 9  (16-7) / shr7
-dq 0x8f8e8d8c8b8a8988, 0x0706050403020100 ; shl 8  (16-8) / shr8
-dq 0x008f8e8d8c8b8a89, 0x0807060504030201 ; shl 7  (16-9) / shr9
-dq 0x01008f8e8d8c8b8a, 0x0908070605040302 ; shl 6  (16-10) / shr10
-dq 0x0201008f8e8d8c8b, 0x0a09080706050403 ; shl 5  (16-11) / shr11
-dq 0x030201008f8e8d8c, 0x0b0a090807060504 ; shl 4  (16-12) / shr12
-dq 0x04030201008f8e8d, 0x0c0b0a0908070605 ; shl 3  (16-13) / shr13
-dq 0x0504030201008f8e, 0x0d0c0b0a09080706 ; shl 2  (16-14) / shr14
-dq 0x060504030201008f, 0x0e0d0c0b0a090807 ; shl 1  (16-15) / shr15
-
-;; ; MAGIC value, which when folded 4 times gives FFFFFF00000...0000
-;; global crc_init_4
-;; crc_init_4:
-;; dq 0x9db42487
-;; dq 0x0
-;; dq 0x0
-;; dq 0x0
-
-; constant used to shift/fold one XMM reg down by 4 XMM widths
-global fold_4:data internal
-fold_4:
-dq 0x00000001c6e41596
-dq 0x0000000154442bd4
-
-
-;value, which when xored with pshufb_shf_table entry gives shr value
-global mask3:data internal
-mask3:	dq 0x8080808080808080, 0x8080808080808080
-
 %ifndef CRC_TABLE
 %define CRC_TABLE
 ; Place marker in library to avoid linker warning

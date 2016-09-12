@@ -41,6 +41,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+%define curr_data	rax
 %define tmp1		rax
 
 %define f_index		rbx
@@ -69,7 +70,6 @@
 %define m_bit_count	r11
 
 %define code2		r12
-
 %define f_end_i		r12
 
 %define file_start	r13
@@ -110,32 +110,29 @@ skip_SLOP:
 
 	mov	hufftables, [stream + _hufftables]
 
-	; f_i = state->b_bytes_processed;
-	; f_end_i   = state->b_bytes_valid;
-	mov	f_i %+ d,     [stream + _internal_state_b_bytes_processed]
-	mov	f_end_i %+ d, [stream + _internal_state_b_bytes_valid]
+	mov	file_start, [stream + _next_in]
 
-	; f_i     += (uint32_t)(state->buffer - state->file_start);
-	; f_end_i += (uint32_t)(state->buffer - state->file_start);
-	mov	file_start, [stream + _internal_state_file_start]
-	lea	tmp1, [stream + _internal_state_buffer]
-	sub	tmp1, file_start
-	add	f_i, tmp1
-	add	f_end_i, tmp1
+	mov	f_i %+ d, dword [stream + _total_in]
+	sub	file_start, f_i
+
+	mov	f_end_i %+ d, dword [stream + _avail_in]
+	add	f_end_i, f_i
+
+	sub	f_end_i, LAST_BYTES_COUNT
 	mov	[rsp + f_end_i_mem_offset], f_end_i
 	; for (f_i = f_start_i; f_i < f_end_i; f_i++) {
 	cmp	f_i, f_end_i
 	jge	end_loop_2
 
-	mov	tmp1, [file_start + f_i]
+	mov	curr_data %+ d, [file_start + f_i]
 
-	cmp	dword [stream + _internal_state_b_bytes_processed], 0
+	cmp	dword [stream + _internal_state_b_bytes_processed], 0 ;TODO fixz
 	jne	skip_write_first_byte
 
 	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
 	ja	end_loop_2
 
-	compute_hash	hash, tmp1
+	compute_hash	hash, curr_data
 	and	hash %+ d, HASH_MASK
 	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
 	jmp	encode_literal
@@ -148,7 +145,8 @@ loop2:
 	ja	end_loop_2
 
 	; hash = compute_hash(state->file_start + f_i) & HASH_MASK;
-	compute_hash	hash, tmp1
+	mov	curr_data %+ d, [file_start + f_i]
+	compute_hash	hash, curr_data
 	and	hash %+ d, HASH_MASK
 
 	; f_index = state->head[hash];
@@ -171,6 +169,7 @@ loop2:
 	; len = f_end_i - f_i;
 	mov	tmp4, [rsp + f_end_i_mem_offset]
 	sub	tmp4, f_i
+	add	tmp4, LAST_BYTES_COUNT
 
 	; if (len > 258) len = 258;
 	cmp	tmp4, 258
@@ -206,11 +205,13 @@ loop2:
 	; for (k = f_i+1, f_i += len-1; k <= f_i; k++) {
 	lea	tmp3, [f_i + 1]	; tmp3 <= k
 	add	f_i, len
-%ifdef LIMIT_HASH_UPDATE
+	cmp	f_i, [rsp + f_end_i_mem_offset]
+	jae	skip_hash_update
+
 	; only update hash twice
 
 	; hash = compute_hash(state->file_start + k) & HASH_MASK;
-	mov	tmp6, [file_start + tmp3]
+	mov	tmp6 %+ d, dword [file_start + tmp3]
 	compute_hash	hash, tmp6
 	and	hash %+ d, HASH_MASK
 	; state->head[hash] = k;
@@ -219,27 +220,13 @@ loop2:
 	add	tmp3, 1
 
 	; hash = compute_hash(state->file_start + k) & HASH_MASK;
-	mov	tmp6, [file_start + tmp3]
+	mov	tmp6 %+ d, dword [file_start + tmp3]
 	compute_hash	hash, tmp6
 	and	hash %+ d, HASH_MASK
 	; state->head[hash] = k;
 	mov	[stream + _internal_state_head + 2 * hash], tmp3 %+ w
 
-%else
-loop3:
-	; hash = compute_hash(state->file_start + k) & HASH_MASK;
-	mov	tmp6, [file_start + tmp3]
-	compute_hash	hash, tmp6
-	and	hash %+ d, HASH_MASK
-	; state->head[hash] = k;
-	mov	[stream + _internal_state_head + 2 * hash], tmp3 %+ w
-	inc	tmp3
-	cmp	tmp3, f_i
-	jl	loop3
-%endif
-
-	mov	tmp1 %+ d, [file_start + f_i]
-
+skip_hash_update:
 	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf, tmp5
 
 	; continue
@@ -248,8 +235,6 @@ loop3:
 	jmp	end_loop_2
 
 encode_literal:
-	mov	tmp1 %+ d, [file_start + f_i + 1]
-
 	; get_lit_code(state->file_start[f_i], &code2, &code_len2);
 	movzx	tmp5, byte [file_start + f_i]
 	get_lit_code	tmp5, code2, code_len2, hufftables
@@ -262,19 +247,29 @@ encode_literal:
 	jl	loop2
 
 end_loop_2:
-
+	mov	f_end_i, [rsp + f_end_i_mem_offset]
+	add	f_end_i, LAST_BYTES_COUNT
+	mov	[rsp + f_end_i_mem_offset], f_end_i
 	; if ((f_i >= f_end_i) && ! state->bitbuf.is_full()) {
+	cmp	f_i, f_end_i
+	jge	write_eob
+
+	xor	tmp5, tmp5
+final_bytes:
+	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
+	ja	not_end
+	movzx	tmp5, byte [file_start + f_i]
+	get_lit_code	tmp5, code2, code_len2, hufftables
+	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf, tmp3
+
+	inc	f_i
 	cmp	f_i, [rsp + f_end_i_mem_offset]
-	jl	not_end
+	jl	final_bytes
+
+write_eob:
 	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
 	ja	not_end
 
-	cmp	dword [stream + _end_of_stream], 1
-	jne cont
-	cmp	dword [stream + _internal_state_left_over], 0
-	jg not_end
-
-cont:
 	;	get_lit_code(256, &code2, &code_len2);
 	get_lit_code	256, code2, code_len2, hufftables
 
@@ -293,14 +288,16 @@ sync_flush:
 	;    }
 not_end:
 
-	; state->b_bytes_processed = f_i - (state->buffer - state->file_start);
-	add	f_i, [stream + _internal_state_file_start]
-	sub	f_i, stream
-	sub	f_i, _internal_state_buffer
-	mov	[stream + _internal_state_b_bytes_processed], f_i %+ d
 
-	;    // update output buffer
-	;    stream->next_out = state->bitbuf.buffer_ptr();
+	;; Update input buffer
+	mov	f_end_i, [rsp + f_end_i_mem_offset]
+	mov	[stream + _total_in], f_i %+ d
+	add	file_start, f_i
+	mov	[stream + _next_in], file_start
+	sub	f_end_i, f_i
+	mov	[stream + _avail_in], f_end_i %+ d
+
+	;; Update output buffer
 	mov	[stream + _next_out], m_out_buf
 	;    len = state->bitbuf.buffer_used();
 	sub	m_out_buf, [stream + _internal_state_bitbuf_m_out_start]

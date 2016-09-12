@@ -43,9 +43,6 @@
 # define DEFLATE 1
 #endif
 
-
-extern uint32_t  CrcTable[256];
-
 static inline uint32_t bsr(uint32_t val)
 {
 	uint32_t msb;
@@ -210,16 +207,3 @@ static inline int compare258(uint8_t * str1, uint8_t * str2, uint32_t max_length
 
 	return count;
 }
-
-static inline void update_crc(uint32_t* crc, uint8_t * start, uint32_t length)
-{
-#ifndef DEFLATE
-	uint8_t *end = start + length;
-
-	while (start < end)
-		*crc = (*crc >> 8) ^ CrcTable[(*crc & 0x000000FF) ^ *start++];
-#else
-	return;
-#endif
-}
-

@@ -84,8 +84,8 @@ section .text
 %endif
 
 align 16
-global  crc32_gzip
-crc32_gzip:
+global  crc32_gzip_01
+crc32_gzip_01:
 
         ; unsigned long c = crc ^ 0xffffffffL;
         not     arg1_low32	;

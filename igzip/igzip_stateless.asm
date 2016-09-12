@@ -37,7 +37,6 @@
 
 %include "stdmac.asm"
 
-%define LAST_BYTES_COUNT	3 ; Bytes to prevent reading out of array bounds
 %define LA_STATELESS	280	  ; Max number of bytes read in loop2 rounded up to 8 byte boundary
 
 %ifdef DEBUG
@@ -179,8 +178,7 @@ skip_SLOP:
 	mov	[stream + _internal_state_b_bytes_valid], f_end_i %+ d
 
         mov     f_i, 0
-	mov	file_start, [stream + _next_in]
-        mov     [stream + _internal_state_file_start], file_start
+	mov	file_start, [stream + _internal_state_file_start]
 
 	; f_end_i -= LA;
 	sub	f_end_i, LA_STATELESS

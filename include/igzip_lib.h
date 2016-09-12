@@ -231,14 +231,13 @@ struct isal_zstate {
 	uint32_t b_bytes_valid;	//!< number of bytes of valid data in buffer
 	uint32_t b_bytes_processed;	//!< keeps track of the number of bytes processed in isal_zstate.buffer
 	uint8_t *file_start;	//!< pointer to where file would logically start
-	DECLARE_ALIGNED(uint32_t crc[16], 16);	//!< actually 4 128-bit integers
+	uint32_t crc;		//!< Current crc
 	struct BitBuf2 bitbuf;	//!< Bit Buffer
 	enum isal_zstate_state state;	//!< Current state in processing the data stream
 	uint32_t count;	//!< used for partial header/trailer writes
 	uint8_t tmp_out_buff[16];	//!< temporary array
 	uint32_t tmp_out_start;	//!< temporary variable
 	uint32_t tmp_out_end;	//!< temporary variable
-	uint32_t last_flush;    //!< keeps track of last submitted flush
 	uint32_t has_gzip_hdr;	//!< keeps track of if the gzip header has been written.
 	uint32_t has_eob;	//!< keeps track of eob on the last deflate block
 	uint32_t has_eob_hdr;	//!< keeps track of eob hdr (with BFINAL set)

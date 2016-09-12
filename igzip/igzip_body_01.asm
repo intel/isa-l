@@ -4,5 +4,4 @@
 %define COMPARE_TYPE 2
 %endif
 
-%include "igzip_buffer_utils_01.asm"
 %include "igzip_body.asm"

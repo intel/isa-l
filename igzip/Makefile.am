@@ -28,8 +28,6 @@
 ########################################################################
 
 lsrc        += 	igzip/igzip.c igzip/hufftables_c.c \
-		igzip/crc_utils_01.asm \
-		igzip/crc_utils_04.asm \
 		igzip/igzip_body_01.asm \
 		igzip/igzip_body_02.asm \
 		igzip/igzip_body_04.asm \
@@ -64,8 +62,6 @@ other_tests +=  igzip/igzip_file_perf igzip/igzip_sync_flush_file_perf igzip/igz
 
 other_src   += 	igzip/bitbuf2.asm igzip/data_struct2.asm \
 		igzip/inflate_data_structs.asm \
-		igzip/igzip_buffer_utils_01.asm \
-		igzip/igzip_buffer_utils_04.asm \
 		igzip/igzip_body.asm igzip/igzip_finish.asm \
 		igzip/lz0a_const.asm igzip/options.asm igzip/stdmac.asm igzip/igzip_compare_types.asm \
 		igzip/bitbuf2.h igzip/repeated_char_result.h \
