@@ -40,7 +40,7 @@
  * also forms the basis of gzip and zlib compression formats. Igzip supports the
  * following flush features:
  *
- * - No Flush: The default method where no flush is performed.
+ * - No Flush: The default method where no special flush is performed.
  *
  * - Sync flush: whereby isal_deflate() finishes the current deflate block at
  *   the end of each input buffer. The deflate block is byte aligned by
@@ -276,7 +276,7 @@ struct isal_zstream {
 
 	struct isal_hufftables *hufftables; //!< Huffman encoding used when compressing
 	uint32_t end_of_stream;	//!< non-zero if this is the last input buffer
-	uint32_t flush;	//!< Flush type can be NO_FLUSH or SYNC_FLUSH
+	uint32_t flush;	//!< Flush type can be NO_FLUSH, SYNC_FLUSH or FULL_FLUSH
 
 	struct isal_zstate internal_state;	//!< Internal state for this stream
 };
@@ -448,11 +448,11 @@ void isal_deflate_stateless_init(struct isal_zstream *stream);
  * buffer, as long as the output buffer is big enough.
  *
  * The equivalent of the zlib FLUSH_SYNC operation is currently supported.
- * Flush types can be NO_FLUSH or SYNC_FLUSH. Default flush type is NO_FLUSH.
- * If SYNC_FLUSH is selected each input buffer is compressed and byte aligned
- * with a type 0 block appended to the end. Switching between NO_FLUSH and
- * SYNC_FLUSH is supported to select after which input buffer a SYNC_FLUSH is
- * performed.
+ * Flush types can be NO_FLUSH, SYNC_FLUSH or FULL_FLUSH. Default flush type is
+ * NO_FLUSH. A SYNC_ OR FULL_ flush will byte align the deflate block by
+ * appending an empty stored block.  Additionally FULL_FLUSH will ensure
+ * look back history does not include previous blocks so new blocks are fully
+ * independent. Switching between flush types is supported.
  *
  * @param  stream Structure holding state information on the compression streams.
  * @return COMP_OK (if everything is ok),
@@ -469,6 +469,10 @@ int isal_deflate(struct isal_zstream *stream);
  * avail_out must be large enough to fit the entire compressed output. Max
  * expansion is limited to the input size plus the header size of a stored/raw
  * block.
+ *
+ * For stateless the flush types NO_FLUSH and FULL_FLUSH are supported.
+ * FULL_FLUSH will byte align the output deflate block so additional blocks can
+ * be easily appended.
  *
  * @param  stream Structure holding state information on the compression streams.
  * @return COMP_OK (if everything is ok),
@@ -495,8 +499,8 @@ void isal_inflate_init(struct inflate_state *state);
  * indicates the length of that buffer. Similarly next_out points to an empty
  * output buffer and avail_out indicates the size of that buffer.
  *
- * The fields total_in and total_out start at 0 and are updated by
- * isal_inflate(). These reflect the total number of bytes read or written so far.
+ * The field total_out starts at 0 and is updated by isal_inflate(). This
+ * reflects the total number of bytes written so far.
  *
  * The call to isal_inflate() will take data from the input buffer (updating
  * next_in, avail_in and write a decompressed stream to the output buffer
@@ -505,17 +509,19 @@ void isal_inflate_init(struct inflate_state *state);
  * state of the decompression on exit can be read from state->block-state.
  *
  * @param  state Structure holding state information on the compression streams.
- * @return DECOMP_OK (if everything is ok),
- *         INVALID_BLOCK,
- *         INVALID_SYMBOL,
- *         INVALID_LOOKBACK.
+ * @return ISAL_DECOMP_OK (if everything is ok),
+ *         ISAL_END_INPUT (if all input was decompressed),
+ *         ISAL_OUT_OVERFLOW (if output buffer ran out of space),
+ *         ISAL_INVALID_BLOCK,
+ *         ISAL_INVALID_SYMBOL,
+ *         ISAL_INVALID_LOOKBACK.
  */
 int isal_inflate(struct inflate_state *state);
 
 /**
  * @brief Fast data (deflate) stateless decompression for storage applications.
  *
- * Stateless (one shot) compression routine with a similar interface to
+ * Stateless (one shot) decompression routine with a similar interface to
  * isal_inflate() but operates on entire input buffer at one time. Parameter
  * avail_out must be large enough to fit the entire decompressed output.
  *
