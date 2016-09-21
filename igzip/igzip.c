@@ -68,8 +68,6 @@ static int write_deflate_header_unaligned_stateless(struct isal_zstream *stream)
 static int write_trailer_stateless(struct isal_zstream *stream, uint32_t avail_in,
 				   uint32_t crc32);
 
-void isal_deflate_body_stateless(struct isal_zstream *stream);
-
 unsigned int detect_repeated_char(uint8_t * buf, uint32_t size);
 
 #define STORED_BLK_HDR_BZ 5
@@ -314,7 +312,9 @@ static uint32_t write_constant_compressed_stateless(struct isal_zstream *stream,
 	uint32_t rep_bytes = rep_bits / 8;
 	uint32_t rep_extra = (repeated_length - 1) % 258;
 	uint32_t bytes;
-
+#ifndef DEFLATE
+	uint8_t *start_in = stream->next_in;
+#endif
 	/* Guarantee there is enough space for the header even in the worst case */
 	if (stream->avail_out < HEADER_LENGTH + MAX_FIXUP_CODE_LENGTH + rep_bytes + 8)
 		return STATELESS_OVERFLOW;
@@ -385,6 +385,9 @@ static uint32_t write_constant_compressed_stateless(struct isal_zstream *stream,
 	stream->avail_out -= bytes;
 	stream->total_out += bytes;
 
+#ifndef DEFLATE
+	state->crc = crc32_gzip(state->crc, start_in, stream->next_in - start_in);
+#endif
 	return COMP_OK;
 }
 
@@ -411,7 +414,10 @@ static int isal_deflate_int_stateless(struct isal_zstream *stream, uint8_t * nex
 {
 	uint32_t crc32 = 0;
 	uint32_t repeated_char_length;
+	struct isal_zstate *state = &stream->internal_state;
 
+	state->state = ZSTATE_NEW_HDR;
+	state->crc = 0;
 #ifndef DEFLATE
 	if (write_gzip_header_stateless(stream))
 		return STATELESS_OVERFLOW;
@@ -432,18 +438,14 @@ static int isal_deflate_int_stateless(struct isal_zstream *stream, uint8_t * nex
 							stream->end_of_stream) != COMP_OK)
 			return STATELESS_OVERFLOW;
 
-#ifndef DEFLATE
-		crc32 = crc32_gzip(0x0, next_in, avail_in);
-#endif
-
-		if (stream->internal_state.has_eob_hdr) {
+		if (state->has_eob_hdr) {
 			if (write_trailer_stateless(stream, avail_in, crc32) != COMP_OK)
 				return STATELESS_OVERFLOW;
 		} else if (stream->avail_out >= 8) {
 			sync_flush_stateless(stream);
 #ifndef USE_BITBUFB
 			flush_write_buffer(stream);
-			if (stream->internal_state.bitbuf.m_bit_count != 0)
+			if (state->bitbuf.m_bit_count != 0)
 				return STATELESS_OVERFLOW;
 #endif
 		} else
@@ -454,39 +456,21 @@ static int isal_deflate_int_stateless(struct isal_zstream *stream, uint8_t * nex
 		if (write_constant_compressed_stateless
 		    (stream, stream->next_in[0], repeated_char_length, 0) != COMP_OK)
 			return STATELESS_OVERFLOW;
-		stream->internal_state.has_eob = 0;
+		state->has_eob = 0;
 	}
 
 	if (write_deflate_header_unaligned_stateless(stream) != COMP_OK)
 		return STATELESS_OVERFLOW;
-	if (stream->avail_out < 8)
+
+	reset_match_history(stream);
+	state->file_start = stream->next_in - stream->total_in;
+	isal_deflate_pass(stream);
+
+	if (state->state == ZSTATE_END
+	    || (state->state == ZSTATE_NEW_HDR && stream->flush == FULL_FLUSH))
+		return COMP_OK;
+	else
 		return STATELESS_OVERFLOW;
-
-	memset(stream->internal_state.head, 0, sizeof(stream->internal_state.head));
-	stream->internal_state.file_start = stream->next_in;
-	isal_deflate_body_stateless(stream);
-
-	if (!stream->internal_state.has_eob)
-		return STATELESS_OVERFLOW;
-
-#ifndef DEFLATE
-	crc32 = crc32_gzip(0x0, next_in, avail_in);
-#endif
-
-	if (stream->internal_state.has_eob_hdr) {
-		if (write_trailer_stateless(stream, avail_in, crc32) != COMP_OK)
-			return STATELESS_OVERFLOW;
-	} else if (stream->avail_out >= 8) {
-		sync_flush_stateless(stream);
-#ifndef USE_BITBUFB
-		flush_write_buffer(stream);
-		if (stream->internal_state.bitbuf.m_bit_count != 0)
-			return STATELESS_OVERFLOW;
-#endif
-	} else
-		return STATELESS_OVERFLOW;
-
-	return COMP_OK;
 }
 
 static int write_stored_block_stateless(struct isal_zstream *stream,
@@ -561,8 +545,12 @@ static inline void reset_match_history(struct isal_zstream *stream)
 	uint16_t *head = stream->internal_state.head;
 	int i = 0;
 
-	for (i = 0; i < sizeof(state->head) / 2; i++) {
-		head[i] = (uint16_t) (stream->total_in);
+	if (stream->total_in == 0)
+		memset(stream->internal_state.head, 0, sizeof(stream->internal_state.head));
+	else {
+		for (i = 0; i < sizeof(state->head) / 2; i++) {
+			head[i] = (uint16_t) (stream->total_in);
+		}
 	}
 }
 
@@ -872,6 +860,8 @@ static int write_deflate_header_stateless(struct isal_zstream *stream)
 	stream->avail_out -= count;
 	stream->total_out += count;
 
+	state->state = ZSTATE_BODY;
+
 	return COMP_OK;
 }
 
@@ -938,6 +928,8 @@ static int write_deflate_header_unaligned_stateless(struct isal_zstream *stream)
 	stream->next_out = buffer_ptr(&state->bitbuf);
 	stream->avail_out -= count;
 	stream->total_out += count;
+
+	state->state = ZSTATE_BODY;
 
 	return COMP_OK;
 }

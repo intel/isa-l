@@ -32,14 +32,10 @@ lsrc        += 	igzip/igzip.c igzip/hufftables_c.c \
 		igzip/igzip_body_02.asm \
 		igzip/igzip_body_04.asm \
 		igzip/igzip_finish.asm \
-		igzip/igzip_stateless_01.asm \
-		igzip/igzip_stateless_02.asm \
-		igzip/igzip_stateless_04.asm \
 		igzip/crc_data.asm \
 		igzip/rfc1951_lookup.asm \
 		igzip/crc32_gzip.asm igzip/detect_repeated_char.asm \
 		igzip/igzip_multibinary.asm \
-		igzip/igzip_stateless_base.c \
 		igzip/igzip_base.c \
 		igzip/igzip_update_histogram_01.asm \
 		igzip/igzip_update_histogram_04.asm \
@@ -66,7 +62,6 @@ other_src   += 	igzip/bitbuf2.asm igzip/data_struct2.asm \
 		igzip/lz0a_const.asm igzip/options.asm igzip/stdmac.asm igzip/igzip_compare_types.asm \
 		igzip/bitbuf2.h igzip/repeated_char_result.h \
 		igzip/igzip_body.asm \
-		igzip/igzip_stateless.asm \
 		igzip/igzip_update_histogram.asm \
 		igzip/huffman.asm \
 		include/reg_sizes.asm \
