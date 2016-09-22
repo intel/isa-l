@@ -112,6 +112,7 @@ FIELD	_total_out,	4,	4
 FIELD	_hufftables,	8,	8
 FIELD	_end_of_stream,	4,	4
 FIELD   _flush,		4,	4
+FIELD	_gzip_flag,	4,	4
 FIELD	_internal_state,	_isal_zstate_size,	_isal_zstate_align
 
 %assign _isal_zstream_size	_FIELD_OFFSET

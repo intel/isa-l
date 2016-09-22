@@ -39,10 +39,6 @@
 # include <x86intrin.h>
 #endif
 
-#ifndef IGZIP_USE_GZIP_FORMAT
-# define DEFLATE 1
-#endif
-
 static inline uint32_t bsr(uint32_t val)
 {
 	uint32_t msb;

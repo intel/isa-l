@@ -62,13 +62,8 @@
  *   default this optoin is not defined. This define sets IGZIP_HIST_SIZE to be
  *   8 if IGZIP_HIST_SIZE > 8K.
  *
- * - IGZIP_USE_GZIP_FORMAT - Defines whether the compression should add gzip
- *   header and trailer to compressed data. By default this option is not
- *   defined
- *
- *   As an example, to compile gzip with an 8K window size and add the gzip
- *   header and trailer, in a terminal run @verbatim gmake D="-D
- *   IGZIP_HIST_SIZE=8*1024 -D IGZIP_USE_GZIP_FORMAT" @endverbatim on Linux and
+ *   As an example, to compile gzip with an 8K window size, in a terminal run
+ *   @verbatim gmake D="-D IGZIP_HIST_SIZE=8*1024" @endverbatim on Linux and
  *   FreeBSD, or with @verbatim nmake -f Makefile.nmake D="-D
  *   IGZIP_HIST_SIZE=8*1024" @endverbatim on Windows.
  *
@@ -276,6 +271,7 @@ struct isal_zstream {
 	struct isal_hufftables *hufftables; //!< Huffman encoding used when compressing
 	uint32_t end_of_stream;	//!< non-zero if this is the last input buffer
 	uint32_t flush;	//!< Flush type can be NO_FLUSH, SYNC_FLUSH or FULL_FLUSH
+	uint32_t gzip_flag; //!< Indicate if gzip compression is to be performed
 
 	struct isal_zstate internal_state;	//!< Internal state for this stream
 };

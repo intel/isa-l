@@ -32,10 +32,6 @@ default rel
 %ifndef __OPTIONS_ASM__
 %define __OPTIONS_ASM__
 
-%ifndef IGZIP_USE_GZIP_FORMAT
-%define DEFLATE
-%endif
-
 ; Options:dir
 ; m - reschedule mem reads
 ; e b - bitbuff style
