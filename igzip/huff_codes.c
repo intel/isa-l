@@ -55,6 +55,9 @@ struct slver isal_update_histogram_slver = { 0x0085, 0x01, 0x00 };
 struct slver isal_create_hufftables_slver_00010086;
 struct slver isal_create_hufftables_slver = { 0x0086, 0x01, 0x00 };
 
+struct slver isal_create_hufftables_subset_slver_00010087;
+struct slver isal_create_hufftables_subset_slver = { 0x0087, 0x01, 0x00 };
+
 int heap_push(struct huff_tree element, struct histheap *heap)
 {
 	uint16_t index;
