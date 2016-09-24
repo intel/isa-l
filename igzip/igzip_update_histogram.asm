@@ -224,12 +224,6 @@ _hash_offset	equ	(_dist_offset + 8 * DIST_LEN)
 ; void isal_update_histogram
 global isal_update_histogram_ %+ ARCH
 isal_update_histogram_ %+ ARCH %+ :
-
-	;; do nothing if (avail_in == 0)
-	cmp	file_length, 0
-	jne	skip1
-	ret
-skip1:
 	FUNC_SAVE
 
 %ifnidn	file_start, arg0
@@ -241,8 +235,9 @@ skip1:
 %ifnidn	histogram, arg2
 	mov	histogram, arg2
 %endif
-
 	mov	f_i, 0
+	cmp	file_length, 0
+	je	exit_ret	; If nothing to do then exit
 
 	mov	tmp1, qword [histogram + _lit_len_offset + 8*256]
 	inc	tmp1
@@ -513,8 +508,8 @@ end:
 	mov	tmp1, [rsp + _eob_count_offset]
 	mov	qword [histogram + _lit_len_offset + HIST_ELEM_SIZE * 256], tmp1
 
+exit_ret:
 	FUNC_RESTORE
-
 	ret
 
 compare_loop:
