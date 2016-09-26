@@ -350,6 +350,8 @@ struct inflate_state {
 	struct inflate_huff_code_small dist_huff_code;	//!< Structure for decoding dist symbols
 	enum isal_block_state block_state;	//!< Current decompression state
 	uint32_t bfinal;	//!< Flag identifying final block
+	uint32_t crc_flag;	//!< Flag identifying whether to track of crc
+	uint32_t crc;		//!< Contains crc of output if crc_flag is set
 	int32_t type0_block_len;	//!< Length left to read of type 0 block when outbuffer overflow occured
 	int32_t copy_overflow_length; 	//!< Length left to copy when outbuffer overflow occured
 	int32_t copy_overflow_distance;	//!< Lookback distance when outbuffer overlow occured
@@ -501,7 +503,8 @@ void isal_inflate_init(struct inflate_state *state);
  * next_in, avail_in and write a decompressed stream to the output buffer
  * (updating next_out and avail_out). The function returns when the input buffer
  * is empty, the output buffer is full or invalid data is found. The current
- * state of the decompression on exit can be read from state->block-state.
+ * state of the decompression on exit can be read from state->block-state. If
+ * the crc_flag is set, the gzip crc of the output is stored in state->crc.
  *
  * @param  state Structure holding state information on the compression streams.
  * @return ISAL_DECOMP_OK (if everything is ok),

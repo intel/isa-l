@@ -5,6 +5,7 @@
 #include "huff_codes.h"
 
 extern int decode_huffman_code_block_stateless(struct inflate_state *);
+extern uint32_t crc32_gzip(uint32_t init_crc, const unsigned char *buf, uint64_t len);
 
 /* structure contain lookup data based on RFC 1951 */
 struct rfc1951_tables {
@@ -1037,6 +1038,8 @@ void isal_inflate_init(struct inflate_state *state)
 	state->total_out = 0;
 	state->block_state = ISAL_BLOCK_NEW_HDR;
 	state->bfinal = 0;
+	state->crc_flag = 0;
+	state->crc = 0;
 	state->type0_block_len = 0;
 	state->copy_overflow_length = 0;
 	state->copy_overflow_distance = 0;
@@ -1048,11 +1051,13 @@ void isal_inflate_init(struct inflate_state *state)
 int isal_inflate_stateless(struct inflate_state *state)
 {
 	uint32_t ret = 0;
+	uint8_t *start_out = state->next_out;
 
 	state->read_in = 0;
 	state->read_in_length = 0;
 	state->block_state = ISAL_BLOCK_NEW_HDR;
 	state->bfinal = 0;
+	state->crc = 0;
 	state->total_out = 0;
 
 	while (state->block_state != ISAL_BLOCK_FINISH) {
@@ -1074,6 +1079,9 @@ int isal_inflate_stateless(struct inflate_state *state)
 			state->block_state = ISAL_BLOCK_FINISH;
 	}
 
+	if (state->crc_flag)
+		state->crc = crc32_gzip(state->crc, start_out, state->next_out - start_out);
+
 	/* Undo count stuff of bytes read into the read buffer */
 	state->next_in -= state->read_in_length / 8;
 	state->avail_in += state->read_in_length / 8;
@@ -1084,7 +1092,7 @@ int isal_inflate_stateless(struct inflate_state *state)
 int isal_inflate(struct inflate_state *state)
 {
 
-	uint8_t *next_out = state->next_out;
+	uint8_t *start_out = state->next_out;
 	uint32_t avail_out = state->avail_out;
 	uint32_t copy_size = 0;
 	int32_t shift_size = 0;
@@ -1138,7 +1146,7 @@ int isal_inflate(struct inflate_state *state)
 			state->tmp_out_valid = state->next_out - state->tmp_out_buffer;
 
 			/* Setup state for decompressing into out_buffer */
-			state->next_out = next_out;
+			state->next_out = start_out;
 			state->avail_out = avail_out;
 		}
 
@@ -1158,6 +1166,10 @@ int isal_inflate(struct inflate_state *state)
 		    || ret == ISAL_INVALID_SYMBOL) {
 			/* Set total_out to not count data in tmp_out_buffer */
 			state->total_out -= state->tmp_out_valid - state->tmp_out_processed;
+			if (state->crc_flag)
+				state->crc =
+				    crc32_gzip(state->crc, start_out,
+					       state->next_out - start_out);
 			return ret;
 		}
 
@@ -1183,6 +1195,10 @@ int isal_inflate(struct inflate_state *state)
 					state->block_state = ISAL_BLOCK_INPUT_DONE;
 			}
 		}
+
+		if (state->crc_flag)
+			state->crc =
+			    crc32_gzip(state->crc, start_out, state->next_out - start_out);
 
 		if (state->block_state != ISAL_BLOCK_INPUT_DONE) {
 			/* Save decompression history in tmp_out buffer */

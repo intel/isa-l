@@ -63,6 +63,8 @@ FIELD	_lit_huff_code,	_inflate_huff_code_large_size,	_inflate_huff_code_large_al
 FIELD	_dist_huff_code,_inflate_huff_code_small_size,	_inflate_huff_code_small_align
 FIELD	_block_state,	4,	4
 FIELD	_bfinal,	4,	4
+FIELD	_crc_flag,	4,	4
+FIELD	_crc,		4,	4
 FIELD	_type0_block_len,	4, 	4
 FIELD	_copy_overflow_len,  	4,	4
 FIELD	_copy_overflow_dist,	4,	4

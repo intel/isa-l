@@ -291,15 +291,16 @@ uint32_t check_gzip_header(uint8_t * z_buf)
 	return ret;
 }
 
-uint32_t check_gzip_trl(uint64_t gzip_crc, uint8_t * uncompress_buf, uint32_t uncompress_len)
+uint32_t check_gzip_trl(uint64_t gzip_trl, uint32_t inflate_crc, uint8_t * uncompress_buf,
+			uint32_t uncompress_len)
 {
-	uint64_t crc, ret = 0;
+	uint64_t trl, ret = 0;
+	uint32_t crc;
 
 	crc = find_crc(uncompress_buf, uncompress_len);
+	trl = ((uint64_t) uncompress_len << 32) | crc;
 
-	crc = ((uint64_t) uncompress_len << 32) | crc;
-
-	if (crc != gzip_crc)
+	if (crc != inflate_crc || trl != gzip_trl)
 		ret = INCORRECT_GZIP_TRAILER;
 
 	return ret;
@@ -316,6 +317,7 @@ int inflate_stateless_pass(uint8_t * compress_buf, uint64_t compress_len,
 	state.avail_in = compress_len;
 	state.next_out = uncompress_buf;
 	state.avail_out = *uncompress_len;
+	state.crc_flag = gzip_flag;
 
 	ret = isal_inflate_stateless(&state);
 
@@ -324,8 +326,8 @@ int inflate_stateless_pass(uint8_t * compress_buf, uint64_t compress_len,
 	if (gzip_flag) {
 		if (!ret)
 			ret =
-			    check_gzip_trl(*(uint64_t *) state.next_in, uncompress_buf,
-					   *uncompress_len);
+			    check_gzip_trl(*(uint64_t *) state.next_in, state.crc,
+					   uncompress_buf, *uncompress_len);
 		state.avail_in -= 8;
 	}
 
@@ -357,6 +359,7 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 	state->next_out = NULL;
 	state->avail_in = 0;
 	state->avail_out = 0;
+	state->crc_flag = gzip_flag;
 
 	if (gzip_flag)
 		compress_len -= 8;
@@ -451,7 +454,7 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 		if (!ret)
 			ret =
 			    check_gzip_trl(*(uint64_t *) & compress_buf[compress_len],
-					   uncompress_buf, *uncompress_len);
+					   state->crc, uncompress_buf, *uncompress_len);
 	}
 	if (ret == 0 && state->avail_in != 0)
 		ret = INFLATE_LEFTOVER_INPUT;
