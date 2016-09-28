@@ -36,7 +36,7 @@
 #include <math.h>
 
 #ifndef RANDOMS
-# define RANDOMS   400
+# define RANDOMS   0x40
 #endif
 #ifndef TEST_SEED
 # define TEST_SEED 0x1234

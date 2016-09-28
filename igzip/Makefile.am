@@ -48,9 +48,7 @@ extern_hdrs +=	include/igzip_lib.h
 
 pkginclude_HEADERS += include/types.h
 
-unit_tests  += 	igzip/igzip_rand_test
-
-check_tests +=  igzip/igzip_check
+check_tests +=  igzip/igzip_rand_test
 
 perf_tests  +=  igzip/igzip_perf igzip/igzip_sync_flush_perf
 
@@ -93,7 +91,6 @@ igzip_igzip_inflate_perf_LDFLAGS = -lz
 igzip_inflate_test: LDLIBS += -lz
 igzip_igzip_inflate_test_LDADD = libisal.la
 igzip_igzip_inflate_test_LDFLAGS = -lz
-igzip_igzip_check_LDADD = libisal.la
 igzip_igzip_hist_perf_LDADD = libisal.la
 igzip_fuzz_inflate: LDLIBS += -lz
 igzip_igzip_fuzz_inflate_LDADD = libisal.la
