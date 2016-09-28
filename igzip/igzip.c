@@ -404,7 +404,7 @@ static int isal_deflate_int_stateless(struct isal_zstream *stream)
 	uint32_t repeated_char_length;
 	struct isal_zstate *state = &stream->internal_state;
 
-	if (stream->gzip_flag)
+	if (stream->gzip_flag == IGZIP_GZIP)
 		if (write_gzip_header_stateless(stream))
 			return STATELESS_OVERFLOW;
 
@@ -473,9 +473,10 @@ static int write_stored_block_stateless(struct isal_zstream *stream,
 	stream->total_out += stored_len;
 	avail_in = stream->avail_in;
 
-	if (stream->gzip_flag) {
+	if (stream->gzip_flag == IGZIP_GZIP) {
 		memcpy(stream->next_out, gzip_hdr, gzip_hdr_bytes);
 		stream->next_out += gzip_hdr_bytes;
+		stream->gzip_flag = IGZIP_GZIP_NO_HDR;
 	}
 
 	do {
@@ -549,7 +550,6 @@ void isal_deflate_init(struct isal_zstream *stream)
 	state->has_eob = 0;
 	state->has_eob_hdr = 0;
 	state->left_over = 0;
-	state->has_gzip_hdr = 0;
 	state->state = ZSTATE_NEW_HDR;
 	state->count = 0;
 
@@ -596,6 +596,7 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 	uint8_t *next_out = stream->next_out;
 	const uint32_t avail_out = stream->avail_out;
 	const uint32_t total_out = stream->total_out;
+	const uint32_t gzip_flag = stream->gzip_flag;
 
 	uint32_t crc32 = 0;
 	uint32_t stored_len;
@@ -629,9 +630,13 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 
 	dyn_min_len = stream->hufftables->deflate_hdr_count + 1;
 
-	if (stream->gzip_flag) {
+	if (stream->gzip_flag == IGZIP_GZIP) {
 		dyn_min_len += gzip_hdr_bytes + gzip_trl_bytes + 1;
 		stored_len += gzip_hdr_bytes + gzip_trl_bytes;
+
+	} else if (stream->gzip_flag == IGZIP_GZIP_NO_HDR) {
+		dyn_min_len += gzip_trl_bytes + 1;
+		stored_len += gzip_trl_bytes;
 	}
 
 	min_len = dyn_min_len;
@@ -671,6 +676,8 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 	stream->next_out = next_out;
 	stream->avail_out = avail_out;
 	stream->total_out = total_out;
+
+	stream->gzip_flag = gzip_flag;
 
 	if (stream->gzip_flag)
 		crc32 = crc32_gzip(0x0, next_in, avail_in);
@@ -786,6 +793,7 @@ static int write_gzip_header_stateless(struct isal_zstream *stream)
 	memcpy(stream->next_out, gzip_hdr, gzip_hdr_bytes);
 
 	stream->next_out += gzip_hdr_bytes;
+	stream->gzip_flag = IGZIP_GZIP_NO_HDR;
 
 	return COMP_OK;
 }
@@ -805,7 +813,7 @@ static void write_gzip_header(struct isal_zstream *stream)
 
 	if (state->count == gzip_hdr_bytes) {
 		state->count = 0;
-		state->has_gzip_hdr = 1;
+		stream->gzip_flag = IGZIP_GZIP_NO_HDR;
 	}
 
 	stream->avail_out -= bytes_to_write;
@@ -937,7 +945,7 @@ void write_header(struct isal_zstream *stream)
 		stream->total_out += count;
 	}
 
-	if (stream->gzip_flag && !state->has_gzip_hdr)
+	if (stream->gzip_flag == IGZIP_GZIP)
 		write_gzip_header(stream);
 
 	count = hufftables->deflate_hdr_count - state->count;

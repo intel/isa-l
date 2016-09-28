@@ -36,7 +36,7 @@
 #define BUF_SIZE 1024
 #define MIN_TEST_LOOPS   10
 #ifndef RUN_MEM_SIZE
-# define RUN_MEM_SIZE 5000000000
+# define RUN_MEM_SIZE 500000000
 #endif
 
 struct isal_zstream stream;

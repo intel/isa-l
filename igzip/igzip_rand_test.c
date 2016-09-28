@@ -495,7 +495,7 @@ int inflate_check(uint8_t * z_buf, int z_size, uint8_t * in_buf, int in_size,
 	if (test_buf != NULL)
 		memset(test_buf, 0xff, test_size);
 
-	if (gzip_flag) {
+	if (gzip_flag == IGZIP_GZIP) {
 		gzip_hdr_result = check_gzip_header(z_buf);
 		z_buf += gzip_hdr_bytes;
 		z_size -= gzip_hdr_bytes;
@@ -880,8 +880,9 @@ int compress_stateless(uint8_t * data, uint32_t data_size, uint8_t * compressed_
 		return COMPRESS_INPUT_STREAM_INTEGRITY_ERROR;
 
 	if (stream.next_out - compressed_buf != stream.total_out ||
-	    stream.total_out + stream.avail_out != *compressed_size)
+	    stream.total_out + stream.avail_out != *compressed_size) {
 		return COMPRESS_OUTPUT_STREAM_INTEGRITY_ERROR;
+	}
 
 	if (ret != IGZIP_COMP_OK) {
 		if (ret == STATELESS_OVERFLOW)
@@ -1171,7 +1172,7 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 	uint8_t *z_buf = NULL;
 	uint8_t *in_buf = NULL;
 
-	gzip_flag = rand() % 2;
+	gzip_flag = rand() % 3;
 
 	if (in_size != 0) {
 		in_buf = malloc(in_size);
@@ -1377,7 +1378,7 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 		return COMPRESS_GENERAL_ERROR;
 	}
 
-	gzip_flag = rand() % 2;
+	gzip_flag = rand() % 3;
 	if (gzip_flag)
 		z_size_max += gzip_extra_bytes;
 
@@ -1519,7 +1520,7 @@ int test_flush(uint8_t * in_buf, uint32_t in_size)
 	uint32_t z_size, flush_type = 0, gzip_flag;
 	uint8_t *z_buf = NULL;
 
-	gzip_flag = rand() % 2;
+	gzip_flag = rand() % 3;
 	z_size = 2 * in_size + 2 * (hdr_bytes + trl_bytes) + 8;
 	if (gzip_flag)
 		z_size += gzip_extra_bytes;
@@ -1579,7 +1580,7 @@ int test_full_flush(uint8_t * in_buf, uint32_t in_size)
 	uint32_t z_size, gzip_flag;
 	uint8_t *z_buf = NULL;
 
-	gzip_flag = rand() % 2;
+	gzip_flag = rand() % 3;
 	z_size = 2 * in_size + MAX_LOOPS * (hdr_bytes + trl_bytes + 5);
 
 	if (gzip_flag)

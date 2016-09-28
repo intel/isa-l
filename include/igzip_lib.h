@@ -135,6 +135,11 @@ enum {IGZIP_LIT_TABLE_SIZE = ISAL_DEF_LIT_SYMBOLS};
 #define FULL_FLUSH	2
 #define FINISH_FLUSH	0	/* Deprecated */
 
+/* Gzip Flags */
+#define IGZIP_DEFLATE	0	/* Default */
+#define IGZIP_GZIP	1
+#define IGZIP_GZIP_NO_HDR	2
+
 /* Compression Return values */
 #define COMP_OK 0
 #define INVALID_FLUSH -7
@@ -233,7 +238,6 @@ struct isal_zstate {
 	uint8_t tmp_out_buff[16];	//!< temporary array
 	uint32_t tmp_out_start;	//!< temporary variable
 	uint32_t tmp_out_end;	//!< temporary variable
-	uint32_t has_gzip_hdr;	//!< keeps track of if the gzip header has been written.
 	uint32_t has_eob;	//!< keeps track of eob on the last deflate block
 	uint32_t has_eob_hdr;	//!< keeps track of eob hdr (with BFINAL set)
 	uint32_t left_over;	//!< keeps track of overflow bytes
@@ -451,6 +455,10 @@ void isal_deflate_stateless_init(struct isal_zstream *stream);
  * look back history does not include previous blocks so new blocks are fully
  * independent. Switching between flush types is supported.
  *
+ * If the gzip_flag is set to IGZIP_GZIP, a generic gzip header and the gzip
+ * trailer are written around the deflate compressed data. If gzip_flag is set
+ * to IGZIP_GZIP_NO_HDR, then only the gzip trailer is written.
+ *
  * @param  stream Structure holding state information on the compression streams.
  * @return COMP_OK (if everything is ok),
  *         INVALID_FLUSH (if an invalid FLUSH is selected),
@@ -470,6 +478,10 @@ int isal_deflate(struct isal_zstream *stream);
  * For stateless the flush types NO_FLUSH and FULL_FLUSH are supported.
  * FULL_FLUSH will byte align the output deflate block so additional blocks can
  * be easily appended.
+ *
+ * If the gzip_flag is set to IGZIP_GZIP, a generic gzip header and the gzip
+ * trailer are written around the deflate compressed data. If gzip_flag is set
+ * to IGZIP_GZIP_NO_HDR, then only the gzip trailer is written.
  *
  * @param  stream Structure holding state information on the compression streams.
  * @return COMP_OK (if everything is ok),
