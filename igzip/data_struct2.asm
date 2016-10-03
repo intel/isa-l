@@ -67,6 +67,52 @@ FIELD	_m_out_start,	8,	8
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+START_FIELDS	;; isal_mod_hist
+
+;;      name		size    align
+FIELD	_d_hist,	30*2,	2
+FIELD	_ll_hist,	513*2,	2
+
+%assign _isal_mod_hist_size	_FIELD_OFFSET
+%assign _isal_mod_hist_align	_STRUCT_ALIGN
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+%define HUFF_CODE_SIZE 4
+
+START_FIELDS	;; hufftables_icf
+
+;;      name		size    align
+FIELD	_lit_len_table,	513 * HUFF_CODE_SIZE,	HUFF_CODE_SIZE
+FIELD	_dist_table,	31 * HUFF_CODE_SIZE,	HUFF_CODE_SIZE
+
+%assign _hufftables_icf_size	_FIELD_OFFSET
+%assign _hufftables_icf_align	_STRUCT_ALIGN
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+%define DEF_MAX_HDR_SIZE 328
+START_FIELDS	;; level_2_buf
+
+;;      name		size    align
+FIELD	_encode_tables,		_hufftables_icf_size,	_hufftables_icf_align
+FIELD	_deflate_hdr_buf_used,	8,	8
+FIELD	_deflate_hdr_buf,	DEF_MAX_HDR_SIZE,	1
+FIELD	_icf_buf_next,		8,	8
+FIELD	_icf_buf_avail_out,	8,	8
+FIELD	_icf_buf_start,		0,	0
+
+%assign _level_2_buf_size	_FIELD_OFFSET
+%assign _level_2_buf_align	_STRUCT_ALIGN
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 START_FIELDS	;; isal_zstate
 
 ;;      name		size    align
@@ -82,7 +128,8 @@ FIELD   _tmp_out_start,	4,	4
 FIELD	_tmp_out_end,	4,	4
 FIELD	_has_eob,		4,	4
 FIELD	_has_eob_hdr,	4,	4
-FIELD	_has_hist, 4,	4
+FIELD	_has_hist,	4,	4
+FIELD	_hist,		_isal_mod_hist_size, _isal_mod_hist_align
 FIELD	_buffer,	BSIZE,	32
 FIELD	_head,		IGZIP_HASH_SIZE*2,	16
 
@@ -95,6 +142,8 @@ _bitbuf_m_out_buf	equ	_bitbuf+_m_out_buf
 _bitbuf_m_out_end	equ	_bitbuf+_m_out_end
 _bitbuf_m_out_start	equ	_bitbuf+_m_out_start
 
+_hist_lit_len		equ	_hist+_ll_hist
+_hist_dist		equ	_hist+_d_hist
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -109,6 +158,9 @@ FIELD	_next_out,	8,	8
 FIELD	_avail_out,	4,	4
 FIELD	_total_out,	4,	4
 FIELD	_hufftables,	8,	8
+FIELD	_level,		4,	4
+FIELD	_level_buf_size,	4,	4
+FIELD	_level_buf,	8,	8
 FIELD	_end_of_stream,	4,	4
 FIELD   _flush,		4,	4
 FIELD	_gzip_flag,	4,	4
@@ -137,16 +189,22 @@ _internal_state_bitbuf_m_bit_count	equ   _internal_state+_bitbuf_m_bit_count
 _internal_state_bitbuf_m_out_buf	  equ   _internal_state+_bitbuf_m_out_buf
 _internal_state_bitbuf_m_out_end	  equ   _internal_state+_bitbuf_m_out_end
 _internal_state_bitbuf_m_out_start	equ   _internal_state+_bitbuf_m_out_start
+_internal_state_hist_lit_len		equ	_internal_state+_hist_lit_len
+_internal_state_hist_dist		equ	_internal_state+_hist_dist
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-ZSTATE_HDR			equ	1
-ZSTATE_BODY			equ	2
-ZSTATE_FLUSH_READ_BUFFER	equ	3
-ZSTATE_SYNC_FLUSH		equ	4
-ZSTATE_TRL			equ	6
+;; Internal States
+ZSTATE_NEW_HDR			equ	0
+ZSTATE_HDR			equ	(ZSTATE_NEW_HDR + 1)
+ZSTATE_CREATE_HDR		equ	(ZSTATE_HDR + 1)
+ZSTATE_BODY			equ	(ZSTATE_CREATE_HDR + 1)
+ZSTATE_FLUSH_READ_BUFFER	equ	(ZSTATE_BODY + 1)
+ZSTATE_FLUSH_ICF_BUFFER		equ	(ZSTATE_FLUSH_READ_BUFFER + 1)
+ZSTATE_SYNC_FLUSH		equ	(ZSTATE_FLUSH_ICF_BUFFER + 1)
+ZSTATE_FLUSH_WRITE_BUFFER	equ	(ZSTATE_SYNC_FLUSH + 1)
+ZSTATE_TRL			equ	(ZSTATE_FLUSH_WRITE_BUFFER + 1)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

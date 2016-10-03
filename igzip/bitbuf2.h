@@ -102,19 +102,28 @@ static inline uint32_t buffer_used(struct BitBuf2 *me)
 	return (uint32_t)(me->m_out_buf - me->m_out_start);
 }
 
+static inline uint32_t buffer_bits_used(struct BitBuf2 *me)
+{
+	return (8 * (uint32_t)(me->m_out_buf - me->m_out_start) + me->m_bit_count);
+}
+
+static inline void flush_bits(struct BitBuf2 *me)
+{
+	uint32_t bits;
+	_mm_stream_si64x((int64_t *) me->m_out_buf, me->m_bits);
+	bits = me->m_bit_count & ~7;
+	me->m_bit_count -= bits;
+	me->m_out_buf += bits/8;
+	me->m_bits >>= bits;
+
+}
+
 static inline void check_space(struct BitBuf2 *me, uint32_t num_bits)
 {
 	/* Checks if bitbuf has num_bits extra space and flushes the bytes in
 	 * the bitbuf if it doesn't. */
-	uint32_t bytes;
-	if (63 - me->m_bit_count < num_bits) {
-		_mm_stream_si64x((int64_t *) me->m_out_buf, me->m_bits);
-		bytes = me->m_bit_count / 8;
-		me->m_out_buf += bytes;
-		bytes *= 8;
-		me->m_bit_count -= bytes;
-		me->m_bits >>= bytes;
-	}
+	if (63 - me->m_bit_count < num_bits)
+		flush_bits(me);
 }
 
 static inline void write_bits_unsafe(struct BitBuf2 *me, uint64_t code, uint32_t count)
@@ -136,16 +145,10 @@ static inline void write_bits(struct BitBuf2 *me, uint64_t code, uint32_t count)
 	}
 #elif defined(USE_BITBUFB) /* Write bits always */
 	/* Assumes there is space to fit code into m_bits. */
-	uint32_t bits;
 	me->m_bits |= code << me->m_bit_count;
 	me->m_bit_count += count;
-	if (me->m_bit_count >= 8) {
-		_mm_stream_si64x((int64_t *) me->m_out_buf, me->m_bits);
-		bits = me->m_bit_count & ~7;
-		me->m_bit_count -= bits;
-		me->m_out_buf += bits/8;
-		me->m_bits >>= bits;
-	}
+	if (me->m_bit_count >= 8)
+		flush_bits(me);
 #else /* USE_BITBUF_ELSE */
 	check_space(me, count);
 	write_bits_unsafe(me, code, count);

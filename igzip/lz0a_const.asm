@@ -27,6 +27,8 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+%include "options.asm"
+
 %assign K      1024
 %assign D      IGZIP_HIST_SIZE        ;; Amount of history
 %assign LA     18 * 16      ;; Max look-ahead, rounded up to 32 byte boundary
@@ -45,3 +47,7 @@
 %assign SHORTEST_MATCH  4
 
 %assign SLOP 8
+
+%define DIST_OFFSET	14
+%define EXTRA_BITS_OFFSET	(DIST_OFFSET + 5)
+%define LIT (0x1E << DIST_OFFSET)

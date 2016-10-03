@@ -203,3 +203,10 @@
 	; code2 is clobbered, rcx is clobbered
 %endif
 %endm
+
+%macro write_dword 2
+%define %%data %1d
+%define %%addr %2
+	movnti	[%%addr], %%data
+	add	%%addr, 4
+%endm

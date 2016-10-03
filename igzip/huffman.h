@@ -126,6 +126,48 @@ static inline void get_lit_code(struct isal_hufftables *hufftables, uint32_t lit
 	*len = hufftables->lit_table_sizes[lit];
 }
 
+static void compute_dist_icf_code(uint32_t dist, uint32_t *code, uint32_t *extra_bits)
+{
+	uint32_t msb;
+	uint32_t num_extra_bits;
+
+	dist -= 1;
+	msb = bsr(dist);
+	assert(msb >= 1);
+	num_extra_bits = msb - 2;
+	*extra_bits = dist & ((1 << num_extra_bits) - 1);
+	dist >>= num_extra_bits;
+	*code = dist + 2 * num_extra_bits;
+	assert(*code < 30);
+}
+
+static inline void get_dist_icf_code(uint32_t dist, uint32_t *code, uint32_t *extra_bits)
+{
+	assert(dist >= 1);
+	assert(dist <= 32768);
+	if (dist <= 2) {
+		*code = dist - 1;
+		*extra_bits = 0;
+	} else {
+		compute_dist_icf_code(dist, code, extra_bits);
+	}
+}
+
+static inline void get_len_icf_code(uint32_t length, uint32_t *code)
+{
+	assert(length >= 3);
+	assert(length <= 258);
+
+	*code = length + 254;
+}
+
+static inline void get_lit_icf_code(uint32_t lit, uint32_t *code)
+{
+	assert(lit <= 256);
+
+	*code = lit;
+}
+
 /**
  * @brief Returns a hash of the first 3 bytes of input data.
  */

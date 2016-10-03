@@ -79,80 +79,56 @@
 #define HASH_MASK  (IGZIP_HASH_SIZE - 1)
 #define SHORTEST_MATCH  4
 
+#define LENGTH_BITS 5
+#define FREQ_SHIFT 16
+#define FREQ_MASK_HI (0xFFFFFFFFFFFF0000)
+#define DEPTH_SHIFT 24
+#define DEPTH_MASK 0x7F
+#define DEPTH_MASK_HI (DEPTH_MASK << DEPTH_SHIFT)
+#define DEPTH_1       (1 << DEPTH_SHIFT)
+#define HEAP_TREE_SIZE (3*MAX_HISTHEAP_SIZE + 1)
+#define HEAP_TREE_NODE_START (HEAP_TREE_SIZE-1)
+#define MAX_BL_CODE_LEN 7
+
 /**
  * @brief Structure used to store huffman codes
  */
 struct huff_code {
-	uint16_t code;
-	uint8_t length;
+	union {
+		struct {
+			uint16_t code;
+			uint8_t extra_bit_count;
+			uint8_t length;
+		};
+		struct {
+			uint32_t code_and_extra:24;
+			uint8_t length2;
+		};
+	};
 };
 
-/**
- * @brief Binary tree used to store and create a huffman tree.
- */
-struct huff_tree {
-	uint16_t value;
-	uint64_t frequency;
-	struct huff_tree *left;
-	struct huff_tree *right;
+struct tree_node {
+	uint32_t child;
+	uint32_t depth;
 };
 
-/**
- * @brief Nodes in a doubly linked list.
- */
-struct linked_list_node {
-	uint16_t value;
-	struct linked_list_node *next;
-	struct linked_list_node *previous;
+struct heap_tree {
+	union {
+		uint64_t heap[HEAP_TREE_SIZE];
+		uint64_t code_len_count[MAX_HUFF_TREE_DEPTH + 1];
+		struct tree_node tree[HEAP_TREE_SIZE];
+	};
 };
 
-/**
- * @brief This structure is a doubly linked list.
- */
-struct linked_list {
-	uint64_t length;
-	struct linked_list_node *start;
-	struct linked_list_node *end;
+struct rl_code {
+	uint8_t code;
+	uint8_t extra_bits;
 };
 
-/**
- * @brief  This is a binary minheap structure which stores huffman trees.
- * @details The huffman trees are sorted by the frequency of the root.
- * The structure is represented in a fixed sized array.
- */
-struct histheap {
-	struct huff_tree tree[MAX_HISTHEAP_SIZE];
-	uint16_t size;
+struct hufftables_icf {
+	struct huff_code lit_len_table[513];
+	struct huff_code dist_table[31];
 };
-
-/**
- * @brief Inserts a hufftree into a histheap.
- * @param element: the hufftree to be inserted
- * @param heap: the heap which element is being inserted into.
- * @requires This function assumes the heap has enough allocated space.
- * @returns Returns the index in heap of the inserted element
- */
-int heap_push(struct huff_tree element, struct histheap *heap);
-
-/**
- * @brief  Removes the top element from the heap and returns it.
- */
-struct huff_tree heap_pop(struct histheap *heap);
-
-/**
- * @brief Removes the first element from list and returns it.
- */
-struct linked_list_node *pop_from_front(struct linked_list *list);
-
-/**
- * @brief Adds new_element to the front of list.
- */
-void append_to_front(struct linked_list *list, struct linked_list_node *new_element);
-
-/**
- * @brief Adds new_element to the end of list.
- */
-void append_to_back(struct linked_list *list, struct linked_list_node *new_element);
 
 /**
  * @brief  Returns the deflate symbol value for a repeat length.
@@ -165,68 +141,6 @@ uint32_t convert_length_to_len_sym(uint32_t length);
 uint32_t convert_dist_to_dist_sym(uint32_t dist);
 
 /**
- * Constructs a huffman tree on tree_array which only uses elements with non-zero frequency.
- * @requires Assumes there will be at least two symbols in the produced tree.
- * @requires tree_array must have length at least 2*size-1, and size must be less than 286.
- * @param tree_array: array of huff_tree elements used to create a huffman tree, the first
- * size elements of the array are the leaf elements in the huffman tree.
- * @param  histogram: a histogram of the frequency of elements in tree_array.
- * @param size: the number of leaf elements in the huffman tree.
-*/
-struct huff_tree create_symbol_subset_huff_tree(struct huff_tree *tree_array,
-						uint64_t * histogram, uint32_t size);
-
-/**
- * @brief  Construct a huffman tree on tree_array which uses every symbol.
- * @requires tree_array must have length at least 2*size-1, and size must be less than 286.
- * @param tree_array: array of huff_tree elements used to create a huffman tree, the first
- * @param size elements of the array are the leaf elements in the huffman tree.
- * @param histogram: a histogram of the frequency of elements in tree_array.
- * @param size: the number of leaf elements in the huffman tree.
- */
-struct huff_tree create_huff_tree(struct huff_tree *tree_array, uint64_t * histogram,
-				  uint32_t size);
-
-/**
- * @brief Creates a deflate compliant huffman tree with maximum depth max_depth.
- * @details The huffman tree is represented as a lookup table.
- * @param huff_lookup_table: The output lookup table.
- * @param table_length: The length of table.
- * @param root: the input huffman tree the created tree is based on.
- * @param max_depth: maximum depth the huffman tree can have
- * @returns Returns 0 if sucessful and returns 1 otherwise.
- */
-int create_huff_lookup(struct huff_code *huff_lookup_table, int table_length,
-		       struct huff_tree root, uint8_t max_depth);
-
-/**
- * @brief Determines the code length for every value in a huffmant tree.
- * @param huff_lookup_table: An output lookup table used to store the code lengths
- * @param corresponding to the possible values
- * @param count: An output histogram representing code length versus number of occurences.
- * @param current_node: A node of the huffman tree being analyzed currently.
- * @param current_depth: The depth of the current node in the huffman tree.
- * @returns Returns 0 if sucessful and returns 1 otherwise.
- */
-int find_code_lengths(struct huff_code *huff_lookup_table, uint16_t * count,
-		      struct huff_tree root, uint8_t max_depth);
-
-/**
- * @brief Creates an array of linked lists.
- * @detail Each linked list contains all the elements with codes of a given length for
- * lengths less than 16, and an list for all elements with codes at least 16. These lists
- * are sorted by frequency from least frequent to most frequent within any given code length.
- * @param depth_array: depth_array[i] is a linked list of elements with code length i
- * @param linked_lists: An input structure the linked lists in depth array are built on.
- * @param current_node: the current node being visited in a huffman tree
- * @param current_depth: the depth of current_node in a huffman tree
- */
-void huffman_tree_traversal(struct linked_list *depth_array,
-			    struct linked_list_node *linked_lists, uint16_t * extra_nodes,
-			    uint8_t max_depth, struct huff_tree current_node,
-			    uint16_t current_depth);
-
-/**
  * @brief Determines the code each element of a deflate compliant huffman tree and stores
  * it in a lookup table
  * @requires table has been initialized to already contain the code length for each element.
@@ -234,10 +148,7 @@ void huffman_tree_traversal(struct linked_list *depth_array,
  * @param table_length: The length of table.
  * @param count: a histogram representing the number of occurences of codes of a given length
  */
-void set_huff_codes(struct huff_code *table, int table_length, uint16_t * count);
-
-/* Reverse the first length bits in bits and returns that value */
-uint16_t bit_reverse(uint16_t bits, uint8_t length);
+uint32_t set_huff_codes(struct huff_code *table, int table_length, uint32_t * count);
 
 /**
  * @brief Checks if a literal/length huffman table can be stored in the igzip hufftables files.
@@ -263,32 +174,8 @@ uint16_t valid_dist_huff_table(struct huff_code *huff_code_table);
  * @param end_of_block: Value determining whether end of block header is produced or not;
  * 0 corresponds to not end of block and all other inputs correspond to end of block.
  */
-int create_header(uint8_t *header, uint32_t header_length, struct huff_code *lit_huff_table,
-		  struct huff_code *dist_huff_table, uint32_t end_of_block);
-
-/**
- * @brief Creates a run length encoded reprsentation of huff_table.
- * @details Also creates a histogram representing the frequency of each symbols
- * @returns Returns the number of symbols written into huffman_rep.
- * @param huffman_rep: The output run length encoded version of huff_table.
- * @param histogram: The output histogram of frequencies of elements in huffman_rep.
- * @param extra_bits: An output table storing extra bits associated with huffman_rep.
- * @param huff_table: The input huffman_table or concatonation of huffman_tables.
- * @parma len: The length of huff_table.
- */
-uint16_t create_huffman_rep(uint16_t * huffman_rep, uint64_t * histogram,
-			    uint16_t * extra_bits, struct huff_code *huff_table, uint16_t len);
-
-/**
- * @brief Flushes the symbols for a repeat of last_code for length run_length into huffman_rep.
- * @param huffman_rep: pointer to array containing the output huffman_rep.
- * @param histogram: histogram of elements seen in huffman_rep.
- * @param extra_bits: an array holding extra bits for the corresponding symbol in huffman_rep.
- * @param huff_table: a concatenated list of huffman lookup tables.
- * @param current_index: The next spot elements will be written in huffman_rep.
- */
-uint16_t flush_repeats(uint16_t * huffman_rep, uint64_t * histogram, uint16_t * extra_bits,
-		       uint16_t last_code, uint16_t run_length, uint16_t current_index);
+int create_header(struct BitBuf2 *header_bitbuf, struct rl_code *huffman_rep, uint32_t length,
+		uint64_t * histogram, uint32_t hlit, uint32_t hdist, uint32_t end_of_block);
 
 /**
  * @brief Creates the header for run length encoded huffman trees.
@@ -303,10 +190,10 @@ uint16_t flush_repeats(uint16_t * huffman_rep, uint64_t * histogram, uint16_t * 
  * @param hlit: Length of literal/length table minus 257.
  * @parm hdist: Length of distance table minus 1.
  */
-int create_huffman_header(uint8_t *header, uint32_t header_length, struct huff_code *lookup_table,
-			  uint16_t * huffman_rep, uint16_t * extra_bits,
-			  uint16_t huffman_rep_length, uint32_t end_of_block, uint32_t hclen,
-			  uint32_t hlit, uint32_t hdist);
+int create_huffman_header(struct BitBuf2 *header_bitbuf, struct huff_code *lookup_table,
+			  struct rl_code * huffman_rep, uint16_t huffman_rep_length,
+			  uint32_t end_of_block, uint32_t hclen, uint32_t hlit,
+			  uint32_t hdist);
 
 /**
  * @brief Creates a two table representation of huffman codes.
@@ -348,4 +235,18 @@ void create_packed_dist_table(uint32_t * packed_table, uint32_t length,
  */
 int are_hufftables_useable(struct huff_code *lit_len_hufftable,
 			   struct huff_code *dist_hufftable);
+
+/**
+ * @brief Creates a representation of the huffman code from a histogram used to
+ * decompress the intermediate compression format.
+ *
+ * @param bb: bitbuf structure where the header huffman code header is written
+ * @param hufftables: output huffman code representation
+ * @param hist: histogram used to generat huffman code
+ * @param end_of_block: flag whether this is the final huffman code
+ */
+void
+create_hufftables_icf(struct BitBuf2 *bb, struct hufftables_icf * hufftables,
+                  struct isal_mod_hist *hist, uint32_t end_of_block);
+
 #endif

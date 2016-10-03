@@ -150,6 +150,7 @@ enum {IGZIP_LIT_TABLE_SIZE = ISAL_DEF_LIT_SYMBOLS};
 #define INVALID_PARAM -8
 #define STATELESS_OVERFLOW -1
 #define ISAL_INVALID_OPERATION -9
+#define ISAL_INVALID_LEVEL -4	/* Invalid Compression level set */
 
 /**
  *  @enum isal_zstate_state
@@ -163,16 +164,20 @@ enum {IGZIP_LIT_TABLE_SIZE = ISAL_DEF_LIT_SYMBOLS};
 enum isal_zstate_state {
 	ZSTATE_NEW_HDR,  //!< Header to be written
 	ZSTATE_HDR,	//!< Header state
+	ZSTATE_CREATE_HDR, //!< Header to be created
 	ZSTATE_BODY,	//!< Body state
 	ZSTATE_FLUSH_READ_BUFFER, //!< Flush buffer
+	ZSTATE_FLUSH_ICF_BUFFER,
 	ZSTATE_SYNC_FLUSH, //!< Write sync flush block
 	ZSTATE_FLUSH_WRITE_BUFFER, //!< Flush bitbuf
 	ZSTATE_TRL,	//!< Trailer state
 	ZSTATE_END,	//!< End state
 	ZSTATE_TMP_NEW_HDR, //!< Temporary Header to be written
 	ZSTATE_TMP_HDR,	//!< Temporary Header state
+	ZSTATE_TMP_CREATE_HDR, //!< Temporary Header to be created state
 	ZSTATE_TMP_BODY,	//!< Temporary Body state
 	ZSTATE_TMP_FLUSH_READ_BUFFER, //!< Flush buffer
+	ZSTATE_TMP_FLUSH_ICF_BUFFER,
 	ZSTATE_TMP_SYNC_FLUSH, //!< Write sync flush block
 	ZSTATE_TMP_FLUSH_WRITE_BUFFER, //!< Flush bitbuf
 	ZSTATE_TMP_TRL,	//!< Temporary Trailer state
@@ -206,7 +211,6 @@ enum isal_block_state {
 #define ISAL_INVALID_SYMBOL -2	/* Invalid deflate symbol found */
 #define ISAL_INVALID_LOOKBACK -3	/* Invalid lookback distance found */
 
-
 /******************************************************************************/
 /* Compression structures */
 /******************************************************************************/
@@ -216,6 +220,20 @@ struct isal_huff_histogram {
 	uint64_t dist_histogram[ISAL_DEF_DIST_SYMBOLS]; //!< Histogram of Distance Symbols seen
 	uint16_t hash_table[IGZIP_HASH_SIZE]; //!< Tmp space used as a hash table
 };
+
+struct isal_mod_hist {
+    uint16_t d_hist[30];
+    uint16_t ll_hist[513];
+};
+
+/* Data sizes for level specific data options */
+#define ISAL_DEF_LVL1_REQ 4 * IGZIP_K /* has to be at least sizeof(struct level_2_buf) */
+#define ISAL_DEF_LVL1_TOKEN_SIZE 4
+#define ISAL_DEF_LVL1_MIN (ISAL_DEF_LVL1_REQ + ISAL_DEF_LVL1_TOKEN_SIZE * 1 * IGZIP_K)
+#define ISAL_DEF_LVL1_SMALL (ISAL_DEF_LVL1_REQ + ISAL_DEF_LVL1_TOKEN_SIZE * 16 * IGZIP_K)
+#define ISAL_DEF_LVL1_MEDIUM (ISAL_DEF_LVL1_REQ + ISAL_DEF_LVL1_TOKEN_SIZE * 32 * IGZIP_K)
+#define ISAL_DEF_LVL1_LARGE (ISAL_DEF_LVL1_REQ + ISAL_DEF_LVL1_TOKEN_SIZE * 64 * IGZIP_K)
+#define ISAL_DEF_LVL1_EXTRA_LARGE (ISAL_DEF_LVL1_REQ + ISAL_DEF_LVL1_TOKEN_SIZE * 128 * IGZIP_K)
 
 /** @brief Holds Bit Buffer information*/
 struct BitBuf2 {
@@ -246,6 +264,8 @@ struct isal_zstate {
 	uint32_t has_eob;	//!< keeps track of eob on the last deflate block
 	uint32_t has_eob_hdr;	//!< keeps track of eob hdr (with BFINAL set)
 	uint32_t has_hist;	//!< flag to track if there is match history
+
+	struct isal_mod_hist hist;
 
 	DECLARE_ALIGNED(uint8_t buffer[2 * IGZIP_HIST_SIZE + ISAL_LOOK_AHEAD], 32);	//!< Internal buffer
 	DECLARE_ALIGNED(uint16_t head[IGZIP_HASH_SIZE], 16);	//!< Hash array
@@ -278,6 +298,9 @@ struct isal_zstream {
 	uint32_t total_out;	//!< total number of bytes written so far
 
 	struct isal_hufftables *hufftables; //!< Huffman encoding used when compressing
+	uint32_t level; //!< Compression level to use
+	uint32_t level_buf_size; //!< Size of level_buf
+	uint8_t * level_buf; //!< User allocated buffer required for different compression levels
 	uint32_t end_of_stream;	//!< non-zero if this is the last input buffer
 	uint32_t flush;	//!< Flush type can be NO_FLUSH, SYNC_FLUSH or FULL_FLUSH
 	uint32_t gzip_flag; //!< Indicate if gzip compression is to be performed

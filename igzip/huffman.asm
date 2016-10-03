@@ -168,6 +168,49 @@
 %endif
 
 
+; Macros for doing Huffman Encoding
+
+; Assumes (dist != 0)
+; Uses RCX, clobbers dist
+; void compute_dist_code	dist, code, len
+%macro compute_dist_icf_code 3
+%define %%dist %1	; IN, clobbered
+%define %%distq %1
+%define %%code %2	; OUT
+%define	%%tmp1 %3
+
+	bsr	rcx, %%dist	; ecx = msb = bsr(dist)
+	dec	rcx		; ecx = num_extra_bits = msb - N
+	BZHI	%%code, %%dist, rcx, %%tmp1
+	SHRX	%%dist, %%dist, rcx	; dist >>= num_extra_bits
+	lea	%%dist, [%%dist + 2*rcx] ; code = sym = dist + num_extra_bits*2
+	shl	%%code, EXTRA_BITS_OFFSET - DIST_OFFSET
+	add	%%code, %%dist	; code = extra_bits | sym
+
+%endm
+
+; Uses RCX, clobbers dist
+; get_dist_code	dist, code, len
+%macro get_dist_icf_code 3
+%define %%dist %1	; 32-bit IN, clobbered
+%define %%distq %1	; 64-bit IN, clobbered
+%define %%code %2	; 32-bit OUT
+%define %%tmp1 %3
+
+	cmp	%%dist, 1
+	jg	%%do_compute
+
+%ifnidn	%%code, %%dist
+	mov	%%code, %%dist
+%endif
+	jmp 	%%done
+%%do_compute:
+	compute_dist_icf_code	%%distq, %%code, %%tmp1
+%%done:
+	shl	%%code, DIST_OFFSET
+%endm
+
+
 ; "len" can be same register as "length"
 ; get_len_code	length, code, len
 %macro get_len_code 4
