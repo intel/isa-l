@@ -87,18 +87,17 @@ enum IGZIP_TEST_ERROR_CODES {
 	RESULT_ERROR
 };
 
-const int hdr_bytes = 300;
+static const int hdr_bytes = 300;
 
-const uint8_t gzip_hdr[10] = {
+static const uint8_t gzip_hdr[10] = {
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0xff
 };
 
-const uint32_t gzip_hdr_bytes = 10;
-const uint32_t gzip_trl_bytes = 8;
+static const uint32_t gzip_hdr_bytes = 10;
+/* static const uint32_t gzip_trl_bytes = 8; */
 
-const int trl_bytes = 0;
-const int gzip_extra_bytes = 18;
+static const int gzip_extra_bytes = 18;	/* gzip_hdr_bytes + gzip_trl_bytes */
 
 int inflate_type = 0;
 
@@ -1184,7 +1183,7 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 	}
 
 	/* Test non-overflow case where a type 0 block is not written */
-	z_size = 2 * in_size + hdr_bytes + trl_bytes;
+	z_size = 2 * in_size + hdr_bytes;
 	if (gzip_flag)
 		z_size += gzip_extra_bytes;
 
@@ -1323,7 +1322,7 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 		if (z_buf != NULL)
 			free(z_buf);
 
-		z_size = 2 * in_size + MAX_LOOPS * (hdr_bytes + trl_bytes + 5);
+		z_size = 2 * in_size + MAX_LOOPS * (hdr_bytes + 5);
 
 		z_buf = malloc(z_size);
 
@@ -1370,9 +1369,9 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 
 	/* Test a non overflow case */
 	if (flush_type == NO_FLUSH)
-		z_size_max = 2 * in_size + hdr_bytes + trl_bytes + 2;
+		z_size_max = 2 * in_size + hdr_bytes + 2;
 	else if (flush_type == SYNC_FLUSH || flush_type == FULL_FLUSH)
-		z_size_max = 2 * in_size + MAX_LOOPS * (hdr_bytes + trl_bytes + 5);
+		z_size_max = 2 * in_size + MAX_LOOPS * (hdr_bytes + 5);
 	else {
 		printf("Invalid Flush Parameter\n");
 		return COMPRESS_GENERAL_ERROR;
@@ -1521,7 +1520,7 @@ int test_flush(uint8_t * in_buf, uint32_t in_size)
 	uint8_t *z_buf = NULL;
 
 	gzip_flag = rand() % 3;
-	z_size = 2 * in_size + 2 * (hdr_bytes + trl_bytes) + 8;
+	z_size = 2 * in_size + 2 * hdr_bytes + 8;
 	if (gzip_flag)
 		z_size += gzip_extra_bytes;
 	z_buf = malloc(z_size);
@@ -1581,7 +1580,7 @@ int test_full_flush(uint8_t * in_buf, uint32_t in_size)
 	uint8_t *z_buf = NULL;
 
 	gzip_flag = rand() % 3;
-	z_size = 2 * in_size + MAX_LOOPS * (hdr_bytes + trl_bytes + 5);
+	z_size = 2 * in_size + MAX_LOOPS * (hdr_bytes + 5);
 
 	if (gzip_flag)
 		z_size += gzip_extra_bytes;
