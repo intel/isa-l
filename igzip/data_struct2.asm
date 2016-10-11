@@ -82,7 +82,7 @@ FIELD   _tmp_out_start,	4,	4
 FIELD	_tmp_out_end,	4,	4
 FIELD	_has_eob,		4,	4
 FIELD	_has_eob_hdr,	4,	4
-FIELD	_left_over, 4,	4
+FIELD	_has_hist, 4,	4
 FIELD	_buffer,	BSIZE,	32
 FIELD	_head,		IGZIP_HASH_SIZE*2,	16
 
@@ -129,7 +129,7 @@ _internal_state_tmp_out_start		  equ   _internal_state+_tmp_out_start
 _internal_state_tmp_out_end		  equ   _internal_state+_tmp_out_end
 _internal_state_has_eob		  equ   _internal_state+_has_eob
 _internal_state_has_eob_hdr		  equ   _internal_state+_has_eob_hdr
-_internal_state_left_over		  equ   _internal_state+_left_over
+_internal_state_has_hist		  equ   _internal_state+_has_hist
 _internal_state_buffer			  equ   _internal_state+_buffer
 _internal_state_head			  equ   _internal_state+_head
 _internal_state_bitbuf_m_bits		  equ   _internal_state+_bitbuf_m_bits

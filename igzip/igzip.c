@@ -526,6 +526,8 @@ static inline void reset_match_history(struct isal_zstream *stream)
 	uint16_t *head = stream->internal_state.head;
 	int i = 0;
 
+	state->has_hist = 0;
+
 	if (stream->total_in == 0)
 		memset(stream->internal_state.head, 0, sizeof(stream->internal_state.head));
 	else {
@@ -549,7 +551,7 @@ void isal_deflate_init(struct isal_zstream *stream)
 	state->b_bytes_processed = 0;
 	state->has_eob = 0;
 	state->has_eob_hdr = 0;
-	state->left_over = 0;
+	state->has_hist = 0;
 	state->state = ZSTATE_NEW_HDR;
 	state->count = 0;
 

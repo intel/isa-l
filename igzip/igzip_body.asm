@@ -199,31 +199,23 @@ skip1:
 
 	; for (f_i = f_start_i; f_i < f_end_i; f_i++) {
 MARK __body_compute_hash_ %+ ARCH
+	MOVDQU	xdata, [file_start + f_i]
 	mov	curr_data, [file_start + f_i]
+	mov	tmp3, curr_data
+	mov	tmp6, curr_data
 
-	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
-	ja	output_end
-
-	;; Encode first byte in the stream as a literal
 	compute_hash	hash, curr_data
-	and	hash %+ d, HASH_MASK
-	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
-	and	curr_data, 0xff
-	get_lit_code	curr_data, code2, code_len2, hufftables
 
-	mov	tmp3, [file_start + f_i + 1]
-	mov	tmp6, tmp3
-	compute_hash	hash, tmp3
+	shr	tmp3, 8
+	compute_hash	hash2, tmp3
 
-	shr	tmp6, 8
-	compute_hash	hash2, tmp6
+	and	hash, HASH_MASK
+	and	hash2, HASH_MASK
 
-	MOVD	xhash, hash %+ d
-	PINSRD	xhash, hash2 %+ d, 1
-	PAND	xhash, xhash, xmask
+	cmp	dword [stream + _internal_state_has_hist], 0
+	je	write_first_byte
 
-	jmp	write_lit_bits
-
+	jmp	loop2
 	align	16
 
 loop2:
@@ -547,6 +539,27 @@ compare_loop2:
 	and	curr_data, 0xff
 	get_lit_code	curr_data, code3, code_len3, hufftables
 	jmp	len_dist_lit_huffman
+
+MARK __write_first_byte_ %+ ARCH
+write_first_byte:
+	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
+	ja	output_end
+
+	mov	dword [stream + _internal_state_has_hist], 1
+
+	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
+
+	mov	hash, hash2
+	shr	tmp6, 16
+	compute_hash	hash2, tmp6
+
+	MOVD	xhash, hash %+ d
+	PINSRD	xhash, hash2 %+ d, 1
+	PAND	xhash, xhash, xmask
+
+	and	curr_data, 0xff
+	get_lit_code	curr_data, code2, code_len2, hufftables
+	jmp	write_lit_bits
 
 section .data
 	align 16

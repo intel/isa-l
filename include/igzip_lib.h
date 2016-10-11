@@ -240,7 +240,7 @@ struct isal_zstate {
 	uint32_t tmp_out_end;	//!< temporary variable
 	uint32_t has_eob;	//!< keeps track of eob on the last deflate block
 	uint32_t has_eob_hdr;	//!< keeps track of eob hdr (with BFINAL set)
-	uint32_t left_over;	//!< keeps track of overflow bytes
+	uint32_t has_hist;	//!< flag to track if there is match history
 
 	DECLARE_ALIGNED(uint8_t buffer[2 * IGZIP_HIST_SIZE + ISAL_LOOK_AHEAD], 32);	//!< Internal buffer
 	DECLARE_ALIGNED(uint16_t head[IGZIP_HASH_SIZE], 16);	//!< Hash array
