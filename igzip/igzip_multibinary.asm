@@ -65,4 +65,4 @@ mbin_interface		isal_update_histogram
 mbin_dispatch_init5	isal_update_histogram, isal_update_histogram_base, isal_update_histogram_01, isal_update_histogram_01, isal_update_histogram_04
 
 mbin_interface		crc32_gzip
-mbin_dispatch_init5	crc32_gzip, crc32_gzip_base, crc32_gzip_01, crc32_gzip_01, crc32_gzip_01
+mbin_dispatch_init5	crc32_gzip, crc32_gzip_base, crc32_gzip_base, crc32_gzip_01, crc32_gzip_01
