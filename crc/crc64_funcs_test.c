@@ -46,6 +46,23 @@ typedef uint32_t u32;
 typedef uint16_t u16;
 typedef uint8_t u8;
 
+typedef uint64_t(*crc64_func_t) (uint64_t, const uint8_t *, uint64_t);
+
+typedef struct func_case {
+	char *note;
+	crc64_func_t crc64_func_call;
+	crc64_func_t crc64_ref_call;
+} func_case_t;
+
+func_case_t test_funcs[] = {
+	{"crc64_ecma_norm", crc64_ecma_norm, crc64_ecma_norm_base},
+	{"crc64_ecma_refl", crc64_ecma_refl, crc64_ecma_refl_base},
+	{"crc64_iso_norm", crc64_iso_norm, crc64_iso_norm_base},
+	{"crc64_iso_refl", crc64_iso_refl, crc64_iso_refl_base},
+	{"crc64_jones_norm", crc64_jones_norm, crc64_jones_norm_base},
+	{"crc64_jones_refl", crc64_jones_refl, crc64_jones_refl_base}
+};
+
 // Generates pseudo-random data
 
 void rand_buffer(unsigned char *buf, long buffer_size)
@@ -55,16 +72,27 @@ void rand_buffer(unsigned char *buf, long buffer_size)
 		buf[i] = rand();
 }
 
+// Test cases
+int zeros_test(func_case_t * test_func);
+
+int simple_pattern_test(func_case_t * test_func);
+
+int seeds_sizes_test(func_case_t * test_func);
+
+int eob_test(func_case_t * test_func);
+
+int update_test(func_case_t * test_func);
+
+int verbose = 0;
+void *buf_alloc = NULL;
+
 int main(int argc, char *argv[])
 {
-	int fail = 0;
-	u64 r;
-	int verbose = argc - 1;
-	int i, s, ret;
-	void *buf_alloc;
-	unsigned char *buf;
+	int fail = 0, fail_case;
+	int i, ret;
+	func_case_t *test_func;
 
-	printf("Test crc64_ecma_norm ");
+	verbose = argc - 1;
 
 	// Align to MAX_BUF boundary
 	ret = posix_memalign(&buf_alloc, MAX_BUF, MAX_BUF * TEST_SIZE);
@@ -72,14 +100,44 @@ int main(int argc, char *argv[])
 		printf("alloc error: Fail");
 		return -1;
 	}
-	buf = (unsigned char *)buf_alloc;
-
 	srand(TEST_SEED);
+	printf("CRC64 Tests\n");
 
-	// Test of all zeros
+	for (i = 0; i < sizeof(test_funcs) / sizeof(test_funcs[0]); i++) {
+		fail_case = 0;
+		test_func = &test_funcs[i];
+
+		printf("Test %s ", test_func->note);
+		fail_case += zeros_test(test_func);
+		fail_case += simple_pattern_test(test_func);
+		fail_case += seeds_sizes_test(test_func);
+		fail_case += eob_test(test_func);
+		fail_case += update_test(test_func);
+		printf("Test %s done: %s\n", test_func->note, fail_case ? "Fail" : "Pass");
+
+		if (fail_case) {
+			printf("\n%s Failed %d tests\n", test_func->note, fail_case);
+			fail++;
+		}
+	}
+
+	printf("CRC64 Tests all done: %s\n", fail ? "Fail" : "Pass");
+
+	return fail;
+}
+
+// Test of all zeros
+int zeros_test(func_case_t * test_func)
+{
+	uint64_t crc, crc_ref;
+	int fail = 0;
+	unsigned char *buf = NULL;
+
+	buf = (unsigned char *)buf_alloc;
 	memset(buf, 0, MAX_BUF * 10);
-	u64 crc = crc64_ecma_norm(TEST_SEED, buf, MAX_BUF);
-	u64 crc_ref = crc64_ecma_norm_base(TEST_SEED, buf, MAX_BUF);
+	crc = test_func->crc64_func_call(TEST_SEED, buf, MAX_BUF * 10);
+	crc_ref = test_func->crc64_ref_call(TEST_SEED, buf, MAX_BUF * 10);
+
 	if (crc != crc_ref) {
 		fail++;
 		printf("\n		   opt   ref\n");
@@ -88,10 +146,20 @@ int main(int argc, char *argv[])
 	} else
 		printf(".");
 
-	// Another simple test pattern
+	return fail;
+}
+
+// Another simple test pattern
+int simple_pattern_test(func_case_t * test_func)
+{
+	uint64_t crc, crc_ref;
+	int fail = 0;
+	unsigned char *buf = NULL;
+
+	buf = (unsigned char *)buf_alloc;
 	memset(buf, 0x8a, MAX_BUF);
-	crc = crc64_ecma_norm(TEST_SEED, buf, MAX_BUF);
-	crc_ref = crc64_ecma_norm_base(TEST_SEED, buf, MAX_BUF);
+	crc = test_func->crc64_func_call(TEST_SEED, buf, MAX_BUF);
+	crc_ref = test_func->crc64_ref_call(TEST_SEED, buf, MAX_BUF);
 	if (crc != crc_ref)
 		fail++;
 	if (verbose)
@@ -99,13 +167,25 @@ int main(int argc, char *argv[])
 	else
 		printf(".");
 
+	return fail;
+}
+
+int seeds_sizes_test(func_case_t * test_func)
+{
+	uint64_t crc, crc_ref;
+	int fail = 0;
+	int i;
+	uint64_t r, s;
+	unsigned char *buf = NULL;
+
 	// Do a few random tests
+	buf = (unsigned char *)buf_alloc;	//reset buf
 	r = rand();
 	rand_buffer(buf, MAX_BUF * TEST_SIZE);
 
 	for (i = 0; i < TEST_SIZE; i++) {
-		crc = crc64_ecma_norm(r, buf, MAX_BUF);
-		crc_ref = crc64_ecma_norm_base(r, buf, MAX_BUF);
+		crc = test_func->crc64_func_call(r, buf, MAX_BUF);
+		crc_ref = test_func->crc64_ref_call(r, buf, MAX_BUF);
 		if (crc != crc_ref)
 			fail++;
 		if (verbose)
@@ -120,8 +200,8 @@ int main(int argc, char *argv[])
 	r = rand();
 
 	for (i = MAX_BUF; i >= 0; i--) {
-		crc = crc64_ecma_norm(r, buf, i);
-		crc_ref = crc64_ecma_norm_base(r, buf, i);
+		crc = test_func->crc64_func_call(r, buf, i);
+		crc_ref = test_func->crc64_ref_call(r, buf, i);
 		if (crc != crc_ref) {
 			fail++;
 			printf("fail random size%i 0x%16lx 0x%16lx\n", i, crc, crc_ref);
@@ -140,8 +220,8 @@ int main(int argc, char *argv[])
 			printf("seed = 0x%lx\n", r);
 
 		for (i = 0; i < TEST_SIZE; i++) {
-			crc = crc64_ecma_norm(r, buf, MAX_BUF);
-			crc_ref = crc64_ecma_norm_base(r, buf, MAX_BUF);
+			crc = test_func->crc64_func_call(r, buf, MAX_BUF);
+			crc_ref = test_func->crc64_ref_call(r, buf, MAX_BUF);
 			if (crc != crc_ref)
 				fail++;
 			if (verbose)
@@ -152,12 +232,22 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	// Run tests at end of buffer
+	return fail;
+}
+
+// Run tests at end of buffer
+int eob_test(func_case_t * test_func)
+{
+	uint64_t crc, crc_ref;
+	int fail = 0;
+	int i;
+	unsigned char *buf = NULL;
+
 	buf = (unsigned char *)buf_alloc;	//reset buf
 	buf = buf + ((MAX_BUF - 1) * TEST_SIZE);	//Line up TEST_SIZE from end
 	for (i = 0; i < TEST_SIZE; i++) {
-		crc = crc64_ecma_norm(TEST_SEED, buf + i, TEST_SIZE - i);
-		crc_ref = crc64_ecma_norm_base(TEST_SEED, buf + i, TEST_SIZE - i);
+		crc = test_func->crc64_func_call(TEST_SEED, buf + i, TEST_SIZE - i);
+		crc_ref = test_func->crc64_ref_call(TEST_SEED, buf + i, TEST_SIZE - i);
 		if (crc != crc_ref)
 			fail++;
 		if (verbose)
@@ -166,9 +256,35 @@ int main(int argc, char *argv[])
 			printf(".");
 	}
 
-	printf("Test done: %s\n", fail ? "Fail" : "Pass");
-	if (fail)
-		printf("\nFailed %d tests\n", fail);
+	return fail;
+}
+
+int update_test(func_case_t * test_func)
+{
+	uint64_t crc, crc_ref;
+	int fail = 0;
+	int i;
+	uint64_t r;
+	unsigned char *buf = NULL;
+
+	buf = (unsigned char *)buf_alloc;	//reset buf
+	r = rand();
+	// Process the whole buf with reference func single call.
+	crc_ref = test_func->crc64_ref_call(r, buf, MAX_BUF * TEST_SIZE);
+	// Process buf with update method.
+	for (i = 0; i < TEST_SIZE; i++) {
+		crc = test_func->crc64_func_call(r, buf, MAX_BUF);
+		// Update crc seeds and buf pointer.
+		r = crc;
+		buf += MAX_BUF;
+	}
+
+	if (crc != crc_ref)
+		fail++;
+	if (verbose)
+		printf("crc rand%3d = 0x%16lx 0x%16lx\n", i, crc, crc_ref);
+	else
+		printf(".");
 
 	return fail;
 }

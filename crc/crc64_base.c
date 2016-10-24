@@ -34,7 +34,7 @@
 
 // crc64_ecma baseline function
 // Slow crc64 from the definition.  Can be sped up with a lookup table.
-uint64_t crc64_ecma_refl_base(uint64_t seed, uint8_t * buf, uint64_t len)
+uint64_t crc64_ecma_refl_base(uint64_t seed, const uint8_t * buf, uint64_t len)
 {
 	uint64_t rem = ~seed;
 	unsigned int i, j;
@@ -50,12 +50,80 @@ uint64_t crc64_ecma_refl_base(uint64_t seed, uint8_t * buf, uint64_t len)
 	return ~rem;
 }
 
-uint64_t crc64_ecma_norm_base(uint64_t seed, uint8_t * buf, uint64_t len)
+uint64_t crc64_ecma_norm_base(uint64_t seed, const uint8_t * buf, uint64_t len)
 {
 	uint64_t rem = ~seed;
 	unsigned int i, j;
 
 	uint64_t poly = 0x42F0E1EBA9EA3693ULL;	// ECMA-182 standard
+
+	for (i = 0; i < len; i++) {
+		rem = rem ^ ((uint64_t) buf[i] << 56);
+		for (j = 0; j < MAX_ITER; j++) {
+			rem = (rem & 0x8000000000000000ULL ? poly : 0) ^ (rem << 1);
+		}
+	}
+	return ~rem;
+}
+
+// crc64_iso baseline function
+// Slow crc64 from the definition.  Can be sped up with a lookup table.
+uint64_t crc64_iso_refl_base(uint64_t seed, const uint8_t * buf, uint64_t len)
+{
+	uint64_t rem = ~seed;
+	unsigned int i, j;
+
+	uint64_t poly = 0xD800000000000000ULL;	// ISO standard reflected
+
+	for (i = 0; i < len; i++) {
+		rem = rem ^ (uint64_t) buf[i];
+		for (j = 0; j < MAX_ITER; j++) {
+			rem = (rem & 0x1ULL ? poly : 0) ^ (rem >> 1);
+		}
+	}
+	return ~rem;
+}
+
+uint64_t crc64_iso_norm_base(uint64_t seed, const uint8_t * buf, uint64_t len)
+{
+	uint64_t rem = ~seed;
+	unsigned int i, j;
+
+	uint64_t poly = 0x000000000000001BULL;	// ISO standard
+
+	for (i = 0; i < len; i++) {
+		rem = rem ^ ((uint64_t) buf[i] << 56);
+		for (j = 0; j < MAX_ITER; j++) {
+			rem = (rem & 0x8000000000000000ULL ? poly : 0) ^ (rem << 1);
+		}
+	}
+	return ~rem;
+}
+
+// crc64_jones baseline function
+// Slow crc64 from the definition.  Can be sped up with a lookup table.
+uint64_t crc64_jones_refl_base(uint64_t seed, const uint8_t * buf, uint64_t len)
+{
+	uint64_t rem = ~seed;
+	unsigned int i, j;
+
+	uint64_t poly = 0x95ac9329ac4bc9b5ULL;	// Jones coefficients reflected
+
+	for (i = 0; i < len; i++) {
+		rem = rem ^ (uint64_t) buf[i];
+		for (j = 0; j < MAX_ITER; j++) {
+			rem = (rem & 0x1ULL ? poly : 0) ^ (rem >> 1);
+		}
+	}
+	return ~rem;
+}
+
+uint64_t crc64_jones_norm_base(uint64_t seed, const uint8_t * buf, uint64_t len)
+{
+	uint64_t rem = ~seed;
+	unsigned int i, j;
+
+	uint64_t poly = 0xad93d23594c935a9ULL;	// Jones coefficients
 
 	for (i = 0; i < len; i++) {
 		rem = rem ^ ((uint64_t) buf[i] << 56);
@@ -77,3 +145,15 @@ struct slver crc64_ecma_refl_base_slver = { 0x001c, 0x00, 0x00 };
 
 struct slver crc64_ecma_norm_base_slver_00000019;
 struct slver crc64_ecma_norm_base_slver = { 0x0019, 0x00, 0x00 };
+
+struct slver crc64_iso_refl_base_slver_00000022;
+struct slver crc64_iso_refl_base_slver = { 0x0022, 0x00, 0x00 };
+
+struct slver crc64_iso_norm_base_slver_0000001f;
+struct slver crc64_iso_norm_base_slver = { 0x001f, 0x00, 0x00 };
+
+struct slver crc64_jones_refl_base_slver_00000028;
+struct slver crc64_jones_refl_base_slver = { 0x0028, 0x00, 0x00 };
+
+struct slver crc64_jones_norm_base_slver_00000025;
+struct slver crc64_jones_norm_base_slver = { 0x0025, 0x00, 0x00 };

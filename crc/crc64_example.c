@@ -26,63 +26,43 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
-
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-#include <sys/time.h>
+#include <assert.h>
 #include "crc64.h"
-#include "test.h"
 
-//#define CACHED_TEST
-#ifdef CACHED_TEST
-// Cached test, loop many times over small dataset
-# define TEST_LEN     8*1024
-# define TEST_LOOPS   400000
-# define TEST_TYPE_STR "_warm"
-#else
-// Uncached test.  Pull from large mem base.
-#  define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
-#  define TEST_LEN     (2 * GT_L3_CACHE)
-#  define TEST_LOOPS   100
-#  define TEST_TYPE_STR "_cold"
-#endif
-
-#ifndef TEST_SEED
-# define TEST_SEED 0x1234
-#endif
-
-#define TEST_MEM TEST_LEN
+#define BUF_SIZE 8192
+#define INIT_SEED 0x12345678
 
 int main(int argc, char *argv[])
 {
-	int i;
-	void *buf;
-	uint64_t crc;
-	struct perf start, stop;
+	uint8_t inbuf[BUF_SIZE];
+	uint64_t avail_in, total_in = 0;
+	uint64_t crc64_checksum;
+	FILE *in;
 
-	printf("crc64_ecma_refl_perf:\n");
-
-	if (posix_memalign(&buf, 1024, TEST_LEN)) {
-		printf("alloc error: Fail");
-		return -1;
+	if (argc != 2) {
+		fprintf(stderr, "Usage: crc64_example infile\n");
+		exit(0);
 	}
-	memset(buf, (char)TEST_SEED, TEST_LEN);
+	in = fopen(argv[1], "rb");
+	if (!in) {
+		fprintf(stderr, "Can't open %s for reading\n", argv[1]);
+		exit(0);
+	}
 
-	printf("Start timed tests\n");
+	printf("crc64_example -- crc64_ecma_refl:\n");
 	fflush(0);
 
-	crc = crc64_ecma_refl(TEST_SEED, buf, TEST_LEN);
-	perf_start(&start);
-	for (i = 0; i < TEST_LOOPS; i++) {
-		crc = crc64_ecma_refl(TEST_SEED, buf, TEST_LEN);
+	crc64_checksum = INIT_SEED;
+	while ((avail_in = fread(inbuf, 1, BUF_SIZE, in))) {
+		// crc update mode
+		crc64_checksum = crc64_ecma_refl(crc64_checksum, inbuf, avail_in);
+		total_in += avail_in;
 	}
-	perf_stop(&stop);
-	printf("crc64_ecma_refl" TEST_TYPE_STR ": ");
-	perf_print(stop, start, (long long)TEST_LEN * i);
 
-	printf("finish 0x%lx\n", crc);
+	fclose(in);
+	printf("total length is %ld, checksum is 0x%lx\n", total_in, crc64_checksum);
 
 	return 0;
 }

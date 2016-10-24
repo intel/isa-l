@@ -143,6 +143,42 @@
 %endmacro
 
 ;;;;;
+; mbin_dispatch_init_clmul 3 parameters
+; Use this case for CRC which needs both SSE4_1 and CLMUL
+; 1-> function name
+; 2-> base function
+; 3-> SSE4_1 and CLMUL optimized function
+;;;;;
+%macro mbin_dispatch_init_clmul 3
+	section .text
+	%1_dispatch_init:
+		push	mbin_rsi
+		push	mbin_rax
+		push	mbin_rbx
+		push	mbin_rcx
+		push	mbin_rdx
+		lea     mbin_rsi, [%2 WRT_OPT] ; Default - use base function
+
+		mov     eax, 1
+		cpuid
+		lea	mbin_rbx, [%3 WRT_OPT] ; SSE opt func
+
+		; Test for SSE4.2
+		test	ecx, FLAG_CPUID1_ECX_SSE4_1
+		jz	_%1_init_done
+		test    ecx, FLAG_CPUID1_ECX_CLMUL
+		cmovne	mbin_rsi, mbin_rbx
+	_%1_init_done:
+		pop	mbin_rdx
+		pop	mbin_rcx
+		pop	mbin_rbx
+		pop	mbin_rax
+		mov	[%1_dispatched], mbin_rsi
+		pop	mbin_rsi
+		ret
+%endmacro
+
+;;;;;
 ; mbin_dispatch_init5 parameters
 ; 1-> function name
 ; 2-> base function

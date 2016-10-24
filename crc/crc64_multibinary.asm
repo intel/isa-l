@@ -49,85 +49,41 @@ extern crc64_ecma_refl_base
 extern crc64_ecma_norm_by8
 extern crc64_ecma_norm_base
 
-section .data
-;;; *_mbinit are initial values for *_dispatched; is updated on first call.
-;;; Therefore, *_dispatch_init is only executed on first call.
+extern crc64_iso_refl_by8
+extern crc64_iso_refl_base
 
-crc64_ecma_refl_dispatched:
-	dq	crc64_ecma_refl_mbinit
-crc64_ecma_norm_dispatched:
-        dq      crc64_ecma_norm_mbinit
+extern crc64_iso_norm_by8
+extern crc64_iso_norm_base
+
+extern crc64_jones_refl_by8
+extern crc64_jones_refl_base
+
+extern crc64_jones_norm_by8
+extern crc64_jones_norm_base
 
 section .text
 
-;;;;
-; crc64_ecma_refl multibinary function
-;;;;
-global crc64_ecma_refl:function
-crc64_ecma_refl_mbinit:
-	call	crc64_ecma_refl_dispatch_init
-crc64_ecma_refl:
-	jmp	qword [crc64_ecma_refl_dispatched]
+%include "multibinary.asm"
 
-crc64_ecma_refl_dispatch_init:
-	push    rax
-	push    rbx
-	push    rcx
-	push    rdx
-	push    rsi
-	lea     rsi, [crc64_ecma_refl_base WRT_OPT] ; Default
+mbin_interface			crc64_ecma_refl
+mbin_dispatch_init_clmul	crc64_ecma_refl, crc64_ecma_refl_base, crc64_ecma_refl_by8
+mbin_interface			crc64_ecma_norm
+mbin_dispatch_init_clmul	crc64_ecma_norm, crc64_ecma_norm_base, crc64_ecma_norm_by8
 
-	mov     eax, 1
-	cpuid
-	lea     rbx, [crc64_ecma_refl_by8 WRT_OPT]
+mbin_interface			crc64_iso_refl
+mbin_dispatch_init_clmul	crc64_iso_refl, crc64_iso_refl_base, crc64_iso_refl_by8
+mbin_interface			crc64_iso_norm
+mbin_dispatch_init_clmul	crc64_iso_norm, crc64_iso_norm_base, crc64_iso_norm_by8
 
-	test	ecx, FLAG_CPUID1_ECX_SSE3
-	jz	use_ecma_refl_base
-	test    ecx, FLAG_CPUID1_ECX_CLMUL
-	cmovne  rsi, rbx
-use_ecma_refl_base:
-	mov     [crc64_ecma_refl_dispatched], rsi
-	pop     rsi
-	pop     rdx
-	pop     rcx
-	pop     rbx
-	pop     rax
-	ret
-
-;;;;
-; crc64_ecma_norm multibinary function
-;;;;
-global crc64_ecma_norm:function
-crc64_ecma_norm_mbinit:
-        call    crc64_ecma_norm_dispatch_init
-crc64_ecma_norm:
-        jmp     qword [crc64_ecma_norm_dispatched]
-
-crc64_ecma_norm_dispatch_init:
-        push    rax
-        push    rbx
-        push    rcx
-        push    rdx
-        push    rsi
-        lea     rsi, [crc64_ecma_norm_base WRT_OPT] ; Default
-
-        mov     eax, 1
-        cpuid
-        lea     rbx, [crc64_ecma_norm_by8 WRT_OPT]
-
-        test    ecx, FLAG_CPUID1_ECX_SSE3
-        jz      use_ecma_norm_base
-        test    ecx, FLAG_CPUID1_ECX_CLMUL
-        cmovne  rsi, rbx
-use_ecma_norm_base:
-        mov     [crc64_ecma_norm_dispatched], rsi
-        pop     rsi
-        pop     rdx
-        pop     rcx
-        pop     rbx
-        pop     rax
-        ret
+mbin_interface			crc64_jones_refl
+mbin_dispatch_init_clmul	crc64_jones_refl, crc64_jones_refl_base, crc64_jones_refl_by8
+mbin_interface			crc64_jones_norm
+mbin_dispatch_init_clmul	crc64_jones_norm, crc64_jones_norm_base, crc64_jones_norm_by8
 
 ;;;       func            	core, ver, snum
-slversion crc64_ecma_refl,	00,   00,  0018
-slversion crc64_ecma_norm,	00,   00,  001e
+slversion crc64_ecma_refl,	00,   00,  001b
+slversion crc64_ecma_norm,	00,   00,  0018
+slversion crc64_iso_refl,	00,   00,  0021
+slversion crc64_iso_norm,	00,   00,  001e
+slversion crc64_jones_refl,	00,   00,  0027
+slversion crc64_jones_norm,	00,   00,  0024

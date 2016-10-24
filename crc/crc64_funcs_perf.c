@@ -55,14 +55,30 @@
 
 #define TEST_MEM TEST_LEN
 
+typedef uint64_t(*crc64_func_t) (uint64_t, const uint8_t *, uint64_t);
+
+typedef struct func_case {
+	char *note;
+	crc64_func_t crc64_func_call;
+	crc64_func_t crc64_ref_call;
+} func_case_t;
+
+func_case_t test_funcs[] = {
+	{"crc64_ecma_norm", crc64_ecma_norm, crc64_ecma_norm_base},
+	{"crc64_ecma_refl", crc64_ecma_refl, crc64_ecma_refl_base},
+	{"crc64_iso_norm", crc64_iso_norm, crc64_iso_norm_base},
+	{"crc64_iso_refl", crc64_iso_refl, crc64_iso_refl_base},
+	{"crc64_jones_norm", crc64_jones_norm, crc64_jones_norm_base},
+	{"crc64_jones_refl", crc64_jones_refl, crc64_jones_refl_base}
+};
+
 int main(int argc, char *argv[])
 {
-	int i;
+	int i, j;
 	void *buf;
 	uint64_t crc;
 	struct perf start, stop;
-
-	printf("crc64_ecma_norm_perf:\n");
+	func_case_t *test_func;
 
 	if (posix_memalign(&buf, 1024, TEST_LEN)) {
 		printf("alloc error: Fail");
@@ -70,19 +86,24 @@ int main(int argc, char *argv[])
 	}
 	memset(buf, (char)TEST_SEED, TEST_LEN);
 
-	printf("Start timed tests\n");
-	fflush(0);
+	for (j = 0; j < sizeof(test_funcs) / sizeof(test_funcs[0]); j++) {
+		test_func = &test_funcs[j];
+		printf("%s_perf:\n", test_func->note);
 
-	crc = crc64_ecma_norm(TEST_SEED, buf, TEST_LEN);
-	perf_start(&start);
-	for (i = 0; i < TEST_LOOPS; i++) {
-		crc = crc64_ecma_norm(TEST_SEED, buf, TEST_LEN);
+		printf("Start timed tests\n");
+		fflush(0);
+
+		crc = test_func->crc64_func_call(TEST_SEED, buf, TEST_LEN);
+		perf_start(&start);
+		for (i = 0; i < TEST_LOOPS; i++) {
+			crc = test_func->crc64_func_call(TEST_SEED, buf, TEST_LEN);
+		}
+		perf_stop(&stop);
+		printf("%s" TEST_TYPE_STR ": ", test_func->note);
+		perf_print(stop, start, (long long)TEST_LEN * i);
+
+		printf("finish 0x%lx\n", crc);
 	}
-	perf_stop(&stop);
-	printf("crc64_ecma_norm" TEST_TYPE_STR ": ");
-	perf_print(stop, start, (long long)TEST_LEN * i);
-
-	printf("finish 0x%lx\n", crc);
 
 	return 0;
 }
