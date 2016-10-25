@@ -60,6 +60,8 @@ int main(int argc, char *argv[])
 	fread(in_buf, 1, in_file_size, in);
 
 	/* Inflate data with isal_inflate */
+	memset(state, 0xff, sizeof(struct inflate_state));
+
 	isal_inflate_init(state);
 	state->next_in = in_buf;
 	state->avail_in = in_file_size;

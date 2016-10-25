@@ -190,6 +190,9 @@ static void inline make_inflate_huff_code_large(struct inflate_huff_code_large *
 	last_length = huff_code_table[code_list[0]].length;
 	copy_size = (1 << last_length);
 
+	/* Initialize short_code_lookup, so invalid lookups process data */
+	memset(short_code_lookup, 0x1d, copy_size * sizeof(*short_code_lookup));
+
 	for (k = 0; k < code_list_len; k++) {
 		i = code_list[k];
 		if (huff_code_table[i].length > ISAL_DECODE_LONG_BITS)
@@ -341,6 +344,9 @@ static void inline make_inflate_huff_code_small(struct inflate_huff_code_small *
 
 	last_length = huff_code_table[code_list[0]].length;
 	copy_size = (1 << last_length);
+
+	/* Initialize short_code_lookup, so invalid lookups process data */
+	memset(short_code_lookup, 0x1d, copy_size * sizeof(*short_code_lookup));
 
 	for (k = 0; k < code_list_len; k++) {
 		i = code_list[k];
