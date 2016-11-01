@@ -60,7 +60,6 @@ static int write_stored_block_stateless(struct isal_zstream *stream, uint32_t st
 static int write_gzip_header_stateless(struct isal_zstream *stream);
 static int write_deflate_header_stateless(struct isal_zstream *stream);
 static int write_deflate_header_unaligned_stateless(struct isal_zstream *stream);
-static int write_trailer_stateless(struct isal_zstream *stream);
 
 unsigned int detect_repeated_char(uint8_t * buf, uint32_t size);
 
@@ -142,44 +141,6 @@ void sync_flush(struct isal_zstream *stream)
 			state->b_bytes_processed = 0;
 			reset_match_history(stream);
 		}
-	}
-}
-
-static
-void sync_flush_stateless(struct isal_zstream *stream)
-{
-	struct isal_zstate *state = &stream->internal_state;
-	uint64_t bits_to_write = 0xFFFF0000, bits_len;
-	uint64_t code = 0, len = 0, bytes;
-	int flush_size;
-
-	if (stream->avail_out >= 8) {
-		set_buf(&state->bitbuf, stream->next_out, stream->avail_out);
-
-		if (!state->has_eob)
-			get_lit_code(stream->hufftables, 256, &code, &len);
-
-		flush_size = (-(state->bitbuf.m_bit_count + len + 3)) % 8;
-
-		bits_to_write <<= flush_size + 3;
-		bits_len = 32 + len + flush_size + 3;
-
-#ifdef USE_BITBUFB		/* Write Bits Always */
-		state->state = ZSTATE_NEW_HDR;
-#else /* Not Write Bits Always */
-		state->state = ZSTATE_FLUSH_WRITE_BUFFER;
-#endif
-		state->has_eob = 0;
-
-		if (len > 0)
-			bits_to_write = (bits_to_write << len) | code;
-
-		write_bits(&state->bitbuf, bits_to_write, bits_len);
-
-		bytes = buffer_used(&state->bitbuf);
-		stream->next_out = buffer_ptr(&state->bitbuf);
-		stream->avail_out -= bytes;
-		stream->total_out += bytes;
 	}
 }
 
@@ -291,10 +252,8 @@ static void isal_deflate_int(struct isal_zstream *stream)
 
 }
 
-static uint32_t write_constant_compressed_stateless(struct isal_zstream *stream,
-						    uint32_t repeated_char,
-						    uint32_t repeated_length,
-						    uint32_t end_of_stream)
+static void write_constant_compressed_stateless(struct isal_zstream *stream,
+						uint32_t repeated_length)
 {
 	/* Assumes repeated_length is at least 1.
 	 * Assumes the input end_of_stream is either 0 or 1. */
@@ -303,18 +262,23 @@ static uint32_t write_constant_compressed_stateless(struct isal_zstream *stream,
 	uint32_t rep_bytes = rep_bits / 8;
 	uint32_t rep_extra = (repeated_length - 1) % 258;
 	uint32_t bytes;
+	uint32_t repeated_char = *stream->next_in;
 	uint8_t *start_in = stream->next_in;
 
 	/* Guarantee there is enough space for the header even in the worst case */
 	if (stream->avail_out < HEADER_LENGTH + MAX_FIXUP_CODE_LENGTH + rep_bytes + 8)
-		return STATELESS_OVERFLOW;
+		return;
 
 	/* Assumes the repeated char is either 0 or 0xFF. */
 	memcpy(stream->next_out, repeated_char_header[repeated_char & 1], HEADER_LENGTH);
 
-	if (end_of_stream > 0) {
+	if (stream->avail_in == repeated_length && stream->end_of_stream > 0) {
 		stream->next_out[0] |= 1;
 		state->has_eob_hdr = 1;
+		state->has_eob = 1;
+		state->state = ZSTATE_TRL;
+	} else {
+		state->state = ZSTATE_NEW_HDR;
 	}
 
 	memset(stream->next_out + HEADER_LENGTH, 0, rep_bytes);
@@ -364,8 +328,6 @@ static uint32_t write_constant_compressed_stateless(struct isal_zstream *stream,
 
 	write_bits(&state->bitbuf, END_OF_BLOCK, END_OF_BLOCK_LEN);
 
-	state->has_eob = 1;
-
 	stream->next_in += repeated_length;
 	stream->avail_in -= repeated_length;
 	stream->total_in += repeated_length;
@@ -378,7 +340,7 @@ static uint32_t write_constant_compressed_stateless(struct isal_zstream *stream,
 	if (stream->gzip_flag)
 		state->crc = crc32_gzip(state->crc, start_in, stream->next_in - start_in);
 
-	return COMP_OK;
+	return;
 }
 
 int detect_repeated_char_length(uint8_t * in, uint32_t length)
@@ -401,7 +363,7 @@ int detect_repeated_char_length(uint8_t * in, uint32_t length)
 
 static int isal_deflate_int_stateless(struct isal_zstream *stream)
 {
-	uint32_t repeated_char_length;
+	uint32_t repeat_length;
 	struct isal_zstate *state = &stream->internal_state;
 
 	if (stream->gzip_flag == IGZIP_GZIP)
@@ -410,44 +372,21 @@ static int isal_deflate_int_stateless(struct isal_zstream *stream)
 
 	if (stream->avail_in >= 8
 	    && (*(uint64_t *) stream->next_in == 0
-		|| *(uint64_t *) stream->next_in == ~(uint64_t) 0))
-		repeated_char_length =
-		    detect_repeated_char_length(stream->next_in, stream->avail_in);
-	else
-		repeated_char_length = 0;
+		|| *(uint64_t *) stream->next_in == ~(uint64_t) 0)) {
+		repeat_length = detect_repeated_char_length(stream->next_in, stream->avail_in);
 
-	if (stream->avail_in == repeated_char_length) {
-		if (write_constant_compressed_stateless(stream,
-							stream->next_in[0],
-							repeated_char_length,
-							stream->end_of_stream) != COMP_OK)
-			return STATELESS_OVERFLOW;
-
-		if (state->has_eob_hdr) {
-			if (write_trailer_stateless(stream) != COMP_OK)
-				return STATELESS_OVERFLOW;
-		} else if (stream->avail_out >= 8) {
-			sync_flush_stateless(stream);
-#ifndef USE_BITBUFB
-			flush_write_buffer(stream);
-			if (state->bitbuf.m_bit_count != 0)
-				return STATELESS_OVERFLOW;
-#endif
-		} else
-			return STATELESS_OVERFLOW;
-		return COMP_OK;
-
-	} else if (repeated_char_length >= MIN_REPEAT_LEN) {
-		if (write_constant_compressed_stateless
-		    (stream, stream->next_in[0], repeated_char_length, 0) != COMP_OK)
-			return STATELESS_OVERFLOW;
-		state->has_eob = 0;
+		if (stream->avail_in == repeat_length || repeat_length >= MIN_REPEAT_LEN)
+			write_constant_compressed_stateless(stream, repeat_length);
 	}
 
-	if (write_deflate_header_unaligned_stateless(stream) != COMP_OK)
-		return STATELESS_OVERFLOW;
+	if (state->state == ZSTATE_NEW_HDR || state->state == ZSTATE_HDR) {
+		write_deflate_header_unaligned_stateless(stream);
+		if (state->state == ZSTATE_NEW_HDR || state->state == ZSTATE_HDR)
+			return STATELESS_OVERFLOW;
 
-	reset_match_history(stream);
+		reset_match_history(stream);
+	}
+
 	state->file_start = stream->next_in - stream->total_in;
 	isal_deflate_pass(stream);
 
@@ -828,6 +767,7 @@ static int write_deflate_header_stateless(struct isal_zstream *stream)
 {
 	struct isal_zstate *state = &stream->internal_state;
 	struct isal_hufftables *hufftables = stream->hufftables;
+	uint64_t hdr_extra_bits = hufftables->deflate_hdr[hufftables->deflate_hdr_count];
 	uint32_t count;
 
 	if (hufftables->deflate_hdr_count + 8 >= stream->avail_out)
@@ -835,9 +775,12 @@ static int write_deflate_header_stateless(struct isal_zstream *stream)
 
 	memcpy(stream->next_out, hufftables->deflate_hdr, hufftables->deflate_hdr_count);
 
-	if (stream->end_of_stream == 0)
-		*stream->next_out -= 1;
-	else
+	if (stream->end_of_stream == 0) {
+		if (hufftables->deflate_hdr_count > 0)
+			*stream->next_out -= 1;
+		else
+			hdr_extra_bits -= 1;
+	} else
 		state->has_eob_hdr = 1;
 
 	stream->avail_out -= hufftables->deflate_hdr_count;
@@ -846,8 +789,7 @@ static int write_deflate_header_stateless(struct isal_zstream *stream)
 
 	set_buf(&state->bitbuf, stream->next_out, stream->avail_out);
 
-	write_bits(&state->bitbuf, hufftables->deflate_hdr[hufftables->deflate_hdr_count],
-		   hufftables->deflate_hdr_extra_bits);
+	write_bits(&state->bitbuf, hdr_extra_bits, hufftables->deflate_hdr_extra_bits);
 
 	count = buffer_used(&state->bitbuf);
 	stream->next_out = buffer_ptr(&state->bitbuf);
@@ -887,20 +829,16 @@ static int write_deflate_header_unaligned_stateless(struct isal_zstream *stream)
 	else
 		state->has_eob_hdr = 1;
 
-	write_bits(&state->bitbuf, header_bits, 32);
-	header_bits >>= 32;
-	write_bits(&state->bitbuf, header_bits, 32);
 	header_next++;
 
 	/* Write out Complete Header bits */
-	for (; header_next < header_end; header_next++) {
-		header_bits = *header_next;
+	for (; header_next <= header_end; header_next++) {
 		write_bits(&state->bitbuf, header_bits, 32);
 		header_bits >>= 32;
 		write_bits(&state->bitbuf, header_bits, 32);
+		header_bits = *header_next;
 	}
 
-	header_bits = *header_next;
 	bit_count =
 	    (hufftables->deflate_hdr_count & 0x7) * 8 + hufftables->deflate_hdr_extra_bits;
 
@@ -932,6 +870,7 @@ void write_header(struct isal_zstream *stream)
 {
 	struct isal_zstate *state = &stream->internal_state;
 	struct isal_hufftables *hufftables = stream->hufftables;
+	uint64_t hdr_extra_bits = hufftables->deflate_hdr[hufftables->deflate_hdr_count];
 	uint32_t count;
 
 	state->state = ZSTATE_HDR;
@@ -971,15 +910,18 @@ void write_header(struct isal_zstream *stream)
 		state->count += count;
 
 		count = hufftables->deflate_hdr_count - state->count;
+	} else if (hufftables->deflate_hdr_count == 0) {
+		if (!stream->end_of_stream)
+			hdr_extra_bits -= 1;
+		else
+			state->has_eob_hdr = 1;
 	}
 
 	if ((count == 0) && (stream->avail_out >= 8)) {
 
 		set_buf(&state->bitbuf, stream->next_out, stream->avail_out);
 
-		write_bits(&state->bitbuf,
-			   hufftables->deflate_hdr[hufftables->deflate_hdr_count],
-			   hufftables->deflate_hdr_extra_bits);
+		write_bits(&state->bitbuf, hdr_extra_bits, hufftables->deflate_hdr_extra_bits);
 
 		state->state = ZSTATE_BODY;
 		state->count = 0;
@@ -1039,38 +981,4 @@ void write_trailer(struct isal_zstream *stream)
 		stream->avail_out -= bytes;
 		stream->total_out += bytes;
 	}
-}
-
-static int write_trailer_stateless(struct isal_zstream *stream)
-{
-	int ret = COMP_OK;
-	struct isal_zstate *state = &stream->internal_state;
-	unsigned int bytes;
-
-	if (stream->avail_out < 8) {
-		ret = STATELESS_OVERFLOW;
-	} else {
-		set_buf(&state->bitbuf, stream->next_out, stream->avail_out);
-
-		/* the flush() will pad to the next byte and write up to 8 bytes
-		 * to the output stream/buffer.
-		 */
-		flush(&state->bitbuf);
-		stream->next_out = buffer_ptr(&state->bitbuf);
-		bytes = buffer_used(&state->bitbuf);
-		if (stream->gzip_flag) {
-			if (is_full(&state->bitbuf)) {
-				ret = STATELESS_OVERFLOW;
-			} else {
-				*(uint64_t *) stream->next_out =
-				    ((uint64_t) stream->total_in << 32) | state->crc;
-				stream->next_out += 8;
-				bytes += 8;
-			}
-		}
-		stream->avail_out -= bytes;
-		stream->total_out += bytes;
-	}
-
-	return ret;
 }
