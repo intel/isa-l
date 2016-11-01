@@ -50,6 +50,7 @@ extern const uint8_t gzip_hdr[];
 extern const uint32_t gzip_hdr_bytes;
 extern const uint32_t gzip_trl_bytes;
 extern const struct isal_hufftables hufftables_default;
+extern const struct isal_hufftables hufftables_static;
 extern uint32_t CrcTable[256];
 
 extern uint32_t crc32_gzip(uint32_t init_crc, const unsigned char *buf, uint64_t len);
@@ -95,6 +96,9 @@ struct slver isal_deflate_slver = { 0x0082, 0x03, 0x01 };
 
 struct slver isal_deflate_stateless_slver_01010083;
 struct slver isal_deflate_stateless_slver = { 0x0083, 0x01, 0x01 };
+
+struct slver isal_deflate_set_hufftables_slver_00_01_008b;
+struct slver isal_deflate_set_hufftables_slver = { 0x008b, 0x01, 0x00 };
 
 /*****************************************************************/
 static
@@ -508,6 +512,31 @@ void isal_deflate_init(struct isal_zstream *stream)
 	return;
 }
 
+int isal_deflate_set_hufftables(struct isal_zstream *stream,
+				struct isal_hufftables *hufftables, int type)
+{
+	if (stream->internal_state.state != ZSTATE_NEW_HDR)
+		return ISAL_INVALID_OPERATION;
+
+	switch (type) {
+	case IGZIP_HUFFTABLE_DEFAULT:
+		stream->hufftables = (struct isal_hufftables *)&hufftables_default;
+		break;
+	case IGZIP_HUFFTABLE_STATIC:
+		stream->hufftables = (struct isal_hufftables *)&hufftables_static;
+		break;
+	case IGZIP_HUFFTABLE_CUSTOM:
+		if (hufftables != NULL) {
+			stream->hufftables = hufftables;
+			break;
+		}
+	default:
+		return ISAL_INVALID_OPERATION;
+	}
+
+	return COMP_OK;
+}
+
 void isal_deflate_stateless_init(struct isal_zstream *stream)
 {
 	stream->total_in = 0;
@@ -516,6 +545,7 @@ void isal_deflate_stateless_init(struct isal_zstream *stream)
 	stream->flush = NO_FLUSH;
 	stream->end_of_stream = 0;
 	stream->gzip_flag = 0;
+	stream->internal_state.state = ZSTATE_NEW_HDR;
 	return;
 }
 

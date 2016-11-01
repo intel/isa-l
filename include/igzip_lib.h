@@ -129,6 +129,10 @@ enum { IGZIP_DECODE_OFFSET = 0 };
 enum {IGZIP_LEN_TABLE_SIZE = 256};
 enum {IGZIP_LIT_TABLE_SIZE = ISAL_DEF_LIT_SYMBOLS};
 
+#define IGZIP_HUFFTABLE_CUSTOM 0
+#define IGZIP_HUFFTABLE_DEFAULT 1
+#define IGZIP_HUFFTABLE_STATIC 2
+
 /* Flush Flags */
 #define NO_FLUSH	0	/* Default */
 #define SYNC_FLUSH	1
@@ -145,6 +149,7 @@ enum {IGZIP_LIT_TABLE_SIZE = ISAL_DEF_LIT_SYMBOLS};
 #define INVALID_FLUSH -7
 #define INVALID_PARAM -8
 #define STATELESS_OVERFLOW -1
+#define ISAL_INVALID_OPERATION -9
 
 /**
  *  @enum isal_zstate
@@ -419,6 +424,28 @@ int isal_create_hufftables_subset(struct isal_hufftables * hufftables,
  */
 void isal_deflate_init(struct isal_zstream *stream);
 
+/**
+ * @brief Set stream to use a new Huffman code
+ *
+ * Sets the Huffman code to be used in compression before compression start or
+ * after the sucessful completion of a SYNC_FLUSH or FULL_FLUSH. If type has
+ * value IGZIP_HUFFTABLE_DEFAULT, the stream is set to use the default Huffman
+ * code. If type has value IGZIP_HUFFTABLE_STATIC, the stream is set to use the
+ * deflate standard static Huffman code, or if type has value
+ * IGZIP_HUFFTABLE_CUSTOM, the stream is set to sue the isal_hufftables
+ * structure input to isal_deflate_set_hufftables.
+ *
+ * @param stream: Structure holding state information on the compression stream.
+ * @param hufftables: new huffman code to use if type is set to
+ * IGZIP_HUFFTABLE_CUSTOM.
+ * @param type: Flag specifying what hufftable to use.
+ *
+ * @returns Returns INVALID_OPERATION if the stream was unmodified. This may be
+ * due to the stream being in a state where changing the huffman code is not
+ * allowed or an invalid input is provided.
+ */
+int isal_deflate_set_hufftables(struct isal_zstream *stream,
+				struct isal_hufftables *hufftables, int type);
 
 /**
  * @brief Initialize compression stream data structure

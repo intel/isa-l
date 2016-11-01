@@ -666,6 +666,11 @@ int isal_deflate_with_checks(struct isal_zstream *stream, uint32_t data_size,
 
 }
 
+void set_random_hufftable(struct isal_zstream *stream)
+{
+	isal_deflate_set_hufftables(stream, hufftables, rand() % 4);
+}
+
 /* Compress the input data into the output buffer where the input buffer and
  * output buffer are randomly segmented to test state information for the
  * compression*/
@@ -687,9 +692,6 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	create_rand_repeat_data((uint8_t *) & stream, sizeof(stream));
 
 	isal_deflate_init(&stream);
-
-	if (hufftables != NULL)
-		stream.hufftables = hufftables;
 
 	if (state->state != ZSTATE_NEW_HDR)
 		return COMPRESS_INCORRECT_STATE;
@@ -770,6 +772,9 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 			}
 		}
 
+		if (state->state == ZSTATE_NEW_HDR)
+			set_random_hufftable(&stream);
+
 		ret =
 		    isal_deflate_with_checks(&stream, data_size, *compressed_size, in_buf,
 					     in_size, in_processed, out_buf, out_size,
@@ -820,8 +825,7 @@ int compress_single_pass(uint8_t * data, uint32_t data_size, uint8_t * compresse
 
 	isal_deflate_init(&stream);
 
-	if (hufftables != NULL)
-		stream.hufftables = hufftables;
+	set_random_hufftable(&stream);
 
 	if (state->state != ZSTATE_NEW_HDR)
 		return COMPRESS_INCORRECT_STATE;
@@ -859,8 +863,7 @@ int compress_stateless(uint8_t * data, uint32_t data_size, uint8_t * compressed_
 
 	isal_deflate_stateless_init(&stream);
 
-	if (hufftables != NULL)
-		stream.hufftables = hufftables;
+	set_random_hufftable(&stream);
 
 	stream.avail_in = data_size;
 	stream.next_in = data;
@@ -924,9 +927,6 @@ int compress_stateless_full_flush(uint8_t * data, uint32_t data_size, uint8_t * 
 
 	isal_deflate_stateless_init(&stream);
 
-	if (hufftables != NULL)
-		stream.hufftables = hufftables;
-
 	stream.flush = FULL_FLUSH;
 	stream.end_of_stream = 0;
 	stream.avail_out = *compressed_size;
@@ -964,6 +964,9 @@ int compress_stateless_full_flush(uint8_t * data, uint32_t data_size, uint8_t * 
 		}
 
 		out_buf = stream.next_out;
+
+		if (stream.internal_state.state == ZSTATE_NEW_HDR)
+			set_random_hufftable(&stream);
 
 		ret = isal_deflate_stateless(&stream);
 		assert(stream.internal_state.bitbuf.m_bit_count == 0);
@@ -1020,9 +1023,6 @@ int compress_full_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 
 	isal_deflate_init(&stream);
 
-	if (hufftables != NULL)
-		stream.hufftables = hufftables;
-
 	if (state->state != ZSTATE_NEW_HDR)
 		return COMPRESS_INCORRECT_STATE;
 
@@ -1068,6 +1068,9 @@ int compress_full_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 
 			out_buf = stream.next_out;
 		}
+
+		if (state->state == ZSTATE_NEW_HDR)
+			set_random_hufftable(&stream);
 
 		ret = isal_deflate(&stream);
 
@@ -1120,8 +1123,7 @@ int compress_swap_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 
 	isal_deflate_init(&stream);
 
-	if (hufftables != NULL)
-		stream.hufftables = hufftables;
+	set_random_hufftable(&stream);
 
 	if (state->state != ZSTATE_NEW_HDR)
 		return COMPRESS_INCORRECT_STATE;
@@ -1142,6 +1144,9 @@ int compress_swap_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 
 	if (ret)
 		return ret;
+
+	if (state->state == ZSTATE_NEW_HDR)
+		set_random_hufftable(&stream);
 
 	flush_type = rand() % 3;
 

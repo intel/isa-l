@@ -204,12 +204,13 @@ void fprint_uint64_table(FILE * outfile, uint64_t * table, uint64_t length, char
 
 }
 
-void fprint_hufftables(FILE * output_file, uint8_t * header, uint32_t bit_count,
-		       uint16_t * lit_code_table, uint8_t * lit_code_size_table,
-		       uint16_t * dcodes_code_table, uint8_t * dcodes_code_size_table,
-		       uint32_t * packed_len_table, uint32_t * packed_dist_table)
+void fprint_hufftables(FILE * output_file, char *hufftables_name, uint8_t * header,
+		       uint32_t bit_count, uint16_t * lit_code_table,
+		       uint8_t * lit_code_size_table, uint16_t * dcodes_code_table,
+		       uint8_t * dcodes_code_size_table, uint32_t * packed_len_table,
+		       uint32_t * packed_dist_table)
 {
-	fprintf(output_file, "struct isal_hufftables hufftables_default = {\n\n");
+	fprintf(output_file, "struct isal_hufftables %s = {\n\n", hufftables_name);
 
 	fprint_uint8_table(output_file, header, (bit_count + 7) / 8,
 			   "\t.deflate_hdr = {", "\t},\n\n", "\t\t");
@@ -247,10 +248,7 @@ void fprint_hufftables(FILE * output_file, uint8_t * header, uint32_t bit_count,
 	fprintf(output_file, "};\n");
 }
 
-void fprint_header(FILE * output_file, uint8_t * header, uint32_t bit_count,
-		   uint16_t * lit_code_table, uint8_t * lit_code_size_table,
-		   uint16_t * dcodes_code_table, uint8_t * dcodes_code_size_table,
-		   uint32_t * packed_len_table, uint32_t * packed_dist_table)
+void fprint_header(FILE * output_file)
 {
 	fprintf(output_file, "#include <stdint.h>\n");
 	fprintf(output_file, "#include <igzip_lib.h>\n\n");
@@ -259,15 +257,12 @@ void fprint_header(FILE * output_file, uint8_t * header, uint32_t bit_count,
 		"\t0x1f, 0x8b, 0x08, 0x00, 0x00,\n" "\t0x00, 0x00, 0x00, 0x00, 0xff\t};\n\n");
 
 	fprintf(output_file, "const uint32_t gzip_hdr_bytes = %d;\n", GZIP_HEADER_SIZE);
-	fprintf(output_file, "const uint32_t gzip_trl_bytes = %d;\n\n", GZIP_TRAILER_SIZE);
-
-	fprint_hufftables(output_file, header, bit_count, lit_code_table, lit_code_size_table,
-			  dcodes_code_table, dcodes_code_size_table, packed_len_table,
-			  packed_dist_table);
+	fprintf(output_file, "const uint32_t gzip_trl_bytes = %d;\n", GZIP_TRAILER_SIZE);
 }
 
 int main(int argc, char *argv[])
 {
+	int i;
 	long int file_length;
 	uint8_t *stream = NULL;
 	struct isal_huff_histogram histogram;
@@ -278,6 +273,8 @@ int main(int argc, char *argv[])
 	struct huff_tree lit_tree, dist_tree;
 	struct huff_tree lit_tree_array[2 * LIT_LEN - 1], dist_tree_array[2 * DIST_LEN - 1];
 	struct huff_code lit_huff_table[LIT_LEN], dist_huff_table[DIST_LEN];
+	uint16_t count_static_lit[16] = { 0, 0, 0, 0, 0, 0, 0, 24, 152, 112, 0, 0, 0, 0, 0 };
+	uint16_t count_static_dist[16] = { 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	uint64_t bit_count;
 	uint32_t packed_len_table[LEN_TABLE_SIZE];
 	uint32_t packed_dist_table[LONG_DIST_TABLE_SIZE];
@@ -378,7 +375,6 @@ int main(int argc, char *argv[])
 		}
 	}
 #ifdef PRINT_CODES
-	int i;
 	printf("Lit/Len codes\n");
 	for (i = 0; i < LIT_TABLE_SIZE - 1; i++)
 		printf("Lit %3d: Code 0x%04x, Code_Len %d\n", i, lit_huff_table[i].code,
@@ -415,9 +411,46 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	fprint_header(file, header, bit_count, lit_code_table, lit_code_size_table,
-		      dcodes_code_table, dcodes_code_size_table, packed_len_table,
-		      packed_dist_table);
+	fprint_header(file);
+
+	fprintf(file, "\n");
+
+	fprint_hufftables(file, "hufftables_default", header, bit_count, lit_code_table,
+			  lit_code_size_table, dcodes_code_table, dcodes_code_size_table,
+			  packed_len_table, packed_dist_table);
+
+	fprintf(file, "\n");
+
+	/* Generate the static Huffman code defined in RFC 1951 */
+	memset(lit_huff_table, 0, sizeof(lit_huff_table));
+	memset(dist_huff_table, 0, sizeof(dist_huff_table));
+
+	for (i = 0; i < 144; i++)
+		lit_huff_table[i].length = 8;
+	for (i = 144; i < 256; i++)
+		lit_huff_table[i].length = 9;
+	for (i = 256; i < 280; i++)
+		lit_huff_table[i].length = 7;
+	for (i = 280; i < 286; i++)
+		lit_huff_table[i].length = 8;
+
+	for (i = 0; i < 30; i++)
+		dist_huff_table[i].length = 5;
+
+	set_huff_codes(lit_huff_table, LIT_LEN, count_static_lit);
+	set_huff_codes(dist_huff_table, DIST_LEN, count_static_dist);
+	create_code_tables(lit_code_table, lit_code_size_table, LIT_TABLE_SIZE,
+			   lit_huff_table);
+	create_code_tables(dcodes_code_table, dcodes_code_size_table, DIST_LEN,
+			   dist_huff_table);
+	create_packed_len_table(packed_len_table, lit_huff_table);
+	create_packed_dist_table(packed_dist_table, LONG_DIST_TABLE_SIZE, dist_huff_table);
+	bit_count = 3;
+	header[0] = 0x03;
+
+	fprint_hufftables(file, "hufftables_static", header, bit_count, lit_code_table,
+			  lit_code_size_table, dcodes_code_table, dcodes_code_size_table,
+			  packed_len_table, packed_dist_table);
 
 	fclose(file);
 
