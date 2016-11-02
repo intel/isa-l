@@ -72,6 +72,7 @@ int main(int argc, char *argv[])
 	printf("Start timed tests\n");
 	fflush(0);
 
+	memset(buf, 0, TEST_LEN);
 	crc = crc32_iscsi(buf, TEST_LEN, TEST_SEED);
 	perf_start(&start);
 	for (i = 0; i < TEST_LOOPS; i++) {
