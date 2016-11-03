@@ -57,6 +57,9 @@ default rel
 
  %assign i 0
  %rep %%bSize/8 - 1
+  %if i < %%bSize*3/4
+	prefetchnta  [bufptmp+ %%bSize*3 +i*4]
+  %endif
 	crc32   rax, qword [bufptmp+i + 0*%%bSize]  ;; update crc0
 	crc32   rbx, qword [bufptmp+i + 1*%%bSize]  ;; update crc1
 	crc32   r10, qword [bufptmp+i + 2*%%bSize]  ;; update crc2

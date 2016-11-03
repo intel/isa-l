@@ -196,6 +196,10 @@ CONCAT(crc_,i,:)
 	crc32	crc_init,  qword [block_0 - i*8]
 	crc32	crc1,      qword [block_1 - i*8]
 	crc32	crc2,      qword [block_2 - i*8]
+
+ %if i > 128*8 / 32	; prefetch next 3KB data
+	prefetchnta [block_2 + 128*32 - i*32]
+ %endif
 %assign i (i-1)
 %endrep
 

@@ -44,6 +44,8 @@
 
 %include "reg_sizes.asm"
 
+%define	fetch_dist	1024
+
 [bits 64]
 default rel
 
@@ -145,6 +147,7 @@ _fold_128_B_loop:
 	; update the buffer pointer
 	add	arg2, 128		;    buf += 128;
 
+	prefetchnta [arg2+fetch_dist+0]
 	movdqu	xmm9, [arg2+16*0]
 	movdqu	xmm12, [arg2+16*1]
 	pshufb	xmm9, xmm11
@@ -160,6 +163,7 @@ _fold_128_B_loop:
 	pxor	xmm1, xmm12
 	xorps	xmm1, xmm13
 
+	prefetchnta [arg2+fetch_dist+32]
 	movdqu	xmm9, [arg2+16*2]
 	movdqu	xmm12, [arg2+16*3]
 	pshufb	xmm9, xmm11
@@ -175,6 +179,7 @@ _fold_128_B_loop:
 	pxor	xmm3, xmm12
 	xorps	xmm3, xmm13
 
+	prefetchnta [arg2+fetch_dist+64]
 	movdqu	xmm9, [arg2+16*4]
 	movdqu	xmm12, [arg2+16*5]
 	pshufb	xmm9, xmm11
@@ -190,6 +195,7 @@ _fold_128_B_loop:
 	pxor	xmm5, xmm12
 	xorps	xmm5, xmm13
 
+	prefetchnta [arg2+fetch_dist+96]
 	movdqu	xmm9, [arg2+16*6]
 	movdqu	xmm12, [arg2+16*7]
 	pshufb	xmm9, xmm11
