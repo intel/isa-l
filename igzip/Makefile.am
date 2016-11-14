@@ -66,7 +66,8 @@ other_src   += 	igzip/bitbuf2.asm igzip/data_struct2.asm \
 		include/multibinary.asm \
 		include/test.h \
 		igzip/huffman.h \
-		igzip/igzip_decode_block_stateless.asm
+		igzip/igzip_decode_block_stateless.asm \
+		igzip/inflate_std_vects.h
 
 examples    += 	igzip/igzip_example igzip/igzip_sync_flush_example
 

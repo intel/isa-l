@@ -33,6 +33,7 @@
 #include <assert.h>
 #include "igzip_lib.h"
 #include "crc_inflate.h"
+#include "inflate_std_vects.h"
 #include <math.h>
 
 #ifndef RANDOMS
@@ -434,7 +435,7 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 
 		if (*uncompress_len - uncomp_processed == 0 && state->avail_out == 0
 		    && state->tmp_out_valid - state->tmp_out_processed > 0) {
-			ret = INFLATE_OUT_BUFFER_OVERFLOW;
+			ret = ISAL_OUT_OVERFLOW;
 			break;
 		}
 
@@ -442,7 +443,7 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 		    && (state->block_state != ISAL_BLOCK_INPUT_DONE)
 		    && state->tmp_out_valid - state->tmp_out_processed == 0) {
 			if (state->read_in_length == read_in_old) {
-				ret = INFLATE_END_OF_INPUT;
+				ret = ISAL_END_INPUT;
 				break;
 			}
 			read_in_old = state->read_in_length;
@@ -1620,6 +1621,46 @@ int test_full_flush(uint8_t * in_buf, uint32_t in_size)
 	return ret;
 }
 
+int test_inflate(struct vect_result *in_vector)
+{
+	int ret = IGZIP_COMP_OK;
+	uint8_t *compress_buf = in_vector->vector, *out_buf = NULL;
+	uint64_t compress_len = in_vector->vector_length;
+	uint32_t out_size = 0;
+
+	out_size = 10 * in_vector->vector_length;
+	out_buf = malloc(out_size);
+	if (out_buf == NULL)
+		return MALLOC_FAILED;
+
+	ret = inflate_stateless_pass(compress_buf, compress_len, out_buf, &out_size, 0);
+
+	if (ret == INFLATE_LEFTOVER_INPUT)
+		ret = ISAL_DECOMP_OK;
+
+	if (ret != in_vector->expected_error)
+		printf("Inflate return value incorrect, %d != %d\n", ret,
+		       in_vector->expected_error);
+	else
+		ret = IGZIP_COMP_OK;
+
+	if (!ret) {
+		ret = inflate_multi_pass(compress_buf, compress_len, out_buf, &out_size, 0);
+
+		if (ret == INFLATE_LEFTOVER_INPUT)
+			ret = ISAL_DECOMP_OK;
+
+		if (ret != in_vector->expected_error)
+			printf("Inflate return value incorrect, %d != %d\n", ret,
+			       in_vector->expected_error);
+		else
+			ret = IGZIP_COMP_OK;
+	}
+
+	return ret;
+
+}
+
 int get_filesize(FILE * f)
 {
 	int curr, end;
@@ -2011,6 +2052,16 @@ int main(int argc, char *argv[])
 
 	fin_ret |= ret;
 
+	printf("%s\n", ret ? "Fail" : "Pass");
+
+	printf("igzip_rand_test inflate   Std Vectors:  ");
+
+	for (i = 0; i < sizeof(std_vect_array) / sizeof(struct vect_result); i++) {
+		ret = test_inflate(&std_vect_array[i]);
+		if (ret)
+			return ret;
+	}
+	printf("................");
 	printf("%s\n", ret ? "Fail" : "Pass");
 
 	printf("igzip rand test finished: %s\n",
