@@ -193,7 +193,7 @@ static void inline make_inflate_huff_code_large(struct inflate_huff_code_large *
 	copy_size = (1 << last_length);
 
 	/* Initialize short_code_lookup, so invalid lookups process data */
-	memset(short_code_lookup, 0x1d, copy_size * sizeof(*short_code_lookup));
+	memset(short_code_lookup, 0x00, copy_size * sizeof(*short_code_lookup));
 
 	for (k = 0; k < code_list_len; k++) {
 		i = code_list[k];
@@ -350,7 +350,7 @@ static void inline make_inflate_huff_code_small(struct inflate_huff_code_small *
 	copy_size = (1 << last_length);
 
 	/* Initialize short_code_lookup, so invalid lookups process data */
-	memset(short_code_lookup, 0x1d, copy_size * sizeof(*short_code_lookup));
+	memset(short_code_lookup, 0x00, copy_size * sizeof(*short_code_lookup));
 
 	for (k = 0; k < code_list_len; k++) {
 		i = code_list[k];
