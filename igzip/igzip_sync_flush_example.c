@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
 	do {
 		if (stream.internal_state.state == ZSTATE_NEW_HDR) {
 			stream.avail_in = (uint32_t) fread(inbuf, 1, BUF_SIZE, in);
-			stream.end_of_stream = feof(in);
+			stream.end_of_stream = feof(in) ? 1 : 0;
 			stream.next_in = inbuf;
 		}
 		do {

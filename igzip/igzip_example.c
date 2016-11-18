@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 
 	do {
 		stream.avail_in = (uint32_t) fread(inbuf, 1, BUF_SIZE, in);
-		stream.end_of_stream = feof(in);
+		stream.end_of_stream = feof(in) ? 1 : 0;
 		stream.next_in = inbuf;
 		do {
 			stream.avail_out = BUF_SIZE;
