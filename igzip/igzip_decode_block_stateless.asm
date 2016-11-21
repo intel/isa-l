@@ -281,6 +281,7 @@ stack_size		equ	3 * 8 + 8 * 8
 	;; Save length associated with symbol
 	mov	rcx, %%next_sym
 	shr	rcx, 9
+	jz	invalid_symbol
 	and	%%next_sym, 0x1FF
 %%end:
 	;; Updated read_in to reflect the bits which were decoded
@@ -332,7 +333,9 @@ stack_size		equ	3 * 8 + 8 * 8
 	;; Save length associated with symbol
 	mov	rcx, %%next_sym
 	shr	rcx, 9
+	jz	invalid_symbol
 	and	%%next_sym, 0x1FF
+
 %%end:
 	;; Updated read_in to reflect the bits which were decoded
 	SHRX	%%read_in, %%read_in, rcx

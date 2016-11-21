@@ -275,6 +275,9 @@ static void inline make_inflate_huff_code_large(struct inflate_huff_code_large *
 			}
 		}
 
+		memset(&result->long_code_lookup[long_code_lookup_length], 0x00,
+		       2 * (1 << (max_length - ISAL_DECODE_LONG_BITS)));
+
 		for (j = 0; j < temp_code_length; j++) {
 			code_length = huff_code_table[temp_code_list[j]].length;
 			long_bits =
@@ -429,6 +432,9 @@ static void inline make_inflate_huff_code_small(struct inflate_huff_code_small *
 			}
 		}
 
+		memset(&result->long_code_lookup[long_code_lookup_length], 0x00,
+		       2 * (1 << (max_length - ISAL_DECODE_SHORT_BITS)));
+
 		for (j = 0; j < temp_code_length; j++) {
 			code_length = huff_code_table[temp_code_list[j]].length;
 			long_bits =
@@ -543,6 +549,10 @@ static uint16_t inline decode_next_large(struct inflate_state *state,
 		bit_count = next_sym >> 9;
 		state->read_in >>= bit_count;
 		state->read_in_length -= bit_count;
+
+		if (bit_count == 0)
+			next_sym = 0x1FF;
+
 		return next_sym & 0x1FF;
 
 	}
