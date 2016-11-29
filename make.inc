@@ -39,7 +39,7 @@
 #	trace - get simulator trace
 #	clean - remove object files
 
-version ?= 2.16.0
+version ?= 2.17.0
 
 CC  = gcc
 AS  = yasm
