@@ -106,19 +106,16 @@ void sync_flush(struct isal_zstream *stream)
 {
 	struct isal_zstate *state = &stream->internal_state;
 	uint64_t bits_to_write = 0xFFFF0000, bits_len;
-	uint64_t code = 0, len = 0, bytes;
+	uint64_t bytes;
 	int flush_size;
 
 	if (stream->avail_out >= 8) {
 		set_buf(&state->bitbuf, stream->next_out, stream->avail_out);
 
-		if (!state->has_eob)
-			get_lit_code(stream->hufftables, 256, &code, &len);
-
-		flush_size = (-(state->bitbuf.m_bit_count + len + 3)) % 8;
+		flush_size = (-(state->bitbuf.m_bit_count + 3)) % 8;
 
 		bits_to_write <<= flush_size + 3;
-		bits_len = 32 + len + flush_size + 3;
+		bits_len = 32 + flush_size + 3;
 
 #ifdef USE_BITBUFB		/* Write Bits Always */
 		state->state = ZSTATE_NEW_HDR;
@@ -126,9 +123,6 @@ void sync_flush(struct isal_zstream *stream)
 		state->state = ZSTATE_FLUSH_WRITE_BUFFER;
 #endif
 		state->has_eob = 0;
-
-		if (len > 0)
-			bits_to_write = (bits_to_write << len) | code;
 
 		write_bits(&state->bitbuf, bits_to_write, bits_len);
 
