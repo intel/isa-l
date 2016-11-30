@@ -31,6 +31,7 @@
 %define	BUFFER_UTILS
 
 %include "options.asm"
+%include "reg_sizes.asm"
 
 extern pshufb_shf_table
 extern mask3

@@ -27,6 +27,8 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+%include "reg_sizes.asm"
+
 %assign K      1024
 %assign D      HIST_SIZE * K        ;; Amount of history
 %assign LA     17 * 16      ;; Max look-ahead, rounded up to 32 byte boundary

@@ -28,6 +28,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %include "options.asm"
+%include "reg_sizes.asm"
 
 ; Assumes m_out_buf is a register
 ; Clobbers RCX

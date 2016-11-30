@@ -28,6 +28,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %include "options.asm"
+%include "reg_sizes.asm"
 %include "lz0a_const.asm"
 
 ; Macros for doing Huffman Encoding

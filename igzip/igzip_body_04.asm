@@ -1,3 +1,5 @@
+%include "reg_sizes.asm"
+
 %define ARCH 04
 %define USE_HSWNI
 

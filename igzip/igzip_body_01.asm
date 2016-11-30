@@ -1,3 +1,5 @@
+%include "reg_sizes.asm"
+
 %define ARCH 01
 
 %ifndef COMPARE_TYPE

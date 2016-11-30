@@ -29,6 +29,8 @@
 
 default rel
 
+%include "reg_sizes.asm"
+
 %ifndef __OPTIONS_ASM__
 %define __OPTIONS_ASM__
 
