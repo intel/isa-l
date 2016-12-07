@@ -1,6 +1,5 @@
 =============================================================================
-v2.16 Intel Intelligent Storage Acceleration Library Release Notes
-      Open Source Version
+v2.17 Intel Intelligent Storage Acceleration Library Release Notes
 =============================================================================
 
 =============================================================================
@@ -14,8 +13,6 @@ RELEASE NOTE CONTENTS
 1.  KNOWN ISSUES
 =============================================================================
 
-* Only erasure code unit included in open source version at this time.
-
 * Perf tests do not run in Windows environment.
 
 * 32-bit lib is not supported in Windows.
@@ -23,6 +20,15 @@ RELEASE NOTE CONTENTS
 =============================================================================
 2. FIXED ISSUES
 =============================================================================
+v2.17
+
+* Fix igzip using 32K window and a shared object
+
+* Fix igzip undefined instruction error on Nehalem.
+
+* Fixed issue in crc performance tests where OS optimizations turned cold cache
+  tests into warm tests.
+
 v2.15
 
 * Fix for windows register save in gf_6vect_mad_avx2.asm.  Only affects windows
@@ -43,6 +49,23 @@ v2.10
 =============================================================================
 3. CHANGE LOG & FEATURES ADDED 
 =============================================================================
+v2.17
+
+* New fast decompression (inflate)
+
+* Compression improvements (deflate)
+  - Speed and compression ratio improvements.
+  - Fast custom Huffman code generation.
+  - New features:
+    * Run-time option of gzip crc calculation and headers/trailer.
+    * Choice of static header (BTYPE 01) blocks.
+    * LARGE_WINDOW, 32K history, now default.
+    * Stateless full flush mode.
+
+* CRC64
+  - Six new 64-bit polynomials supported. Normal and reflected versions of ECMA,
+    ISO and Jones polynomials.
+
 v2.16
 
 * Units added: crc, raid, igzip (deflate compression).
