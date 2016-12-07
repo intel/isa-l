@@ -10,14 +10,16 @@ applications.  ISA-L includes:
 * Erasure codes - Fast block Reed-Solomon type erasure codes for any
   encode/decode matrix in GF(2^8).
 
-* CRC - Fast implementations of cyclic redundancy check.  Three different
+* CRC - Fast implementations of cyclic redundancy check.  Six different
   polynomials supported.
-  - iscsi, ieee, t10dif
+  - iscsi32, ieee32, t10dif, ecma64, iso64, jones64.
 
 * Raid - calculate and operate on XOR and P+Q parity found in common RAID
   implementations.
 
 * Compression - Fast deflate-compatible data compression.
+
+* De-compression - Fast inflate-compatible data compression.
 
 See [ISA-L for updates.](https://github.com/01org/isa-l)
 For crypto functions see [isa-l_crypto on github.](https://github.com/01org/isa-l_crypto)
