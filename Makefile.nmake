@@ -93,6 +93,14 @@ objs =  \
 	bin\crc32_ieee_by4.obj \
 	bin\crc32_iscsi_00.obj \
 	bin\crc32_iscsi_01.obj \
+	bin\crc64_base.obj \
+	bin\crc64_ecma_norm_by8.obj \
+	bin\crc64_ecma_refl_by8.obj \
+	bin\crc64_iso_norm_by8.obj \
+	bin\crc64_iso_refl_by8.obj \
+	bin\crc64_jones_norm_by8.obj \
+	bin\crc64_jones_refl_by8.obj \
+	bin\crc64_multibinary.obj \
 	bin\crc_base.obj \
 	bin\crc_data.obj \
 	bin\crc_multibinary.obj \
@@ -101,14 +109,17 @@ objs =  \
 	bin\igzip.obj \
 	bin\igzip_base.obj \
 	bin\igzip_body_01.obj \
+	bin\igzip_body_02.obj \
 	bin\igzip_body_04.obj \
+	bin\igzip_decode_block_stateless_01.obj \
+	bin\igzip_decode_block_stateless_04.obj \
 	bin\igzip_finish.obj \
+	bin\igzip_inflate.obj \
+	bin\igzip_inflate_multibinary.obj \
 	bin\igzip_multibinary.obj \
-	bin\igzip_stateless_01.obj \
-	bin\igzip_stateless_04.obj \
-	bin\igzip_stateless_base.obj \
-	bin\crc_utils_01.obj \
-	bin\crc_utils_04.obj \
+	bin\igzip_update_histogram_01.obj \
+	bin\igzip_update_histogram_04.obj \
+	bin\rfc1951_lookup.obj \
 	bin\detect_repeated_char.obj
 
 INCLUDES  = -I./ -Ierasure_code/ -Iraid/ -Icrc/ -Iigzip/ -Iinclude/
@@ -173,7 +184,8 @@ checks = \
 	crc16_t10dif_test.exe \
 	crc32_ieee_test.exe \
 	crc32_iscsi_test.exe \
-	igzip_check.exe
+	crc64_funcs_test.exe \
+	igzip_rand_test.exe
 
 checks: lib $(checks)
 $(checks): $(@B).obj
@@ -182,22 +194,11 @@ check: $(checks)
 
 # Unit tests
 tests = \
-	gf_vect_mul_sse_test.exe \
-	gf_vect_mul_avx_test.exe \
 	gf_vect_mul_base_test.exe \
-	gf_vect_dot_prod_sse_test.exe \
-	gf_vect_dot_prod_avx_test.exe \
-	gf_2vect_dot_prod_sse_test.exe \
-	gf_3vect_dot_prod_sse_test.exe \
-	gf_4vect_dot_prod_sse_test.exe \
-	gf_5vect_dot_prod_sse_test.exe \
-	gf_6vect_dot_prod_sse_test.exe \
 	gf_vect_dot_prod_base_test.exe \
 	gf_vect_dot_prod_test.exe \
 	gf_vect_mad_test.exe \
-	erasure_code_base_test.exe \
-	erasure_code_sse_test.exe \
-	igzip_rand_test.exe
+	erasure_code_base_test.exe
 
 tests: lib $(tests)
 $(tests): $(@B).obj
@@ -241,9 +242,5 @@ clean:
 	-if exist isa-l.dll del isa-l.dll
 
 zlib.lib:
-igzip_rand_test.exe: igzip_inflate_ref.obj
-igzip_inflate_perf.exe: igzip_inflate_ref.obj
 igzip_inflate_perf.exe:  zlib.lib
-igzip_inflate_test.exe: igzip_inflate_ref.obj
 igzip_inflate_test.exe:  zlib.lib
-igzip_check.exe: igzip_inflate_ref.obj
