@@ -102,14 +102,14 @@ encode_deflate_icf_ %+ ARCH:
 	; sym: 31:24 length; 23:0 code
 	mov	tmp2, sym
 	and	sym, 0xFFFFFF
-	shl	sym, cl
+	SHLX	sym, sym, rcx
 	shr	tmp2, 24
 	or	bits, sym
 	add	rcx, tmp2
 
 	; insert dist code
 	movzx	tmp, WORD(dsym)
-	shl	tmp, cl
+	SHLX	tmp, tmp, rcx
 	or	bits, tmp
 	mov	tmp, dsym
 	shr	tmp, 24
@@ -118,7 +118,7 @@ encode_deflate_icf_ %+ ARCH:
 	; insert dist extra bits
 	shr	data, EXTRA_BITS_OFFSET
 	add	ptr, 4
-	shl	data, cl
+	SHLX	data, data, rcx
 	or	bits, data
 	shr	dsym, 16
 	and	dsym, 0xFF
@@ -131,7 +131,7 @@ encode_deflate_icf_ %+ ARCH:
 	add	out_buf, tmp
 	mov	tmp, rcx
 	and	rcx, ~7
-	shr	bits, cl
+	SHRX	bits, bits, rcx
 	mov	rcx, tmp
 	and	rcx, 7
 
@@ -146,7 +146,7 @@ encode_deflate_icf_ %+ ARCH:
 ;	add	out_buf, tmp
 ;	mov	tmp, rcx
 ;	and	rcx, ~7
-;	shr	bits, cl
+;	SHRX	bits, bits, rcx
 ;	mov	rcx, tmp
 ;	and	rcx, 7
 
