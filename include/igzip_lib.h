@@ -152,7 +152,7 @@ enum {IGZIP_LIT_TABLE_SIZE = ISAL_DEF_LIT_SYMBOLS};
 #define ISAL_INVALID_OPERATION -9
 
 /**
- *  @enum isal_zstate
+ *  @enum isal_zstate_state
  *  @brief Compression State please note ZSTATE_TRL only applies for GZIP compression
  */
 
@@ -394,9 +394,8 @@ void isal_update_histogram(uint8_t * in_stream, int length, struct isal_huff_his
  *  distances are assigned a code.
  *
  * @param hufftables: the output structure containing the huffman code
- * @param lit_histogram: histogram containing frequency of literal symbols and
- * repeat lengths
- * @param dist_histogram: histogram containing frequency of of lookback distances
+ * @param histogram: histogram containing frequency of literal symbols,
+ *        repeat lengths and lookback distances
  * @returns Returns a non zero value if an invalid huffman code was created.
  */
 int isal_create_hufftables(struct isal_hufftables * hufftables,
@@ -408,9 +407,8 @@ int isal_create_hufftables(struct isal_hufftables * hufftables,
  * are not assigned a code
  *
  * @param hufftables: the output structure containing the huffman code
- * @param lit_histogram: histogram containing frequency of literal symbols and
- * repeat lengths
- * @param dist_histogram: histogram containing frequency of of lookback distances
+ * @param histogram: histogram containing frequency of literal symbols,
+ *        repeat lengths and lookback distances
  * @returns Returns a non zero value if an invalid huffman code was created.
  */
 int isal_create_hufftables_subset(struct isal_hufftables * hufftables,
