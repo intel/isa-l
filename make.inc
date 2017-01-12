@@ -271,4 +271,8 @@ clean:
 	@$(RM) -r $(O) *.o *.a $(all_tests) $(lib_name) $(so_lib_name)
 
 
+doc: isa-l.h
+	(cat Doxyfile; echo 'PROJECT_NUMBER=$(version)') | doxygen -
+	$(MAKE) -C generated_doc/latex &> generated_doc/latex_build_api.log
+	cp generated_doc/latex/refman.pdf isa-l_api_$(version).pdf
 

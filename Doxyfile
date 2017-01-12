@@ -1,0 +1,27 @@
+PROJECT_NAME           = "Intel Intelligent Storage Acceleration Library"
+PROJECT_BRIEF          = "ISA-L API reference doc"
+
+OUTPUT_DIRECTORY       = generated_doc
+FULL_PATH_NAMES        = NO
+TAB_SIZE               = 8
+ALIASES                = "requires=\xrefitem requires \"Requires\" \"Instruction Set Requirements for arch-specific functions (non-multibinary)\""
+OPTIMIZE_OUTPUT_FOR_C  = YES
+HIDE_UNDOC_MEMBERS     = YES
+
+INPUT                  = isa-l.h \
+			 include \
+			 README.md \
+			 Release_notes.txt
+
+EXCLUDE                = include/test.h
+EXAMPLE_PATH           = . crc raid erasure_code igzip
+PAPER_TYPE             = letter
+LATEX_SOURCE_CODE      = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = "DECLARE_ALIGNED(n, a)=ALIGN n" \
+                         __declspec(x)='x' \
+                         align(x)='ALIGN \
+                         x'
+EXPAND_AS_DEFINED      = DECLARE_ALIGNED
+EXTENSION_MAPPING      = "txt=md"
