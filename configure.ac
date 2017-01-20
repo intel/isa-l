@@ -88,7 +88,7 @@ else
 fi
 
 # Pick an assembler yasm or nasm
-if test x"$AS" == x""; then
+if test x"$AS" = x""; then
   if test x"$yasm_knows_avx512" = x"yes"; then
     AS=yasm
   elif test x"$nasm_knows_avx512" = x"yes"; then
