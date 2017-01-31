@@ -423,11 +423,13 @@ write_lit_bits:
 	MOVD	hash %+ d, xhash
 
 	inc	word [stream + _internal_state_hist_lit_len + 2*code3]
-	or	code3, LIT
 	inc	word [stream + _internal_state_hist_lit_len + 2*code2]
-	or	code2, LIT
+
+	add	code2, 31
+	shl	code2, DIST_OFFSET
+	or	code3, code2
+
 	write_dword	code3, m_out_buf
-	write_dword	code2, m_out_buf
 
 	PEXTRD	hash2 %+ d, xhash, 1
 

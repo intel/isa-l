@@ -31,7 +31,7 @@
 %define ARG4 r9
 %define TMP1 rsi
 %define TMP2 rdi
-%define ll_tree		ARG4
+%define hufftables	ARG4
 %define ptr		r11
 %else
 ; Linux
@@ -41,8 +41,8 @@
 %define ARG4 rcx
 %define TMP1 r8
 %define TMP2 r9
-%define ll_tree		r11 ; ARG4
-%define ptr		ARG1 ; r11
+%define hufftables	r11
+%define ptr		ARG1
 %endif
 
 %define in_buf_end	ARG2
@@ -57,10 +57,9 @@
 %define len 		dsym
 %define tmp2 		r10
 %define end_ptr		rbp
-%define dist_tree	ll_tree + 4*513
 
-%define LIT_MASK	0x3FF
-%define DIST_MASK	0x1F
+%define LIT_MASK	((0x1 << LIT_LEN_BIT_COUNT) - 1)
+%define DIST_MASK	((0x1 << DIST_LIT_BIT_COUNT) - 1)
 
 %define codes1		ymm1
 %define code_lens1	ymm2
@@ -101,7 +100,7 @@ encode_deflate_icf_ %+ ARCH:
 %ifidn __OUTPUT_FORMAT__, win64
 	mov	ptr, ARG1
 %else
-	mov	ll_tree, ARG4
+	mov	hufftables, ARG4
 %endif
 
 	mov	bits, [bb + _m_bits]
@@ -117,12 +116,12 @@ encode_deflate_icf_ %+ ARCH:
 	vpcmpeqq	ytmp, ytmp, ytmp
 	vmovdqu	datas, [ptr]
 	vpand	syms, datas, [lit_mask]
-	vpgatherdd codes_lookup1, [ll_tree + 4 * syms], ytmp
+	vpgatherdd codes_lookup1, [hufftables + _lit_len_table + 4 * syms], ytmp
 
 	vpcmpeqq	ytmp, ytmp, ytmp
 	vpsrld	dsyms, datas, DIST_OFFSET
 	vpand	dsyms, dsyms, [dist_mask]
-	vpgatherdd codes_lookup2, [dist_tree + 4 * dsyms], ytmp
+	vpgatherdd codes_lookup2, [hufftables + _dist_table + 4 * dsyms], ytmp
 
 	vmovq	ybits %+ x, bits
 	vmovq	ybits_count %+ x, rcx
@@ -151,12 +150,12 @@ encode_deflate_icf_ %+ ARCH:
 	vpcmpeqq	ytmp, ytmp, ytmp
 	vmovdqu	datas, [ptr]
 	vpand	syms, datas, [lit_mask]
-	vpgatherdd codes_lookup1, [ll_tree + 4 * syms], ytmp
+	vpgatherdd codes_lookup1, [hufftables + _lit_len_table + 4 * syms], ytmp
 
 	vpcmpeqq	ytmp, ytmp, ytmp
 	vpsrld	dsyms, datas, DIST_OFFSET
 	vpand	dsyms, dsyms, [dist_mask]
-	vpgatherdd codes_lookup2, [dist_tree + 4 * dsyms], ytmp
+	vpgatherdd codes_lookup2, [hufftables + _dist_table + 4 * dsyms], ytmp
 
 	;; Merge dist code with extra bits
 	vpsllvd	codes3, codes3, code_lens2
@@ -395,13 +394,13 @@ encode_deflate_icf_ %+ ARCH:
 
 	mov	sym, data
 	and	sym, LIT_MASK	; sym has ll_code
-	mov	DWORD(sym), [ll_tree + sym * 4]
+	mov	DWORD(sym), [hufftables + _lit_len_table + sym * 4]
 
 	; look up dist sym
 	mov	dsym, data
 	shr	dsym, DIST_OFFSET
-	and	dsym, 0x1F
-	mov	DWORD(dsym), [dist_tree + dsym * 4]
+	and	dsym, DIST_MASK
+	mov	DWORD(dsym), [hufftables + _dist_table + dsym * 4]
 
 	; insert LL code
 	; sym: 31:24 length; 23:0 code

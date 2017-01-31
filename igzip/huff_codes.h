@@ -126,8 +126,8 @@ struct rl_code {
 };
 
 struct hufftables_icf {
-	struct huff_code lit_len_table[513];
 	struct huff_code dist_table[31];
+	struct huff_code lit_len_table[513];
 };
 
 /**

@@ -85,8 +85,8 @@ FIELD	_ll_hist,	513*2,	2
 START_FIELDS	;; hufftables_icf
 
 ;;      name		size    align
-FIELD	_lit_len_table,	513 * HUFF_CODE_SIZE,	HUFF_CODE_SIZE
 FIELD	_dist_table,	31 * HUFF_CODE_SIZE,	HUFF_CODE_SIZE
+FIELD	_lit_len_table,	513 * HUFF_CODE_SIZE,	HUFF_CODE_SIZE
 
 %assign _hufftables_icf_size	_FIELD_OFFSET
 %assign _hufftables_icf_align	_STRUCT_ALIGN
