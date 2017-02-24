@@ -154,6 +154,26 @@ uint32_t crc32_ieee_base(uint32_t seed, uint8_t * buf, uint64_t len)
 	return ~rem;
 }
 
+// crc32_gzip_refl baseline function.
+// Please get difference details between crc32_gzip_ref and crc32_ieee
+// from crc.h.
+// Slow crc32 from the definition.  Can be sped up with a lookup table.
+uint32_t crc32_gzip_refl_base(uint32_t seed, uint8_t * buf, uint64_t len)
+{
+	uint64_t rem = ~seed;
+	int i, j;
+
+	uint32_t poly = 0xEDB88320;	// IEEE standard
+
+	for (i = 0; i < len; i++) {
+		rem = rem ^ (buf[i]);
+		for (j = 0; j < MAX_ITER; j++) {
+			rem = (rem & 0x1ULL) ? (rem >> 1) ^ poly : (rem >> 1);
+		}
+	}
+	return ~rem;
+}
+
 struct slver {
 	unsigned short snum;
 	unsigned char ver;
@@ -168,3 +188,6 @@ struct slver crc16_t10dif_base_slver = { 0x011e, 0x02, 0x00 };
 
 struct slver crc32_ieee_base_slver_0001011f;
 struct slver crc32_ieee_base_slver = { 0x011f, 0x02, 0x00 };
+
+struct slver crc32_gzip_refl_base_slver_0000002b;
+struct slver crc32_gzip_refl_base_slver = { 0x002b, 0x00, 0x00 };

@@ -48,7 +48,8 @@ lsrc_x86_64 += \
 	crc/crc64_iso_refl_by8.asm \
 	crc/crc64_iso_norm_by8.asm \
 	crc/crc64_jones_refl_by8.asm \
-	crc/crc64_jones_norm_by8.asm
+	crc/crc64_jones_norm_by8.asm \
+	crc/crc32_gzip_refl_by8.asm
 
 src_include += -I $(srcdir)/crc
 extern_hdrs +=  include/crc.h include/crc64.h
@@ -56,9 +57,10 @@ extern_hdrs +=  include/crc.h include/crc64.h
 other_src   +=  include/reg_sizes.asm include/types.h include/test.h
 
 check_tests +=  crc/crc16_t10dif_test crc/crc32_ieee_test crc/crc32_iscsi_test \
-		crc/crc64_funcs_test
+		crc/crc64_funcs_test crc/crc32_gzip_refl_test
 
 perf_tests  +=  crc/crc16_t10dif_perf crc/crc32_ieee_perf crc/crc32_iscsi_perf \
-		crc/crc64_funcs_perf
+		crc/crc64_funcs_perf crc/crc32_gzip_refl_perf
 
 examples    +=  crc/crc_simple_test crc/crc64_example
+

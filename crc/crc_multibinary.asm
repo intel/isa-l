@@ -50,6 +50,11 @@ extern crc16_t10dif_01
 extern crc16_t10dif_by4  ;; Optimized for SLM
 extern crc16_t10dif_base
 
+extern crc32_gzip_refl_by8
+extern crc32_gzip_refl_base
+
+%include "multibinary.asm"
+
 section .data
 ;;; *_mbinit are initial values for *_dispatched; is updated on first call.
 ;;; Therefore, *_dispatch_init is only executed on first call.
@@ -174,7 +179,11 @@ use_t10dif_base:
 	pop     rax
 	ret
 
+mbin_interface			crc32_gzip_refl
+mbin_dispatch_init_clmul	crc32_gzip_refl, crc32_gzip_refl_base, crc32_gzip_refl_by8
+
 ;;;       func            	core, ver, snum
 slversion crc16_t10dif,		00,   03,  011a
 slversion crc32_ieee,		00,   03,  011b
 slversion crc32_iscsi,		00,   03,  011c
+slversion crc32_gzip_refl,		00,   00,  002a
