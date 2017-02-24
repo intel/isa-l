@@ -1,4 +1,4 @@
-EXTRA_DIST = autogen.sh Makefile.unx make.inc Makefile.nmake isa-l.def LICENSE README.md Doxyfile
+EXTRA_DIST = autogen.sh Makefile.unx make.inc Makefile.nmake isa-l.def LICENSE README.md Doxyfile CONTRIBUTING.md
 CLEANFILES =
 LDADD =
 AM_MAKEFLAGS = --no-print-directory
