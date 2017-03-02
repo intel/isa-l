@@ -18,6 +18,7 @@ unit_tests_extra=
 perf_tests_extra=
 examples=
 other_tests=
+lsrc_x86_64=
 lsrc32=
 unit_tests32=
 perf_tests32=
@@ -37,6 +38,19 @@ LIBISAL_AGE=0
 lib_LTLIBRARIES = libisal.la
 pkginclude_HEADERS += $(sort ${extern_hdrs})
 libisal_la_SOURCES = ${lsrc}
+
+if CPU_X86_64
+libisal_la_SOURCES += ${lsrc_x86_64}
+endif
+
+if CPU_X86_32
+libisal_la_SOURCES += ${lsrc_x86_32}
+endif
+
+if CPU_UNDEFINED
+libisal_la_SOURCES += ${lsrc_base_aliases}
+endif
+
 nobase_include_HEADERS = isa-l.h
 libisal_la_LDFLAGS = $(AM_LDFLAGS) \
 	-version-info $(LIBISAL_CURRENT):$(LIBISAL_REVISION):$(LIBISAL_AGE)
