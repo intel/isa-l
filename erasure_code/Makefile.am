@@ -1,5 +1,5 @@
 ########################################################################
-#  Copyright(c) 2011-2015 Intel Corporation All rights reserved.
+#  Copyright(c) 2011-2017 Intel Corporation All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions 
@@ -28,7 +28,9 @@
 ########################################################################
 
 lsrc         += erasure_code/ec_highlevel_func.c \
-		erasure_code/ec_base.c \
+		erasure_code/ec_base.c
+
+lsrc_x86_64  += \
 		erasure_code/gf_vect_mul_sse.asm \
 		erasure_code/gf_vect_mul_avx.asm \
 		erasure_code/gf_vect_dot_prod_sse.asm  \
@@ -70,7 +72,8 @@ lsrc         += erasure_code/ec_highlevel_func.c \
 		erasure_code/ec_multibinary.asm
 
 #if HAVE_AVX512
-lsrc +=		erasure_code/gf_vect_dot_prod_avx512.asm \
+lsrc_x86_64  += \
+		erasure_code/gf_vect_dot_prod_avx512.asm \
 		erasure_code/gf_2vect_dot_prod_avx512.asm \
 		erasure_code/gf_3vect_dot_prod_avx512.asm \
 		erasure_code/gf_4vect_dot_prod_avx512.asm \
@@ -79,9 +82,8 @@ lsrc +=		erasure_code/gf_vect_dot_prod_avx512.asm \
 		erasure_code/gf_3vect_mad_avx512.asm \
 		erasure_code/gf_4vect_mad_avx512.asm
 
-lsrc32	     += erasure_code/ec_highlevel_func.c \
+lsrc_x86_32  += \
 		erasure_code/ec_multibinary.asm \
-		erasure_code/ec_base.c \
 		erasure_code/gf_vect_dot_prod_avx.asm \
 		erasure_code/gf_2vect_dot_prod_avx.asm \
 		erasure_code/gf_3vect_dot_prod_avx.asm \
