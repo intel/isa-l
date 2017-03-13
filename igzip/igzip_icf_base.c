@@ -53,7 +53,7 @@ void isal_deflate_icf_body_base(struct isal_zstream *stream)
 	    sizeof(struct deflate_icf);
 	next_out = start_out;
 
-	while (next_in < end_in - ISAL_LOOK_AHEAD) {
+	while (next_in + ISAL_LOOK_AHEAD < end_in) {
 
 		if (next_out >= end_out) {
 			state->state = ZSTATE_CREATE_HDR;
@@ -140,7 +140,7 @@ void isal_deflate_icf_finish_base(struct isal_zstream *stream)
 	    sizeof(struct deflate_icf);
 	next_out = start_out;
 
-	while (next_in < end_in - 3) {
+	while (next_in + 3 < end_in) {
 		if (next_out >= end_out) {
 			state->state = ZSTATE_CREATE_HDR;
 			update_state(stream, start_in, next_in, end_in, start_out, next_out,

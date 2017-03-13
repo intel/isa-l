@@ -45,7 +45,7 @@ void isal_deflate_body_base(struct isal_zstream *stream)
 	end_in = start_in + stream->avail_in;
 	next_in = start_in;
 
-	while (next_in < end_in - ISAL_LOOK_AHEAD) {
+	while (next_in + ISAL_LOOK_AHEAD < end_in) {
 
 		if (is_full(&state->bitbuf)) {
 			update_state(stream, start_in, next_in, end_in);
@@ -125,7 +125,7 @@ void isal_deflate_finish_base(struct isal_zstream *stream)
 	end_in = start_in + stream->avail_in;
 	next_in = start_in;
 
-	while (next_in < end_in - 3) {
+	while (next_in + 3 < end_in) {
 		if (is_full(&state->bitbuf)) {
 			update_state(stream, start_in, next_in, end_in);
 			return;
