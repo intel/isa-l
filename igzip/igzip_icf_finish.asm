@@ -88,11 +88,11 @@ isal_deflate_icf_finish_01:
 	PUSH_ALL	rbx, rsi, rdi, rbp, r12, r13, r14, r15
 	sub	rsp, stack_size
 
-%ifidn __OUTPUT_FORMAT__, elf64
-	mov	rcx, rdi
-%endif
-
+%ifidn __OUTPUT_FORMAT__, win64
 	mov	stream, rcx
+%else
+	mov	stream, rdi
+%endif
 
 	; state->bitbuf.set_buf(stream->next_out, stream->avail_out);
 	mov	tmp1, [stream + _level_buf]

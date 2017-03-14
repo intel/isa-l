@@ -102,7 +102,7 @@ struct huff_code {
 		};
 		struct {
 			uint32_t code_and_extra:24;
-			uint8_t length2;
+			uint32_t length2:8;
 		};
 	};
 };

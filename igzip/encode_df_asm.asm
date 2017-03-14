@@ -22,38 +22,36 @@
 ; returns final token pointer
 ; equal to token_end if successful
 ;    uint32_t* encode_df(uint32_t *token_start, uint32_t *token_end,
-;                            BitBuf *bb, uint32_t *trees);
+;                            BitBuf *out_buf, uint32_t *trees);
 
 %ifidn __OUTPUT_FORMAT__, win64
-%define ARG1 rcx
-%define ARG2 rdx
-%define ARG3 r8
-%define ARG4 r9
-%define TMP1 rsi
-%define TMP2 rdi
-%define hufftables	ARG4
+%define arg1 rcx
+%define arg2 rdx
+%define arg3 r8
+%define arg4 r9
+%define sym		rsi
+%define dsym		rdi
+%define hufftables	r9
 %define ptr		r11
 %else
 ; Linux
-%define ARG1 rdi
-%define ARG2 rsi
-%define ARG3 rdx
-%define ARG4 rcx
-%define TMP1 r8
-%define TMP2 r9
+%define arg1 rdi
+%define arg2 rsi
+%define arg3 rdx
+%define arg4 rcx
+%define sym		r9
+%define dsym		r8
 %define hufftables	r11
-%define ptr		ARG1
+%define ptr		rdi
 %endif
 
-%define in_buf_end	ARG2
-%define bb		ARG3
-%define out_buf		bb
+%define in_buf_end	arg2
+%define bitbuf		arg3
+%define out_buf		bitbuf
 ; bit_count is rcx
 %define bits		rax
 %define data		r12
 %define tmp		rbx
-%define sym		TMP1
-%define dsym		TMP2
 %define len 		dsym
 %define tmp2 		r10
 %define end_ptr		rbp
@@ -85,28 +83,79 @@
 %define VECTOR_LOOP_PROCESSED (2 * VECTOR_SIZE)
 %define VECTOR_SLOP 0x20 - 8
 
+gpr_save_mem_offset	equ	0
+gpr_save_mem_size	equ	8 * 6
+xmm_save_mem_offset	equ	gpr_save_mem_offset + gpr_save_mem_size
+xmm_save_mem_size	equ	10 * 16
+bitbuf_mem_offset	equ	xmm_save_mem_offset + xmm_save_mem_size
+bitbuf_mem_size		equ	8
+stack_size		equ	gpr_save_mem_size + xmm_save_mem_size + bitbuf_mem_size
+
+
+%macro FUNC_SAVE 0
+	sub	rsp, stack_size
+	mov	[rsp + gpr_save_mem_offset + 0*8], rbx
+	mov	[rsp + gpr_save_mem_offset + 1*8], rbp
+	mov	[rsp + gpr_save_mem_offset + 2*8], r12
+
+%ifidn __OUTPUT_FORMAT__, win64
+	mov	[rsp + gpr_save_mem_offset + 3*8], rsi
+	mov	[rsp + gpr_save_mem_offset + 4*8], rdi
+
+	MOVDQU	[rsp + xmm_save_mem_offset + 0*8], xmm6
+	MOVDQU	[rsp + xmm_save_mem_offset + 1*8], xmm7
+	MOVDQU	[rsp + xmm_save_mem_offset + 2*8], xmm8
+	MOVDQU	[rsp + xmm_save_mem_offset + 3*8], xmm9
+	MOVDQU	[rsp + xmm_save_mem_offset + 4*8], xmm10
+	MOVDQU	[rsp + xmm_save_mem_offset + 5*8], xmm11
+	MOVDQU	[rsp + xmm_save_mem_offset + 6*8], xmm12
+	MOVDQU	[rsp + xmm_save_mem_offset + 7*8], xmm13
+	MOVDQU	[rsp + xmm_save_mem_offset + 8*8], xmm14
+	MOVDQU	[rsp + xmm_save_mem_offset + 9*8], xmm15
+%endif
+
+%endm
+
+%macro FUNC_RESTORE 0
+	mov	rbx, [rsp + gpr_save_mem_offset + 0*8]
+	mov	rbp, [rsp + gpr_save_mem_offset + 1*8]
+	mov	r12, [rsp + gpr_save_mem_offset + 2*8]
+
+%ifidn __OUTPUT_FORMAT__, win64
+	mov	rsi, [rsp + gpr_save_mem_offset + 3*8]
+	mov	rdi, [rsp + gpr_save_mem_offset + 4*8]
+
+	MOVDQU	xmm6, [rsp + xmm_save_mem_offset + 0*8]
+	MOVDQU	xmm7, [rsp + xmm_save_mem_offset + 1*8]
+	MOVDQU	xmm8, [rsp + xmm_save_mem_offset + 2*8]
+	MOVDQU	xmm9, [rsp + xmm_save_mem_offset + 3*8]
+	MOVDQU	xmm10, [rsp + xmm_save_mem_offset + 4*8]
+	MOVDQU	xmm11, [rsp + xmm_save_mem_offset + 5*8]
+	MOVDQU	xmm12, [rsp + xmm_save_mem_offset + 6*8]
+	MOVDQU	xmm13, [rsp + xmm_save_mem_offset + 7*8]
+	MOVDQU	xmm14, [rsp + xmm_save_mem_offset + 8*8]
+	MOVDQU	xmm15, [rsp + xmm_save_mem_offset + 9*8]
+%endif
+	add	rsp, stack_size
+
+%endmacro
+
 global encode_deflate_icf_ %+ ARCH
 encode_deflate_icf_ %+ ARCH:
-	push	rbx
-%ifidn __OUTPUT_FORMAT__, win64
-	push	rsi
-	push	rdi
-%endif
-	push	r12
-	push	rbp
-	push	bb
+	FUNC_SAVE
 
-	; free up rcx
-%ifidn __OUTPUT_FORMAT__, win64
-	mov	ptr, ARG1
-%else
-	mov	hufftables, ARG4
+%ifidn ptr, arg1
+	mov	ptr, arg1
+%endif
+%ifnidn hufftables, arg4
+	mov	hufftables, arg4
 %endif
 
-	mov	bits, [bb + _m_bits]
-	mov	ecx, [bb + _m_bit_count]
-	mov	end_ptr, [bb + _m_out_end]
-	mov	out_buf, [bb + _m_out_buf]	; clobbers bb
+	mov	[rsp + bitbuf_mem_offset], bitbuf
+	mov	bits, [bitbuf + _m_bits]
+	mov	ecx, [bitbuf + _m_bit_count]
+	mov	end_ptr, [bitbuf + _m_out_end]
+	mov	out_buf, [bitbuf + _m_out_buf]	; clobbers bitbuf
 
 	sub	end_ptr, VECTOR_SLOP
 	sub	in_buf_end, VECTOR_LOOP_PROCESSED
@@ -443,20 +492,14 @@ encode_deflate_icf_ %+ ARCH:
 	jb	.finish_loop
 
 .overflow:
-	pop	TMP1	; TMP1 now points to bb
-	mov	[TMP1 + _m_bits], bits
-	mov	[TMP1 + _m_bit_count], ecx
-	mov	[TMP1 + _m_out_buf], out_buf
-
-	pop	rbp
-	pop	r12
-%ifidn __OUTPUT_FORMAT__, win64
-	pop	rdi
-	pop	rsi
-%endif
-	pop	rbx
+	mov	tmp, [rsp + bitbuf_mem_offset]
+	mov	[tmp + _m_bits], bits
+	mov	[tmp + _m_bit_count], ecx
+	mov	[tmp + _m_out_buf], out_buf
 
 	mov	rax, ptr
+
+	FUNC_RESTORE
 
 	ret
 

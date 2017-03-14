@@ -27,11 +27,13 @@
 
 	global build_huff_tree
 build_huff_tree:
-	push	child
-	push	tmp32
+%ifidn __OUTPUT_FORMAT__, win64
+	push	rsi
+	push	rdi
+%endif
 	push	r12
-;	mov	node_ptr, 3*286
-	mov	node_ptr, arg3 ;;;@@@@
+
+	mov	node_ptr, arg3
 .main_loop:
 	; REMOVE_MIN64(heap, heap_size, h1);
 	mov	h2, [heap + heap_size*8]
@@ -64,15 +66,19 @@ build_huff_tree:
 	mov	[heap + node_ptr*8], h1 %+ w
 
 	pop	r12
+%ifidn __OUTPUT_FORMAT__, win64
 	pop	rdi
 	pop	rsi
+%endif
 	ret
 
 align 32
 	global	build_heap_asm
 build_heap_asm:
+%ifidn __OUTPUT_FORMAT__, win64
 	push	rsi
 	push	rdi
+%endif
 	push	r12
 	mov	qword [heap + heap_size*8 + 8], -1
 	mov	i, heap_size
@@ -84,6 +90,8 @@ build_heap_asm:
 	jnz	.loop
 
 	pop	r12
+%ifidn __OUTPUT_FORMAT__, win64
 	pop	rdi
 	pop	rsi
+%endif
 	ret
