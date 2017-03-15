@@ -4,10 +4,10 @@
 
 #include "flatten_ll.h"
 
-void flatten_ll(uint16_t * ll_hist)
+void flatten_ll(uint32_t * ll_hist)
 {
 	uint32_t i, j;
-	uint16_t *s = ll_hist, x, *p;
+	uint32_t *s = ll_hist, x, *p;
 
 	s[265] += s[266];
 	s[266] = s[267] + s[268];

@@ -66,12 +66,13 @@ FIELD	_m_out_start,	8,	8
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%define HIST_ELEM_SIZE 4
 
 START_FIELDS	;; isal_mod_hist
 
 ;;      name		size    align
-FIELD	_d_hist,	30*2,	2
-FIELD	_ll_hist,	513*2,	2
+FIELD	_d_hist,	30*HIST_ELEM_SIZE,	HIST_ELEM_SIZE
+FIELD	_ll_hist,	513*HIST_ELEM_SIZE,	HIST_ELEM_SIZE
 
 %assign _isal_mod_hist_size	_FIELD_OFFSET
 %assign _isal_mod_hist_align	_STRUCT_ALIGN

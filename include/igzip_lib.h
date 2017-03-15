@@ -222,8 +222,8 @@ struct isal_huff_histogram {
 };
 
 struct isal_mod_hist {
-    uint16_t d_hist[30];
-    uint16_t ll_hist[513];
+    uint32_t d_hist[30];
+    uint32_t ll_hist[513];
 };
 
 /* Data sizes for level specific data options */

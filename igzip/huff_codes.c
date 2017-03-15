@@ -240,7 +240,7 @@ uint32_t convert_length_to_len_sym(uint32_t length)
 // and bl_count is the count of the lengths
 
 /* Init heap with the histogram, and return the histogram size */
-static inline uint32_t init_heap16(struct heap_tree *heap_space, uint16_t * histogram,
+static inline uint32_t init_heap32(struct heap_tree *heap_space, uint32_t * histogram,
 				   uint32_t hist_size)
 {
 	uint32_t heap_size, i;
@@ -997,8 +997,8 @@ create_hufftables_icf(struct BitBuf2 *bb, struct hufftables_icf *hufftables,
 
 	struct huff_code *ll_codes = hufftables->lit_len_table;
 	struct huff_code *d_codes = hufftables->dist_table;
-	uint16_t *ll_hist = hist->ll_hist;
-	uint16_t *d_hist = hist->d_hist;
+	uint32_t *ll_hist = hist->ll_hist;
+	uint32_t *d_hist = hist->d_hist;
 
 	flatten_ll(hist->ll_hist);
 
@@ -1006,12 +1006,12 @@ create_hufftables_icf(struct BitBuf2 *bb, struct hufftables_icf *hufftables,
 	if (ll_hist[256] == 0)
 		ll_hist[256] = 1;
 
-	heap_size = init_heap16(&heap_space, ll_hist, LIT_LEN);
+	heap_size = init_heap32(&heap_space, ll_hist, LIT_LEN);
 	gen_huff_code_lens(&heap_space, heap_size, bl_count,
 			   ll_codes, LIT_LEN, MAX_DEFLATE_CODE_LEN);
 	max_ll_code = set_huff_codes(ll_codes, LIT_LEN, bl_count);
 
-	heap_size = init_heap16(&heap_space, d_hist, DIST_LEN);
+	heap_size = init_heap32(&heap_space, d_hist, DIST_LEN);
 	gen_huff_code_lens(&heap_space, heap_size, bl_count, d_codes,
 			   DIST_LEN, MAX_DEFLATE_CODE_LEN);
 	max_d_code = set_dist_huff_codes(d_codes, bl_count);
