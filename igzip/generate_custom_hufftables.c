@@ -47,44 +47,25 @@
  *
  * *WARNING* generate custom hufftables must be compiled with a IGZIP_HIST_SIZE
  * that is at least as large as the IGZIP_HIST_SIZE used by igzip. By default
- * IGZIP_HIST_SIZE is 8K, the maximum usable IGZIP_HIST_SIZE is 32K. The reason
+ * IGZIP_HIST_SIZE is 32K, the maximum usable IGZIP_HIST_SIZE is 32K. The reason
  * for this is to generate better compression. Igzip cannot produce look back
  * distances with sizes larger than the IGZIP_HIST_SIZE igzip was compiled with,
  * so look back distances with sizes larger than IGZIP_HIST_SIZE are not
- * assigned a huffman code.
+ * assigned a huffman code. The definition of LONGER_HUFFTABLES must be
+ * consistent as well since that definition changes the size of the structures
+ * printed by this tool.
  *
- * To improve compression ratio, the compile time option LIT_SUB is provided to
- * allow generating custom hufftables which only use a subset of all possible
- * literals. This can be useful for getting better compression when it is known
- * that the data being compressed will never contain certain symbols, for
- * example text files. If this option is used, it needs to be checked that every
- * possible literal is in fact given a valid code in the output hufftable. This
- * can be done by checking that every required literal has a positive value for
- * the length of the code associated with that literal. Literals which have not
- * been given codes will have a code length of zero. The compile time option
- * PRINT_CODES (described below) can be used to help manually perform this
- * check.
- *
- * The compile time parameter PRINT_CODES causes the literal/length huffman code
- * and the distance huffman code created by generate_custom_hufftables to be
- * printed out. This is printed out where each line corresponds to a different
- * symbol. The first column is the symbol used to represent each literal (Lit),
- * end of block symbol (EOB), length (Len) or distance (Dist), the second column
- * is the associated code value, and the third column is the length in bits of
- * that code.
  */
 
 #include <stdint.h>
 #include <stdio.h>
 #include <inttypes.h>
-#include "huff_codes.h"
-#include "bitbuf2.h"
+#include <string.h>
+#include <stdlib.h>
+#include "igzip_lib.h"
 
 /*These max code lengths are limited by how the data is stored in
  * hufftables.asm. The deflate standard max is 15.*/
-
-#define LONG_DCODE_OFFSET 26
-#define SHORT_DCODE_OFFSET 0
 
 #define MAX_HEADER_SIZE ISAL_DEF_MAX_HDR_SIZE
 
@@ -184,74 +165,60 @@ void fprint_uint32_table(FILE * outfile, uint32_t * table, uint64_t length, char
 
 }
 
-/**
- * @brief Prints a table of uint64_t elements to a file.
- * @param outfile: the file the table is printed to.
- * @param table: the table to be printed.
- * @param length: number of elements to be printed.
- * @param header: header to append in front of the table.
- * @param footer: footer to append at the end of the table.
- */
-void fprint_uint64_table(FILE * outfile, uint64_t * table, uint64_t length, char *header,
-			 char *footer)
-{
-	int i;
-	fprintf(outfile, "%s\n", header);
-	for (i = 0; i < length - 1; i++)
-		fprintf(outfile, "\t0x%016" PRIx64 ",\n", table[i]);
-	fprintf(outfile, "\t0x%016" PRIx64, table[i]);
-	fprintf(outfile, "%s", footer);
-
-}
-
-void fprint_hufftables(FILE * output_file, char *hufftables_name, uint8_t * header,
-		       uint32_t bit_count, uint16_t * lit_code_table,
-		       uint8_t * lit_code_size_table, uint16_t * dcodes_code_table,
-		       uint8_t * dcodes_code_size_table, uint32_t * packed_len_table,
-		       uint32_t * packed_dist_table)
+void fprint_hufftables(FILE * output_file, char *hufftables_name,
+		       struct isal_hufftables *hufftables)
 {
 	fprintf(output_file, "struct isal_hufftables %s = {\n\n", hufftables_name);
 
-	fprint_uint8_table(output_file, header, (bit_count + 7) / 8,
-			   "\t.deflate_hdr = {", "\t},\n\n", "\t\t");
-	fprintf(output_file, "\t.deflate_hdr_count = %d,\n", bit_count / 8);
-	fprintf(output_file, "\t.deflate_hdr_extra_bits = %d,\n\n", bit_count & 7);
+	fprint_uint8_table(output_file, hufftables->deflate_hdr,
+			   hufftables->deflate_hdr_count +
+			   (hufftables->deflate_hdr_extra_bits + 7) / 8,
+			   "\t.deflate_hdr = {", "},\n\n", "\t\t");
 
-	fprint_uint32_table(output_file, packed_dist_table, SHORT_DIST_TABLE_SIZE,
-			    "\t.dist_table = {", ",\n", "\t\t");
-	fprint_uint32_table(output_file, &packed_dist_table[SHORT_DIST_TABLE_SIZE],
-			    LONG_DIST_TABLE_SIZE - SHORT_DIST_TABLE_SIZE,
-			    "#ifdef LONGER_HUFFTABLE",
-			    "\n#endif /* LONGER_HUFFTABLE */\n\t},\n\n", "\t\t");
+	fprintf(output_file, "\t.deflate_hdr_count = %d,\n", hufftables->deflate_hdr_count);
+	fprintf(output_file, "\t.deflate_hdr_extra_bits = %d,\n\n",
+		hufftables->deflate_hdr_extra_bits);
 
-	fprint_uint32_table(output_file, packed_len_table, LEN_TABLE_SIZE, "\t.len_table = {",
-			    "\t},\n\n", "\t\t");
-	fprint_uint16_table(output_file, lit_code_table, LIT_TABLE_SIZE, "\t.lit_table = {",
-			    "\t},\n\n", "\t\t");
-	fprint_uint8_table(output_file, lit_code_size_table, LIT_TABLE_SIZE,
-			   "\t.lit_table_sizes = {", "\t},\n\n", "\t\t");
+	fprint_uint32_table(output_file, hufftables->dist_table, IGZIP_DIST_TABLE_SIZE,
+			    "\t.dist_table = {", "},\n\n", "\t\t");
 
-	fprintf(output_file, "#ifndef LONGER_HUFFTABLE\n");
-	fprint_uint16_table(output_file, dcodes_code_table + SHORT_DCODE_OFFSET,
-			    DIST_LEN - SHORT_DCODE_OFFSET, "\t.dcodes = {", "\t},\n\n",
-			    "\t\t");
-	fprint_uint8_table(output_file, dcodes_code_size_table + SHORT_DCODE_OFFSET,
-			   DIST_LEN - SHORT_DCODE_OFFSET, "\t.dcodes_sizes = {", "\t}\n",
-			   "\t\t");
-	fprintf(output_file, "#else\n");
-	fprint_uint16_table(output_file, dcodes_code_table + LONG_DCODE_OFFSET,
-			    DIST_LEN - LONG_DCODE_OFFSET, "\t.dcodes = {", "\t},\n\n", "\t\t");
-	fprint_uint8_table(output_file, dcodes_code_size_table + LONG_DCODE_OFFSET,
-			   DIST_LEN - LONG_DCODE_OFFSET, "\t.dcodes_sizes = {", "\t}\n",
-			   "\t\t");
-	fprintf(output_file, "#endif\n");
+	fprint_uint32_table(output_file, hufftables->len_table, IGZIP_LEN_TABLE_SIZE,
+			    "\t.len_table = {", "},\n\n", "\t\t");
+
+	fprint_uint16_table(output_file, hufftables->lit_table, IGZIP_LIT_TABLE_SIZE,
+			    "\t.lit_table = {", "},\n\n", "\t\t");
+	fprint_uint8_table(output_file, hufftables->lit_table_sizes, IGZIP_LIT_TABLE_SIZE,
+			   "\t.lit_table_sizes = {", "},\n\n", "\t\t");
+
+	fprint_uint16_table(output_file, hufftables->dcodes,
+			    ISAL_DEF_DIST_SYMBOLS - IGZIP_DECODE_OFFSET,
+			    "\t.dcodes = {", "},\n\n", "\t\t");
+	fprint_uint8_table(output_file, hufftables->dcodes_sizes,
+			   ISAL_DEF_DIST_SYMBOLS - IGZIP_DECODE_OFFSET,
+			   "\t.dcodes_sizes = {", "}\n", "\t\t");
 	fprintf(output_file, "};\n");
 }
 
 void fprint_header(FILE * output_file)
 {
+
 	fprintf(output_file, "#include <stdint.h>\n");
 	fprintf(output_file, "#include <igzip_lib.h>\n\n");
+
+	fprintf(output_file, "#if IGZIP_HIST_SIZE > %d\n"
+		"# error \"Invalid history size for the custom hufftable\"\n"
+		"#endif\n", IGZIP_HIST_SIZE);
+
+#ifdef LONGER_HUFFTABLE
+	fprintf(output_file, "#ifndef LONGER_HUFFTABLE\n"
+		"# error \"Custom hufftable requires LONGER_HUFFTABLE to be defined \"\n"
+		"#endif\n");
+#else
+	fprintf(output_file, "#ifdef LONGER_HUFFTABLE\n"
+		"# error \"Custom hufftable requires LONGER_HUFFTABLE to not be defined \"\n"
+		"#endif\n");
+#endif
+	fprintf(output_file, "\n");
 
 	fprintf(output_file, "const uint8_t gzip_hdr[] = {\n"
 		"\t0x1f, 0x8b, 0x08, 0x00, 0x00,\n" "\t0x00, 0x00, 0x00, 0x00, 0xff\t};\n\n");
@@ -262,27 +229,12 @@ void fprint_header(FILE * output_file)
 
 int main(int argc, char *argv[])
 {
-	int i;
 	long int file_length;
 	uint8_t *stream = NULL;
+	struct isal_hufftables hufftables;
 	struct isal_huff_histogram histogram;
-	uint64_t *lit_histogram = histogram.lit_len_histogram;
-	uint64_t *dist_histogram = histogram.dist_histogram;
-	uint8_t header[MAX_HEADER_SIZE];
+	struct isal_zstream tmp_stream;
 	FILE *file;
-	struct huff_tree lit_tree, dist_tree;
-	struct huff_tree lit_tree_array[2 * LIT_LEN - 1], dist_tree_array[2 * DIST_LEN - 1];
-	struct huff_code lit_huff_table[LIT_LEN], dist_huff_table[DIST_LEN];
-	uint16_t count_static_lit[16] = { 0, 0, 0, 0, 0, 0, 0, 24, 152, 112, 0, 0, 0, 0, 0 };
-	uint16_t count_static_dist[16] = { 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-	uint64_t bit_count;
-	uint32_t packed_len_table[LEN_TABLE_SIZE];
-	uint32_t packed_dist_table[LONG_DIST_TABLE_SIZE];
-	uint16_t lit_code_table[LIT_TABLE_SIZE];
-	uint16_t dcodes_code_table[DIST_LEN];
-	uint8_t lit_code_size_table[LIT_TABLE_SIZE];
-	uint8_t dcodes_code_size_table[DIST_LEN];
-	int max_dist = convert_dist_to_dist_sym(D);
 
 	if (argc == 1) {
 		printf("Error, no input file.\n");
@@ -290,10 +242,6 @@ int main(int argc, char *argv[])
 	}
 
 	memset(&histogram, 0, sizeof(histogram));	/* Initialize histograms. */
-	memset(lit_tree_array, 0, sizeof(lit_tree_array));
-	memset(dist_tree_array, 0, sizeof(dist_tree_array));
-	memset(lit_huff_table, 0, sizeof(lit_huff_table));
-	memset(dist_huff_table, 0, sizeof(dist_huff_table));
 
 	while (argc > 1) {
 		printf("Processing %s\n", argv[argc - 1]);
@@ -329,81 +277,7 @@ int main(int argc, char *argv[])
 		argc--;
 	}
 
-	/* Create a huffman tree corresponding to the histograms created in
-	 * gen_histogram*/
-#ifdef LIT_SUB
-	int j;
-	/* Guarantee every possible repeat length is given a symbol. It is hard
-	 * to guarantee data will never have a repeat of a given length */
-	for (j = LIT_TABLE_SIZE; j < LIT_LEN; j++)
-		if (lit_histogram[j] == 0)
-			lit_histogram[j]++;
-
-	lit_tree = create_symbol_subset_huff_tree(lit_tree_array, lit_histogram, LIT_LEN);
-#else
-	lit_tree = create_huff_tree(lit_tree_array, lit_histogram, LIT_LEN);
-#endif
-	dist_tree = create_huff_tree(dist_tree_array, dist_histogram, max_dist + 1);
-
-	/* Create a look up table to represent huffman tree above in deflate
-	 * standard form after it has been modified to satisfy max depth
-	 * criteria.*/
-	if (create_huff_lookup(lit_huff_table, LIT_LEN, lit_tree, MAX_DEFLATE_CODE_LEN) > 0) {
-		printf("Error, code with invalid length for Deflate standard.\n");
-		return 1;
-	}
-
-	if (create_huff_lookup(dist_huff_table, DIST_LEN, dist_tree, MAX_DEFLATE_CODE_LEN) > 0) {
-		printf("Error, code with invalid length for Deflate standard.\n");
-		return 1;
-	}
-
-	if (are_hufftables_useable(lit_huff_table, dist_huff_table)) {
-		if (create_huff_lookup
-		    (lit_huff_table, LIT_LEN, lit_tree, MAX_SAFE_LIT_CODE_LEN) > 0) {
-			printf("Error, code with invalid length for Deflate standard.\n");
-			return 1;
-		}
-		if (create_huff_lookup
-		    (dist_huff_table, DIST_LEN, dist_tree, MAX_SAFE_DIST_CODE_LEN) > 0) {
-			printf("Error, code with invalid length for Deflate standard.\n");
-			return 1;
-		}
-		if (are_hufftables_useable(lit_huff_table, dist_huff_table)) {
-			printf("Error, hufftable is not usable\n");
-			return 1;
-		}
-	}
-#ifdef PRINT_CODES
-	printf("Lit/Len codes\n");
-	for (i = 0; i < LIT_TABLE_SIZE - 1; i++)
-		printf("Lit %3d: Code 0x%04x, Code_Len %d\n", i, lit_huff_table[i].code,
-		       lit_huff_table[i].length);
-
-	printf("EOB %3d: Code 0x%04x, Code_Len %d\n", 256, lit_huff_table[256].code,
-	       lit_huff_table[256].length);
-
-	for (i = LIT_TABLE_SIZE; i < LIT_LEN; i++)
-		printf("Len %d: Code 0x%04x, Code_Len %d\n", i, lit_huff_table[i].code,
-		       lit_huff_table[i].length);
-	printf("\n");
-
-	printf("Dist codes \n");
-	for (i = 0; i < DIST_LEN; i++)
-		printf("Dist %2d: Code 0x%04x, Code_Len %d\n", i, dist_huff_table[i].code,
-		       dist_huff_table[i].length);
-	printf("\n");
-#endif
-
-	create_code_tables(lit_code_table, lit_code_size_table, LIT_TABLE_SIZE,
-			   lit_huff_table);
-	create_code_tables(dcodes_code_table, dcodes_code_size_table, DIST_LEN,
-			   dist_huff_table);
-	create_packed_len_table(packed_len_table, lit_huff_table);
-	create_packed_dist_table(packed_dist_table, LONG_DIST_TABLE_SIZE, dist_huff_table);
-
-	bit_count =
-	    create_header(header, sizeof(header), lit_huff_table, dist_huff_table, LAST_BLOCK);
+	isal_create_hufftables(&hufftables, &histogram);
 
 	file = fopen("hufftables_c.c", "w");
 	if (file == NULL) {
@@ -415,42 +289,13 @@ int main(int argc, char *argv[])
 
 	fprintf(file, "\n");
 
-	fprint_hufftables(file, "hufftables_default", header, bit_count, lit_code_table,
-			  lit_code_size_table, dcodes_code_table, dcodes_code_size_table,
-			  packed_len_table, packed_dist_table);
+	fprint_hufftables(file, "hufftables_default", &hufftables);
 
 	fprintf(file, "\n");
 
-	/* Generate the static Huffman code defined in RFC 1951 */
-	memset(lit_huff_table, 0, sizeof(lit_huff_table));
-	memset(dist_huff_table, 0, sizeof(dist_huff_table));
-
-	for (i = 0; i < 144; i++)
-		lit_huff_table[i].length = 8;
-	for (i = 144; i < 256; i++)
-		lit_huff_table[i].length = 9;
-	for (i = 256; i < 280; i++)
-		lit_huff_table[i].length = 7;
-	for (i = 280; i < 286; i++)
-		lit_huff_table[i].length = 8;
-
-	for (i = 0; i < 30; i++)
-		dist_huff_table[i].length = 5;
-
-	set_huff_codes(lit_huff_table, LIT_LEN, count_static_lit);
-	set_huff_codes(dist_huff_table, DIST_LEN, count_static_dist);
-	create_code_tables(lit_code_table, lit_code_size_table, LIT_TABLE_SIZE,
-			   lit_huff_table);
-	create_code_tables(dcodes_code_table, dcodes_code_size_table, DIST_LEN,
-			   dist_huff_table);
-	create_packed_len_table(packed_len_table, lit_huff_table);
-	create_packed_dist_table(packed_dist_table, LONG_DIST_TABLE_SIZE, dist_huff_table);
-	bit_count = 3;
-	header[0] = 0x03;
-
-	fprint_hufftables(file, "hufftables_static", header, bit_count, lit_code_table,
-			  lit_code_size_table, dcodes_code_table, dcodes_code_size_table,
-			  packed_len_table, packed_dist_table);
+	isal_deflate_stateless_init(&tmp_stream);
+	isal_deflate_set_hufftables(&tmp_stream, NULL, IGZIP_HUFFTABLE_STATIC);
+	fprint_hufftables(file, "hufftables_static", tmp_stream.hufftables);
 
 	fclose(file);
 
