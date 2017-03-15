@@ -91,7 +91,6 @@ igzip_igzip_rand_test_LDADD = libisal.la
 
 # Include tools to make custom Huffman tables based on sample data
 other_tests += igzip/generate_custom_hufftables
-other_tests += igzip/generate_constant_block_header
 other_src   += igzip/huff_codes.h
 lsrc        += igzip/huff_codes.c
 
