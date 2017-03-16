@@ -761,9 +761,6 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 
 	uint32_t crc32 = 0;
 	uint32_t stored_len;
-	uint32_t dyn_min_len;
-	uint32_t min_len;
-	uint32_t select_stored_blk = 0;
 
 	/* Final block has already been written */
 	stream->internal_state.has_eob_hdr = 0;
@@ -792,42 +789,28 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 	   contains the EOB
 	 */
 
-	dyn_min_len = stream->hufftables->deflate_hdr_count + 1;
-
-	if (stream->gzip_flag == IGZIP_GZIP) {
-		dyn_min_len += gzip_hdr_bytes + gzip_trl_bytes + 1;
+	if (stream->gzip_flag == IGZIP_GZIP)
 		stored_len += gzip_hdr_bytes + gzip_trl_bytes;
 
-	} else if (stream->gzip_flag == IGZIP_GZIP_NO_HDR) {
-		dyn_min_len += gzip_trl_bytes + 1;
+	else if (stream->gzip_flag == IGZIP_GZIP_NO_HDR)
 		stored_len += gzip_trl_bytes;
-	}
-
-	min_len = dyn_min_len;
-
-	if (stored_len < dyn_min_len) {
-		min_len = stored_len;
-		select_stored_blk = 1;
-	}
 
 	/*
 	   the output buffer should be no less than 8 bytes
 	   while empty stored deflate block is 5 bytes only
 	 */
-	if (avail_out < min_len || stream->avail_out < 8)
+	if (stream->avail_out < 8)
 		return STATELESS_OVERFLOW;
 
-	if (!select_stored_blk) {
-		if (isal_deflate_int_stateless(stream) == COMP_OK)
-			return COMP_OK;
-		else {
-			if (stream->flush == FULL_FLUSH) {
-				stream->internal_state.file_start =
-				    (uint8_t *) & stream->internal_state.buffer;
-				reset_match_history(stream);
-			}
-			stream->internal_state.has_eob_hdr = 0;
+	if (isal_deflate_int_stateless(stream) == COMP_OK)
+		return COMP_OK;
+	else {
+		if (stream->flush == FULL_FLUSH) {
+			stream->internal_state.file_start =
+			    (uint8_t *) & stream->internal_state.buffer;
+			reset_match_history(stream);
 		}
+		stream->internal_state.has_eob_hdr = 0;
 	}
 
 	if (avail_out < stored_len)
