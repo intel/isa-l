@@ -39,7 +39,7 @@
 # define USE_BITBUFB
 #endif
 
-#if defined (__unix__) || (__APPLE__)
+#if defined (__unix__) || (__APPLE__) || (__MINGW32__)
 #define _mm_stream_si64x(dst, src) *((uint64_t*)dst) = src
 #else
 #include <intrin.h>

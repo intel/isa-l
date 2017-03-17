@@ -144,7 +144,7 @@ global encode_deflate_icf_ %+ ARCH
 encode_deflate_icf_ %+ ARCH:
 	FUNC_SAVE
 
-%ifidn ptr, arg1
+%ifnidn ptr, arg1
 	mov	ptr, arg1
 %endif
 %ifnidn hufftables, arg4

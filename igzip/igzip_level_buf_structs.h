@@ -11,6 +11,6 @@ struct level_2_buf {
 	uint8_t deflate_hdr[ISAL_DEF_MAX_HDR_SIZE];
 	struct deflate_icf *icf_buf_next;
 	uint64_t icf_buf_avail_out;
-	struct deflate_icf icf_buf_start[0];
+	struct deflate_icf icf_buf_start[];
 };
 #endif
