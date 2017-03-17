@@ -64,13 +64,18 @@ perf_tests  +=  igzip/igzip_perf igzip/igzip_sync_flush_perf
 other_tests +=  igzip/igzip_file_perf igzip/igzip_sync_flush_file_perf igzip/igzip_stateless_file_perf igzip/igzip_hist_perf
 other_tests +=  igzip/igzip_semi_dyn_file_perf
 
-other_src   += 	igzip/bitbuf2.asm  igzip/data_struct2.asm \
+other_src   += 	igzip/bitbuf2.asm  \
+		igzip/data_struct2.asm \
 		igzip/inflate_data_structs.asm \
-		igzip/igzip_body.asm igzip/igzip_finish.asm \
-		igzip/lz0a_const.asm igzip/options.asm igzip/stdmac.asm igzip/igzip_compare_types.asm \
+		igzip/igzip_body.asm \
+		igzip/igzip_icf_body.asm \
+		igzip/igzip_finish.asm \
+		igzip/lz0a_const.asm \
+		igzip/options.asm \
+		igzip/stdmac.asm \
+		igzip/igzip_compare_types.asm \
 		igzip/bitbuf2.h \
 		igzip/repeated_char_result.h \
-		igzip/igzip_body.asm \
 		igzip/igzip_update_histogram.asm \
 		igzip/huffman.asm \
 		include/reg_sizes.asm \
@@ -82,7 +87,7 @@ other_src   += 	igzip/bitbuf2.asm  igzip/data_struct2.asm \
 		igzip/inflate_std_vects.h \
 		igzip/flatten_ll.h \
 		igzip/encode_df.h \
-		igzip/encode_df_asm.asm\
+		igzip/encode_df_asm.asm \
 		igzip/heap_macros.asm
 
 examples    += 	igzip/igzip_example igzip/igzip_sync_flush_example
