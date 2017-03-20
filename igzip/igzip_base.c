@@ -125,68 +125,72 @@ void isal_deflate_finish_base(struct isal_zstream *stream)
 	end_in = start_in + stream->avail_in;
 	next_in = start_in;
 
-	while (next_in + 3 < end_in) {
-		if (is_full(&state->bitbuf)) {
-			update_state(stream, start_in, next_in, end_in);
-			return;
-		}
-
-		literal = *(uint32_t *) next_in;
-		hash = compute_hash(literal) & HASH_MASK;
-		dist = (next_in - state->file_start - last_seen[hash]) & 0xFFFF;
-		last_seen[hash] = (uint64_t) (next_in - state->file_start);
-
-		if (dist - 1 < IGZIP_HIST_SIZE - 1) {	/* The -1 are to handle the case when dist = 0 */
-			match_length = compare258(next_in - dist, next_in, end_in - next_in);
-
-			if (match_length >= SHORTEST_MATCH) {
-				next_hash = next_in;
-#ifdef ISAL_LIMIT_HASH_UPDATE
-				end = next_hash + 3;
-#else
-				end = next_hash + match_length;
-#endif
-				next_hash++;
-
-				for (; next_hash < end - 3; next_hash++) {
-					literal = *(uint32_t *) next_hash;
-					hash = compute_hash(literal) & HASH_MASK;
-					last_seen[hash] =
-					    (uint64_t) (next_hash - state->file_start);
-				}
-
-				get_len_code(stream->hufftables, match_length, &code,
-					     &code_len);
-				get_dist_code(stream->hufftables, dist, &code2, &code_len2);
-
-				code |= code2 << code_len;
-				code_len += code_len2;
-
-				write_bits(&state->bitbuf, code, code_len);
-
-				next_in += match_length;
-
-				continue;
+	if (stream->avail_in != 0) {
+		while (next_in + 3 < end_in) {
+			if (is_full(&state->bitbuf)) {
+				update_state(stream, start_in, next_in, end_in);
+				return;
 			}
+
+			literal = *(uint32_t *) next_in;
+			hash = compute_hash(literal) & HASH_MASK;
+			dist = (next_in - state->file_start - last_seen[hash]) & 0xFFFF;
+			last_seen[hash] = (uint64_t) (next_in - state->file_start);
+
+			if (dist - 1 < IGZIP_HIST_SIZE - 1) {	/* The -1 are to handle the case when dist = 0 */
+				match_length =
+				    compare258(next_in - dist, next_in, end_in - next_in);
+
+				if (match_length >= SHORTEST_MATCH) {
+					next_hash = next_in;
+#ifdef ISAL_LIMIT_HASH_UPDATE
+					end = next_hash + 3;
+#else
+					end = next_hash + match_length;
+#endif
+					next_hash++;
+
+					for (; next_hash < end - 3; next_hash++) {
+						literal = *(uint32_t *) next_hash;
+						hash = compute_hash(literal) & HASH_MASK;
+						last_seen[hash] =
+						    (uint64_t) (next_hash - state->file_start);
+					}
+
+					get_len_code(stream->hufftables, match_length, &code,
+						     &code_len);
+					get_dist_code(stream->hufftables, dist, &code2,
+						      &code_len2);
+
+					code |= code2 << code_len;
+					code_len += code_len2;
+
+					write_bits(&state->bitbuf, code, code_len);
+
+					next_in += match_length;
+
+					continue;
+				}
+			}
+
+			get_lit_code(stream->hufftables, literal & 0xFF, &code, &code_len);
+			write_bits(&state->bitbuf, code, code_len);
+			next_in++;
+
 		}
 
-		get_lit_code(stream->hufftables, literal & 0xFF, &code, &code_len);
-		write_bits(&state->bitbuf, code, code_len);
-		next_in++;
+		while (next_in < end_in) {
+			if (is_full(&state->bitbuf)) {
+				update_state(stream, start_in, next_in, end_in);
+				return;
+			}
 
-	}
+			literal = *next_in;
+			get_lit_code(stream->hufftables, literal & 0xFF, &code, &code_len);
+			write_bits(&state->bitbuf, code, code_len);
+			next_in++;
 
-	while (next_in < end_in) {
-		if (is_full(&state->bitbuf)) {
-			update_state(stream, start_in, next_in, end_in);
-			return;
 		}
-
-		literal = *next_in;
-		get_lit_code(stream->hufftables, literal & 0xFF, &code, &code_len);
-		write_bits(&state->bitbuf, code, code_len);
-		next_in++;
-
 	}
 
 	if (!is_full(&state->bitbuf)) {
