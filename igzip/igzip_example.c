@@ -32,6 +32,11 @@
 #include "igzip_lib.h"
 
 #define BUF_SIZE 8192
+#ifndef LEVEL
+# define LEVEL 0
+#else
+# define LEVEL 1
+#endif
 
 struct isal_zstream stream;
 
@@ -61,6 +66,16 @@ int main(int argc, char *argv[])
 	isal_deflate_init(&stream);
 	stream.end_of_stream = 0;
 	stream.flush = NO_FLUSH;
+
+	if (LEVEL == 1) {
+		stream.level = 1;
+		stream.level_buf = malloc(ISAL_DEF_LVL1_DEFAULT);
+		stream.level_buf_size = ISAL_DEF_LVL1_DEFAULT;
+		if (stream.level_buf == 0) {
+			printf("Failed to allocate level compression buffer\n");
+			exit(0);
+		}
+	}
 
 	do {
 		stream.avail_in = (uint32_t) fread(inbuf, 1, BUF_SIZE, in);
