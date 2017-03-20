@@ -50,7 +50,10 @@
  *   in sync flush but also ensures that subsequent block's history does not
  *   look back beyond this point and new blocks are fully independent.
  *
- * Igzip contians some behaviour configurable at compile time. These
+ * Igzip also supports compression levels from ISAL_DEF_MIN_LEVEL to
+ * ISAL_DEF_MAX_LEVEL.
+ *
+ * Igzip contains some behaviour configurable at compile time. These
  * configureable options are:
  *
  * - IGZIP_HIST_SIZE - Defines the window size. The default value is 32K (note K
@@ -226,14 +229,28 @@ struct isal_mod_hist {
     uint32_t ll_hist[513];
 };
 
-/* Data sizes for level specific data options */
+#define ISAL_DEF_MIN_LEVEL 0
+#define ISAL_DEF_MAX_LEVEL 1
+
+/* Defines used set level data sizes */
+#define ISAL_DEF_LVL0_REQ 0
 #define ISAL_DEF_LVL1_REQ 4 * IGZIP_K /* has to be at least sizeof(struct level_2_buf) */
 #define ISAL_DEF_LVL1_TOKEN_SIZE 4
+
+/* Data sizes for level specific data options */
+#define ISAL_DEF_LVL0_MIN ISAL_DEF_LVL0_REQ
+#define ISAL_DEF_LVL0_SMALL ISAL_DEF_LVL0_REQ
+#define ISAL_DEF_LVL0_MEDIUM ISAL_DEF_LVL0_REQ
+#define ISAL_DEF_LVL0_LARGE ISAL_DEF_LVL0_REQ
+#define ISAL_DEF_LVL0_EXTRA_LARGE ISAL_DEF_LVL0_REQ
+#define ISAL_DEF_LVL0_DEFAULT ISAL_DEF_LVL0_REQ
+
 #define ISAL_DEF_LVL1_MIN (ISAL_DEF_LVL1_REQ + ISAL_DEF_LVL1_TOKEN_SIZE * 1 * IGZIP_K)
 #define ISAL_DEF_LVL1_SMALL (ISAL_DEF_LVL1_REQ + ISAL_DEF_LVL1_TOKEN_SIZE * 16 * IGZIP_K)
 #define ISAL_DEF_LVL1_MEDIUM (ISAL_DEF_LVL1_REQ + ISAL_DEF_LVL1_TOKEN_SIZE * 32 * IGZIP_K)
 #define ISAL_DEF_LVL1_LARGE (ISAL_DEF_LVL1_REQ + ISAL_DEF_LVL1_TOKEN_SIZE * 64 * IGZIP_K)
 #define ISAL_DEF_LVL1_EXTRA_LARGE (ISAL_DEF_LVL1_REQ + ISAL_DEF_LVL1_TOKEN_SIZE * 128 * IGZIP_K)
+#define ISAL_DEF_LVL1_DEFAULT ISAL_DEF_LVL1_LARGE
 
 /** @brief Holds Bit Buffer information*/
 struct BitBuf2 {
@@ -480,6 +497,11 @@ void isal_deflate_stateless_init(struct isal_zstream *stream);
 /**
  * @brief Fast data (deflate) compression for storage applications.
  *
+ * The call to isal_deflate() will take data from the input buffer (updating
+ * next_in, avail_in and write a compressed stream to the output buffer
+ * (updating next_out and avail_out). The function returns when either the input
+ * buffer is empty or the output buffer is full.
+ *
  * On entry to isal_deflate(), next_in points to an input buffer and avail_in
  * indicates the length of that buffer. Similarly next_out points to an empty
  * output buffer and avail_out indicates the size of that buffer.
@@ -487,14 +509,20 @@ void isal_deflate_stateless_init(struct isal_zstream *stream);
  * The fields total_in and total_out start at 0 and are updated by
  * isal_deflate(). These reflect the total number of bytes read or written so far.
  *
- * The call to isal_deflate() will take data from the input buffer (updating
- * next_in, avail_in and write a compressed stream to the output buffer
- * (updating next_out and avail_out). The function returns when either the input
- * buffer is empty or the output buffer is full.
- *
  * When the last input buffer is passed in, signaled by setting the
  * end_of_stream, the routine will complete compression at the end of the input
  * buffer, as long as the output buffer is big enough.
+ *
+ * The compression level can be set by setting level to any value between
+ * ISAL_DEF_MIN_LEVEL and ISAL_DEF_MAX_LEVEL. When the compression level is
+ * ISAL_DEF_MIN_LEVEL, hufftables can be set to a table trained for the the
+ * specific data type being compressed to achieve better compression. When a
+ * higher compression level is desired, a larger generic memory buffer needs to
+ * be supplied by setting level_buf and level_buf_size to represent the chunk of
+ * memory. For level x, the suggest size for this buffer this buffer is
+ * ISAL_DEFL_LVLx_DEFAULT. The defines ISAL_DEFL_LVLx_MIN, ISAL_DEFL_LVLx_SMALL,
+ * ISAL_DEFL_LVLx_MEDIUM, ISAL_DEFL_LVLx_LARGE, and ISAL_DEFL_LVLx_EXTRA_LARGE
+ * are also provided as other suggested sizes.
  *
  * The equivalent of the zlib FLUSH_SYNC operation is currently supported.
  * Flush types can be NO_FLUSH, SYNC_FLUSH or FULL_FLUSH. Default flush type is
@@ -510,6 +538,7 @@ void isal_deflate_stateless_init(struct isal_zstream *stream);
  * @param  stream Structure holding state information on the compression streams.
  * @return COMP_OK (if everything is ok),
  *         INVALID_FLUSH (if an invalid FLUSH is selected),
+ *         ISAL_INVALID_LEVEL (if an invalid compression level is selected).
  */
 int isal_deflate(struct isal_zstream *stream);
 
@@ -523,6 +552,9 @@ int isal_deflate(struct isal_zstream *stream);
  * expansion is limited to the input size plus the header size of a stored/raw
  * block.
  *
+ * When the compression level is set to 1, unlike in isal_deflate(), level_buf
+ * may be optionally set depending on what what permormance is desired.
+ *
  * For stateless the flush types NO_FLUSH and FULL_FLUSH are supported.
  * FULL_FLUSH will byte align the output deflate block so additional blocks can
  * be easily appended.
@@ -533,6 +565,8 @@ int isal_deflate(struct isal_zstream *stream);
  *
  * @param  stream Structure holding state information on the compression streams.
  * @return COMP_OK (if everything is ok),
+ *         INVALID_FLUSH (if an invalid FLUSH is selected),
+ *         ISAL_INVALID_LEVEL (if an invalid compression level is selected),
  *         STATELESS_OVERFLOW (if output buffer will not fit output).
  */
 int isal_deflate_stateless(struct isal_zstream *stream);
