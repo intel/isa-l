@@ -20,6 +20,7 @@ examples=
 other_tests=
 lsrc_x86_64=
 lsrc_x86_32=
+lsrc_base_aliases=
 lsrc32=
 unit_tests32=
 perf_tests32=

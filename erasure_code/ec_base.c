@@ -33,6 +33,18 @@
 #include "ec_base.h"		// for GF tables
 #include "types.h"
 
+void ec_init_tables(int k, int rows, unsigned char *a, unsigned char *g_tbls)
+{
+	int i, j;
+
+	for (i = 0; i < rows; i++) {
+		for (j = 0; j < k; j++) {
+			gf_vect_mul_init(*a++, g_tbls);
+			g_tbls += 32;
+		}
+	}
+}
+
 unsigned char gf_mul(unsigned char a, unsigned char b)
 {
 #ifndef GF_LARGE_TABLES

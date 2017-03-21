@@ -80,6 +80,12 @@ ifeq ($(arch),mingw)
   AR=x86_64-w64-mingw32-ar
 endif
 
+# arch=noarch build options
+ARFLAGS_noarch = cr $@
+ifeq ($(arch),noarch)
+  host_cpu=base_aliases
+endif
+
 ASFLAGS_Darwin = -f macho64 --prefix=_
 ARFLAGS_Darwin = -r $@
 ifeq ($(arch),Darwin)

@@ -27,12 +27,12 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ########################################################################
 
-lsrc         += erasure_code/ec_highlevel_func.c \
-		erasure_code/ec_base.c
+lsrc         += erasure_code/ec_base.c
 
 lsrc_base_aliases += erasure_code/ec_base_aliases.c
 
 lsrc_x86_64  += \
+		erasure_code/ec_highlevel_func.c \
 		erasure_code/gf_vect_mul_sse.asm \
 		erasure_code/gf_vect_mul_avx.asm \
 		erasure_code/gf_vect_dot_prod_sse.asm  \
@@ -85,6 +85,7 @@ lsrc_x86_64  += \
 		erasure_code/gf_4vect_mad_avx512.asm
 
 lsrc_x86_32  += \
+		erasure_code/ec_highlevel_func.c \
 		erasure_code/ec_multibinary.asm \
 		erasure_code/gf_vect_dot_prod_avx.asm \
 		erasure_code/gf_2vect_dot_prod_avx.asm \
