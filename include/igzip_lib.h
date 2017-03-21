@@ -527,9 +527,12 @@ void isal_deflate_stateless_init(struct isal_zstream *stream);
  * The equivalent of the zlib FLUSH_SYNC operation is currently supported.
  * Flush types can be NO_FLUSH, SYNC_FLUSH or FULL_FLUSH. Default flush type is
  * NO_FLUSH. A SYNC_ OR FULL_ flush will byte align the deflate block by
- * appending an empty stored block.  Additionally FULL_FLUSH will ensure
- * look back history does not include previous blocks so new blocks are fully
- * independent. Switching between flush types is supported.
+ * appending an empty stored block once all input has been compressed, including
+ * the buffered input. Checking that the out_buffer is not empty or that
+ * internal_state.state = ZSTATE_NEW_HDR is sufficient to guarantee all input
+ * has been flushed. Additionally FULL_FLUSH will ensure look back history does
+ * not include previous blocks so new blocks are fully independent. Switching
+ * between flush types is supported.
  *
  * If the gzip_flag is set to IGZIP_GZIP, a generic gzip header and the gzip
  * trailer are written around the deflate compressed data. If gzip_flag is set

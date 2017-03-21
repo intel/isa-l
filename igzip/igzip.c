@@ -369,7 +369,8 @@ static void isal_deflate_int(struct isal_zstream *stream)
 			state->state -= ZSTATE_TMP_OFFSET;
 
 		if (stream->avail_out == 0 || state->state == ZSTATE_END
-		    || state->state == ZSTATE_NEW_HDR)
+		    // or do not write out empty blocks since the outbuffer was processed
+		    || (state->state == ZSTATE_NEW_HDR && stream->avail_out == 0))
 			return;
 	}
 	assert(state->tmp_out_start == state->tmp_out_end);
@@ -843,7 +844,7 @@ int isal_deflate(struct isal_zstream *stream)
 	int size = 0;
 	uint8_t *copy_down_src = NULL;
 	uint64_t copy_down_size = 0;
-	uint32_t processed = 0;
+	int32_t processed = -(state->b_bytes_valid - state->b_bytes_processed);
 
 	if (stream->flush >= 3)
 		return INVALID_FLUSH;
@@ -852,7 +853,7 @@ int isal_deflate(struct isal_zstream *stream)
 	avail_in = stream->avail_in;
 	stream->total_in -= state->b_bytes_valid - state->b_bytes_processed;
 
-	while (processed < IGZIP_HIST_SIZE + ISAL_LOOK_AHEAD) {
+	do {
 		size = avail_in;
 		if (size > sizeof(state->buffer) - state->b_bytes_valid) {
 			size = sizeof(state->buffer) - state->b_bytes_valid;
@@ -868,6 +869,7 @@ int isal_deflate(struct isal_zstream *stream)
 		stream->next_in = &state->buffer[state->b_bytes_processed];
 		stream->avail_in = state->b_bytes_valid - state->b_bytes_processed;
 		state->file_start = stream->next_in - stream->total_in;
+		processed += stream->avail_in;
 
 		if (stream->avail_in > IGZIP_HIST_SIZE
 		    || stream->end_of_stream || stream->flush != NO_FLUSH) {
@@ -891,10 +893,9 @@ int isal_deflate(struct isal_zstream *stream)
 
 		stream->flush = flush_type;
 		stream->end_of_stream = end_of_stream;
-		if (avail_in <= 0 || stream->avail_out <= 0)
-			break;
-		processed += size;
-	}
+		processed -= stream->avail_in;
+	} while (processed < IGZIP_HIST_SIZE + ISAL_LOOK_AHEAD && avail_in > 0
+		 && stream->avail_out > 0);
 
 	if (processed >= IGZIP_HIST_SIZE + ISAL_LOOK_AHEAD) {
 		stream->next_in = next_in - stream->avail_in;
