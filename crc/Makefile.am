@@ -31,6 +31,9 @@ lsrc  += \
 	crc/crc_base.c \
 	crc/crc64_base.c
 
+lsrc_base_aliases += crc/crc_base_aliases.c
+lsrc_x86_32       += crc/crc_base_aliases.c
+
 lsrc_x86_64 += \
 	crc/crc16_t10dif_01.asm \
 	crc/crc16_t10dif_by4.asm \
