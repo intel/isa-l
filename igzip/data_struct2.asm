@@ -103,6 +103,8 @@ START_FIELDS	;; level_2_buf
 FIELD	_encode_tables,		_hufftables_icf_size,	_hufftables_icf_align
 FIELD	_deflate_hdr_buf_used,	8,	8
 FIELD	_deflate_hdr_buf,	DEF_MAX_HDR_SIZE,	1
+FIELD	_block_start_index,	4,	4
+FIELD	_block_in_length,	4,	4
 FIELD	_icf_buf_next,		8,	8
 FIELD	_icf_buf_avail_out,	8,	8
 FIELD	_icf_buf_start,		0,	0
@@ -203,7 +205,9 @@ ZSTATE_CREATE_HDR		equ	(ZSTATE_HDR + 1)
 ZSTATE_BODY			equ	(ZSTATE_CREATE_HDR + 1)
 ZSTATE_FLUSH_READ_BUFFER	equ	(ZSTATE_BODY + 1)
 ZSTATE_FLUSH_ICF_BUFFER		equ	(ZSTATE_FLUSH_READ_BUFFER + 1)
-ZSTATE_SYNC_FLUSH		equ	(ZSTATE_FLUSH_ICF_BUFFER + 1)
+ZSTATE_TYPE0_HDR		equ	(ZSTATE_FLUSH_ICF_BUFFER + 1)
+ZSTATE_TYPE0_BODY		equ	(ZSTATE_TYPE0_HDR + 1)
+ZSTATE_SYNC_FLUSH		equ	(ZSTATE_TYPE0_BODY + 1)
 ZSTATE_FLUSH_WRITE_BUFFER	equ	(ZSTATE_SYNC_FLUSH + 1)
 ZSTATE_TRL			equ	(ZSTATE_FLUSH_WRITE_BUFFER + 1)
 

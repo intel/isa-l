@@ -173,6 +173,8 @@ enum isal_zstate_state {
 	ZSTATE_BODY,	//!< Body state
 	ZSTATE_FLUSH_READ_BUFFER, //!< Flush buffer
 	ZSTATE_FLUSH_ICF_BUFFER,
+	ZSTATE_TYPE0_HDR, //! Type0 block header to be written
+	ZSTATE_TYPE0_BODY, //!< Type0 block body to be written
 	ZSTATE_SYNC_FLUSH, //!< Write sync flush block
 	ZSTATE_FLUSH_WRITE_BUFFER, //!< Flush bitbuf
 	ZSTATE_TRL,	//!< Trailer state

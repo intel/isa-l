@@ -1536,7 +1536,7 @@ void expand_hufftables_icf(struct hufftables_icf *hufftables)
 	dist_codes[DIST_LEN].length = 0;
 }
 
-void
+uint64_t
 create_hufftables_icf(struct BitBuf2 *bb, struct hufftables_icf *hufftables,
 		      struct isal_mod_hist *hist, uint32_t end_of_block)
 {
@@ -1605,21 +1605,25 @@ create_hufftables_icf(struct BitBuf2 *bb, struct hufftables_icf *hufftables,
 		    (static_d_codes[i].length + dist_code_extra_bits[i]) * d_hist[i];
 	}
 
-	expand_hufftables_icf(hufftables);
+	if (static_compressed_len > compressed_len) {
+		num_cl_tokens = rl_encode(combined_table, max_ll_code + max_d_code + 2,
+					  cl_counts, cl_tokens);
 
-	num_cl_tokens =
-	    rl_encode(combined_table, max_ll_code + max_d_code + 2, cl_counts, cl_tokens);
+		/* Create header */
+		create_header(bb, cl_tokens, num_cl_tokens, cl_counts, max_ll_code - 256,
+			      max_d_code, end_of_block);
+		compressed_len += 8 * buffer_used(bb) + bb->m_bit_count;
+	}
 
-	/* Create header */
-	create_header(bb, cl_tokens, num_cl_tokens, cl_counts, max_ll_code - 256, max_d_code,
-		      end_of_block);
-	compressed_len += 8 * buffer_used(bb) + bb->m_bit_count;
-
-	if (static_compressed_len < compressed_len) {
+	/* Substitute in static block since it creates smaller block */
+	if (static_compressed_len <= compressed_len) {
 		memcpy(hufftables, &static_hufftables, sizeof(struct hufftables_icf));
-		expand_hufftables_icf(hufftables);
 		memcpy(bb, &bb_tmp, sizeof(struct BitBuf2));
 		end_of_block = end_of_block ? 1 : 0;
 		write_bits(bb, 0x2 | end_of_block, 3);
+		compressed_len = static_compressed_len;
 	}
+
+	expand_hufftables_icf(hufftables);
+	return compressed_len;
 }

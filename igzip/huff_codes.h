@@ -244,8 +244,11 @@ int are_hufftables_useable(struct huff_code *lit_len_hufftable,
  * @param hufftables: output huffman code representation
  * @param hist: histogram used to generat huffman code
  * @param end_of_block: flag whether this is the final huffman code
+ *
+ * @returns Returns the length in bits of the block with histogram hist encoded
+ * with the set hufftable
  */
-void
+uint64_t
 create_hufftables_icf(struct BitBuf2 *bb, struct hufftables_icf * hufftables,
                   struct isal_mod_hist *hist, uint32_t end_of_block);
 

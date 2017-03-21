@@ -9,6 +9,8 @@ struct level_2_buf {
 	uint32_t deflate_hdr_count;
 	uint32_t deflate_hdr_extra_bits;
 	uint8_t deflate_hdr[ISAL_DEF_MAX_HDR_SIZE];
+	uint32_t block_start_index;
+	uint32_t block_in_length;
 	struct deflate_icf *icf_buf_next;
 	uint64_t icf_buf_avail_out;
 	struct deflate_icf icf_buf_start[];
