@@ -41,6 +41,7 @@ struct deflate_icf *encode_deflate_icf_base(struct deflate_icf *next_in,
 					    struct deflate_icf *end_in, struct BitBuf2 *bb,
 					    struct hufftables_icf *hufftables);
 uint32_t crc32_gzip_base(uint32_t init_crc, const unsigned char *buf, uint64_t len);
+int decode_huffman_code_block_stateless_base(struct inflate_state *s);
 
 void isal_deflate_body(struct isal_zstream *stream)
 {
@@ -78,4 +79,9 @@ struct deflate_icf *encode_deflate_icf(struct deflate_icf *next_in,
 uint32_t crc32_gzip(uint32_t init_crc, const unsigned char *buf, uint64_t len)
 {
 	return crc32_gzip_base(init_crc, buf, len);
+}
+
+int decode_huffman_code_block_stateless(struct inflate_state *s)
+{
+	return decode_huffman_code_block_stateless_base(s);
 }
