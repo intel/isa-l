@@ -621,7 +621,8 @@ struct slver isal_create_hufftables_slver = { 0x0086, 0x01, 0x00 };
 struct slver isal_create_hufftables_subset_slver_00010087;
 struct slver isal_create_hufftables_subset_slver = { 0x0087, 0x01, 0x00 };
 
-extern uint32_t build_huff_tree(struct heap_tree *heap, uint64_t heap_size, uint64_t node_ptr);
+extern uint32_t build_huff_tree_asm(struct heap_tree *heap, uint64_t heap_size,
+				    uint64_t node_ptr);
 extern void build_heap_asm(uint64_t * heap, uint64_t heap_size);
 
 static const uint8_t bitrev8[0x100] = {
@@ -799,6 +800,62 @@ uint32_t convert_length_to_len_sym(uint32_t length)
 		return 285;
 }
 
+void inline heapify(uint64_t * heap, uint64_t heap_size, uint64_t index)
+{
+	uint64_t child = 2 * index, tmp;
+	while (child <= heap_size) {
+		child = (heap[child] <= heap[child + 1]) ? child : child + 1;
+
+		if (heap[index] > heap[child]) {
+			tmp = heap[index];
+			heap[index] = heap[child];
+			heap[child] = tmp;
+			index = child;
+			child = 2 * index;
+		} else
+			break;
+	}
+}
+
+void build_heap_base(uint64_t * heap, uint64_t heap_size)
+{
+	uint64_t i;
+	heap[heap_size + 1] = -1;
+	for (i = heap_size / 2; i > 0; i--)
+		heapify(heap, heap_size, i);
+
+}
+
+uint32_t build_huff_tree_base(struct heap_tree *heap_space, uint64_t heap_size,
+			      uint64_t node_ptr)
+{
+	uint64_t *heap = (uint64_t *) heap_space;
+	uint64_t h1, h2;
+
+	while (heap_size > 1) {
+		h1 = heap[1];
+		heap[1] = heap[heap_size];
+		heap[heap_size--] = -1;
+
+		heapify(heap, heap_size, 1);
+
+		h2 = heap[1];
+		heap[1] = ((h1 + h2) & ~0xFFFFull) | node_ptr;
+
+		heapify(heap, heap_size, 1);
+
+		*(uint16_t *) (&heap[node_ptr]) = h1;
+		*(uint16_t *) (&heap[node_ptr - 1]) = h2;
+		node_ptr -= 2;
+
+	}
+	h1 = heap[1];
+	*(uint16_t *) (&heap[node_ptr]) = h1;
+	return node_ptr;
+}
+
+#define build_heap build_heap_base
+#define build_huff_tree build_huff_tree_base
 // Upon return, codes[] contains the code lengths,
 // and bl_count is the count of the lengths
 
@@ -833,7 +890,7 @@ static inline uint32_t init_heap32(struct heap_tree *heap_space, uint32_t * hist
 		}
 	}
 
-	build_heap_asm(heap_space->heap, heap_size);
+	build_heap(heap_space->heap, heap_size);
 
 	return heap_size;
 }
@@ -867,7 +924,7 @@ static inline uint32_t init_heap64(struct heap_tree *heap_space, uint64_t * hist
 		}
 	}
 
-	build_heap_asm(heap_space->heap, heap_size);
+	build_heap(heap_space->heap, heap_size);
 
 	return heap_size;
 }
@@ -883,7 +940,7 @@ static inline uint32_t init_heap64_complete(struct heap_tree *heap_space, uint64
 	for (i = 0; i < hist_size; i++)
 		heap_space->heap[++heap_size] = ((histogram[i]) << FREQ_SHIFT) | i;
 
-	build_heap_asm(heap_space->heap, heap_size);
+	build_heap(heap_space->heap, heap_size);
 
 	return heap_size;
 }
