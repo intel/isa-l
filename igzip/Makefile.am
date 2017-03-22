@@ -34,8 +34,8 @@ lsrc        += 	igzip/igzip.c \
 		igzip/flatten_ll.c \
 		igzip/encode_df.c
 
-lsrc_base_aliases += igzip/igzip_base_aliases.c
-lsrc_x86_32       += igzip/igzip_base_aliases.c
+lsrc_base_aliases += igzip/igzip_base_aliases.c igzip/proc_heap_base.c
+lsrc_x86_32       += igzip/igzip_base_aliases.c igzip/proc_heap_base.c
 
 lsrc_x86_64 +=  \
 		igzip/igzip_body_01.asm \

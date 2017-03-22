@@ -25,8 +25,8 @@
 %define i		r11
 %define tmp2		r12
 
-	global build_huff_tree_asm
-build_huff_tree_asm:
+	global build_huff_tree
+build_huff_tree:
 %ifidn __OUTPUT_FORMAT__, win64
 	push	rsi
 	push	rdi
@@ -73,8 +73,8 @@ build_huff_tree_asm:
 	ret
 
 align 32
-	global	build_heap_asm
-build_heap_asm:
+	global	build_heap
+build_heap:
 %ifidn __OUTPUT_FORMAT__, win64
 	push	rsi
 	push	rdi
