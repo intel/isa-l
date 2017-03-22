@@ -40,6 +40,7 @@ void isal_update_histogram_base(uint8_t * start_stream, int length,
 struct deflate_icf *encode_deflate_icf_base(struct deflate_icf *next_in,
 					    struct deflate_icf *end_in, struct BitBuf2 *bb,
 					    struct hufftables_icf *hufftables);
+uint32_t crc32_gzip_base(uint32_t init_crc, const unsigned char *buf, uint64_t len);
 
 void isal_deflate_body(struct isal_zstream *stream)
 {
@@ -72,4 +73,9 @@ struct deflate_icf *encode_deflate_icf(struct deflate_icf *next_in,
 				       struct hufftables_icf *hufftables)
 {
 	return encode_deflate_icf_base(next_in, end_in, bb, hufftables);
+}
+
+uint32_t crc32_gzip(uint32_t init_crc, const unsigned char *buf, uint64_t len)
+{
+	return crc32_gzip_base(init_crc, buf, len);
 }

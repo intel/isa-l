@@ -31,6 +31,7 @@ lsrc        += 	igzip/igzip.c \
 		igzip/hufftables_c.c \
 		igzip/igzip_base.c \
 		igzip/igzip_icf_base.c \
+		igzip/crc32_gzip_base.c \
 		igzip/flatten_ll.c \
 		igzip/encode_df.c
 
@@ -46,7 +47,6 @@ lsrc_x86_64 +=  \
 		igzip/igzip_icf_body_02.asm \
 		igzip/igzip_icf_body_04.asm \
 		igzip/igzip_icf_finish.asm \
-		igzip/crc_data.asm \
 		igzip/rfc1951_lookup.asm \
 		igzip/crc32_gzip.asm igzip/detect_repeated_char.asm \
 		igzip/igzip_multibinary.asm \

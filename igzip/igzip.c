@@ -56,7 +56,6 @@ extern const uint32_t gzip_hdr_bytes;
 extern const uint32_t gzip_trl_bytes;
 extern const struct isal_hufftables hufftables_default;
 extern const struct isal_hufftables hufftables_static;
-extern uint32_t CrcTable[256];
 
 extern uint32_t crc32_gzip(uint32_t init_crc, const unsigned char *buf, uint64_t len);
 
@@ -738,15 +737,6 @@ void isal_deflate_stateless_init(struct isal_zstream *stream)
 	stream->gzip_flag = 0;
 	stream->internal_state.state = ZSTATE_NEW_HDR;
 	return;
-}
-
-uint32_t crc32_gzip_base(uint32_t crc, uint8_t * start, uint32_t length)
-{
-	uint8_t *end = start + length;
-	crc = ~crc;
-	while (start < end)
-		crc = (crc >> 8) ^ CrcTable[(crc & 0x000000FF) ^ *start++];
-	return ~crc;
 }
 
 int isal_deflate_stateless(struct isal_zstream *stream)
