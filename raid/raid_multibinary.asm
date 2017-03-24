@@ -56,6 +56,7 @@ extern xor_check_sse
 
 %ifdef HAVE_AS_KNOWS_AVX512
  extern xor_gen_avx512
+ extern pq_gen_avx512
 %endif
 
 mbin_interface xor_gen
@@ -63,7 +64,7 @@ mbin_interface pq_gen
 
 %ifdef HAVE_AS_KNOWS_AVX512
  mbin_dispatch_init6 xor_gen, xor_gen_base, xor_gen_sse, xor_gen_avx, xor_gen_avx, xor_gen_avx512
- mbin_dispatch_init5 pq_gen, pq_gen_base, pq_gen_sse, pq_gen_avx, pq_gen_avx2
+ mbin_dispatch_init6 pq_gen, pq_gen_base, pq_gen_sse, pq_gen_avx, pq_gen_avx2, pq_gen_avx512
 %else
  mbin_dispatch_init5 xor_gen, xor_gen_base, xor_gen_sse, xor_gen_avx, xor_gen_avx
  mbin_dispatch_init5 pq_gen, pq_gen_base, pq_gen_sse, pq_gen_avx, pq_gen_avx2
