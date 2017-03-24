@@ -40,7 +40,7 @@
 // Loop many times over same 
 # define TEST_SOURCES 10
 # define TEST_LEN     8*1024
-# define TEST_LOOPS   400000
+# define TEST_LOOPS   2000000
 # define TEST_TYPE_STR "_warm"
 #else
 // Uncached test.  Pull from large mem base.
@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
 	// Allocate the arrays
 	for (i = 0; i < TEST_SOURCES + 1; i++) {
 		void *buf;
-		ret = posix_memalign(&buf, 32, TEST_LEN);
+		ret = posix_memalign(&buf, 64, TEST_LEN);
 		if (ret) {
 			printf("alloc error: Fail");
 			return 1;
