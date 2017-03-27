@@ -686,8 +686,8 @@ void isal_update_histogram_base(uint8_t * start_stream, int length,
 		literal = *(uint32_t *) current;
 		hash = compute_hash(literal) & HASH_MASK;
 		seen = last_seen[hash];
-		last_seen[hash] = ((uint64_t) current - (uint64_t) start_stream) & 0xFFFF;
-		dist = ((uint64_t) current - (uint64_t) start_stream - seen) & 0xFFFF;
+		last_seen[hash] = (current - start_stream) & 0xFFFF;
+		dist = (current - start_stream - seen) & 0xFFFF;
 		if (dist - 1 < D - 1) {
 			assert(start_stream <= current - dist);
 			match_length =
@@ -705,9 +705,7 @@ void isal_update_histogram_base(uint8_t * start_stream, int length,
 				for (; next_hash < end; next_hash++) {
 					literal = *(uint32_t *) next_hash;
 					hash = compute_hash(literal) & HASH_MASK;
-					last_seen[hash] =
-					    ((uint64_t) next_hash -
-					     (uint64_t) start_stream) & 0xFFFF;
+					last_seen[hash] = (next_hash - start_stream) & 0xFFFF;
 				}
 
 				dist_histogram[convert_dist_to_dist_sym(dist)] += 1;
@@ -722,8 +720,8 @@ void isal_update_histogram_base(uint8_t * start_stream, int length,
 	literal = literal >> 8;
 	hash = compute_hash(literal) & HASH_MASK;
 	seen = last_seen[hash];
-	last_seen[hash] = ((uint64_t) current - (uint64_t) start_stream) & 0xFFFF;
-	dist = ((uint64_t) current - (uint64_t) start_stream - seen) & 0xFFFF;
+	last_seen[hash] = (current - start_stream) & 0xFFFF;
+	dist = (current - start_stream - seen) & 0xFFFF;
 	if (dist < D) {
 		match_length = compare258(current - dist, current, end_stream - current);
 		if (match_length >= SHORTEST_MATCH) {
