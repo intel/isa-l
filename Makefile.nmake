@@ -102,7 +102,7 @@ objs =  \
 	bin\crc64_jones_refl_by8.obj \
 	bin\crc64_multibinary.obj \
 	bin\crc_base.obj \
-	bin\crc_data.obj \
+	bin\crc32_gzip_base.obj \
 	bin\crc_multibinary.obj \
 	bin\huff_codes.obj \
 	bin\hufftables_c.obj \
@@ -114,6 +114,15 @@ objs =  \
 	bin\igzip_decode_block_stateless_01.obj \
 	bin\igzip_decode_block_stateless_04.obj \
 	bin\igzip_finish.obj \
+	bin\flatten_ll.obj \
+	bin\encode_df.obj \
+	bin\encode_df_04.obj \
+	bin\proc_heap.obj \
+	bin\igzip_icf_body_01.obj \
+	bin\igzip_icf_body_02.obj \
+	bin\igzip_icf_body_04.obj \
+	bin\igzip_icf_finish.obj \
+	bin\igzip_icf_base.obj \
 	bin\igzip_inflate.obj \
 	bin\igzip_inflate_multibinary.obj \
 	bin\igzip_multibinary.obj \
