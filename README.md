@@ -1,4 +1,3 @@
-=================================================
 Intel(R) Intelligent Storage Acceleration Library
 =================================================
 
@@ -52,7 +51,7 @@ On Windows use nmake to build dll and static lib:
     nmake -f Makefile.nmake
 
 ### Other make targets
-Other targes include:
+Other targets include:
 * `make check` : create and run tests
 * `make tests` : create additional unit tests
 * `make perfs` : create included performance tests

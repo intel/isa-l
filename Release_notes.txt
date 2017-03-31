@@ -1,25 +1,26 @@
-=============================================================================
-v2.17 Intel Intelligent Storage Acceleration Library Release Notes
-=============================================================================
+v2.18 Intel Intelligent Storage Acceleration Library Release Notes
+==================================================================
 
-=============================================================================
 RELEASE NOTE CONTENTS
-=============================================================================
 1. KNOWN ISSUES
 2. FIXED ISSUES
 3. CHANGE LOG & FEATURES ADDED
 
-=============================================================================
-1.  KNOWN ISSUES
-=============================================================================
+1. KNOWN ISSUES
+----------------
 
 * Perf tests do not run in Windows environment.
 
 * 32-bit lib is not supported in Windows.
 
-=============================================================================
 2. FIXED ISSUES
-=============================================================================
+---------------
+
+v2.18
+
+* Mac OS X/darwin systems no longer require the --target=darwin config option.
+  The autoconf canonical build should detect.
+
 v2.17
 
 * Fix igzip using 32K window and a shared object
@@ -46,9 +47,18 @@ v2.10
   affects windows versions of erasure code.  GP register saves/restore were
   pushed to same stack area as XMM.
 
-=============================================================================
 3. CHANGE LOG & FEATURES ADDED 
-=============================================================================
+------------------------------
+
+v2.18
+
+* New 2-pass fully-dynamic deflate compression (level -1).  ISA-L fast deflate
+  now has two levels.  Level 0 (default) is the same as previous generations.
+  Setting to level 1 will switch to the fully-dynamic compression that will
+  typically reach higher compression ratios.
+
+* RAID AVX512 functions.
+
 v2.17
 
 * New fast decompression (inflate)
