@@ -80,11 +80,13 @@ objs =  \
 	bin\pq_check_sse.obj \
 	bin\pq_gen_avx.obj \
 	bin\pq_gen_avx2.obj \
+	bin\pq_gen_avx512.obj \
 	bin\pq_gen_sse.obj \
 	bin\raid_base.obj \
 	bin\raid_multibinary.obj \
 	bin\xor_check_sse.obj \
 	bin\xor_gen_avx.obj \
+	bin\xor_gen_avx512.obj \
 	bin\xor_gen_sse.obj \
 	bin\crc16_t10dif_01.obj \
 	bin\crc16_t10dif_by4.obj \
