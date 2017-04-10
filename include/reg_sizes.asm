@@ -118,6 +118,72 @@
 %define ymm14x xmm14
 %define ymm15x xmm15
 
+%define zmm0x xmm0
+%define zmm1x xmm1
+%define zmm2x xmm2
+%define zmm3x xmm3
+%define zmm4x xmm4
+%define zmm5x xmm5
+%define zmm6x xmm6
+%define zmm7x xmm7
+%define zmm8x xmm8
+%define zmm9x xmm9
+%define zmm10x xmm10
+%define zmm11x xmm11
+%define zmm12x xmm12
+%define zmm13x xmm13
+%define zmm14x xmm14
+%define zmm15x xmm15
+%define zmm16x xmm16
+%define zmm17x xmm17
+%define zmm18x xmm18
+%define zmm19x xmm19
+%define zmm20x xmm20
+%define zmm21x xmm21
+%define zmm22x xmm22
+%define zmm23x xmm23
+%define zmm24x xmm24
+%define zmm25x xmm25
+%define zmm26x xmm26
+%define zmm27x xmm27
+%define zmm28x xmm28
+%define zmm29x xmm29
+%define zmm30x xmm30
+%define zmm31x xmm31
+
+%define zmm0y ymm0
+%define zmm1y ymm1
+%define zmm2y ymm2
+%define zmm3y ymm3
+%define zmm4y ymm4
+%define zmm5y ymm5
+%define zmm6y ymm6
+%define zmm7y ymm7
+%define zmm8y ymm8
+%define zmm9y ymm9
+%define zmm10y ymm10
+%define zmm11y ymm11
+%define zmm12y ymm12
+%define zmm13y ymm13
+%define zmm14y ymm14
+%define zmm15y ymm15
+%define zmm16y ymm16
+%define zmm17y ymm17
+%define zmm18y ymm18
+%define zmm19y ymm19
+%define zmm20y ymm20
+%define zmm21y ymm21
+%define zmm22y ymm22
+%define zmm23y ymm23
+%define zmm24y ymm24
+%define zmm25y ymm25
+%define zmm26y ymm26
+%define zmm27y ymm27
+%define zmm28y ymm28
+%define zmm29y ymm29
+%define zmm30y ymm30
+%define zmm31y ymm31
+
 %define DWORD(reg) reg %+ d
 %define WORD(reg)  reg %+ w
 %define BYTE(reg)  reg %+ b

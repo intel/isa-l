@@ -3,6 +3,11 @@
 %include "data_struct2.asm"
 %include "stdmac.asm"
 
+%ifdef HAVE_AS_KNOWS_AVX512
+
+%define ARCH 06
+%define USE_HSWNI
+
 ; tree entry is 4 bytes:
 ; lit/len tree (513 entries)
 ; |  3  |  2   |  1 | 0 |
@@ -59,29 +64,40 @@
 %define LIT_MASK	((0x1 << LIT_LEN_BIT_COUNT) - 1)
 %define DIST_MASK	((0x1 << DIST_LIT_BIT_COUNT) - 1)
 
-%define codes1		ymm1
-%define code_lens1	ymm2
-%define codes2		ymm3
-%define code_lens2	ymm4
-%define codes3		ymm5
-%define	code_lens3	ymm6
-%define codes4		ymm7
-%define syms		ymm7
+%define codes1		zmm1
+%define code_lens1	zmm2
+%define codes2		zmm3
+%define code_lens2	zmm4
+%define codes3		zmm5
+%define ztmp		zmm5
+%define	code_lens3	zmm6
+%define codes4		zmm7
+%define syms		zmm7
 
-%define code_lens4	ymm8
-%define dsyms		ymm8
+%define code_lens4	zmm8
+%define dsyms		zmm8
+%define zbits_count_q	zmm8
 
-%define ytmp		ymm9
-%define codes_lookup1	ymm10
-%define	codes_lookup2	ymm11
-%define datas		ymm12
-%define ybits		ymm13
-%define ybits_count	ymm14
-%define yoffset_mask	ymm15
+%define codes_lookup1	zmm9
+%define	codes_lookup2	zmm10
+%define datas		zmm11
+%define zbits		zmm12
+%define zbits_count	zmm13
+%define zoffset_mask	zmm14
 
-%define VECTOR_SIZE 0x20
+%define zq_64		zmm15
+%define zlit_mask	zmm16
+%define zdist_mask	zmm17
+%define zlit_icr_mask	zmm18
+%define zeb_icr_mask	zmm19
+%define zmax_write	zmm20
+%define zrot_perm	zmm21
+%define zq_8		zmm22
+%define zmin_write	zmm23
+
+%define VECTOR_SIZE 0x40
 %define VECTOR_LOOP_PROCESSED (2 * VECTOR_SIZE)
-%define VECTOR_SLOP 0x20 - 8
+%define VECTOR_SLOP 0x40 - 8
 
 gpr_save_mem_offset	equ	0
 gpr_save_mem_size	equ	8 * 6
@@ -162,31 +178,48 @@ encode_deflate_icf_ %+ ARCH:
 	cmp	ptr, in_buf_end
 	jge	.finish
 
-	vpcmpeqq	ytmp, ytmp, ytmp
-	vmovdqu	datas, [ptr]
-	vpand	syms, datas, [lit_mask]
-	vpgatherdd codes_lookup1, [hufftables + _lit_len_table + 4 * syms], ytmp
+	kxorq	k0, k0, k0
+	kmovq	k1, [k_mask_1]
+	kmovq	k2, [k_mask_2]
+	kmovq	k3, [k_mask_3]
+	kmovq	k4, [k_mask_4]
+	kmovq	k5, [k_mask_5]
 
-	vpcmpeqq	ytmp, ytmp, ytmp
+	vmovdqa64 zoffset_mask, [offset_mask]
+	vmovdqa64 zlit_mask, [lit_mask]
+	vmovdqa64 zdist_mask, [dist_mask]
+	vmovdqa64 zlit_icr_mask, [lit_icr_mask]
+	vmovdqa64 zeb_icr_mask, [eb_icr_mask]
+	vmovdqa64 zmax_write, [max_write_d]
+	vmovdqa64 zq_64, [q_64]
+	vmovdqa64 zrot_perm, [rot_perm]
+	vmovdqa64 zq_8, [q_8]
+	vmovdqa64 zmin_write, [min_write_q]
+
+	knotq	k6, k0
+	vmovdqu64	datas, [ptr]
+	vpandd	syms, datas, [lit_mask]
+	vpgatherdd codes_lookup1 {k6}, [hufftables + _lit_len_table + 4 * syms]
+
+	knotq	k7, k0
 	vpsrld	dsyms, datas, DIST_OFFSET
-	vpand	dsyms, dsyms, [dist_mask]
-	vpgatherdd codes_lookup2, [hufftables + _dist_table + 4 * dsyms], ytmp
+	vpandd	dsyms, dsyms, [dist_mask]
+	vpgatherdd codes_lookup2 {k7}, [hufftables + _dist_table + 4 * dsyms]
 
-	vmovq	ybits %+ x, bits
-	vmovq	ybits_count %+ x, rcx
-	vmovdqa	yoffset_mask, [offset_mask]
+	vmovq	zbits %+ x, bits
+	vmovq	zbits_count %+ x, rcx
 
 .main_loop:
 	;;  Sets codes1 to contain lit/len codes andcode_lens1 the corresponding lengths
 	vpsrld	code_lens1, codes_lookup1, 24
-	vpand	codes1, codes_lookup1, [lit_icr_mask]
+	vpandd	codes1, codes_lookup1, zlit_icr_mask
 
 	;; Sets codes2 to contain dist codes, code_lens2 the corresponding lengths,
 	;; and code_lens3 the extra bit counts
-	vpblendw	codes2, ybits, codes_lookup2, 0x55 ;Bits 8 and above of ybits are 0
+	vmovdqu16	codes2 {k1}{z}, codes_lookup2 ;Bits 8 and above of zbits are 0
 	vpsrld	code_lens2, codes_lookup2, 24
 	vpsrld	code_lens3, codes_lookup2, 16
-	vpand	code_lens3, [eb_icr_mask]
+	vpandd	code_lens3, code_lens3, zeb_icr_mask
 
 	;; Set codes3 to contain the extra bits
 	vpsrld	codes3, datas, EXTRA_BITS_OFFSET
@@ -195,117 +228,123 @@ encode_deflate_icf_ %+ ARCH:
 	ja	.main_loop_exit
 
 	;; Start code lookups for next iteration
+	knotq	k6, k0
 	add	ptr, VECTOR_SIZE
-	vpcmpeqq	ytmp, ytmp, ytmp
-	vmovdqu	datas, [ptr]
-	vpand	syms, datas, [lit_mask]
-	vpgatherdd codes_lookup1, [hufftables + _lit_len_table + 4 * syms], ytmp
+	vmovdqu64	datas, [ptr]
+	vpandd	syms, datas, zlit_mask
+	vpgatherdd codes_lookup1 {k6}, [hufftables + _lit_len_table + 4 * syms]
 
-	vpcmpeqq	ytmp, ytmp, ytmp
+	knotq	k7, k0
 	vpsrld	dsyms, datas, DIST_OFFSET
-	vpand	dsyms, dsyms, [dist_mask]
-	vpgatherdd codes_lookup2, [hufftables + _dist_table + 4 * dsyms], ytmp
+	vpandd	dsyms, dsyms, zdist_mask
+	vpgatherdd codes_lookup2 {k7}, [hufftables + _dist_table + 4 * dsyms]
 
 	;; Merge dist code with extra bits
 	vpsllvd	codes3, codes3, code_lens2
-	vpxor	codes2, codes2, codes3
+	vpxord	codes2, codes2, codes3
 	vpaddd	code_lens2, code_lens2, code_lens3
 
 	;; Check for long codes
 	vpaddd	code_lens3, code_lens1, code_lens2
-	vpcmpgtd	ytmp, code_lens3, [max_write_d]
-	vptest	ytmp, ytmp
+	vpcmpgtd	k6, code_lens3, zmax_write
+	ktestd	k6, k6
 	jnz	.long_codes
 
 	;; Merge dist and len codes
 	vpsllvd	codes2, codes2, code_lens1
-	vpxor	codes1, codes1, codes2
+	vpxord	codes1, codes1, codes2
 
-	;; Split buffer data into qwords, ytmp is 0 after last branch
-	vpblendd codes3, ytmp, codes1, 0x55
+	vmovdqa32 codes3 {k1}{z}, codes1
 	vpsrlq	codes1, codes1, 32
 	vpsrlq	code_lens1, code_lens3, 32
-	vpblendd	code_lens3, ytmp, code_lens3, 0x55
+	vmovdqa32	code_lens3 {k1}{z}, code_lens3
 
 	;; Merge bitbuf bits
-	vpsllvq codes3, codes3, ybits_count
-	vpxor	codes3, codes3, ybits
-	vpaddq	code_lens3, code_lens3, ybits_count
+	vpsllvq codes3, codes3, zbits_count
+	vpxord	codes3, codes3, zbits
+	vpaddq	code_lens3, code_lens3, zbits_count
 
 	;; Merge two symbols into qwords
 	vpsllvq	codes1, codes1, code_lens3
-	vpxor codes1, codes1, codes3
+	vpxord codes1, codes1, codes3
 	vpaddq code_lens1, code_lens1, code_lens3
 
-	;; Split buffer data into dqwords, ytmp is 0 after last branch
-	vpblendd	codes2, ytmp, codes1, 0x33
-	vpblendd	code_lens2, ytmp, code_lens1, 0x33
-	vpsrldq	codes1, 8
-	vpsrldq	code_lens1, 8
+	;; Determine total bits at end of each qword
+	kshiftlq k7, k3, 2
+	vpermq	zbits_count {k5}{z}, zrot_perm, code_lens1
+	vpaddq	code_lens2, zbits_count, code_lens1
+	vshufi64x2 zbits_count {k3}{z}, code_lens2, code_lens2, 0x90
+	vpaddq	code_lens2, code_lens2, zbits_count
+	vshufi64x2 zbits_count {k7}{z}, code_lens2, code_lens2, 0x40
+	vpaddq	code_lens2, code_lens2, zbits_count
 
-	;; Merge two qwords into dqwords
-	vmovdqa	ytmp, [q_64]
-	vpsubq	code_lens3, ytmp, code_lens2
-	vpsrlvq	codes3, codes1, code_lens3
-	vpslldq	codes3, codes3, 8
+	;; Bit align quadwords
+	vpandd	zbits_count, code_lens2, zoffset_mask
+	vpermq	zbits_count_q {k5}{z}, zrot_perm, zbits_count
+	vpsllvq	codes1, codes1, zbits_count_q
 
-	vpsllvq	codes1, codes1, code_lens2
+	;; Get last byte in each qword
+	vpsrlq	code_lens2, code_lens2, 3
+	vpaddq	code_lens1, code_lens1, zbits_count_q
+	vpsrlq	code_lens1, code_lens1, 3
+	vpaddq	code_lens1, code_lens1, zq_8
+	vpshufb	codes3 {k4}{z}, codes1, code_lens1
 
-	vpxor	codes1, codes1, codes3
-	vpxor	codes1, codes1, codes2
-	vpaddq	code_lens1, code_lens1, code_lens2
+	;; Check whether any of the last bytes overlap
+	vpcmpq k6 {k5}, code_lens1, zmin_write, 0
+	ktestd k6, k6
+	jnz .small_codes
 
-	vmovq	tmp, code_lens1 %+ x 	;Number of bytes
-	shr	tmp, 3
-	vpand	ybits_count, code_lens1, yoffset_mask ;Extra bits
+.small_codes_next:
+	;; Save off zbits and zbits_count for next loop
+	knotq	k7, k5
+	vpermq	zbits {k7}{z}, zrot_perm, codes3
+	vpermq	zbits_count {k7}{z}, zrot_perm, zbits_count
 
-	;; bit shift upper dqword combined bits to line up with lower dqword
-	vextracti128	codes2 %+ x, codes1, 1
-	vextracti128	code_lens2 %+ x, code_lens1, 1
+	;; Merge last byte in each qword with the next qword
+	vpermq	codes3 {k5}{z}, zrot_perm, codes3
+	vpxord codes1, codes1, codes3
 
-	vpbroadcastq	ybits_count, ybits_count %+ x
-	vpsrldq	codes3, codes2, 1
-	vpsllvq	codes2, codes2, ybits_count
-	vpsllvq	codes3, codes3, ybits_count
-	vpslldq	codes3, codes3, 1
-	vpor	codes2, codes2, codes3
+	;; Determine total bytes written
+	vextracti64x2 code_lens1 %+ x, code_lens2, 3
+	vpextrq tmp2, code_lens1 %+ x, 1
 
-	; Write out lower dqword of combined bits
-	vmovdqu	[out_buf], codes1
-	movzx	bits, byte [out_buf + tmp]
-	vmovq	codes1 %+ x, bits
-	vpaddq	code_lens1, code_lens1, code_lens2
+	;; Write out qwords
+	knotq	k6, k0
+	vpermq code_lens2 {k5}{z}, zrot_perm, code_lens2
+	vpscatterqq [out_buf + code_lens2] {k6}, codes1
 
-	vmovq	tmp2, code_lens1 %+ x	;Number of bytes
-	shr	tmp2, 3
-	vpand	ybits_count, code_lens1, yoffset_mask ;Extra bits
-
-	; Write out upper dqword of combined bits
-	vpor	codes1 %+ x, codes1 %+ x, codes2 %+ x
-	vmovdqu	[out_buf + tmp], codes1 %+ x
 	add	out_buf, tmp2
-	movzx	bits, byte [out_buf]
-	vmovq	ybits %+ x, bits
 
 	cmp	ptr, in_buf_end
 	jbe	.main_loop
 
 .main_loop_exit:
-	vmovq	rcx, ybits_count %+ x
-	vmovq	bits, ybits %+ x
+	vmovq	rcx, zbits_count %+ x
+	vmovq	bits, zbits %+ x
 	jmp	.finish
+
+.small_codes:
+	;; Merge overlapping last bytes
+	vpermq	codes4 {k6}{z}, zrot_perm, codes3
+	vporq codes3, codes3, codes4
+	kshiftlq k7, k6, 1
+	ktestd k6, k7
+	jz .small_codes_next
+
+	kandq k6, k6, k7
+	jmp .small_codes
 
 .long_codes:
 	add	end_ptr, VECTOR_SLOP
 	sub	ptr, VECTOR_SIZE
 
-	vpxor ytmp, ytmp, ytmp
-	vpblendd codes3, ytmp, codes1, 0x55
-	vpblendd code_lens3, ytmp, code_lens1, 0x55
-	vpblendd codes4, ytmp, codes2, 0x55
+	vmovdqa32 codes3 {k1}{z}, codes1
+	vmovdqa32 code_lens3 {k1}{z}, code_lens1
+	vmovdqa32 codes4 {k1}{z}, codes2
 
 	vpsllvq	codes4, codes4, code_lens3
-	vpxor	codes3, codes3, codes4
+	vpxord	codes3, codes3, codes4
 	vpaddd	code_lens3, code_lens1, code_lens2
 
 	vpsrlq	codes1, codes1, 32
@@ -313,21 +352,28 @@ encode_deflate_icf_ %+ ARCH:
 	vpsrlq	codes2, codes2, 32
 
 	vpsllvq	codes2, codes2, code_lens1
-	vpxor codes1, codes1, codes2
+	vpxord codes1, codes1, codes2
 
 	vpsrlq code_lens1, code_lens3, 32
-	vpblendd	code_lens3, ytmp, code_lens3, 0x55
+	vmovdqa32	code_lens3 {k1}{z}, code_lens3
 
 	;; Merge bitbuf bits
-	vpsllvq codes3, codes3, ybits_count
-	vpxor	codes3, codes3, ybits
-	vpaddq	code_lens3, code_lens3, ybits_count
+	vpsllvq codes3, codes3, zbits_count
+	vpxord	codes3, codes3, zbits
+	vpaddq	code_lens3, code_lens3, zbits_count
 	vpaddq code_lens1, code_lens1, code_lens3
 
 	xor	bits, bits
 	xor	rcx, rcx
 	vpsubq code_lens1, code_lens1, code_lens3
-%rep 2
+
+	vmovdqu64 codes2, codes1
+	vmovdqu64 code_lens2, code_lens1
+	vmovdqu64 codes4, codes3
+	vmovdqu64 code_lens4, code_lens3
+%assign i 0
+%rep 4
+%assign i (i + 1)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	cmp	out_buf, end_ptr
 	ja	.overflow
@@ -416,15 +462,15 @@ encode_deflate_icf_ %+ ARCH:
 	and	rcx, 7
 	add	ptr, 4
 
-	vextracti128 codes3 %+ x, codes3, 1
-	vextracti128 code_lens3 %+ x, code_lens3, 1
-	vextracti128 codes1 %+ x, codes1, 1
-	vextracti128 code_lens1 %+ x, code_lens1, 1
+	vextracti32x4 codes3 %+ x, codes4, i
+	vextracti32x4 code_lens3 %+ x, code_lens4, i
+	vextracti32x4 codes1 %+ x, codes2, i
+	vextracti32x4 code_lens1 %+ x, code_lens2, i
 %endrep
 	sub	end_ptr, VECTOR_SLOP
 
-	vmovq	ybits %+ x, bits
-	vmovq	ybits_count %+ x, rcx
+	vmovq	zbits %+ x, bits
+	vmovq	zbits_count %+ x, rcx
 	cmp	ptr, in_buf_end
 	jbe	.main_loop
 
@@ -504,24 +550,55 @@ encode_deflate_icf_ %+ ARCH:
 	ret
 
 section .data
-	align 32
+	align 64
 max_write_d:
-	dd	0x1c, 0x1d, 0x20, 0x20, 0x1e, 0x1e, 0x1e, 0x1e
+	dd	0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c
+	dd	0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c
+min_write_q:
+	dq	0x00, 0x08, 0x00, 0x08, 0x00, 0x08, 0x00, 0x08
 offset_mask:
-	dq	0x0000000000000007, 0x0000000000000000
-	dq	0x0000000000000000, 0x0000000000000000
+	dq	0x0000000000000007, 0x0000000000000007
+	dq	0x0000000000000007, 0x0000000000000007
+	dq	0x0000000000000007, 0x0000000000000007
+	dq	0x0000000000000007, 0x0000000000000007
 q_64:
 	dq	0x0000000000000040, 0x0000000000000000
 	dq	0x0000000000000040, 0x0000000000000000
+	dq	0x0000000000000040, 0x0000000000000000
+	dq	0x0000000000000040, 0x0000000000000000
+q_8 :
+	dq	0x0000000000000000, 0x0000000000000008
+	dq	0x0000000000000000, 0x0000000000000008
+	dq	0x0000000000000000, 0x0000000000000008
+	dq	0x0000000000000000, 0x0000000000000008
 lit_mask:
+	dd LIT_MASK, LIT_MASK, LIT_MASK, LIT_MASK
+	dd LIT_MASK, LIT_MASK, LIT_MASK, LIT_MASK
 	dd LIT_MASK, LIT_MASK, LIT_MASK, LIT_MASK
 	dd LIT_MASK, LIT_MASK, LIT_MASK, LIT_MASK
 dist_mask:
 	dd DIST_MASK, DIST_MASK, DIST_MASK, DIST_MASK
 	dd DIST_MASK, DIST_MASK, DIST_MASK, DIST_MASK
+	dd DIST_MASK, DIST_MASK, DIST_MASK, DIST_MASK
+	dd DIST_MASK, DIST_MASK, DIST_MASK, DIST_MASK
 lit_icr_mask:
-	dd 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF
-	dd 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF
+	dd 0x00ffffff, 0x00ffffff, 0x00ffffff, 0x00ffffff
+	dd 0x00ffffff, 0x00ffffff, 0x00ffffff, 0x00ffffff
+	dd 0x00ffffff, 0x00ffffff, 0x00ffffff, 0x00ffffff
+	dd 0x00ffffff, 0x00ffffff, 0x00ffffff, 0x00ffffff
 eb_icr_mask:
-	dd 0x000000FF, 0x000000FF, 0x000000FF, 0x000000FF
-	dd 0x000000FF, 0x000000FF, 0x000000FF, 0x000000FF
+	dd 0x000000ff, 0x000000ff, 0x000000ff, 0x000000ff
+	dd 0x000000ff, 0x000000ff, 0x000000ff, 0x000000ff
+	dd 0x000000ff, 0x000000ff, 0x000000ff, 0x000000ff
+	dd 0x000000ff, 0x000000ff, 0x000000ff, 0x000000ff
+rot_perm:
+	dq 0x00000007, 0x00000000, 0x00000001, 0x00000002
+	dq 0x00000003, 0x00000004, 0x00000005, 0x00000006
+
+k_mask_1: dq 0x55555555
+k_mask_2: dq 0x11111111
+k_mask_3: dq 0xfffffffc
+k_mask_4: dw 0x0101, 0x0101, 0x0101, 0x0101
+k_mask_5: dq 0xfffffffe
+
+%endif

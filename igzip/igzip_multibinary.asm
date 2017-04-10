@@ -60,6 +60,10 @@ extern isal_update_histogram_04
 extern encode_deflate_icf_base
 extern encode_deflate_icf_04
 
+%ifdef HAVE_AS_KNOWS_AVX512
+extern encode_deflate_icf_06
+%endif
+
 extern crc32_gzip_base
 extern crc32_gzip_01
 
@@ -82,8 +86,13 @@ mbin_dispatch_init5	isal_deflate_icf_finish, isal_deflate_icf_finish_base, isal_
 mbin_interface		isal_update_histogram
 mbin_dispatch_init5	isal_update_histogram, isal_update_histogram_base, isal_update_histogram_01, isal_update_histogram_01, isal_update_histogram_04
 
+%ifdef HAVE_AS_KNOWS_AVX512
+mbin_interface		encode_deflate_icf
+mbin_dispatch_init6	encode_deflate_icf, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_04, encode_deflate_icf_06
+%else
 mbin_interface		encode_deflate_icf
 mbin_dispatch_init5	encode_deflate_icf, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_04
+%endif
 
 mbin_interface		crc32_gzip
 mbin_dispatch_init5	crc32_gzip, crc32_gzip_base, crc32_gzip_base, crc32_gzip_01, crc32_gzip_01

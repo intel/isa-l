@@ -56,6 +56,7 @@ lsrc_x86_64 +=  \
 		igzip/igzip_decode_block_stateless_04.asm \
 		igzip/igzip_inflate_multibinary.asm \
 		igzip/encode_df_04.asm \
+		igzip/encode_df_06.asm \
 		igzip/proc_heap.asm
 
 src_include += -I $(srcdir)/igzip
@@ -93,7 +94,6 @@ other_src   += 	igzip/bitbuf2.asm  \
 		igzip/inflate_std_vects.h \
 		igzip/flatten_ll.h \
 		igzip/encode_df.h \
-		igzip/encode_df_asm.asm \
 		igzip/heap_macros.asm \
 		igzip/igzip_checksums.h
 
