@@ -50,7 +50,7 @@ build_huff_tree:
 	mov	[heap + node_ptr*8], h1 %+ w
 	mov	[heap + node_ptr*8 - 8], h2 %+ w
 
-	and 	h3, 0XFFFF0000	; sign extends to FFFFFFFFFFFF0000
+	and 	h3, ~0xffff
 	or	h3, node_ptr
 	sub	node_ptr, 2
 

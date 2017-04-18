@@ -290,7 +290,7 @@ encode_deflate_icf_ %+ ARCH:
 	cmp	ptr, in_buf_end
 	jbe	.main_loop
 
-.main_loop_exit
+.main_loop_exit:
 	vmovq	rcx, ybits_count %+ x
 	vmovq	bits, ybits %+ x
 	jmp	.finish
