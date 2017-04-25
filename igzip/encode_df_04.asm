@@ -246,6 +246,13 @@ encode_deflate_icf_ %+ ARCH:
 	vpsrldq	codes1, 8
 	vpsrldq	code_lens1, 8
 
+	;; Bit align dqwords
+	vpaddq	code_lens1, code_lens1, code_lens2
+	vpand	ybits_count, code_lens1, yoffset_mask ;Extra bits
+	vpermq	ybits_count, ybits_count, 0xcf
+	vpaddq	code_lens2, ybits_count
+	vpsllvq	codes2, codes2, ybits_count
+
 	;; Merge two qwords into dqwords
 	vmovdqa	ytmp, [q_64]
 	vpsubq	code_lens3, ytmp, code_lens2
@@ -256,27 +263,30 @@ encode_deflate_icf_ %+ ARCH:
 
 	vpxor	codes1, codes1, codes3
 	vpxor	codes1, codes1, codes2
-	vpaddq	code_lens1, code_lens1, code_lens2
 
 	vmovq	tmp, code_lens1 %+ x 	;Number of bytes
 	shr	tmp, 3
-	vpand	ybits_count, code_lens1, yoffset_mask ;Extra bits
+
+	;; Extract last bytes
+	vpaddq	code_lens2, code_lens1, ybits_count
+	vpsrlq	code_lens2, code_lens2, 3
+	vpshufb	codes2, codes1, code_lens2
+	vpand	codes2, codes2, [bytes_mask]
+	vextracti128	ybits %+ x, codes2, 1
+
+	;; Check for short codes
+	vptest code_lens2, [min_write_mask]
+	jz	.short_codes
+.short_codes_next
+
+	vpermq	codes2, codes2, 0x45
+	vpor	codes1, codes1, codes2
 
 	;; bit shift upper dqword combined bits to line up with lower dqword
-	vextracti128	codes2 %+ x, codes1, 1
 	vextracti128	code_lens2 %+ x, code_lens1, 1
-
-	vpbroadcastq	ybits_count, ybits_count %+ x
-	vpsrldq	codes3, codes2, 1
-	vpsllvq	codes2, codes2, ybits_count
-	vpsllvq	codes3, codes3, ybits_count
-	vpslldq	codes3, codes3, 1
-	vpor	codes2, codes2, codes3
 
 	; Write out lower dqword of combined bits
 	vmovdqu	[out_buf], codes1
-	movzx	bits, byte [out_buf + tmp]
-	vmovq	codes1 %+ x, bits
 	vpaddq	code_lens1, code_lens1, code_lens2
 
 	vmovq	tmp2, code_lens1 %+ x	;Number of bytes
@@ -284,11 +294,8 @@ encode_deflate_icf_ %+ ARCH:
 	vpand	ybits_count, code_lens1, yoffset_mask ;Extra bits
 
 	; Write out upper dqword of combined bits
-	vpor	codes1 %+ x, codes1 %+ x, codes2 %+ x
-	vmovdqu	[out_buf + tmp], codes1 %+ x
+	vextracti128	[out_buf + tmp], codes1, 1
 	add	out_buf, tmp2
-	movzx	bits, byte [out_buf]
-	vmovq	ybits %+ x, bits
 
 	cmp	ptr, in_buf_end
 	jbe	.main_loop
@@ -297,6 +304,11 @@ encode_deflate_icf_ %+ ARCH:
 	vmovq	rcx, ybits_count %+ x
 	vmovq	bits, ybits %+ x
 	jmp	.finish
+
+.short_codes:
+	;; Merge last bytes when the second dqword contains less than a byte
+	vpor ybits %+ x, codes2 %+ x
+	jmp .short_codes_next
 
 .long_codes:
 	add	end_ptr, VECTOR_SLOP
@@ -509,7 +521,9 @@ encode_deflate_icf_ %+ ARCH:
 section .data
 	align 32
 max_write_d:
-	dd	0x1c, 0x1d, 0x20, 0x20, 0x1e, 0x1e, 0x1e, 0x1e
+	dd	0x1c, 0x1d, 0x1f, 0x20, 0x1c, 0x1d, 0x1f, 0x20
+min_write_mask:
+	dq	0x00, 0x00, 0xff, 0x00
 offset_mask:
 	dq	0x0000000000000007, 0x0000000000000000
 	dq	0x0000000000000000, 0x0000000000000000
@@ -528,3 +542,6 @@ lit_icr_mask:
 eb_icr_mask:
 	dd 0x000000FF, 0x000000FF, 0x000000FF, 0x000000FF
 	dd 0x000000FF, 0x000000FF, 0x000000FF, 0x000000FF
+bytes_mask:
+	dq	0x00000000000000ff, 0x0000000000000000
+	dq	0x00000000000000ff, 0x0000000000000000
