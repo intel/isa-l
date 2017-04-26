@@ -108,12 +108,12 @@ unsigned int crc32_iscsi_base(unsigned char *buffer, int len, unsigned int crc_i
 	p_buf = (unsigned char *)buffer;
 	unsigned char *p_end = buffer + len;
 
-	crc = crc_init;
+	crc = ~crc_init;
 
 	while (p_buf < (unsigned char *)p_end) {
 		crc = (crc >> 8) ^ crc32_table_iscsi_base[(crc & 0x000000FF) ^ *p_buf++];
 	}
-	return crc;
+	return ~crc;
 }
 
 // crc16_t10dif baseline function
