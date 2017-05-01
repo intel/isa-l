@@ -28,6 +28,7 @@
 **********************************************************************/
 
 #include <stdint.h>
+#include "igzip_checksums.h"
 
 uint32_t crc32_table_gzip_base[256] = {
 	0x00000000, 0x77073096, 0xee0e612c, 0x990951ba,
@@ -103,4 +104,42 @@ uint32_t crc32_gzip_base(uint32_t crc, uint8_t * start, uint32_t length)
 	while (start < end)
 		crc = (crc >> 8) ^ crc32_table_gzip_base[(crc & 0xff) ^ *start++];
 	return ~crc;
+}
+
+uint32_t adler32_base(uint32_t adler32, uint8_t * start, uint32_t length)
+{
+	uint8_t *end, *next = start;
+	uint64_t A, B;
+
+	A = adler32 & 0xffff;
+	B = adler32 >> 16;
+
+	/* Internally the checksum is being stored as B | (A-1) so crc and
+	 * addler have same init value */
+	A += 1;
+
+	while (length > MAX_ADLER_BUF) {
+		end = next + MAX_ADLER_BUF;
+		for (; next < end; next++) {
+			A += *next;
+			B += A;
+		}
+
+		A = A % ADLER_MOD;
+		B = B % ADLER_MOD;
+		length -= MAX_ADLER_BUF;
+	}
+
+	end = next + length;
+	for (; next < end; next++) {
+		A += *next;
+		B += A;
+	}
+
+	A -= 1;
+
+	A = A % ADLER_MOD;
+	B = B % ADLER_MOD;
+
+	return B << 16 | A;
 }

@@ -39,6 +39,11 @@ const uint8_t gzip_hdr[] = {
 const uint32_t gzip_hdr_bytes = 10;
 const uint32_t gzip_trl_bytes = 8;
 
+const uint8_t zlib_hdr[] = { 0x78, 0x01 };
+
+const uint32_t zlib_hdr_bytes = 2;
+const uint32_t zlib_trl_bytes = 4;
+
 struct isal_hufftables hufftables_default = {
 
 	.deflate_hdr = {
@@ -2280,6 +2285,11 @@ const uint8_t gzip_hdr[] = {
 
 const uint32_t gzip_hdr_bytes = 10;
 const uint32_t gzip_trl_bytes = 8;
+
+const uint8_t zlib_hdr[] = { 0x78, 0x01 };
+
+const uint32_t zlib_hdr_bytes = 2;
+const uint32_t zlib_trl_bytes = 4;
 
 struct isal_hufftables hufftables_default = {
 

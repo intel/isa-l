@@ -50,20 +50,36 @@
 #include "huff_codes.h"
 #include "encode_df.h"
 #include "igzip_level_buf_structs.h"
+#include "igzip_checksums.h"
+
+#ifdef __FreeBSD__
+#include <sys/types.h>
+#include <sys/endian.h>
+# define to_be32(x) bswap32(x)
+#elif defined (__APPLE__)
+#include <libkern/OSByteOrder.h>
+# define to_be32(x) OSSwapInt32(x)
+#elif defined (__GNUC__) && !defined (__MINGW32__)
+# include <byteswap.h>
+# define to_be32(x) bswap_32(x)
+#elif defined _WIN64
+# define to_be32(x) _byteswap_ulong(x)
+#endif
 
 extern const uint8_t gzip_hdr[];
 extern const uint32_t gzip_hdr_bytes;
 extern const uint32_t gzip_trl_bytes;
+extern const uint8_t zlib_hdr[];
+extern const uint32_t zlib_hdr_bytes;
+extern const uint32_t zlib_trl_bytes;
 extern const struct isal_hufftables hufftables_default;
 extern const struct isal_hufftables hufftables_static;
-
-extern uint32_t crc32_gzip(uint32_t init_crc, const unsigned char *buf, uint64_t len);
 
 static int write_stored_block_stateless(struct isal_zstream *stream, uint32_t stored_len,
 					uint32_t crc32);
 
-static int write_gzip_header_stateless(struct isal_zstream *stream);
-static void write_gzip_header(struct isal_zstream *stream);
+static int write_stream_header_stateless(struct isal_zstream *stream);
+static void write_stream_header(struct isal_zstream *stream);
 static int write_deflate_header_stateless(struct isal_zstream *stream);
 static int write_deflate_header_unaligned_stateless(struct isal_zstream *stream);
 
@@ -110,6 +126,22 @@ struct slver isal_deflate_set_hufftables_slver_00_01_008b;
 struct slver isal_deflate_set_hufftables_slver = { 0x008b, 0x01, 0x00 };
 
 /*****************************************************************/
+
+void update_checksum(struct isal_zstream *stream, uint8_t * start_in, uint64_t length)
+{
+	struct isal_zstate *state = &stream->internal_state;
+	switch (stream->gzip_flag) {
+	case IGZIP_GZIP:
+	case IGZIP_GZIP_NO_HDR:
+		state->crc = crc32_gzip(state->crc, start_in, length);
+		break;
+	case IGZIP_ZLIB:
+	case IGZIP_ZLIB_NO_HDR:
+		state->crc = isal_adler32(state->crc, start_in, length);
+		break;
+	}
+}
+
 static
 void sync_flush(struct isal_zstream *stream)
 {
@@ -235,8 +267,8 @@ static void create_icf_block_hdr(struct isal_zstream *stream)
 	if (end_out - stream->next_out >= ISAL_DEF_MAX_HDR_SIZE) {
 		/* Determine whether this is the final block */
 
-		if (stream->gzip_flag == IGZIP_GZIP)
-			write_gzip_header_stateless(stream);
+		if (stream->gzip_flag == IGZIP_GZIP || stream->gzip_flag == IGZIP_ZLIB)
+			write_stream_header_stateless(stream);
 
 		set_buf(write_buf, stream->next_out, stream->avail_out);
 
@@ -288,7 +320,6 @@ static void isal_deflate_pass(struct isal_zstream *stream)
 
 	if (state->state == ZSTATE_FLUSH_READ_BUFFER)
 		isal_deflate_finish(stream);
-
 	if (state->state == ZSTATE_SYNC_FLUSH)
 		sync_flush(stream);
 
@@ -296,7 +327,7 @@ static void isal_deflate_pass(struct isal_zstream *stream)
 		flush_write_buffer(stream);
 
 	if (stream->gzip_flag)
-		state->crc = crc32_gzip(state->crc, start_in, stream->next_in - start_in);
+		update_checksum(stream, start_in, stream->next_in - start_in);
 
 	if (state->state == ZSTATE_TRL)
 		write_trailer(stream);
@@ -342,7 +373,7 @@ static void isal_deflate_icf_pass(struct isal_zstream *stream)
 		flush_write_buffer(stream);
 
 	if (stream->gzip_flag)
-		state->crc = crc32_gzip(state->crc, start_in, stream->next_in - start_in);
+		update_checksum(stream, start_in, stream->next_in - start_in);
 
 	if (state->state == ZSTATE_TRL)
 		write_trailer(stream);
@@ -507,7 +538,7 @@ static void write_constant_compressed_stateless(struct isal_zstream *stream,
 	stream->total_out += bytes;
 
 	if (stream->gzip_flag)
-		state->crc = crc32_gzip(state->crc, start_in, stream->next_in - start_in);
+		update_checksum(stream, start_in, stream->next_in - start_in);
 
 	return;
 }
@@ -535,8 +566,8 @@ static int isal_deflate_int_stateless(struct isal_zstream *stream)
 	uint32_t repeat_length;
 	struct isal_zstate *state = &stream->internal_state;
 
-	if (stream->gzip_flag == IGZIP_GZIP)
-		if (write_gzip_header_stateless(stream))
+	if (stream->gzip_flag == IGZIP_GZIP || stream->gzip_flag == IGZIP_ZLIB)
+		if (write_stream_header_stateless(stream))
 			return STATELESS_OVERFLOW;
 
 	if (stream->avail_in >= 8
@@ -590,7 +621,6 @@ static int write_stored_block_stateless(struct isal_zstream *stream,
 	uint64_t stored_blk_hdr;
 	uint32_t copy_size;
 	uint32_t avail_in;
-	uint64_t gzip_trl;
 
 	if (stream->avail_out < stored_len)
 		return STATELESS_OVERFLOW;
@@ -603,6 +633,10 @@ static int write_stored_block_stateless(struct isal_zstream *stream,
 		memcpy(stream->next_out, gzip_hdr, gzip_hdr_bytes);
 		stream->next_out += gzip_hdr_bytes;
 		stream->gzip_flag = IGZIP_GZIP_NO_HDR;
+	} else if (stream->gzip_flag == IGZIP_ZLIB) {
+		memcpy(stream->next_out, zlib_hdr, zlib_hdr_bytes);
+		stream->next_out += zlib_hdr_bytes;
+		stream->gzip_flag = IGZIP_ZLIB_NO_HDR;
 	}
 
 	do {
@@ -635,11 +669,19 @@ static int write_stored_block_stateless(struct isal_zstream *stream,
 	} while (avail_in != 0);
 
 	if (stream->gzip_flag && stream->internal_state.has_eob_hdr) {
-		gzip_trl = stream->avail_in;
-		gzip_trl <<= 32;
-		gzip_trl |= crc32 & 0xFFFFFFFF;
-		memcpy(stream->next_out, &gzip_trl, gzip_trl_bytes);
-		stream->next_out += gzip_trl_bytes;
+		switch (stream->gzip_flag) {
+		case IGZIP_GZIP:
+		case IGZIP_GZIP_NO_HDR:
+			*(uint64_t *) stream->next_out =
+			    ((uint64_t) stream->total_in << 32) | crc32;
+			stream->next_out += gzip_trl_bytes;
+			break;
+		case IGZIP_ZLIB:
+		case IGZIP_ZLIB_NO_HDR:
+			*(uint32_t *) stream->next_out =
+			    to_be32((crc32 & 0xFFFF0000) | ((crc32 & 0xFFFF) + 1) % ADLER_MOD);
+			stream->next_out += zlib_trl_bytes;
+		}
 	}
 
 	stream->avail_in = 0;
@@ -750,7 +792,6 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 	const uint32_t total_out = stream->total_out;
 	const uint32_t gzip_flag = stream->gzip_flag;
 
-	uint32_t crc32 = 0;
 	uint32_t stored_len;
 
 	/* Final block has already been written */
@@ -786,6 +827,12 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 	else if (stream->gzip_flag == IGZIP_GZIP_NO_HDR)
 		stored_len += gzip_trl_bytes;
 
+	else if (stream->gzip_flag == IGZIP_ZLIB)
+		stored_len += zlib_hdr_bytes + zlib_trl_bytes;
+
+	else if (stream->gzip_flag == IGZIP_ZLIB_NO_HDR)
+		stored_len += zlib_trl_bytes;
+
 	/*
 	   the output buffer should be no less than 8 bytes
 	   while empty stored deflate block is 5 bytes only
@@ -817,10 +864,12 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 
 	stream->gzip_flag = gzip_flag;
 
-	if (stream->gzip_flag)
-		crc32 = crc32_gzip(0x0, next_in, avail_in);
+	if (stream->gzip_flag) {
+		stream->internal_state.crc = 0;
+		update_checksum(stream, next_in, avail_in);
+	}
 
-	return write_stored_block_stateless(stream, stored_len, crc32);
+	return write_stored_block_stateless(stream, stored_len, stream->internal_state.crc);
 }
 
 int isal_deflate(struct isal_zstream *stream)
@@ -920,38 +969,66 @@ int isal_deflate(struct isal_zstream *stream)
 	return ret;
 }
 
-static int write_gzip_header_stateless(struct isal_zstream *stream)
+static int write_stream_header_stateless(struct isal_zstream *stream)
 {
-	if (gzip_hdr_bytes >= stream->avail_out)
+	uint32_t hdr_bytes;
+	const uint8_t *hdr;
+	uint32_t next_flag;
+
+	if (stream->gzip_flag == IGZIP_ZLIB) {
+		hdr_bytes = zlib_hdr_bytes;
+		hdr = zlib_hdr;
+		next_flag = IGZIP_ZLIB_NO_HDR;
+	} else {
+		hdr_bytes = gzip_hdr_bytes;
+		hdr = gzip_hdr;
+		next_flag = IGZIP_GZIP_NO_HDR;
+	}
+
+	if (hdr_bytes >= stream->avail_out)
 		return STATELESS_OVERFLOW;
 
-	stream->avail_out -= gzip_hdr_bytes;
-	stream->total_out += gzip_hdr_bytes;
+	stream->avail_out -= hdr_bytes;
+	stream->total_out += hdr_bytes;
 
-	memcpy(stream->next_out, gzip_hdr, gzip_hdr_bytes);
+	memcpy(stream->next_out, hdr, hdr_bytes);
 
-	stream->next_out += gzip_hdr_bytes;
-	stream->gzip_flag = IGZIP_GZIP_NO_HDR;
+	stream->next_out += hdr_bytes;
+	stream->gzip_flag = next_flag;
 
 	return COMP_OK;
 }
 
-static void write_gzip_header(struct isal_zstream *stream)
+static void write_stream_header(struct isal_zstream *stream)
 {
 	struct isal_zstate *state = &stream->internal_state;
-	int bytes_to_write = gzip_hdr_bytes;
+	int bytes_to_write;
+	uint32_t hdr_bytes;
+	const uint8_t *hdr;
+	uint32_t next_flag;
 
+	if (stream->gzip_flag == IGZIP_ZLIB) {
+		hdr_bytes = zlib_hdr_bytes;
+		hdr = zlib_hdr;
+		next_flag = IGZIP_ZLIB_NO_HDR;
+	} else {
+		hdr_bytes = gzip_hdr_bytes;
+		hdr = gzip_hdr;
+		next_flag = IGZIP_GZIP_NO_HDR;
+	}
+
+	bytes_to_write = hdr_bytes;
 	bytes_to_write -= state->count;
 
 	if (bytes_to_write > stream->avail_out)
 		bytes_to_write = stream->avail_out;
 
-	memcpy(stream->next_out, gzip_hdr + state->count, bytes_to_write);
+	memcpy(stream->next_out, hdr + state->count, bytes_to_write);
 	state->count += bytes_to_write;
 
-	if (state->count == gzip_hdr_bytes) {
+	if (state->count == hdr_bytes) {
 		state->count = 0;
-		stream->gzip_flag = IGZIP_GZIP_NO_HDR;
+		stream->gzip_flag = next_flag;
 	}
 
 	stream->avail_out -= bytes_to_write;
@@ -1084,8 +1161,8 @@ void write_header(struct isal_zstream *stream, uint8_t * deflate_hdr,
 		stream->total_out += count;
 	}
 
-	if (stream->gzip_flag == IGZIP_GZIP)
-		write_gzip_header(stream);
+	if (stream->gzip_flag == IGZIP_GZIP || stream->gzip_flag == IGZIP_ZLIB)
+		write_stream_header(stream);
 
 	count = deflate_hdr_count - state->count;
 
@@ -1165,10 +1242,23 @@ void write_trailer(struct isal_zstream *stream)
 
 		if (stream->gzip_flag) {
 			if (!is_full(&state->bitbuf)) {
-				*(uint64_t *) stream->next_out =
-				    ((uint64_t) stream->total_in << 32) | crc;
-				stream->next_out += 8;
-				bytes += 8;
+				switch (stream->gzip_flag) {
+				case IGZIP_GZIP:
+				case IGZIP_GZIP_NO_HDR:
+					*(uint64_t *) stream->next_out =
+					    ((uint64_t) stream->total_in << 32) | crc;
+					stream->next_out += gzip_trl_bytes;
+					bytes += gzip_trl_bytes;
+					break;
+				case IGZIP_ZLIB:
+				case IGZIP_ZLIB_NO_HDR:
+					*(uint32_t *) stream->next_out =
+					    to_be32((crc & 0xFFFF0000)
+						    | ((crc & 0xFFFF) + 1) % ADLER_MOD);
+					stream->next_out += zlib_trl_bytes;
+					bytes += zlib_trl_bytes;
+					break;
+				}
 				state->state = ZSTATE_END;
 			}
 		} else

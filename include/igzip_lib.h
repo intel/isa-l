@@ -146,6 +146,8 @@ enum {IGZIP_LIT_TABLE_SIZE = ISAL_DEF_LIT_SYMBOLS};
 #define IGZIP_DEFLATE	0	/* Default */
 #define IGZIP_GZIP	1
 #define IGZIP_GZIP_NO_HDR	2
+#define IGZIP_ZLIB	3
+#define IGZIP_ZLIB_NO_HDR	4
 
 /* Compression Return values */
 #define COMP_OK 0

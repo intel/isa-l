@@ -71,6 +71,8 @@
 
 #define GZIP_HEADER_SIZE 10
 #define GZIP_TRAILER_SIZE 8
+#define ZLIB_HEADER_SIZE 2
+#define ZLIB_TRAILER_SIZE 4
 
 /**
  * @brief Prints a table of uint8_t elements to a file.
@@ -224,7 +226,11 @@ void fprint_header(FILE * output_file)
 		"\t0x1f, 0x8b, 0x08, 0x00, 0x00,\n" "\t0x00, 0x00, 0x00, 0x00, 0xff\t};\n\n");
 
 	fprintf(output_file, "const uint32_t gzip_hdr_bytes = %d;\n", GZIP_HEADER_SIZE);
-	fprintf(output_file, "const uint32_t gzip_trl_bytes = %d;\n", GZIP_TRAILER_SIZE);
+	fprintf(output_file, "const uint32_t gzip_trl_bytes = %d;\n\n", GZIP_TRAILER_SIZE);
+
+	fprintf(output_file, "const uint8_t zlib_hdr[] = { 0x78, 0x01 };\n\n");
+	fprintf(output_file, "const uint32_t zlib_hdr_bytes = %d;\n", ZLIB_HEADER_SIZE);
+	fprintf(output_file, "const uint32_t zlib_trl_bytes = %d;\n", ZLIB_TRAILER_SIZE);
 }
 
 int main(int argc, char *argv[])

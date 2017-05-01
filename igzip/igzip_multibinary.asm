@@ -63,6 +63,8 @@ extern encode_deflate_icf_04
 extern crc32_gzip_base
 extern crc32_gzip_01
 
+extern adler32_base
+
 section .text
 
 %include "multibinary.asm"
@@ -85,3 +87,6 @@ mbin_dispatch_init5	encode_deflate_icf, encode_deflate_icf_base, encode_deflate_
 
 mbin_interface		crc32_gzip
 mbin_dispatch_init5	crc32_gzip, crc32_gzip_base, crc32_gzip_base, crc32_gzip_01, crc32_gzip_01
+
+mbin_interface		isal_adler32
+mbin_dispatch_init5	isal_adler32, adler32_base, adler32_base, adler32_base, adler32_base
