@@ -78,4 +78,20 @@ uint32_t find_crc(uint8_t * start, uint32_t length)
 	return ~crc;
 }
 
+#define ADLER_MOD 65521
+uint32_t find_adler(uint8_t * start, uint32_t length)
+{
+	uint32_t A = 1;
+	uint32_t B = 0;
+	uint8_t *end = start + length;
+
+	while (start < end) {
+		A = (A + *start) % ADLER_MOD;
+		B = (B + A) % ADLER_MOD;
+		start++;
+	}
+
+	return (B << 16) | A;
+}
+
 #endif

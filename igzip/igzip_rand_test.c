@@ -82,6 +82,9 @@ enum IGZIP_TEST_ERROR_CODES {
 	INFLATE_INVALID_LOOK_BACK_DISTANCE,
 	INVALID_GZIP_HEADER,
 	INCORRECT_GZIP_TRAILER,
+	INVALID_ZLIB_HEADER,
+	INCORRECT_ZLIB_TRAILER,
+
 	INFLATE_GENERAL_ERROR,
 
 	INVALID_FLUSH_ERROR,
@@ -97,10 +100,16 @@ static const uint8_t gzip_hdr[10] = {
 	0x00, 0xff
 };
 
-static const uint32_t gzip_hdr_bytes = 10;
-/* static const uint32_t gzip_trl_bytes = 8; */
+static const uint8_t zlib_hdr[2] = {
+	0x78, 0x01
+};
 
+static const uint32_t gzip_hdr_bytes = 10;
+static const uint32_t zlib_hdr_bytes = 2;
+static const uint32_t gzip_trl_bytes = 8;
+static const uint32_t zlib_trl_bytes = 4;
 static const int gzip_extra_bytes = 18;	/* gzip_hdr_bytes + gzip_trl_bytes */
+static const int zlib_extra_bytes = 6;	/* zlib_hdr_bytes + zlib_trl_bytes */
 
 int inflate_type = 0;
 
@@ -230,6 +239,12 @@ void print_error(int error_code)
 	case INCORRECT_GZIP_TRAILER:
 		printf("error: incorrect gzip trailer found when inflating data\n");
 		break;
+	case INVALID_ZLIB_HEADER:
+		printf("error: incorrect zlib header found when inflating data\n");
+		break;
+	case INCORRECT_ZLIB_TRAILER:
+		printf("error: incorrect zlib trailer found when inflating data\n");
+		break;
 	case INVALID_FLUSH_ERROR:
 		printf("error: invalid flush did not cause compression to error\n");
 		break;
@@ -293,6 +308,18 @@ uint32_t check_gzip_header(uint8_t * z_buf)
 	return ret;
 }
 
+uint32_t check_zlib_header(uint8_t * z_buf)
+{
+	/* These values are defined in RFC 1952 page 4 */
+	uint32_t ret = 0;
+	int i;
+	/* Verify that the gzip header is the one used in hufftables_c.c */
+	for (i = 0; i < zlib_hdr_bytes; i++)
+		if (z_buf[i] != zlib_hdr[i])
+			ret = INVALID_ZLIB_HEADER;
+	return ret;
+}
+
 uint32_t check_gzip_trl(uint64_t gzip_trl, uint32_t inflate_crc, uint8_t * uncompress_buf,
 			uint32_t uncompress_len)
 {
@@ -304,6 +331,22 @@ uint32_t check_gzip_trl(uint64_t gzip_trl, uint32_t inflate_crc, uint8_t * uncom
 
 	if (crc != inflate_crc || trl != gzip_trl)
 		ret = INCORRECT_GZIP_TRAILER;
+
+	return ret;
+}
+
+uint32_t check_zlib_trl(uint32_t zlib_trl, uint32_t inflate_crc, uint8_t * uncompress_buf,
+			uint32_t uncompress_len)
+{
+	uint32_t trl, ret = 0;
+	uint32_t crc;
+
+	crc = find_adler(uncompress_buf, uncompress_len);
+
+	trl = (crc >> 24) | ((crc >> 8) & 0xFF00) | (crc << 24) | ((crc & 0xFF00) << 8);
+
+	if (trl != zlib_trl)
+		ret = INCORRECT_ZLIB_TRAILER;
 
 	return ret;
 }
@@ -326,11 +369,21 @@ int inflate_stateless_pass(uint8_t * compress_buf, uint64_t compress_len,
 	*uncompress_len = state.total_out;
 
 	if (gzip_flag) {
-		if (!ret)
-			ret =
-			    check_gzip_trl(*(uint64_t *) state.next_in, state.crc,
-					   uncompress_buf, *uncompress_len);
-		state.avail_in -= 8;
+		if (gzip_flag == IGZIP_GZIP || gzip_flag == IGZIP_GZIP_NO_HDR) {
+			if (!ret)
+				ret =
+				    check_gzip_trl(*(uint64_t *) state.next_in, state.crc,
+						   uncompress_buf, *uncompress_len);
+			state.avail_in -= gzip_trl_bytes;
+		} else if (gzip_flag == IGZIP_ZLIB || gzip_flag == IGZIP_ZLIB_NO_HDR) {
+			if (!ret)
+				ret =
+				    check_zlib_trl(*(uint32_t *) state.next_in, state.crc,
+						   uncompress_buf, *uncompress_len);
+			state.avail_in -= zlib_trl_bytes;
+
+		}
+
 	}
 
 	if (ret == 0 && state.avail_in != 0)
@@ -363,8 +416,10 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 	state->avail_out = 0;
 	state->crc_flag = gzip_flag;
 
-	if (gzip_flag)
-		compress_len -= 8;
+	if (gzip_flag == IGZIP_GZIP || gzip_flag == IGZIP_GZIP_NO_HDR)
+		compress_len -= gzip_trl_bytes;
+	else if (gzip_flag == IGZIP_ZLIB || gzip_flag == IGZIP_ZLIB_NO_HDR)
+		compress_len -= zlib_trl_bytes;
 
 	while (1) {
 		if (state->avail_in == 0) {
@@ -453,10 +508,19 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 	}
 
 	if (gzip_flag) {
-		if (!ret)
-			ret =
-			    check_gzip_trl(*(uint64_t *) & compress_buf[compress_len],
-					   state->crc, uncompress_buf, *uncompress_len);
+		if (!ret) {
+			if (gzip_flag == IGZIP_GZIP || gzip_flag == IGZIP_GZIP_NO_HDR) {
+				ret =
+				    check_gzip_trl(*(uint64_t *) & compress_buf[compress_len],
+						   state->crc, uncompress_buf,
+						   *uncompress_len);
+			} else if (gzip_flag == IGZIP_ZLIB || gzip_flag == IGZIP_ZLIB_NO_HDR) {
+				ret =
+				    check_zlib_trl(*(uint32_t *) & compress_buf[compress_len],
+						   state->crc, uncompress_buf,
+						   *uncompress_len);
+			}
+		}
 	}
 	if (ret == 0 && state->avail_in != 0)
 		ret = INFLATE_LEFTOVER_INPUT;
@@ -501,6 +565,10 @@ int inflate_check(uint8_t * z_buf, int z_size, uint8_t * in_buf, int in_size,
 		gzip_hdr_result = check_gzip_header(z_buf);
 		z_buf += gzip_hdr_bytes;
 		z_size -= gzip_hdr_bytes;
+	} else if (gzip_flag == IGZIP_ZLIB) {
+		gzip_hdr_result = check_zlib_header(z_buf);
+		z_buf += zlib_hdr_bytes;
+		z_size -= zlib_hdr_bytes;
 	}
 
 	if (inflate_type == 0) {
@@ -553,6 +621,9 @@ int inflate_check(uint8_t * z_buf, int z_size, uint8_t * in_buf, int in_size,
 	case INCORRECT_GZIP_TRAILER:
 		gzip_trl_result = INCORRECT_GZIP_TRAILER;
 		break;
+	case INCORRECT_ZLIB_TRAILER:
+		gzip_trl_result = INCORRECT_ZLIB_TRAILER;
+		break;
 
 	default:
 		return INFLATE_GENERAL_ERROR;
@@ -565,13 +636,17 @@ int inflate_check(uint8_t * z_buf, int z_size, uint8_t * in_buf, int in_size,
 	if (mem_result)
 		return RESULT_ERROR;
 
-	if (gzip_flag) {
-		if (gzip_hdr_result)
-			return INVALID_GZIP_HEADER;
+	if (gzip_hdr_result == INVALID_GZIP_HEADER)
+		return INVALID_GZIP_HEADER;
 
-		if (gzip_trl_result)
-			return INCORRECT_GZIP_TRAILER;
-	}
+	else if (gzip_hdr_result == INVALID_ZLIB_HEADER)
+		return INVALID_ZLIB_HEADER;
+
+	if (gzip_trl_result == INCORRECT_GZIP_TRAILER)
+		return INCORRECT_GZIP_TRAILER;
+
+	else if (gzip_trl_result == INCORRECT_ZLIB_TRAILER)
+		return INCORRECT_ZLIB_TRAILER;
 
 	return 0;
 }
@@ -1253,7 +1328,7 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 	uint8_t *z_buf = NULL;
 	uint8_t *in_buf = NULL;
 
-	gzip_flag = rand() % 3;
+	gzip_flag = rand() % 5;
 	level = rand() % 2;
 
 	if (in_size != 0) {
@@ -1267,8 +1342,14 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 
 	/* Test non-overflow case where a type 0 block is not written */
 	z_size = 2 * in_size + hdr_bytes;
-	if (gzip_flag)
+	if (gzip_flag == IGZIP_GZIP)
 		z_size += gzip_extra_bytes;
+	else if (gzip_flag == IGZIP_GZIP_NO_HDR)
+		z_size += gzip_trl_bytes;
+	else if (gzip_flag == IGZIP_ZLIB)
+		z_size += zlib_extra_bytes;
+	else if (gzip_flag == IGZIP_ZLIB_NO_HDR)
+		z_size += zlib_trl_bytes;
 
 	z_buf = malloc(z_size);
 
@@ -1324,10 +1405,17 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 
 	/*Test non-overflow case where a type 0 block is possible to be written */
 	z_size = TYPE0_HDR_SIZE * ((in_size + TYPE0_MAX_SIZE - 1) / TYPE0_MAX_SIZE) + in_size;
-	if (gzip_flag)
-		z_size += gzip_extra_bytes;
 
-	if (z_size == gzip_extra_bytes)
+	if (gzip_flag == IGZIP_GZIP)
+		z_size += gzip_extra_bytes;
+	else if (gzip_flag == IGZIP_GZIP_NO_HDR)
+		z_size += gzip_trl_bytes;
+	else if (gzip_flag == IGZIP_ZLIB)
+		z_size += zlib_extra_bytes;
+	else if (gzip_flag == IGZIP_ZLIB_NO_HDR)
+		z_size += zlib_trl_bytes;
+
+	if (z_size <= gzip_extra_bytes)
 		z_size += TYPE0_HDR_SIZE;
 
 	if (z_size < 8)
@@ -1453,7 +1541,7 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 {
 	int ret = IGZIP_COMP_OK, fin_ret = IGZIP_COMP_OK;
 	uint32_t overflow = 0, gzip_flag, level;
-	uint32_t z_size, z_size_max, z_compressed_size;
+	uint32_t z_size = 0, z_size_max = 0, z_compressed_size;
 	uint8_t *z_buf = NULL;
 
 	/* Test a non overflow case */
@@ -1466,12 +1554,19 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 		return COMPRESS_GENERAL_ERROR;
 	}
 
-	gzip_flag = rand() % 3;
+	gzip_flag = rand() % 5;
 	level = rand() % 2;
-	if (gzip_flag)
-		z_size_max += gzip_extra_bytes;
 
 	z_size = z_size_max;
+
+	if (gzip_flag == IGZIP_GZIP)
+		z_size += gzip_extra_bytes;
+	else if (gzip_flag == IGZIP_GZIP_NO_HDR)
+		z_size += gzip_trl_bytes;
+	else if (gzip_flag == IGZIP_ZLIB)
+		z_size += zlib_extra_bytes;
+	else if (gzip_flag == IGZIP_ZLIB_NO_HDR)
+		z_size += zlib_trl_bytes;
 
 	z_buf = malloc(z_size);
 	if (z_buf == NULL) {
@@ -1613,12 +1708,19 @@ int test_flush(uint8_t * in_buf, uint32_t in_size)
 	uint32_t z_size, flush_type = 0, gzip_flag, level;
 	uint8_t *z_buf = NULL;
 
-	gzip_flag = rand() % 3;
+	gzip_flag = rand() % 5;
 	level = rand() % 2;
 
 	z_size = 2 * in_size + 2 * hdr_bytes + 8;
-	if (gzip_flag)
+	if (gzip_flag == IGZIP_GZIP)
 		z_size += gzip_extra_bytes;
+	else if (gzip_flag == IGZIP_GZIP_NO_HDR)
+		z_size += gzip_trl_bytes;
+	else if (gzip_flag == IGZIP_ZLIB)
+		z_size += zlib_extra_bytes;
+	else if (gzip_flag == IGZIP_ZLIB_NO_HDR)
+		z_size += zlib_trl_bytes;
+
 	z_buf = malloc(z_size);
 
 	if (z_buf == NULL)
@@ -1676,12 +1778,18 @@ int test_full_flush(uint8_t * in_buf, uint32_t in_size)
 	uint32_t z_size, gzip_flag, level;
 	uint8_t *z_buf = NULL;
 
-	gzip_flag = rand() % 3;
+	gzip_flag = rand() % 5;
 	level = rand() % 2;
 	z_size = 2 * in_size + MAX_LOOPS * (hdr_bytes + 5);
 
-	if (gzip_flag)
+	if (gzip_flag == IGZIP_GZIP)
 		z_size += gzip_extra_bytes;
+	else if (gzip_flag == IGZIP_GZIP_NO_HDR)
+		z_size += gzip_trl_bytes;
+	else if (gzip_flag == IGZIP_ZLIB)
+		z_size += zlib_extra_bytes;
+	else if (gzip_flag == IGZIP_ZLIB_NO_HDR)
+		z_size += zlib_trl_bytes;
 
 	z_buf = malloc(z_size);
 	if (z_buf == NULL) {

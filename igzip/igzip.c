@@ -1210,61 +1210,71 @@ void write_header(struct isal_zstream *stream, uint8_t * deflate_hdr,
 void write_trailer(struct isal_zstream *stream)
 {
 	struct isal_zstate *state = &stream->internal_state;
-	unsigned int bytes;
+	unsigned int bytes = 0;
 	uint32_t crc = state->crc;
 
-	if (stream->avail_out >= 8) {
-		set_buf(&state->bitbuf, stream->next_out, stream->avail_out);
+	set_buf(&state->bitbuf, stream->next_out, stream->avail_out);
 
+	if (!state->has_eob_hdr) {
+		/* If the final header has not been written, write a
+		 * final block. This block is a static huffman block
+		 * which only contains the end of block symbol. The code
+		 * that happens to do this is the fist 10 bits of
+		 * 0x003 */
+		if (stream->avail_out < 8)
+			return;
+
+		state->has_eob_hdr = 1;
+		write_bits(&state->bitbuf, 0x003, 10);
+		if (is_full(&state->bitbuf)) {
+			stream->next_out = buffer_ptr(&state->bitbuf);
+			bytes = buffer_used(&state->bitbuf);
+			stream->avail_out -= bytes;
+			stream->total_out += bytes;
+			return;
+		}
+	}
+
+	if (state->bitbuf.m_bit_count) {
 		/* the flush() will pad to the next byte and write up to 8 bytes
 		 * to the output stream/buffer.
 		 */
-		if (!state->has_eob_hdr) {
-			/* If the final header has not been written, write a
-			 * final block. This block is a static huffman block
-			 * which only contains the end of block symbol. The code
-			 * that happens to do this is the fist 10 bits of
-			 * 0x003 */
-			state->has_eob_hdr = 1;
-			write_bits(&state->bitbuf, 0x003, 10);
-			if (is_full(&state->bitbuf)) {
-				stream->next_out = buffer_ptr(&state->bitbuf);
-				bytes = buffer_used(&state->bitbuf);
-				stream->avail_out -= bytes;
-				stream->total_out += bytes;
-				return;
-			}
-		}
+		if (stream->avail_out < 8)
+			return;
 
 		flush(&state->bitbuf);
-		stream->next_out = buffer_ptr(&state->bitbuf);
-		bytes = buffer_used(&state->bitbuf);
-
-		if (stream->gzip_flag) {
-			if (!is_full(&state->bitbuf)) {
-				switch (stream->gzip_flag) {
-				case IGZIP_GZIP:
-				case IGZIP_GZIP_NO_HDR:
-					*(uint64_t *) stream->next_out =
-					    ((uint64_t) stream->total_in << 32) | crc;
-					stream->next_out += gzip_trl_bytes;
-					bytes += gzip_trl_bytes;
-					break;
-				case IGZIP_ZLIB:
-				case IGZIP_ZLIB_NO_HDR:
-					*(uint32_t *) stream->next_out =
-					    to_be32((crc & 0xFFFF0000)
-						    | ((crc & 0xFFFF) + 1) % ADLER_MOD);
-					stream->next_out += zlib_trl_bytes;
-					bytes += zlib_trl_bytes;
-					break;
-				}
-				state->state = ZSTATE_END;
-			}
-		} else
-			state->state = ZSTATE_END;
-
-		stream->avail_out -= bytes;
-		stream->total_out += bytes;
 	}
+
+	stream->next_out = buffer_ptr(&state->bitbuf);
+	bytes = buffer_used(&state->bitbuf);
+
+	switch (stream->gzip_flag) {
+	case IGZIP_GZIP:
+	case IGZIP_GZIP_NO_HDR:
+		if (stream->avail_out - bytes >= gzip_trl_bytes) {
+			*(uint64_t *) stream->next_out =
+			    ((uint64_t) stream->total_in << 32) | crc;
+			stream->next_out += gzip_trl_bytes;
+			bytes += gzip_trl_bytes;
+			state->state = ZSTATE_END;
+		}
+		break;
+
+	case IGZIP_ZLIB:
+	case IGZIP_ZLIB_NO_HDR:
+		if (stream->avail_out - bytes >= zlib_trl_bytes) {
+			*(uint32_t *) stream->next_out =
+			    to_be32((crc & 0xFFFF0000) | ((crc & 0xFFFF) + 1) % ADLER_MOD);
+			stream->next_out += zlib_trl_bytes;
+			bytes += zlib_trl_bytes;
+			state->state = ZSTATE_END;
+		}
+		break;
+
+	default:
+		state->state = ZSTATE_END;
+	}
+
+	stream->avail_out -= bytes;
+	stream->total_out += bytes;
 }
