@@ -35,7 +35,11 @@
 
 /*Don't use file larger memory can support because compression and decompression
  * are done in a stateless manner. */
+# if __WORDSIZE == 64
 #define MAX_INPUT_FILE_SIZE 2L*1024L*1024L*1024L
+# else
+#define MAX_INPUT_FILE_SIZE 512L*1024L*1024L
+#endif
 
 int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 		       uint8_t * uncompress_buf, uint32_t * uncompress_len)
@@ -149,7 +153,7 @@ int test(uint8_t * compressed_stream,
 {
 	int ret;
 	ret =
-	    compress2(compressed_stream, compressed_length,
+	    compress2(compressed_stream, (uLongf *) compressed_length,
 		      uncompressed_stream, uncompressed_length, 6);
 	if (ret) {
 		printf("Failed compressing input with exit code %d", ret);
@@ -235,7 +239,9 @@ int main(int argc, char **argv)
 		fseek(file, 0, SEEK_SET);
 		file_length -= ftell(file);
 		if (file_length > MAX_INPUT_FILE_SIZE) {
-			printf("File too large to run on this test\n");
+			printf("\nFile too large to run on this test,"
+                                " Max 512MB for 32bit OS, 2GB for 64bit OS.\n");
+			printf(" ... Fail\n");
 			fclose(file);
 			continue;
 		}
@@ -247,17 +253,17 @@ int main(int argc, char **argv)
 		}
 		compressed_stream = malloc(compressed_length);
 		if (uncompressed_stream == NULL && file_length != 0) {
-			printf("Failed to allocate memory\n");
+			printf("\nFailed to allocate memory\n");
 			exit(0);
 		}
 
 		if (compressed_stream == NULL) {
-			printf("Failed to allocate memory\n");
+			printf("\nFailed to allocate memory\n");
 			exit(0);
 		}
 
 		if (uncompressed_test_stream == NULL) {
-			printf("Failed to allocate memory\n");
+			printf("\nFailed to allocate memory\n");
 			exit(0);
 		}
 

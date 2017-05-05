@@ -115,9 +115,9 @@ other_src   += igzip/crc_inflate.h
 igzip_inflate_perf: LDLIBS += -lz
 igzip_igzip_inflate_perf_LDADD = libisal.la
 igzip_igzip_inflate_perf_LDFLAGS = -lz
-igzip_inflate_test: LDLIBS += -lz
+igzip_inflate_test: LDLIBS += -lz -D_FILE_OFFSET_BITS=64
 igzip_igzip_inflate_test_LDADD = libisal.la
-igzip_igzip_inflate_test_LDFLAGS = -lz
+igzip_igzip_inflate_test_LDFLAGS = -lz -D_FILE_OFFSET_BITS=64
 igzip_igzip_hist_perf_LDADD = libisal.la
 igzip_fuzz_inflate: LDLIBS += -lz
 igzip_igzip_fuzz_inflate_LDADD = libisal.la
