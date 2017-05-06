@@ -1,5 +1,9 @@
-#ifndef INFLATE_CRC_TABLE
-#define INFLATE_CRC_TABLE
+/*
+ * Reference checksums used in compression tests
+ */
+
+#ifndef CHECKSUM_TEST_REF_H
+#define CHECKSUM_TEST_REF_H
 
 uint32_t inflate_crc_table[256] = {
 	0x00000000, 0x77073096, 0xee0e612c, 0x990951ba,
@@ -68,30 +72,29 @@ uint32_t inflate_crc_table[256] = {
 	0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d};
 
 
-uint32_t find_crc(uint8_t * start, uint32_t length)
+uint32_t crc32_gzip_refl_ref(uint32_t crc, const unsigned char *buf, uint64_t len)
 {
-	uint32_t crc = ~0;
-	uint8_t *end = start + length;
-
-	while (start < end)
-		crc = (crc >> 8) ^ inflate_crc_table[(crc & 0x000000FF) ^ *start++];
+	uint64_t i;
+	crc = ~crc;
+	for (i = 0; i < len; i++)
+		crc = (crc >> 8) ^ inflate_crc_table[(crc & 0xff) ^ buf[i]];
 	return ~crc;
 }
 
 #define ADLER_MOD 65521
-uint32_t find_adler(uint8_t * start, uint32_t length)
+
+
+uint32_t adler_ref(uint32_t init, const unsigned char *buf, uint64_t len)
 {
-	uint32_t A = 1;
-	uint32_t B = 0;
-	uint8_t *end = start + length;
+	uint64_t i;
+	uint32_t a = init & 0xffff;
+	uint32_t b = init >> 16;
 
-	while (start < end) {
-		A = (A + *start) % ADLER_MOD;
-		B = (B + A) % ADLER_MOD;
-		start++;
+	for (i = 0; i < len; i++) {
+		a = (a + buf[i]) % ADLER_MOD;
+		b = (b + a) % ADLER_MOD;
 	}
-
-	return (B << 16) | A;
+	return (b << 16) | a;
 }
 
-#endif
+#endif /* CHECKSUM_TEST_REF_H */

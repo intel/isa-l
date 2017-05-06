@@ -58,7 +58,7 @@ int usage(void)
 
 int main(int argc, char *argv[])
 {
-	FILE *in, *out = NULL;
+	FILE *in = NULL, *out = NULL;
 	unsigned char *inbuf, *outbuf, *level_buf = NULL;
 	int i, c, iterations = 0, inbuf_size = 0;
 	uint64_t infile_size, outbuf_size;

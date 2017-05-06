@@ -33,7 +33,7 @@
 #include <string.h>
 #include <assert.h>
 #include "igzip_lib.h"
-#include "crc_inflate.h"
+#include "checksum_test_ref.h"
 #include "inflate_std_vects.h"
 #include <math.h>
 #include "test.h"
@@ -366,7 +366,7 @@ uint32_t check_gzip_trl(uint64_t gzip_trl, uint32_t inflate_crc, uint8_t * uncom
 	uint64_t trl, ret = 0;
 	uint32_t crc;
 
-	crc = find_crc(uncompress_buf, uncompress_len);
+	crc = crc32_gzip_refl_ref(0, uncompress_buf, uncompress_len);
 	trl = ((uint64_t) uncompress_len << 32) | crc;
 
 	if (crc != inflate_crc || trl != gzip_trl)
@@ -381,7 +381,7 @@ uint32_t check_zlib_trl(uint32_t zlib_trl, uint32_t inflate_adler, uint8_t * unc
 	uint32_t trl, ret = 0;
 	uint32_t adler;
 
-	adler = find_adler(uncompress_buf, uncompress_len);
+	adler = adler_ref(1, uncompress_buf, uncompress_len);
 
 	trl =
 	    (adler >> 24) | ((adler >> 8) & 0xFF00) | (adler << 24) | ((adler & 0xFF00) << 8);
