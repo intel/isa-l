@@ -114,10 +114,6 @@ uint32_t adler32_base(uint32_t adler32, uint8_t * start, uint32_t length)
 	A = adler32 & 0xffff;
 	B = adler32 >> 16;
 
-	/* Internally the checksum is being stored as B | (A-1) so crc and
-	 * addler have same init value */
-	A += 1;
-
 	while (length > MAX_ADLER_BUF) {
 		end = next + MAX_ADLER_BUF;
 		for (; next < end; next++) {
@@ -135,8 +131,6 @@ uint32_t adler32_base(uint32_t adler32, uint8_t * start, uint32_t length)
 		A += *next;
 		B += A;
 	}
-
-	A -= 1;
 
 	A = A % ADLER_MOD;
 	B = B % ADLER_MOD;

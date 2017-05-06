@@ -107,7 +107,7 @@ static void update_checksum(struct inflate_state *state, uint8_t * start_in, uin
 		break;
 	case ISAL_ZLIB:
 	case ISAL_ZLIB_NO_HDR:
-		state->crc = isal_adler32(state->crc, start_in, length);
+		state->crc = isal_adler32_bam1(state->crc, start_in, length);
 		break;
 	}
 }

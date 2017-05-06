@@ -127,6 +127,23 @@ struct slver isal_deflate_set_hufftables_slver = { 0x008b, 0x01, 0x00 };
 
 /*****************************************************************/
 
+// isal_adler32_bam1 - adler with (B | A minus 1) storage
+
+uint32_t isal_adler32_bam1(uint32_t adler32, const unsigned char *start, uint64_t length)
+{
+	uint64_t a;
+
+	/* Internally the checksum is being stored as B | (A-1) so crc and
+	 * addler have same init value */
+	a = adler32 & 0xffff;
+	a = (a == ADLER_MOD - 1) ? 0 : a + 1;
+	adler32 = isal_adler32((adler32 & 0xffff0000) | a, start, length);
+	a = (adler32 & 0xffff);
+	a = (a == 0) ? ADLER_MOD - 1 : a - 1;
+
+	return (adler32 & 0xffff0000) | a;
+}
+
 static void update_checksum(struct isal_zstream *stream, uint8_t * start_in, uint64_t length)
 {
 	struct isal_zstate *state = &stream->internal_state;
@@ -137,7 +154,7 @@ static void update_checksum(struct isal_zstream *stream, uint8_t * start_in, uin
 		break;
 	case IGZIP_ZLIB:
 	case IGZIP_ZLIB_NO_HDR:
-		state->crc = isal_adler32(state->crc, start_in, length);
+		state->crc = isal_adler32_bam1(state->crc, start_in, length);
 		break;
 	}
 }

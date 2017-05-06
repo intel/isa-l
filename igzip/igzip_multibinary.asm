@@ -68,6 +68,7 @@ extern crc32_gzip_base
 extern crc32_gzip_01
 
 extern adler32_base
+extern adler32_avx2_4
 
 section .text
 
@@ -98,4 +99,4 @@ mbin_interface		crc32_gzip
 mbin_dispatch_init5	crc32_gzip, crc32_gzip_base, crc32_gzip_base, crc32_gzip_01, crc32_gzip_01
 
 mbin_interface		isal_adler32
-mbin_dispatch_init5	isal_adler32, adler32_base, adler32_base, adler32_base, adler32_base
+mbin_dispatch_init5	isal_adler32, adler32_base, adler32_base, adler32_base, adler32_avx2_4

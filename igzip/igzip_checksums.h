@@ -8,5 +8,6 @@
 
 uint32_t crc32_gzip(uint32_t init_crc, const unsigned char *buf, uint64_t len);
 uint32_t isal_adler32(uint32_t init_crc, const unsigned char *buf, uint64_t len);
+uint32_t isal_adler32_bam1(uint32_t init_crc, const unsigned char *buf, uint64_t len);
 
 #endif
