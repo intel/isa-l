@@ -335,18 +335,18 @@ uint32_t check_gzip_trl(uint64_t gzip_trl, uint32_t inflate_crc, uint8_t * uncom
 	return ret;
 }
 
-uint32_t check_zlib_trl(uint32_t zlib_trl, uint32_t inflate_crc, uint8_t * uncompress_buf,
+uint32_t check_zlib_trl(uint32_t zlib_trl, uint32_t inflate_adler, uint8_t * uncompress_buf,
 			uint32_t uncompress_len)
 {
 	uint32_t trl, ret = 0;
-	uint32_t crc;
+	uint32_t adler;
 
-	crc = find_adler(uncompress_buf, uncompress_len);
+	adler = find_adler(uncompress_buf, uncompress_len);
 
-	trl = (crc >> 24) | ((crc >> 8) & 0xFF00) | (crc << 24) | ((crc & 0xFF00) << 8);
+	trl = (adler >> 24) | ((adler >> 8) & 0xFF00) | (adler << 24) | ((adler & 0xFF00) << 8);
 
-	if (trl != zlib_trl)
-		ret = INCORRECT_ZLIB_TRAILER;
+	if (adler != inflate_adler || trl != zlib_trl){
+		ret = INCORRECT_ZLIB_TRAILER;}
 
 	return ret;
 }

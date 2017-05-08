@@ -208,6 +208,14 @@ enum isal_block_state {
 	ISAL_BLOCK_FINISH	/* Decompression of input is completed and all data has been flushed to output */
 };
 
+
+/* Inflate Flags */
+#define ISAL_DEFLATE	0	/* Default */
+#define ISAL_GZIP	1
+#define ISAL_GZIP_NO_HDR	2
+#define ISAL_ZLIB	3
+#define ISAL_ZLIB_NO_HDR	4
+
 /* Inflate Return values */
 #define ISAL_DECOMP_OK 0	/* No errors encountered while decompressing */
 #define ISAL_END_INPUT 1	/* End of input reached */
@@ -603,7 +611,9 @@ void isal_inflate_init(struct inflate_state *state);
  * (updating next_out and avail_out). The function returns when the input buffer
  * is empty, the output buffer is full or invalid data is found. The current
  * state of the decompression on exit can be read from state->block-state. If
- * the crc_flag is set, the gzip crc of the output is stored in state->crc.
+ * the crc_flag is set to ISAL_GZIP_NO_HDR the gzip crc of the output is stored
+ * in state->crc. Alternatively, if the crc_flag is set to ISAL_ZLIB_NO_HDR the
+ * adler32 of the output is stored in state->crc.
  *
  * @param  state Structure holding state information on the compression streams.
  * @return ISAL_DECOMP_OK (if everything is ok),

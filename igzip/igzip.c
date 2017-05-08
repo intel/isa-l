@@ -127,7 +127,7 @@ struct slver isal_deflate_set_hufftables_slver = { 0x008b, 0x01, 0x00 };
 
 /*****************************************************************/
 
-void update_checksum(struct isal_zstream *stream, uint8_t * start_in, uint64_t length)
+static void update_checksum(struct isal_zstream *stream, uint8_t * start_in, uint64_t length)
 {
 	struct isal_zstate *state = &stream->internal_state;
 	switch (stream->gzip_flag) {
