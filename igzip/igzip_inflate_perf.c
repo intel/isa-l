@@ -27,6 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
+#define _FILE_OFFSET_BITS 64
 #include <stdio.h>
 #include <assert.h>
 #include "huff_codes.h"
@@ -43,23 +44,12 @@
 # define RUN_MEM_SIZE 1000000000
 #endif
 
-int get_filesize(FILE * f)
-{
-	int curr, end;
-
-	curr = ftell(f);	/* Save current position */
-	fseek(f, 0L, SEEK_END);
-	end = ftell(f);
-	fseek(f, curr, SEEK_SET);	/* Restore position */
-	return end;
-}
-
 int main(int argc, char *argv[])
 {
 	FILE *in, *out = NULL;
 	unsigned char *inbuf, *outbuf, *tempbuf;
-	int i, infile_size, iterations, outbuf_size, check;
-	uint64_t inbuf_size;
+	int i, iterations, check;
+	uint64_t infile_size, outbuf_size, inbuf_size;
 	struct inflate_state state;
 
 	if (argc > 3 || argc < 2) {
@@ -192,7 +182,7 @@ int main(int argc, char *argv[])
 			}
 		}
 		perf_stop(&stop);
-		printf("  file %s - in_size=%d out_size=%lu iter=%d\n", argv[1],
+		printf("  file %s - in_size=%lu out_size=%lu iter=%d\n", argv[1],
 		       infile_size, gstream.total_out, i);
 
 		printf("igzip_file: ");
@@ -221,7 +211,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	perf_stop(&stop);
-	printf("  file %s - in_size=%d out_size=%d iter=%d\n", argv[1],
+	printf("  file %s - in_size=%lu out_size=%d iter=%d\n", argv[1],
 	       infile_size, state.total_out, i);
 
 	printf("igzip_file: ");

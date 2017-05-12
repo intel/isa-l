@@ -27,6 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
+#define _FILE_OFFSET_BITS 64
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -89,22 +90,12 @@ int str_to_i(char *s)
 	return i;
 }
 
-int get_filesize(FILE * f)
-{
-	int curr, end;
-
-	curr = ftell(f);	/* Save current position */
-	fseek(f, 0L, SEEK_END);
-	end = ftell(f);
-	fseek(f, curr, SEEK_SET);	/* Restore position */
-	return end;
-}
-
 int main(int argc, char *argv[])
 {
 	FILE *in = stdin, *out = NULL;
 	unsigned char *inbuf, *outbuf;
-	int i = 0, c, infile_size, outbuf_size;
+	int i = 0, c;
+	uint64_t infile_size, outbuf_size;
 	int segment_size = DEFAULT_SEG_SIZE;
 	int sample_size = DEFAULT_SAMPLE_SIZE;
 	int check_output = 1;
@@ -293,7 +284,7 @@ int main(int argc, char *argv[])
 		ret = 1;
 	}
 
-	printf("  file %s - in_size=%d out_size=%d iter=%d ratio=%3.1f%%\n", argv[optind],
+	printf("  file %s - in_size=%lu out_size=%d iter=%d ratio=%3.1f%%\n", argv[optind],
 	       infile_size, stream.total_out, i, 100.0 * stream.total_out / infile_size);
 
 	printf("igzip_file: ");

@@ -27,6 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
+#define _FILE_OFFSET_BITS 64
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -54,22 +55,12 @@ int usage(void)
 	exit(0);
 }
 
-int get_filesize(FILE * f)
-{
-	int curr, end;
-
-	curr = ftell(f);	/* Save current position */
-	fseek(f, 0L, SEEK_END);
-	end = ftell(f);
-	fseek(f, curr, SEEK_SET);	/* Restore position */
-	return end;
-}
-
 int main(int argc, char *argv[])
 {
 	FILE *in, *out = NULL;
 	unsigned char *inbuf, *outbuf, *level_buf = NULL;
-	int i, c, infile_size, iterations = 0, outbuf_size;
+	int i, c, iterations = 0;
+	uint64_t infile_size, outbuf_size;
 	struct isal_huff_histogram histogram;
 	struct isal_hufftables hufftables_custom;
 	int level = 0, level_size = 0;
@@ -185,7 +176,7 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
-	printf("  file %s - in_size=%d out_size=%d iter=%d ratio=%3.1f%%", in_file_name,
+	printf("  file %s - in_size=%lu out_size=%d iter=%d ratio=%3.1f%%", in_file_name,
 	       infile_size, stream.total_out, i, 100.0 * stream.total_out / infile_size);
 
 	if (level == 0) {

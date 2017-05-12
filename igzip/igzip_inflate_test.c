@@ -27,17 +27,19 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
+#define _FILE_OFFSET_BITS 64
 #include <stdint.h>
 #include <stdio.h>
 #include <zlib.h>
 #include "igzip_lib.h"
 #include "huff_codes.h"
+#include "test.h"
 
 /*Don't use file larger memory can support because compression and decompression
  * are done in a stateless manner. */
-# if __WORDSIZE == 64
+#if __WORDSIZE == 64
 #define MAX_INPUT_FILE_SIZE 2L*1024L*1024L*1024L
-# else
+#else
 #define MAX_INPUT_FILE_SIZE 512L*1024L*1024L
 #endif
 
@@ -234,13 +236,10 @@ int main(int argc, char **argv)
 		} else
 			printf("Starting file %s", argv[i]);
 		fflush(0);
-		fseek(file, 0, SEEK_END);
-		file_length = ftell(file);
-		fseek(file, 0, SEEK_SET);
-		file_length -= ftell(file);
+		file_length = get_filesize(file);
 		if (file_length > MAX_INPUT_FILE_SIZE) {
 			printf("\nFile too large to run on this test,"
-                                " Max 512MB for 32bit OS, 2GB for 64bit OS.\n");
+			       " Max 512MB for 32bit OS, 2GB for 64bit OS.\n");
 			printf(" ... Fail\n");
 			fclose(file);
 			continue;

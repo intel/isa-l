@@ -27,6 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
+#define _FILE_OFFSET_BITS 64
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -41,22 +42,12 @@
 
 struct isal_zstream stream;
 
-int get_filesize(FILE * f)
-{
-	int curr, end;
-
-	curr = ftell(f);	/* Save current position */
-	fseek(f, 0L, SEEK_END);
-	end = ftell(f);
-	fseek(f, curr, SEEK_SET);	/* Restore position */
-	return end;
-}
-
 int main(int argc, char *argv[])
 {
 	FILE *in, *out = NULL;
 	unsigned char *inbuf, *outbuf;
-	int i, infile_size, iterations, outbuf_size;
+	int i, iterations;
+	uint64_t infile_size, outbuf_size;
 
 	if (argc > 3 || argc < 2) {
 		fprintf(stderr, "Usage: igzip_sync_flush_file_perf  infile [outfile]\n"
@@ -144,7 +135,7 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
-	printf("  file %s - in_size=%d out_size=%d iter=%d ratio=%3.1f%%\n", argv[1],
+	printf("  file %s - in_size=%lu out_size=%d iter=%d ratio=%3.1f%%\n", argv[1],
 	       infile_size, stream.total_out, i, 100.0 * stream.total_out / infile_size);
 
 	printf("igzip_file: ");

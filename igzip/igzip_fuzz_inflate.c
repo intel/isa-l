@@ -1,3 +1,4 @@
+#define _FILE_OFFSET_BITS 64
 #include <stdio.h>
 #include <assert.h>
 #include <zlib.h>
@@ -6,22 +7,13 @@
 #include "test.h"
 
 #define OUT_BUFFER_SIZE 64*1024
-int get_filesize(FILE * f)
-{
-	int curr, end;
-
-	curr = ftell(f);	/* Save current position */
-	fseek(f, 0L, SEEK_END);
-	end = ftell(f);
-	fseek(f, curr, SEEK_SET);	/* Restore position */
-	return end;
-}
 
 int main(int argc, char *argv[])
 {
 	FILE *in = NULL;
 	unsigned char *in_buf = NULL, *isal_out_buf = NULL, *zlib_out_buf = NULL;
-	int in_file_size, out_buf_size, zret, iret;
+	uint64_t in_file_size;
+	int out_buf_size, zret, iret;
 	struct inflate_state *state = NULL;
 	z_stream zstate;
 	char z_msg_invalid_code_set[] = "invalid code lengths set";
@@ -53,7 +45,7 @@ int main(int argc, char *argv[])
 	zlib_out_buf = malloc(OUT_BUFFER_SIZE);
 
 	if (state == NULL || in_buf == NULL || isal_out_buf == NULL || zlib_out_buf == NULL) {
-		fprintf(stderr, "Failed to malloc input and outputs buffers");
+		fprintf(stderr, "Failed to malloc input and outputs buffers\n");
 		exit(1);
 	}
 

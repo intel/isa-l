@@ -27,6 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
+#define _FILE_OFFSET_BITS 64
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,6 +36,7 @@
 #include "crc_inflate.h"
 #include "inflate_std_vects.h"
 #include <math.h>
+#include "test.h"
 
 #ifndef RANDOMS
 # define RANDOMS   0x40
@@ -1751,22 +1753,11 @@ int test_inflate(struct vect_result *in_vector)
 
 }
 
-int get_filesize(FILE * f)
-{
-	int curr, end;
-
-	curr = ftell(f);	/* Save current position */
-	fseek(f, 0L, SEEK_END);
-	end = ftell(f);
-	fseek(f, curr, SEEK_SET);	/* Restore position */
-	return end;
-}
-
 /* Run multiple compression tests on data stored in a file */
 int test_compress_file(char *file_name)
 {
 	int ret = IGZIP_COMP_OK;
-	uint32_t in_size;
+	uint64_t in_size;
 	uint8_t *in_buf = NULL;
 	FILE *in_file = NULL;
 

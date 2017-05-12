@@ -27,7 +27,6 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-
 #ifndef _TEST_H
 #define _TEST_H
 
@@ -36,14 +35,16 @@ extern "C" {
 #endif
 
 // Use sys/time.h functions for time
-
+#ifdef __unix__
 #include <sys/time.h>
+#endif
 
 struct perf{
 	struct timeval tv;
 };
 
 
+#ifdef __unix__
 inline int perf_start(struct perf *p)
 {
 	return gettimeofday(&(p->tv), 0);
@@ -72,7 +73,21 @@ inline void perf_print(struct perf stop, struct perf start, long long dsize)
 	else
 		printf("\n");
 }
+#endif
 
+inline uint64_t get_filesize(FILE *fp)
+{
+	uint64_t file_size;
+	fpos_t pos, pos_curr;
+
+	fgetpos(fp, &pos_curr);  /* Save current position */
+	fseeko(fp, 0, SEEK_END);
+	fgetpos(fp, &pos);
+	file_size = *(uint64_t *)&pos;
+	fsetpos(fp, &pos_curr);  /* Restore position */
+
+	return file_size;
+}
 
 #ifdef __cplusplus
 }
