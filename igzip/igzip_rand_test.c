@@ -45,6 +45,9 @@
 # define TEST_SEED 0x1234
 #endif
 
+#define MAX_BITS_COUNT 20
+#define MIN_BITS_COUNT 8
+
 #define IBUF_SIZE  (1024*1024)
 
 #define PAGE_SIZE 4*1024
@@ -129,8 +132,10 @@ void create_rand_repeat_data(uint8_t * data, int size)
 	uint32_t next_data;
 	uint8_t *data_start = data;
 	uint32_t length, distance;
-	uint32_t max_repeat_data = 256;
-	uint32_t power = rand() % 32;
+	uint32_t symbol_count = rand() % 255 + 1, swaps_left, tmp;
+	uint32_t max_repeat_data = symbol_count;
+	uint8_t symbols[256], *symbols_next, swap_val;
+
 	/* An array of the powers of 2 (except the final element which is 0) */
 	const uint32_t power_of_2_array[] = {
 		0x00000001, 0x00000002, 0x00000004, 0x00000008,
@@ -143,6 +148,34 @@ void create_rand_repeat_data(uint8_t * data, int size)
 		0x10000000, 0x20000000, 0x40000000, 0x00000000
 	};
 
+	uint32_t power = rand() % sizeof(power_of_2_array) / sizeof(uint32_t);
+
+	if (symbol_count > 128) {
+		memset(symbols, 1, sizeof(symbols));
+		swap_val = 0;
+		swaps_left = 256 - symbol_count;
+	} else {
+		memset(symbols, 0, sizeof(symbols));
+		swap_val = 1;
+		swaps_left = symbol_count;
+	}
+
+	while (swaps_left > 0) {
+		tmp = rand() % 256;
+		if (symbols[tmp] != swap_val) {
+			symbols[tmp] = swap_val;
+			swaps_left--;
+		}
+	}
+
+	symbols_next = symbols;
+	for (tmp = 0; tmp < 256; tmp++) {
+		if (symbols[tmp]) {
+			*symbols_next = tmp;
+			symbols_next++;
+		}
+	}
+
 	max_repeat_data += power_of_2_array[power];
 
 	if (size-- > 0)
@@ -150,11 +183,11 @@ void create_rand_repeat_data(uint8_t * data, int size)
 
 	while (size > 0) {
 		next_data = rand() % max_repeat_data;
-		if (next_data < 256) {
-			*data++ = next_data;
+		if (next_data < symbol_count) {
+			*data++ = symbols[next_data];
 			size--;
 		} else if (size < 3) {
-			*data++ = rand() % 256;
+			*data++ = symbols[rand() % symbol_count];
 			size--;
 		} else {
 			length = (rand() % 256) + MIN_LENGTH;
@@ -175,6 +208,13 @@ void create_rand_repeat_data(uint8_t * data, int size)
 				memcpy(data, data - distance, length);
 		}
 	}
+}
+
+int get_rand_data_length(void)
+{
+	int max_mask =
+	    (1 << ((rand() % (MAX_BITS_COUNT - MIN_BITS_COUNT)) + MIN_BITS_COUNT)) - 1;
+	return rand() & max_mask;
 }
 
 void print_error(int error_code)
@@ -343,10 +383,12 @@ uint32_t check_zlib_trl(uint32_t zlib_trl, uint32_t inflate_adler, uint8_t * unc
 
 	adler = find_adler(uncompress_buf, uncompress_len);
 
-	trl = (adler >> 24) | ((adler >> 8) & 0xFF00) | (adler << 24) | ((adler & 0xFF00) << 8);
+	trl =
+	    (adler >> 24) | ((adler >> 8) & 0xFF00) | (adler << 24) | ((adler & 0xFF00) << 8);
 
-	if (adler != inflate_adler || trl != zlib_trl){
-		ret = INCORRECT_ZLIB_TRAILER;}
+	if (adler != inflate_adler || trl != zlib_trl) {
+		ret = INCORRECT_ZLIB_TRAILER;
+	}
 
 	return ret;
 }
@@ -2013,7 +2055,7 @@ int main(int argc, char *argv[])
 		return ret;
 
 	for (i = 0; i < RANDOMS; i++) {
-		in_size = rand() % (IBUF_SIZE + 1);
+		in_size = get_rand_data_length();
 		offset = rand() % (IBUF_SIZE + 1 - in_size);
 		in_buf += offset;
 
@@ -2048,7 +2090,7 @@ int main(int argc, char *argv[])
 		return ret;
 
 	for (i = 0; i < 16; i++) {
-		in_size = rand() % (IBUF_SIZE + 1);
+		in_size = get_rand_data_length();
 		offset = rand() % (IBUF_SIZE + 1 - in_size);
 		in_buf += offset;
 
@@ -2077,7 +2119,7 @@ int main(int argc, char *argv[])
 		return ret;
 
 	for (i = 0; i < RANDOMS; i++) {
-		in_size = rand() % (IBUF_SIZE + 1);
+		in_size = get_rand_data_length();
 		offset = rand() % (IBUF_SIZE + 1 - in_size);
 		in_buf += offset;
 
@@ -2115,7 +2157,7 @@ int main(int argc, char *argv[])
 		return ret;
 
 	for (i = 0; i < RANDOMS; i++) {
-		in_size = rand() % (IBUF_SIZE + 1);
+		in_size = get_rand_data_length();
 		offset = rand() % (IBUF_SIZE + 1 - in_size);
 		in_buf += offset;
 
@@ -2146,7 +2188,7 @@ int main(int argc, char *argv[])
 		return ret;
 
 	for (i = 0; i < RANDOMS; i++) {
-		in_size = rand() % (IBUF_SIZE + 1);
+		in_size = get_rand_data_length();
 		offset = rand() % (IBUF_SIZE + 1 - in_size);
 		in_buf += offset;
 
@@ -2177,7 +2219,7 @@ int main(int argc, char *argv[])
 		return ret;
 
 	for (i = 0; i < RANDOMS; i++) {
-		in_size = rand() % (IBUF_SIZE + 1);
+		in_size = get_rand_data_length();
 		offset = rand() % (IBUF_SIZE + 1 - in_size);
 		in_buf += offset;
 
@@ -2194,7 +2236,7 @@ int main(int argc, char *argv[])
 	}
 
 	for (i = 0; i < RANDOMS / 8; i++) {
-		in_size = rand() % (IBUF_SIZE + 1);
+		in_size = get_rand_data_length();
 		offset = rand() % (IBUF_SIZE + 1 - in_size);
 		in_buf += offset;
 
@@ -2223,7 +2265,7 @@ int main(int argc, char *argv[])
 		return ret;
 
 	for (i = 0; i < RANDOMS / 4; i++) {
-		in_size = rand() % (IBUF_SIZE + 1);
+		in_size = get_rand_data_length();
 		offset = rand() % (IBUF_SIZE + 1 - in_size);
 		in_buf += offset;
 
