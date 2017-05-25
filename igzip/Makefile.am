@@ -49,6 +49,7 @@ lsrc_x86_64 +=  \
 		igzip/igzip_icf_finish.asm \
 		igzip/rfc1951_lookup.asm \
 		igzip/crc32_gzip.asm igzip/detect_repeated_char.asm \
+		igzip/adler32_sse.asm \
 		igzip/adler32_avx2_4.asm \
 		igzip/igzip_multibinary.asm \
 		igzip/igzip_update_histogram_01.asm \

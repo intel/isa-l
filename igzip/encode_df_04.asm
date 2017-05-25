@@ -277,7 +277,7 @@ encode_deflate_icf_ %+ ARCH:
 	;; Check for short codes
 	vptest code_lens2, [min_write_mask]
 	jz	.short_codes
-.short_codes_next
+.short_codes_next:
 
 	vpermq	codes2, codes2, 0x45
 	vpor	codes1, codes1, codes2
