@@ -158,11 +158,7 @@ void sync_flush(struct isal_zstream *stream)
 		bits_to_write <<= flush_size + 3;
 		bits_len = 32 + flush_size + 3;
 
-#ifdef USE_BITBUFB		/* Write Bits Always */
 		state->state = ZSTATE_NEW_HDR;
-#else /* Not Write Bits Always */
-		state->state = ZSTATE_FLUSH_WRITE_BUFFER;
-#endif
 		state->has_eob = 0;
 
 		write_bits(&state->bitbuf, bits_to_write, bits_len);
@@ -203,11 +199,6 @@ static void flush_icf_block(struct isal_zstream *stream)
 	struct deflate_icf *icf_buf_encoded_next;
 
 	set_buf(write_buf, stream->next_out, stream->avail_out);
-
-#if defined (USE_BITBUF8) || (USE_BITBUF_ELSE)
-	if (!is_full(write_buf))
-		flush_bits(write_buf);
-#endif
 
 	icf_buf_encoded_next = encode_deflate_icf(level_buf->icf_buf_start + state->count,
 						  level_buf->icf_buf_next, write_buf,

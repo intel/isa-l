@@ -56,15 +56,6 @@ default rel
 %endif
 %endif
 
-%ifdef USE_BITBUFB
-%elifdef USE_BITBUF8
-%elifdef USE_BITBUF_ELSE
-%else
-; bit buffer types
-; BITBUFB: (b) Always write data
-%define USE_BITBUFB
-%endif
-
 ; (h) limit hash update
 %define LIMIT_HASH_UPDATE
 
