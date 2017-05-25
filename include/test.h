@@ -35,7 +35,7 @@ extern "C" {
 #endif
 
 // Use sys/time.h functions for time
-#ifdef __unix__
+#if defined (__unix__) || (__APPLE__) || (__MINGW32__)
 #include <sys/time.h>
 #endif
 
@@ -44,7 +44,7 @@ struct perf{
 };
 
 
-#ifdef __unix__
+#if defined (__unix__) || (__APPLE__) || (__MINGW32__)
 inline int perf_start(struct perf *p)
 {
 	return gettimeofday(&(p->tv), 0);
@@ -62,7 +62,7 @@ inline void perf_print(struct perf stop, struct perf start, long long dsize)
 	printf("runtime = %10lld usecs", usecs);
 	if (dsize != 0) {
 #if 1 // not bug in printf for 32-bit
-		printf(", bandwidth %lld MB in %.4f sec = %.2f MB/s\n", dsize/(1024*1024), 
+		printf(", bandwidth %lld MB in %.4f sec = %.2f MB/s\n", dsize/(1024*1024),
 			((double) usecs)/1000000, ((double) dsize) / (double)usecs);
 #else
 		printf(", bandwidth %lld MB ", dsize/(1024*1024));
