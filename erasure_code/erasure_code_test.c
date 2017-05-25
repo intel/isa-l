@@ -47,6 +47,7 @@
 #define KMAX TEST_SOURCES
 
 #define EFENCE_TEST_MIN_SIZE 16
+#define EFENCE_TEST_MAX_SIZE EFENCE_TEST_MIN_SIZE + 0x100
 
 #ifdef EC_ALIGNED_ADDR
 // Define power of 2 range to check ptr, len alignment
@@ -489,7 +490,7 @@ int main(int argc, char *argv[])
 			for (j = 0; j < TEST_LEN; j++)
 				buffs[i][j] = rand();
 
-		for (size = EFENCE_TEST_MIN_SIZE; size <= TEST_SIZE; size += align) {
+		for (size = EFENCE_TEST_MIN_SIZE; size <= EFENCE_TEST_MAX_SIZE; size += align) {
 			for (i = 0; i < m; i++) {	// Line up TEST_SIZE from end
 				efence_buffs[i] = buffs[i] + TEST_LEN - size;
 			}
