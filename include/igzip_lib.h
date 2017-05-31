@@ -2,7 +2,7 @@
   Copyright(c) 2011-2016 Intel Corporation All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions 
+  modification, are permitted provided that the following conditions
   are met:
     * Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
@@ -401,7 +401,7 @@ struct inflate_huff_code_small {
 /** @brief Holds decompression state information*/
 struct inflate_state {
 	uint8_t *next_out;	//!< Next output Byte
-	uint32_t avail_out;	//!< Number of bytes available at next_out 
+	uint32_t avail_out;	//!< Number of bytes available at next_out
 	uint32_t total_out;	//!< Total bytes written out so far
 	uint8_t *next_in;	//!< Next input byte
 	uint64_t read_in;	//!< Bits buffered to handle unaligned streams

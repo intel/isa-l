@@ -2,7 +2,7 @@
   Copyright(c) 2011-2015 Intel Corporation All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions 
+  modification, are permitted provided that the following conditions
   are met:
     * Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
@@ -40,7 +40,7 @@
  *  dot product of the symbols (bytes in GF(2^8)) across a set of buffers and a
  *  set of coefficients.  Values for the coefficients are determined by the type
  *  of erasure code.  Using a general dot product means that any sequence of
- *  coefficients may be used including erasure codes based on random 
+ *  coefficients may be used including erasure codes based on random
  *  coefficients.
  *  Multiple versions of dot product are supplied to calculate 1-6 output
  *  vectors in one pass.
@@ -80,10 +80,10 @@ void ec_init_tables(int k, int rows, unsigned char* a, unsigned char* gftbls);
  * encoded data as specified by a matrix of GF(2^8) coefficients. When given a
  * suitable set of coefficients, this function will perform the fast generation
  * or decoding of Reed-Solomon type erasure codes.
- * 
+ *
  * This function determines what instruction sets are enabled and
  * selects the appropriate version at runtime.
- * 
+ *
  * @param len    Length of each block of data (vector) of source or dest data.
  * @param k      The number of vector sources or rows in the generator matrix
  * 		 for coding.
@@ -140,10 +140,10 @@ void ec_encode_data_base(int len, int srcs, int dests, unsigned char *v, unsigne
  * specified by a matrix of GF(2^8) coefficients. When given a suitable set of
  * coefficients, this function will perform the fast generation or decoding of
  * Reed-Solomon type erasure codes from one input source at a time.
- * 
+ *
  * This function determines what instruction sets are enabled and selects the
  * appropriate version at runtime.
- * 
+ *
  * @param len    Length of each block of data (vector) of source or dest data.
  * @param k      The number of vector sources or rows in the generator matrix
  * 		 for coding.
@@ -194,7 +194,7 @@ void ec_encode_data_update_avx2(int len, int k, int rows, int vec_i, unsigned ch
  * Baseline version of ec_encode_data_update().
  */
 
-void ec_encode_data_update_base(int len, int k, int rows, int vec_i, unsigned char *v, 
+void ec_encode_data_update_base(int len, int k, int rows, int vec_i, unsigned char *v,
 				unsigned char *data, unsigned char **dest);
 
 
@@ -216,7 +216,7 @@ void ec_encode_data_update_base(int len, int k, int rows, int vec_i, unsigned ch
  * @returns none
  */
 
-void gf_vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls, 
+void gf_vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
 			unsigned char **src, unsigned char *dest);
 
 /**
@@ -237,7 +237,7 @@ void gf_vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls, 
+void gf_vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
 			unsigned char **src, unsigned char *dest);
 
 /**
@@ -258,7 +258,7 @@ void gf_vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls, 
+void gf_vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
 			unsigned char **src, unsigned char *dest);
 
 /**
@@ -276,7 +276,7 @@ void gf_vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
  * @param gftbls Pointer to 2*32*vlen byte array of pre-calculated constants
  *               based on the array of input coefficients.
  * @param src    Array of pointers to source inputs.
- * @param dest   Array of pointers to destination data buffers.  
+ * @param dest   Array of pointers to destination data buffers.
  * @returns none
  */
 
@@ -298,7 +298,7 @@ void gf_2vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
  * @param gftbls Pointer to 2*32*vlen byte array of pre-calculated constants
  *               based on the array of input coefficients.
  * @param src    Array of pointers to source inputs.
- * @param dest   Array of pointers to destination data buffers.  
+ * @param dest   Array of pointers to destination data buffers.
  * @returns none
  */
 
@@ -320,7 +320,7 @@ void gf_2vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
  * @param gftbls Pointer to 2*32*vlen byte array of pre-calculated constants
  *               based on the array of input coefficients.
  * @param src    Array of pointers to source inputs.
- * @param dest   Array of pointers to destination data buffers.  
+ * @param dest   Array of pointers to destination data buffers.
  * @returns none
  */
 
@@ -342,7 +342,7 @@ void gf_2vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
  * @param gftbls Pointer to 3*32*vlen byte array of pre-calculated constants
  *               based on the array of input coefficients.
  * @param src    Array of pointers to source inputs.
- * @param dest   Array of pointers to destination data buffers.  
+ * @param dest   Array of pointers to destination data buffers.
  * @returns none
  */
 
@@ -364,7 +364,7 @@ void gf_3vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
  * @param gftbls Pointer to 3*32*vlen byte array of pre-calculated constants
  *               based on the array of input coefficients.
  * @param src    Array of pointers to source inputs.
- * @param dest   Array of pointers to destination data buffers.  
+ * @param dest   Array of pointers to destination data buffers.
  * @returns none
  */
 
@@ -386,7 +386,7 @@ void gf_3vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
  * @param gftbls Pointer to 3*32*vlen byte array of pre-calculated constants
  *               based on the array of input coefficients.
  * @param src    Array of pointers to source inputs.
- * @param dest   Array of pointers to destination data buffers.  
+ * @param dest   Array of pointers to destination data buffers.
  * @returns none
  */
 
@@ -474,7 +474,7 @@ void gf_4vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
  * @param gftbls Pointer to 5*32*vlen byte array of pre-calculated constants
  *               based on the array of input coefficients.
  * @param src    Array of pointers to source inputs.
- * @param dest   Array of pointers to destination data buffers.  
+ * @param dest   Array of pointers to destination data buffers.
  * @returns none
  */
 
@@ -496,7 +496,7 @@ void gf_5vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
  * @param gftbls Pointer to 5*32*vlen byte array of pre-calculated constants
  *               based on the array of input coefficients.
  * @param src    Array of pointers to source inputs.
- * @param dest   Array of pointers to destination data buffers.  
+ * @param dest   Array of pointers to destination data buffers.
  * @returns none
  */
 
@@ -518,7 +518,7 @@ void gf_5vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
  * @param gftbls Pointer to 5*32*vlen byte array of pre-calculated constants
  *               based on the array of input coefficients.
  * @param src    Array of pointers to source inputs.
- * @param dest   Array of pointers to destination data buffers.  
+ * @param dest   Array of pointers to destination data buffers.
  * @returns none
  */
 
@@ -540,7 +540,7 @@ void gf_5vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
  * @param gftbls Pointer to 6*32*vlen byte array of pre-calculated constants
  *               based on the array of input coefficients.
  * @param src    Array of pointers to source inputs.
- * @param dest   Array of pointers to destination data buffers.  
+ * @param dest   Array of pointers to destination data buffers.
  * @returns none
  */
 
@@ -562,7 +562,7 @@ void gf_6vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
  * @param gftbls Pointer to 6*32*vlen byte array of pre-calculated constants
  *               based on the array of input coefficients.
  * @param src    Array of pointers to source inputs.
- * @param dest   Array of pointers to destination data buffers.  
+ * @param dest   Array of pointers to destination data buffers.
  * @returns none
  */
 
@@ -584,7 +584,7 @@ void gf_6vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
  * @param gftbls Pointer to 6*32*vlen byte array of pre-calculated constants
  *               based on the array of input coefficients.
  * @param src    Array of pointers to source inputs.
- * @param dest   Array of pointers to destination data buffers.  
+ * @param dest   Array of pointers to destination data buffers.
  * @returns none
  */
 
@@ -593,19 +593,19 @@ void gf_6vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
 
 /**
  * @brief GF(2^8) vector dot product, runs baseline version.
- * 
+ *
  * Does a GF(2^8) dot product across each byte of the input array and a constant
  * set of coefficients to produce each byte of the output. Can be used for
  * erasure coding encode and decode. Function requires pre-calculation of a
  * 32*vlen byte constant array based on the input coefficients.
- * 
+ *
  * @param len    Length of each vector in bytes. Must be >= 16.
  * @param vlen   Number of vector sources.
  * @param gftbls Pointer to 32*vlen byte array of pre-calculated constants based
- *               on the array of input coefficients. Only elements 32*CONST*j + 1 
+ *               on the array of input coefficients. Only elements 32*CONST*j + 1
  *               of this array are used, where j = (0, 1, 2...) and CONST is the
- *               number of elements in the array of input coefficients. The 
- *               elements used correspond to the original input coefficients.		
+ *               number of elements in the array of input coefficients. The
+ *               elements used correspond to the original input coefficients.
  * @param src    Array of pointers to source inputs.
  * @param dest   Pointer to destination data array.
  * @returns none
@@ -621,7 +621,7 @@ void gf_vect_dot_prod_base(int len, int vlen, unsigned char *gftbls,
  * set of coefficients to produce each byte of the output. Can be used for
  * erasure coding encode and decode. Function requires pre-calculation of a
  * 32*vlen byte constant array based on the input coefficients.
- * 
+ *
  * This function determines what instruction sets are enabled and
  * selects the appropriate version at runtime.
  *

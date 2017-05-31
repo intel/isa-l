@@ -47,7 +47,7 @@ v2.10
   affects windows versions of erasure code.  GP register saves/restore were
   pushed to same stack area as XMM.
 
-3. CHANGE LOG & FEATURES ADDED 
+3. CHANGE LOG & FEATURES ADDED
 ------------------------------
 
 v2.18

@@ -2,7 +2,7 @@
   Copyright(c) 2011-2015 Intel Corporation All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions 
+  modification, are permitted provided that the following conditions
   are met:
     * Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
@@ -37,7 +37,7 @@
 
 //#define CACHED_TEST
 #ifdef CACHED_TEST
-// Loop many times over same 
+// Loop many times over same
 # define TEST_SOURCES 10
 # define TEST_LEN     8*1024
 # define TEST_LOOPS   2000000

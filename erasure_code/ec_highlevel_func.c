@@ -2,7 +2,7 @@
   Copyright(c) 2011-2015 Intel Corporation All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions 
+  modification, are permitted provided that the following conditions
   are met:
     * Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
@@ -29,7 +29,6 @@
 #include <limits.h>
 #include "erasure_code.h"
 #include "types.h"
-
 
 void ec_encode_data_sse(int len, int k, int rows, unsigned char *g_tbls, unsigned char **data,
 			unsigned char **coding)
