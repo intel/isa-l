@@ -229,6 +229,12 @@ int main(int argc, char **argv)
 	if (argc == 1)
 		printf("Error, no input file\n");
 	for (i = 1; i < argc; i++) {
+
+		file = NULL;
+		uncompressed_stream = NULL;
+		compressed_stream = NULL;
+		uncompressed_test_stream = NULL;
+
 		file = fopen(argv[i], "r");
 		if (file == NULL) {
 			printf("Error opening file %s\n", argv[i]);
@@ -246,23 +252,25 @@ int main(int argc, char **argv)
 		}
 
 		compressed_length = compressBound(file_length);
+
 		if (file_length != 0) {
 			uncompressed_stream = malloc(file_length);
 			uncompressed_test_stream = malloc(file_length);
 		}
+
 		compressed_stream = malloc(compressed_length);
 		if (uncompressed_stream == NULL && file_length != 0) {
-			printf("\nFailed to allocate memory\n");
+			printf("\nFailed to allocate input memory\n");
 			exit(0);
 		}
 
 		if (compressed_stream == NULL) {
-			printf("\nFailed to allocate memory\n");
+			printf("\nFailed to allocate output memory\n");
 			exit(0);
 		}
 
-		if (uncompressed_test_stream == NULL) {
-			printf("\nFailed to allocate memory\n");
+		if (uncompressed_test_stream == NULL && file_length != 0) {
+			printf("\nFailed to allocate decompressed memory\n");
 			exit(0);
 		}
 
@@ -285,7 +293,8 @@ int main(int argc, char **argv)
 
 		fflush(0);
 		fclose(file);
-		free(compressed_stream);
+		if (compressed_stream != NULL)
+			free(compressed_stream);
 		if (uncompressed_stream != NULL)
 			free(uncompressed_stream);
 		if (uncompressed_test_stream != NULL)
