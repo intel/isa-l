@@ -287,7 +287,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	// Pick a first test
-	m = 15;
+	m = 14;
 	k = 10;
 	if (m > MMAX || k > KMAX)
 		return -1;

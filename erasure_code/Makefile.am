@@ -172,5 +172,7 @@ perf_tests   += erasure_code/gf_vect_mul_perf \
 		erasure_code/erasure_code_sse_perf \
 		erasure_code/erasure_code_update_perf
 
+other_tests  += erasure_code/gen_rs_matrix_limits
+
 other_src    += include/test.h \
 		include/types.h

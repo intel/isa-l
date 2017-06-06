@@ -884,10 +884,17 @@ unsigned char gf_inv(unsigned char a);
  * Vandermonde matrix example of encoding coefficients where high portion of
  * matrix is identity matrix I and lower portion is constructed as 2^{i*(j-k+1)}
  * i:{0,k-1} j:{k,m-1}. Commonly used method for choosing coefficients in
- * erasure encoding but does not guarantee invertable for every sub matrix.  For
- * large k it is possible to find cases where the decode matrix chosen from
- * sources and parity not in erasure are not invertable. Users may want to
- * adjust for k > 5.
+ * erasure encoding but does not guarantee invertable for every sub matrix. For
+ * large pairs of m and k it is possible to find cases where the decode matrix
+ * chosen from sources and parity is not invertable. Users may want to adjust
+ * for certain pairs m and k. If m and k satisfy one of the following
+ * inequalities, no adjustment is required:
+ *
+ * k <= 3
+ * k = 4, m <= 25
+ * k = 5, m <= 10
+ * k <= 21, m-k = 4
+ * m - k <= 3.
  *
  * @param a  [mxk] array to hold coefficients
  * @param m  number of rows in matrix corresponding to srcs + parity.
