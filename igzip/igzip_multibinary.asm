@@ -71,6 +71,9 @@ extern adler32_base
 extern adler32_avx2_4
 extern adler32_sse
 
+extern isal_deflate_hash_lvl0_base
+extern isal_deflate_hash_lvl0_01
+
 section .text
 
 %include "multibinary.asm"
@@ -101,3 +104,6 @@ mbin_dispatch_init5	crc32_gzip, crc32_gzip_base, crc32_gzip_base, crc32_gzip_01,
 
 mbin_interface		isal_adler32
 mbin_dispatch_init5	isal_adler32, adler32_base, adler32_sse, adler32_sse, adler32_avx2_4
+
+mbin_interface		isal_deflate_hash_lvl0
+mbin_dispatch_init5	isal_deflate_hash_lvl0, isal_deflate_hash_lvl0_base, isal_deflate_hash_lvl0_01, isal_deflate_hash_lvl0_01, isal_deflate_hash_lvl0_01

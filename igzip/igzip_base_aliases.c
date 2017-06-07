@@ -43,6 +43,8 @@ struct deflate_icf *encode_deflate_icf_base(struct deflate_icf *next_in,
 uint32_t crc32_gzip_base(uint32_t init_crc, const unsigned char *buf, uint64_t len);
 uint32_t adler32_base(uint32_t init, const unsigned char *buf, uint64_t len);
 int decode_huffman_code_block_stateless_base(struct inflate_state *s);
+void isal_deflate_hash_lvl0_base(struct isal_zstream *stream, uint8_t * dict,
+				 uint32_t dict_len);
 
 void isal_deflate_body(struct isal_zstream *stream)
 {
@@ -90,4 +92,9 @@ uint32_t isal_adler32(uint32_t init, const unsigned char *buf, uint64_t len)
 int decode_huffman_code_block_stateless(struct inflate_state *s)
 {
 	return decode_huffman_code_block_stateless_base(s);
+}
+
+void isal_deflate_hash_lvl0(struct isal_zstream *stream, uint8_t * dict, uint32_t dict_len)
+{
+	return isal_deflate_hash_lvl0_base(stream, dict, dict_len);
 }

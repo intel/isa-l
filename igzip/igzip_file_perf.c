@@ -52,25 +52,30 @@ int usage(void)
 		"  -X        use compression level X with 0 <= X <= 1\n"
 		"  -b <size> input buffer size, 0 buffers all the input\n"
 		"  -i <iter> number of iterations (at least 1)\n"
-		"  -o <file> output file for compresed data\n");
+		"  -o <file> output file for compresed data\n"
+		"  -d <file> dictionary file used by compression\n");
+
 	exit(0);
 }
 
 int main(int argc, char *argv[])
 {
-	FILE *in = NULL, *out = NULL;
-	unsigned char *inbuf, *outbuf, *level_buf = NULL;
+	FILE *in = NULL, *out = NULL, *dict = NULL;
+	unsigned char *inbuf, *outbuf, *level_buf = NULL, *dictbuf = NULL;
 	int i, c, iterations = 0, inbuf_size = 0;
-	uint64_t infile_size, outbuf_size;
+	uint64_t infile_size, outbuf_size, dictfile_size;
 	struct isal_huff_histogram histogram;
 	struct isal_hufftables hufftables_custom;
 	int level = 0, level_size = 0, avail_in;
-	char *in_file_name = NULL, *out_file_name = NULL;
+	char *in_file_name = NULL, *out_file_name = NULL, *dict_file_name = NULL;
 
-	while ((c = getopt(argc, argv, "h01i:b:o:")) != -1) {
+	while ((c = getopt(argc, argv, "h01i:b:o:d:")) != -1) {
 		switch (c) {
 		case 'o':
 			out_file_name = optarg;
+			break;
+		case 'd':
+			dict_file_name = optarg;
 			break;
 		case 'i':
 			iterations = atoi(optarg);
@@ -112,6 +117,15 @@ int main(int argc, char *argv[])
 		printf("outfile=%s\n", out_file_name);
 	}
 
+	if (dict_file_name != NULL) {
+		dict = fopen(dict_file_name, "rb");
+		if (!dict) {
+			fprintf(stderr, "Can't open %s for reading\n", dict_file_name);
+			exit(0);
+		}
+		printf("outfile=%s\n", dict_file_name);
+	}
+
 	printf("Window Size: %d K\n", IGZIP_HIST_SIZE / 1024);
 	printf("igzip_file_perf: \n");
 	fflush(0);
@@ -122,6 +136,10 @@ int main(int argc, char *argv[])
 	infile_size = get_filesize(in);
 
 	outbuf_size = 2 * infile_size + BUF_SIZE;
+
+	dictfile_size = 0;
+	if (dict_file_name != NULL)
+		dictfile_size = get_filesize(dict);
 
 	if (iterations == 0) {
 		iterations = infile_size ? RUN_MEM_SIZE / infile_size : MIN_TEST_LOOPS;
@@ -138,6 +156,14 @@ int main(int argc, char *argv[])
 	if (outbuf == NULL) {
 		fprintf(stderr, "Can't allocate output buffer memory\n");
 		exit(0);
+	}
+
+	if (dictfile_size != 0) {
+		dictbuf = malloc(dictfile_size);
+		if (dictbuf == NULL) {
+			fprintf(stderr, "Can't allocate dictionary buffer memory\n");
+			exit(0);
+		}
 	}
 
 	if (level_size != 0) {
@@ -158,11 +184,18 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
+	if (dictfile_size != (uint32_t) fread(dictbuf, 1, dictfile_size, dict)) {
+		fprintf(stderr, "Couldn't fit all of dictionary file into buffer\n");
+		exit(0);
+	}
+
 	struct perf start, stop;
 	perf_start(&start);
 
 	for (i = 0; i < iterations; i++) {
 		isal_deflate_init(&stream);
+		if (dict_file_name != NULL)
+			isal_deflate_set_dict(&stream, dictbuf, dictfile_size);
 		stream.end_of_stream = 0;
 		stream.flush = NO_FLUSH;
 		stream.level = level;

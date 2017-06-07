@@ -126,7 +126,7 @@ skip_SLOP:
 
 	mov	curr_data %+ d, [file_start + f_i]
 
-	cmp	dword [stream + _internal_state_has_hist], 0
+	cmp	dword [stream + _internal_state_has_hist], IGZIP_NO_HIST
 	jne	skip_write_first_byte
 
 	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
@@ -135,7 +135,7 @@ skip_SLOP:
 	compute_hash	hash, curr_data
 	and	hash %+ d, HASH_MASK
 	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
-	mov	dword [stream + _internal_state_has_hist], 1
+	mov	dword [stream + _internal_state_has_hist], IGZIP_HIST
 	jmp	encode_literal
 
 skip_write_first_byte:

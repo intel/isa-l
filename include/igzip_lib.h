@@ -156,7 +156,7 @@ enum {IGZIP_LIT_TABLE_SIZE = ISAL_DEF_LIT_SYMBOLS};
 #define STATELESS_OVERFLOW -1
 #define ISAL_INVALID_OPERATION -9
 #define ISAL_INVALID_LEVEL -4	/* Invalid Compression level set */
-
+#define ISAL_INVALID_STATE -3
 /**
  *  @enum isal_zstate_state
  *  @brief Compression State please note ZSTATE_TRL only applies for GZIP compression
@@ -263,6 +263,10 @@ struct isal_mod_hist {
 #define ISAL_DEF_LVL1_LARGE (ISAL_DEF_LVL1_REQ + ISAL_DEF_LVL1_TOKEN_SIZE * 64 * IGZIP_K)
 #define ISAL_DEF_LVL1_EXTRA_LARGE (ISAL_DEF_LVL1_REQ + ISAL_DEF_LVL1_TOKEN_SIZE * 128 * IGZIP_K)
 #define ISAL_DEF_LVL1_DEFAULT ISAL_DEF_LVL1_LARGE
+
+#define IGZIP_NO_HIST 0
+#define IGZIP_HIST 1
+#define IGZIP_DICT_HIST 2
 
 /** @brief Holds Bit Buffer information*/
 struct BitBuf2 {
@@ -410,6 +414,7 @@ struct inflate_state {
 	struct inflate_huff_code_large lit_huff_code;	//!< Structure for decoding lit/len symbols
 	struct inflate_huff_code_small dist_huff_code;	//!< Structure for decoding dist symbols
 	enum isal_block_state block_state;	//!< Current decompression state
+	uint32_t dict_length;	//!< Length of dictionary used
 	uint32_t bfinal;	//!< Flag identifying final block
 	uint32_t crc_flag;	//!< Flag identifying whether to track of crc
 	uint32_t crc;		//!< Contains crc of output if crc_flag is set
@@ -507,6 +512,22 @@ void isal_deflate_stateless_init(struct isal_zstream *stream);
 
 
 /**
+ * @brief Set compression dictionary to use
+ *
+ * This function is to be called after isal_deflate_init, or after completing a
+ * SYNC_FLUSH or FULL_FLUSH and before the next call do isal_deflate. If the
+ * dictionary is longer than IGZIP_HIST_SIZE, only the last IGZIP_HIST_SIZE
+ * bytes will be used.
+ *
+ * @param stream Structure holding state information on the compression streams.
+ * @param dict: Array containing dictionary to use.
+ * @param dict_len: Lenth of dict.
+ * @returns COMP_OK,
+ *          ISAL_INVALID_STATE (dictionary could not be set)
+ */
+int isal_deflate_set_dict(struct isal_zstream *stream, uint8_t *dict, uint32_t dict_len);
+
+/**
  * @brief Fast data (deflate) compression for storage applications.
  *
  * The call to isal_deflate() will take data from the input buffer (updating
@@ -545,6 +566,9 @@ void isal_deflate_stateless_init(struct isal_zstream *stream);
  * has been flushed. Additionally FULL_FLUSH will ensure look back history does
  * not include previous blocks so new blocks are fully independent. Switching
  * between flush types is supported.
+ *
+ * If a compression dictionary is required, the dictionary can be set calling
+ * isal_deflate_set_dictionary before calling isal_deflate.
  *
  * If the gzip_flag is set to IGZIP_GZIP, a generic gzip header and the gzip
  * trailer are written around the deflate compressed data. If gzip_flag is set
@@ -599,6 +623,21 @@ int isal_deflate_stateless(struct isal_zstream *stream);
 void isal_inflate_init(struct inflate_state *state);
 
 /**
+ * @brief Set decompression dictionary to use
+ *
+ * This function is to be called after isal_inflate_init. If the dictionary is
+ * longer than IGZIP_HIST_SIZE, only the last IGZIP_HIST_SIZE bytes will be
+ * used.
+ *
+ * @param state: Structure holding state information on the decompression stream.
+ * @param dict: Array containing dictionary to use.
+ * @param dict_len: Lenth of dict.
+ * @returns COMP_OK,
+ *          ISAL_INVALID_STATE (dictionary could not be set)
+ */
+int isal_inflate_set_dict(struct inflate_state *state, uint8_t *dict, uint32_t dict_len);
+
+/**
  * @brief Fast data (deflate) decompression for storage applications.
  *
  * On entry to isal_inflate(), next_in points to an input buffer and avail_in
@@ -617,6 +656,9 @@ void isal_inflate_init(struct inflate_state *state);
  * in state->crc. Alternatively, if the crc_flag is set to ISAL_ZLIB_NO_HDR the
  * adler32 of the output is stored in state->crc.
  *
+ * If a dictionary is required, a call to isal_inflate_set_dict will set the
+ * dictionary.
+ *
  * @param  state Structure holding state information on the compression streams.
  * @return ISAL_DECOMP_OK (if everything is ok),
  *         ISAL_END_INPUT (if all input was decompressed),
@@ -625,6 +667,7 @@ void isal_inflate_init(struct inflate_state *state);
  *         ISAL_INVALID_SYMBOL,
  *         ISAL_INVALID_LOOKBACK.
  */
+
 int isal_inflate(struct inflate_state *state);
 
 /**

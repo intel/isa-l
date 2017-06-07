@@ -66,6 +66,7 @@
 # define to_be32(x) _byteswap_ulong(x)
 #endif
 
+extern void isal_deflate_hash_lvl0(struct isal_zstream *stream, uint8_t * dict, int dict_len);
 extern const uint8_t gzip_hdr[];
 extern const uint32_t gzip_hdr_bytes;
 extern const uint32_t gzip_trl_bytes;
@@ -124,6 +125,9 @@ struct slver isal_deflate_stateless_slver = { 0x0083, 0x01, 0x01 };
 
 struct slver isal_deflate_set_hufftables_slver_00_01_008b;
 struct slver isal_deflate_set_hufftables_slver = { 0x008b, 0x01, 0x00 };
+
+struct slver isal_deflate_set_dict_slver_00_01_008c;
+struct slver isal_deflate_set_dict_slver = { 0x008c, 0x01, 0x00 };
 
 /*****************************************************************/
 
@@ -188,7 +192,7 @@ void sync_flush(struct isal_zstream *stream)
 		if (stream->flush == FULL_FLUSH) {
 			/* Clear match history so there are no cross
 			 * block length distance pairs */
-			reset_match_history(stream);
+			state->has_hist = IGZIP_NO_HIST;
 		}
 	}
 }
@@ -757,7 +761,7 @@ static inline void reset_match_history(struct isal_zstream *stream)
 	uint16_t *head = stream->internal_state.head;
 	int i = 0;
 
-	state->has_hist = 0;
+	state->has_hist = IGZIP_NO_HIST;
 
 	if ((stream->total_in & 0xFFFF) == 0)
 		memset(stream->internal_state.head, 0, sizeof(stream->internal_state.head));
@@ -786,20 +790,16 @@ void isal_deflate_init(struct isal_zstream *stream)
 	state->b_bytes_processed = 0;
 	state->has_eob = 0;
 	state->has_eob_hdr = 0;
-	state->has_hist = 0;
+	state->has_hist = IGZIP_NO_HIST;
 	state->state = ZSTATE_NEW_HDR;
 	state->count = 0;
 
 	state->tmp_out_start = 0;
 	state->tmp_out_end = 0;
 
-	state->file_start = stream->next_in;
-
 	init(&state->bitbuf);
 
 	state->crc = 0;
-
-	memset(state->head, 0, sizeof(state->head));
 
 	return;
 }
@@ -842,6 +842,40 @@ void isal_deflate_stateless_init(struct isal_zstream *stream)
 	stream->gzip_flag = 0;
 	stream->internal_state.state = ZSTATE_NEW_HDR;
 	return;
+}
+
+void isal_deflate_hash(struct isal_zstream *stream, uint8_t * dict, uint32_t dict_len)
+{
+	isal_deflate_hash_lvl0(stream, dict, dict_len);
+	stream->internal_state.has_hist = IGZIP_HIST;
+}
+
+int isal_deflate_set_dict(struct isal_zstream *stream, uint8_t * dict, uint32_t dict_len)
+{
+	struct isal_zstate *state = &stream->internal_state;
+
+	if (state->state != ZSTATE_NEW_HDR || state->b_bytes_processed != state->b_bytes_valid)
+		return ISAL_INVALID_STATE;
+
+	if (dict_len <= 0)
+		return COMP_OK;
+
+	if (dict_len > IGZIP_HIST_SIZE) {
+		dict = dict + dict_len - IGZIP_HIST_SIZE;
+		dict_len = IGZIP_HIST_SIZE;
+	}
+
+	memcpy(state->buffer, dict, dict_len);
+	state->b_bytes_processed = dict_len;
+	state->b_bytes_valid = dict_len;
+
+	/* Reset history to prevent out of bounds matches this works because
+	 * dictionary must set at least 1 element in the history */
+	memset(stream->internal_state.head, -1, sizeof(stream->internal_state.head));
+
+	state->has_hist = IGZIP_DICT_HIST;
+
+	return COMP_OK;
 }
 
 int isal_deflate_stateless(struct isal_zstream *stream)
@@ -962,6 +996,11 @@ int isal_deflate(struct isal_zstream *stream)
 	next_in = stream->next_in;
 	avail_in = stream->avail_in;
 	stream->total_in -= state->b_bytes_valid - state->b_bytes_processed;
+
+	if (state->has_hist == IGZIP_NO_HIST)
+		reset_match_history(stream);
+	else if (state->has_hist == IGZIP_DICT_HIST)
+		isal_deflate_hash(stream, state->buffer, state->b_bytes_processed);
 
 	do {
 		size = avail_in;

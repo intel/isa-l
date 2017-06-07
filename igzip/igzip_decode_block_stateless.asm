@@ -363,6 +363,7 @@ decode_huffman_code_block_stateless_ %+ ARCH %+ :
 	mov	dword [state + _copy_overflow_dist], 0
 
 	mov	tmp3 %+ d, dword [state + _total_out]
+	add	tmp3 %+ d, dword [state + _dict_length]
 	sub	tmp3, next_out
 	neg	tmp3
 
@@ -658,6 +659,7 @@ end:
 	sub	end_out, next_out
 	mov	dword [state + _avail_out], end_out %+ d
 	sub	next_out, [rsp + start_out_mem_offset]
+	sub	next_out %+ d, [state + _dict_length]
 	mov	[state + _total_out], next_out %+ d
 	mov	[state + _next_in], next_in
 	sub	end_in, next_in

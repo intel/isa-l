@@ -212,7 +212,7 @@ MARK __body_compute_hash_ %+ ARCH
 	and	hash, HASH_MASK
 	and	hash2, HASH_MASK
 
-	cmp	dword [stream + _internal_state_has_hist], 0
+	cmp	dword [stream + _internal_state_has_hist], IGZIP_NO_HIST
 	je	write_first_byte
 
 	jmp	loop2
@@ -545,7 +545,7 @@ write_first_byte:
 	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
 	ja	output_end
 
-	mov	dword [stream + _internal_state_has_hist], 1
+	mov	dword [stream + _internal_state_has_hist], IGZIP_HIST
 
 	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
 

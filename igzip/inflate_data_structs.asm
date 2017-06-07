@@ -89,6 +89,7 @@ FIELD	_read_in_length,4,	4
 FIELD	_lit_huff_code,	_inflate_huff_code_large_size,	_inflate_huff_code_large_align
 FIELD	_dist_huff_code,_inflate_huff_code_small_size,	_inflate_huff_code_small_align
 FIELD	_block_state,	4,	4
+FIELD	_dict_length,	4,	4
 FIELD	_bfinal,	4,	4
 FIELD	_crc_flag,	4,	4
 FIELD	_crc,		4,	4

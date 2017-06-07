@@ -87,6 +87,9 @@ struct slver isal_inflate_stateless_slver = { 0x0089, 0x01, 0x00 };
 struct slver isal_inflate_slver_0001008a;
 struct slver isal_inflate_slver = { 0x008a, 0x01, 0x00 };
 
+struct slver isal_inflate_set_dict_slver_0001008d;
+struct slver isal_inflate_set_dict_slver = { 0x008d, 0x01, 0x00 };
+
 /*Performs a copy of length repeat_length data starting at dest -
  * lookback_distance into dest. This copy copies data previously copied when the
  * src buffer and the dest buffer overlap. */
@@ -1064,7 +1067,7 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state)
 				return ISAL_END_INPUT;
 			}
 
-			if (look_back_dist > state->total_out)
+			if (look_back_dist > state->total_out + state->dict_length)
 				return ISAL_INVALID_LOOKBACK;
 
 			if (state->avail_out < repeat_length) {
@@ -1103,6 +1106,7 @@ void isal_inflate_init(struct inflate_state *state)
 	state->next_out = NULL;
 	state->avail_out = 0;
 	state->total_out = 0;
+	state->dict_length = 0;
 	state->block_state = ISAL_BLOCK_NEW_HDR;
 	state->bfinal = 0;
 	state->crc_flag = 0;
@@ -1115,6 +1119,26 @@ void isal_inflate_init(struct inflate_state *state)
 	state->tmp_out_valid = 0;
 }
 
+int isal_inflate_set_dict(struct inflate_state *state, uint8_t * dict, uint32_t dict_len)
+{
+
+	if (state->block_state != ISAL_BLOCK_NEW_HDR
+	    || state->tmp_out_processed != state->tmp_out_valid)
+		return ISAL_INVALID_STATE;
+
+	if (dict_len > IGZIP_HIST_SIZE) {
+		dict = dict + dict_len - IGZIP_HIST_SIZE;
+		dict_len = IGZIP_HIST_SIZE;
+	}
+
+	memcpy(state->tmp_out_buffer, dict, dict_len);
+	state->tmp_out_processed = dict_len;
+	state->tmp_out_valid = dict_len;
+	state->dict_length = dict_len;
+
+	return COMP_OK;
+}
+
 int isal_inflate_stateless(struct inflate_state *state)
 {
 	uint32_t ret = 0;
@@ -1123,6 +1147,7 @@ int isal_inflate_stateless(struct inflate_state *state)
 	state->read_in = 0;
 	state->read_in_length = 0;
 	state->block_state = ISAL_BLOCK_NEW_HDR;
+	state->dict_length = 0;
 	state->bfinal = 0;
 	state->crc = 0;
 	state->total_out = 0;

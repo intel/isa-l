@@ -59,7 +59,8 @@ lsrc_x86_64 +=  \
 		igzip/igzip_inflate_multibinary.asm \
 		igzip/encode_df_04.asm \
 		igzip/encode_df_06.asm \
-		igzip/proc_heap.asm
+		igzip/proc_heap.asm \
+		igzip/igzip_deflate_hash.asm
 
 src_include += -I $(srcdir)/igzip
 extern_hdrs +=	include/igzip_lib.h
