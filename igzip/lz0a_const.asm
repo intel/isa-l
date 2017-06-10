@@ -38,18 +38,28 @@
 %define LAST_BYTES_COUNT	3 ;; Bytes to prevent reading out of array bounds
 %define LA_STATELESS	258	;; No round up since no data is copied to a buffer
 
-%ifndef IGZIP_HASH_SIZE
-%assign IGZIP_HASH_SIZE  (8 * K)
+%ifndef IGZIP_LVL0_HASH_SIZE
+%assign IGZIP_LVL0_HASH_SIZE  (8 * K)
 %endif
 
-%assign HASH_MASK  (IGZIP_HASH_SIZE - 1)
+%ifndef IGZIP_LVL2_HASH_SIZE
+%assign IGZIP_LVL2_HASH_SIZE  IGZIP_HIST_SIZE
+%endif
 
+%assign LVL0_HASH_MASK  (IGZIP_LVL0_HASH_SIZE - 1)
+%assign LVL2_HASH_MASK  (IGZIP_LVL2_HASH_SIZE - 1)
+
+%assign MIN_DEF_MATCH 3 	; Minimum length of a match in deflate
 %assign SHORTEST_MATCH  4
 
 %assign SLOP 8
 
+%define ICF_CODE_BYTES 4
 %define LIT_LEN_BIT_COUNT 10
 %define DIST_LIT_BIT_COUNT 9
+
+%define LIT_LEN_MASK ((1 << LIT_LEN_BIT_COUNT) - 1)
+%define LIT_DIST_MASK ((1 << DIST_LIT_BIT_COUNT) - 1)
 
 %define DIST_OFFSET	LIT_LEN_BIT_COUNT
 %define EXTRA_BITS_OFFSET	(DIST_OFFSET + DIST_LIT_BIT_COUNT)

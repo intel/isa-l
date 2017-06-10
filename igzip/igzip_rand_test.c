@@ -242,6 +242,26 @@ int get_rand_data_length(void)
 	return rand() & max_mask;
 }
 
+int get_rand_level(void)
+{
+	return ISAL_DEF_MIN_LEVEL + rand() % (ISAL_DEF_MAX_LEVEL - ISAL_DEF_MIN_LEVEL + 1);
+
+}
+
+int get_rand_level_buf_size(int level)
+{
+	int size;
+	switch (level) {
+	case 2:
+		size = rand() % IBUF_SIZE + ISAL_DEF_LVL2_MIN;
+		break;
+	case 1:
+	default:
+		size = rand() % IBUF_SIZE + ISAL_DEF_LVL1_MIN;
+	}
+	return size;
+}
+
 void print_error(int error_code)
 {
 	switch (error_code) {
@@ -963,7 +983,7 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	stream.level = level;
 
 	if (level >= 1) {
-		level_buf_size = rand() % IBUF_SIZE + ISAL_DEF_LVL1_MIN;
+		level_buf_size = get_rand_level_buf_size(stream.level);
 		level_buf = malloc(level_buf_size);
 		create_rand_repeat_data(level_buf, level_buf_size);
 		stream.level_buf = level_buf;
@@ -1147,7 +1167,7 @@ int compress_single_pass(uint8_t * data, uint32_t data_size, uint8_t * compresse
 	stream.level = level;
 
 	if (level >= 1) {
-		level_buf_size = rand() % IBUF_SIZE + ISAL_DEF_LVL1_MIN;
+		level_buf_size = get_rand_level_buf_size(stream.level);
 		level_buf = malloc(level_buf_size);
 		create_rand_repeat_data(level_buf, level_buf_size);
 		stream.level_buf = level_buf;
@@ -1218,21 +1238,28 @@ int compress_stateless(uint8_t * data, uint32_t data_size, uint8_t * compressed_
 	stream.gzip_flag = gzip_flag;
 	stream.level = level;
 
-	if (level >= 1) {
+	if (level == 1) {
+		/* This is to test case where level buf uses already existing
+		 * internal buffers */
 		level_buf_size = rand() % IBUF_SIZE;
-		/* printf("level_buf_size = %d\n", level_buf_size); */
+
 		if (level_buf_size >= ISAL_DEF_LVL1_MIN) {
 			level_buf = malloc(level_buf_size);
 			create_rand_repeat_data(level_buf, level_buf_size);
 			stream.level_buf = level_buf;
 			stream.level_buf_size = level_buf_size;
 		}
+	} else if (level > 1) {
+		level_buf_size = get_rand_level_buf_size(level);
+		level_buf = malloc(level_buf_size);
+		create_rand_repeat_data(level_buf, level_buf_size);
+		stream.level_buf = level_buf;
+		stream.level_buf_size = level_buf_size;
 	}
 
-	if (reset_test_flag) {
+	if (reset_test_flag)
 		isal_deflate_reset(&stream);
-		/* printf("post reset level_buf_size = %d\n", level_buf_size); */
-	}
+
 	ret = isal_deflate_stateless(&stream);
 
 	if (level_buf != NULL)
@@ -1311,14 +1338,23 @@ int compress_stateless_full_flush(uint8_t * data, uint32_t data_size, uint8_t * 
 	stream.next_out = compressed_buf;
 	stream.level = level;
 
-	if (level >= 1) {
+	if (level == 1) {
+		/* This is to test case where level_buf uses already existing
+		 * internal buffers */
 		level_buf_size = rand() % IBUF_SIZE;
+
 		if (level_buf_size >= ISAL_DEF_LVL1_MIN) {
 			level_buf = malloc(level_buf_size);
 			create_rand_repeat_data(level_buf, level_buf_size);
 			stream.level_buf = level_buf;
 			stream.level_buf_size = level_buf_size;
 		}
+	} else if (level > 1) {
+		level_buf_size = get_rand_level_buf_size(level);
+		level_buf = malloc(level_buf_size);
+		create_rand_repeat_data(level_buf, level_buf_size);
+		stream.level_buf = level_buf;
+		stream.level_buf_size = level_buf_size;
 	}
 
 	if (reset_test_flag)
@@ -1361,6 +1397,7 @@ int compress_stateless_full_flush(uint8_t * data, uint32_t data_size, uint8_t * 
 			set_random_hufftable(&stream);
 
 		ret = isal_deflate_stateless(&stream);
+
 		assert(stream.internal_state.bitbuf.m_bit_count == 0);
 
 		assert(compressed_buf == stream.next_out - stream.total_out);
@@ -1448,7 +1485,7 @@ int compress_full_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	stream.level = level;
 
 	if (level >= 1) {
-		level_buf_size = rand() % IBUF_SIZE + ISAL_DEF_LVL1_MIN;
+		level_buf_size = get_rand_level_buf_size(stream.level);
 		if (level_buf_size >= ISAL_DEF_LVL1_MIN) {
 			level_buf = malloc(level_buf_size);
 			create_rand_repeat_data(level_buf, level_buf_size);
@@ -1626,7 +1663,7 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 	uint8_t *in_buf = NULL;
 
 	gzip_flag = rand() % 5;
-	level = rand() % 2;
+	level = get_rand_level();
 
 	if (in_size != 0) {
 		in_buf = malloc(in_size);
@@ -1866,7 +1903,7 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 	}
 
 	gzip_flag = rand() % 5;
-	level = rand() % 2;
+	level = get_rand_level();
 
 	z_size = z_size_max;
 
@@ -2072,7 +2109,7 @@ int test_flush(uint8_t * in_buf, uint32_t in_size)
 	uint8_t *z_buf = NULL;
 
 	gzip_flag = rand() % 5;
-	level = rand() % 2;
+	level = get_rand_level();
 
 	z_size = 2 * in_size + 2 * hdr_bytes + 8;
 	if (gzip_flag == IGZIP_GZIP)
@@ -2142,7 +2179,7 @@ int test_full_flush(uint8_t * in_buf, uint32_t in_size)
 	uint8_t *z_buf = NULL;
 
 	gzip_flag = rand() % 5;
-	level = rand() % 2;
+	level = get_rand_level();
 	z_size = 2 * in_size + MAX_LOOPS * (hdr_bytes + 5);
 
 	if (gzip_flag == IGZIP_GZIP)

@@ -90,10 +90,10 @@ main_loop:
 	xor	hash4, hash4
 	crc32	hash4 %+ d, dword [f_i_tmp + dict_offset + 1]
 
-	and	hash, HASH_MASK
-	and	hash2, HASH_MASK
-	and	hash3, HASH_MASK
-	and	hash4, HASH_MASK
+	and	hash, LVL0_HASH_MASK
+	and	hash2, LVL0_HASH_MASK
+	and	hash3, LVL0_HASH_MASK
+	and	hash4, LVL0_HASH_MASK
 
 	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
 	add	f_i, 1
@@ -118,7 +118,7 @@ end_loop:
 	xor	hash, hash
 	crc32	hash %+ d, dword [f_i + dict_offset]
 
-	and	hash, HASH_MASK
+	and	hash, LVL0_HASH_MASK
 	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
 
 	add	f_i, 1

@@ -30,11 +30,14 @@
 #include <stdint.h>
 #include "igzip_lib.h"
 #include "encode_df.h"
+#include "igzip_level_buf_structs.h"
 
 void isal_deflate_body_base(struct isal_zstream *stream);
 void isal_deflate_finish_base(struct isal_zstream *stream);
 void isal_deflate_icf_body_base(struct isal_zstream *stream);
-void isal_deflate_icf_finish_base(struct isal_zstream *stream);
+void isal_deflate_icf_body_lvl1_base(struct isal_zstream *stream);
+void isal_deflate_icf_finish_lvl1_base(struct isal_zstream *stream);
+void isal_deflate_icf_finish_lvl2_base(struct isal_zstream *stream);
 void isal_update_histogram_base(uint8_t * start_stream, int length,
 				struct isal_huff_histogram *histogram);
 struct deflate_icf *encode_deflate_icf_base(struct deflate_icf *next_in,
@@ -45,6 +48,12 @@ uint32_t adler32_base(uint32_t init, const unsigned char *buf, uint64_t len);
 int decode_huffman_code_block_stateless_base(struct inflate_state *s);
 void isal_deflate_hash_lvl0_base(struct isal_zstream *stream, uint8_t * dict,
 				 uint32_t dict_len);
+void isal_deflate_hash_lvl2_base(struct isal_zstream *stream, uint8_t * dict,
+				 uint32_t dict_len);
+void set_long_icf_fg_base(uint8_t * next_in, uint8_t * end_in,
+			  struct deflate_icf *match_lookup, struct level_buf *level_buf);
+void gen_icf_map_h1_base(struct isal_zstream *stream,
+			 struct deflate_icf *matches_icf_lookup, uint64_t input_size);
 
 void isal_deflate_body(struct isal_zstream *stream)
 {
@@ -61,9 +70,19 @@ void isal_deflate_icf_body(struct isal_zstream *stream)
 	isal_deflate_icf_body_base(stream);
 }
 
-void isal_deflate_icf_finish(struct isal_zstream *stream)
+void isal_deflate_icf_body_lvl1(struct isal_zstream *stream)
 {
-	isal_deflate_icf_finish_base(stream);
+	isal_deflate_icf_body_lvl1_base(stream);
+}
+
+void isal_deflate_icf_finish_lvl1(struct isal_zstream *stream)
+{
+	isal_deflate_icf_finish_lvl1_base(stream);
+}
+
+void isal_deflate_icf_finish_lvl2(struct isal_zstream *stream)
+{
+	isal_deflate_icf_finish_lvl2_base(stream);
 }
 
 void isal_update_histogram(uint8_t * start_stream, int length,
@@ -96,5 +115,22 @@ int decode_huffman_code_block_stateless(struct inflate_state *s)
 
 void isal_deflate_hash_lvl0(struct isal_zstream *stream, uint8_t * dict, uint32_t dict_len)
 {
-	return isal_deflate_hash_lvl0_base(stream, dict, dict_len);
+	isal_deflate_hash_lvl0_base(stream, dict, dict_len);
+}
+
+void isal_deflate_hash_lvl2(struct isal_zstream *stream, uint8_t * dict, uint32_t dict_len)
+{
+	isal_deflate_hash_lvl2_base(stream, dict, dict_len);
+}
+
+void set_long_icf_fg(uint8_t * next_in, uint8_t * end_in,
+		     struct deflate_icf *match_lookup, struct level_buf *level_buf)
+{
+	set_long_icf_fg_base(next_in, end_in, match_lookup, level_buf);
+}
+
+void gen_icf_map_lh1(struct isal_zstream *stream,
+		     struct deflate_icf *matches_icf_lookup, uint64_t input_size)
+{
+	gen_icf_map_h1_base(stream, matches_icf_lookup, input_size);
 }

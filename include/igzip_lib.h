@@ -115,8 +115,12 @@ extern "C" {
 
 #define ISAL_LIMIT_HASH_UPDATE
 
-#ifndef IGZIP_HASH_SIZE
-#define IGZIP_HASH_SIZE  (8 * IGZIP_K)
+#ifndef IGZIP_LVL0_HASH_SIZE
+#define IGZIP_LVL0_HASH_SIZE  (8 * IGZIP_K)
+#endif
+
+#ifndef IGZIP_LVL2_HASH_SIZE
+#define IGZIP_LVL2_HASH_SIZE  IGZIP_HIST_SIZE
 #endif
 
 #ifdef LONGER_HUFFTABLE
@@ -155,8 +159,10 @@ enum {IGZIP_LIT_TABLE_SIZE = ISAL_DEF_LIT_SYMBOLS};
 #define INVALID_PARAM -8
 #define STATELESS_OVERFLOW -1
 #define ISAL_INVALID_OPERATION -9
-#define ISAL_INVALID_LEVEL -4	/* Invalid Compression level set */
 #define ISAL_INVALID_STATE -3
+#define ISAL_INVALID_LEVEL -4	/* Invalid Compression level set */
+#define ISAL_INVALID_LEVEL_BUF -5 /* Invalid buffer specified for the compression level */
+
 /**
  *  @enum isal_zstate_state
  *  @brief Compression State please note ZSTATE_TRL only applies for GZIP compression
@@ -235,7 +241,7 @@ enum isal_block_state {
 struct isal_huff_histogram {
 	uint64_t lit_len_histogram[ISAL_DEF_LIT_LEN_SYMBOLS]; //!< Histogram of Literal/Len symbols seen
 	uint64_t dist_histogram[ISAL_DEF_DIST_SYMBOLS]; //!< Histogram of Distance Symbols seen
-	uint16_t hash_table[IGZIP_HASH_SIZE]; //!< Tmp space used as a hash table
+	uint16_t hash_table[IGZIP_LVL0_HASH_SIZE]; //!< Tmp space used as a hash table
 };
 
 struct isal_mod_hist {
@@ -244,12 +250,15 @@ struct isal_mod_hist {
 };
 
 #define ISAL_DEF_MIN_LEVEL 0
-#define ISAL_DEF_MAX_LEVEL 1
+#define ISAL_DEF_MAX_LEVEL 2
 
 /* Defines used set level data sizes */
+/* has to be at least sizeof(struct level_buf) + sizeof(struct lvlX_buf */
 #define ISAL_DEF_LVL0_REQ 0
-#define ISAL_DEF_LVL1_REQ 4 * IGZIP_K /* has to be at least sizeof(struct level_2_buf) */
+#define ISAL_DEF_LVL1_REQ 4 * IGZIP_K
 #define ISAL_DEF_LVL1_TOKEN_SIZE 4
+#define ISAL_DEF_LVL2_REQ 4 * IGZIP_K + 4 * 4 * IGZIP_K + 2 * IGZIP_LVL2_HASH_SIZE
+#define ISAL_DEF_LVL2_TOKEN_SIZE 4
 
 /* Data sizes for level specific data options */
 #define ISAL_DEF_LVL0_MIN ISAL_DEF_LVL0_REQ
@@ -265,6 +274,13 @@ struct isal_mod_hist {
 #define ISAL_DEF_LVL1_LARGE (ISAL_DEF_LVL1_REQ + ISAL_DEF_LVL1_TOKEN_SIZE * 64 * IGZIP_K)
 #define ISAL_DEF_LVL1_EXTRA_LARGE (ISAL_DEF_LVL1_REQ + ISAL_DEF_LVL1_TOKEN_SIZE * 128 * IGZIP_K)
 #define ISAL_DEF_LVL1_DEFAULT ISAL_DEF_LVL1_LARGE
+
+#define ISAL_DEF_LVL2_MIN (ISAL_DEF_LVL2_REQ + ISAL_DEF_LVL2_TOKEN_SIZE * 1 * IGZIP_K)
+#define ISAL_DEF_LVL2_SMALL (ISAL_DEF_LVL2_REQ + ISAL_DEF_LVL2_TOKEN_SIZE * 16 * IGZIP_K)
+#define ISAL_DEF_LVL2_MEDIUM (ISAL_DEF_LVL2_REQ + ISAL_DEF_LVL2_TOKEN_SIZE * 32 * IGZIP_K)
+#define ISAL_DEF_LVL2_LARGE (ISAL_DEF_LVL2_REQ + ISAL_DEF_LVL2_TOKEN_SIZE * 64 * IGZIP_K)
+#define ISAL_DEF_LVL2_EXTRA_LARGE (ISAL_DEF_LVL2_REQ + ISAL_DEF_LVL2_TOKEN_SIZE * 128 * IGZIP_K)
+#define ISAL_DEF_LVL2_DEFAULT ISAL_DEF_LVL2_LARGE
 
 #define IGZIP_NO_HIST 0
 #define IGZIP_HIST 1
@@ -296,6 +312,7 @@ struct isal_zstate {
 	uint8_t has_eob_hdr;	//!< keeps track of eob hdr (with BFINAL set)
 	uint8_t has_eob;	//!< keeps track of eob on the last deflate block
 	uint8_t has_hist;	//!< flag to track if there is match history
+	uint16_t has_level_buf_init; //!< flag to track if user supplied memory has been initialized.
 	struct isal_mod_hist hist;
 	uint32_t count;	//!< used for partial header/trailer writes
 	uint8_t tmp_out_buff[16];	//!< temporary array
@@ -306,8 +323,7 @@ struct isal_zstate {
 	uint8_t buffer[2 * IGZIP_HIST_SIZE + ISAL_LOOK_AHEAD];	//!< Internal buffer
 
 	/* Stream should be setup such that the head is cache aligned*/
-	uint16_t head[IGZIP_HASH_SIZE];	//!< Hash array
-
+	uint16_t head[IGZIP_LVL0_HASH_SIZE];	//!< Hash array
 };
 
 /** @brief Holds the huffman tree used to huffman encode the input stream **/
@@ -593,7 +609,8 @@ int isal_deflate_set_dict(struct isal_zstream *stream, uint8_t *dict, uint32_t d
  * @param  stream Structure holding state information on the compression streams.
  * @return COMP_OK (if everything is ok),
  *         INVALID_FLUSH (if an invalid FLUSH is selected),
- *         ISAL_INVALID_LEVEL (if an invalid compression level is selected).
+ *         ISAL_INVALID_LEVEL (if an invalid compression level is selected),
+ *         ISAL_INVALID_LEVEL_BUF (if the level buffer is not large enough).
  */
 int isal_deflate(struct isal_zstream *stream);
 
@@ -622,6 +639,7 @@ int isal_deflate(struct isal_zstream *stream);
  * @return COMP_OK (if everything is ok),
  *         INVALID_FLUSH (if an invalid FLUSH is selected),
  *         ISAL_INVALID_LEVEL (if an invalid compression level is selected),
+ *         ISAL_INVALID_LEVEL_BUF (if the level buffer is not large enough),
  *         STATELESS_OVERFLOW (if output buffer will not fit output).
  */
 int isal_deflate_stateless(struct isal_zstream *stream);

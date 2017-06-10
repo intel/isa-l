@@ -55,9 +55,15 @@ static inline uint32_t tzcnt(uint64_t val)
 {
 	uint32_t cnt;
 
-#ifdef __x86_64__
+#ifdef __BMI__
+	cnt = __tzcnt_u64(val);
+	cnt = cnt / 8;
+#elifdef __x86_64__
 
-	cnt = __builtin_ctzll(val) / 8;//__tzcnt_u64(val);
+	cnt = __bsfq(val);
+	if(val == 0)
+		cnt = 64;
+	cnt = cnt / 8;
 
 #else
 	for(cnt = 8; val > 0; val <<= 8)
@@ -178,12 +184,41 @@ static inline uint32_t compute_hash(uint32_t data)
 	return _mm_crc32_u32(0, data);
 
 #else
+	uint64_t hash;
 	/* Use multiplication to create a hash, 0xBDD06057 is a prime number */
-	return ((uint64_t)data * 0xB2D06057) >> 16;
+	hash = data;
+	hash *= 0xB2D06057;
+	hash >>= 16;
+	hash *= 0xB2D06057;
+	hash >>= 16;
+
+	return hash;
 
 #endif /* __SSE4_2__ */
 }
 
+#define PROD1 0xFFFFE84B
+#define PROD2 0xFFFF97B1
+static inline uint32_t compute_hash_mad(uint32_t data)
+{
+	int16_t data_low;
+	int16_t data_high;
+
+	data_low = data;        ;
+	data_high = data >> 16;
+	data = PROD1 * data_low + PROD2 * data_high;
+
+	data_low = data;
+	data_high = data >> 16;
+	data = PROD1 * data_low + PROD2 * data_high;
+
+	return data;
+}
+
+static inline uint32_t compute_long_hash(uint64_t data) {
+
+	return compute_hash(data >> 32)^compute_hash(data);
+}
 
 /**
  * @brief Returns how long str1 and str2 have the same symbols.

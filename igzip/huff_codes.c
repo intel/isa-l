@@ -684,7 +684,7 @@ void isal_update_histogram_base(uint8_t * start_stream, int length,
 	memset(last_seen, 0, sizeof(histogram->hash_table));	/* Initialize last_seen to be 0. */
 	for (current = start_stream; current < end_stream - 3; current++) {
 		literal = *(uint32_t *) current;
-		hash = compute_hash(literal) & HASH_MASK;
+		hash = compute_hash(literal) & LVL0_HASH_MASK;
 		seen = last_seen[hash];
 		last_seen[hash] = (current - start_stream) & 0xFFFF;
 		dist = (current - start_stream - seen) & 0xFFFF;
@@ -704,7 +704,7 @@ void isal_update_histogram_base(uint8_t * start_stream, int length,
 				next_hash++;
 				for (; next_hash < end; next_hash++) {
 					literal = *(uint32_t *) next_hash;
-					hash = compute_hash(literal) & HASH_MASK;
+					hash = compute_hash(literal) & LVL0_HASH_MASK;
 					last_seen[hash] = (next_hash - start_stream) & 0xFFFF;
 				}
 
@@ -718,7 +718,7 @@ void isal_update_histogram_base(uint8_t * start_stream, int length,
 		lit_len_histogram[literal & 0xFF] += 1;
 	}
 	literal = literal >> 8;
-	hash = compute_hash(literal) & HASH_MASK;
+	hash = compute_hash(literal) & LVL0_HASH_MASK;
 	seen = last_seen[hash];
 	last_seen[hash] = (current - start_stream) & 0xFFFF;
 	dist = (current - start_stream - seen) & 0xFFFF;

@@ -96,19 +96,42 @@ FIELD	_lit_len_table,	513 * HUFF_CODE_SIZE,	HUFF_CODE_SIZE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+START_FIELDS	;; lvl2_buf
+
+;;      name		size    align
+FIELD	_hash_table,	2 * IGZIP_LVL2_HASH_SIZE,	2
+FIELD	_matches_next,	8,	8
+FIELD	_matches_end,	8,	8
+FIELD	_matches,	4*4*1024,	4
+FIELD	_overflow,	4*LA,	4
+
+%assign _lvl2_buf_size	_FIELD_OFFSET
+%assign _lvl2_buf_align	_STRUCT_ALIGN
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 %define DEF_MAX_HDR_SIZE 328
-START_FIELDS	;; level_2_buf
+START_FIELDS	;; level_buf
 
 ;;      name		size    align
 FIELD	_encode_tables,		_hufftables_icf_size,	_hufftables_icf_align
-FIELD	_deflate_hdr_buf_used,	8,	8
-FIELD	_deflate_hdr_buf,	DEF_MAX_HDR_SIZE,	1
+FIELD	_deflate_hdr_count,	4,	4
+FIELD	_deflate_hdr_extra_bits,4,	4
+FIELD	_deflate_hdr,		DEF_MAX_HDR_SIZE,	1
 FIELD	_icf_buf_next,		8,	8
 FIELD	_icf_buf_avail_out,	8,	8
-FIELD	_icf_buf_start,		0,	0
+FIELD	_icf_buf_start,		8,	8
+FIELD	_lvl_extra,		_lvl2_buf_size,	_lvl2_buf_align
 
-%assign _level_2_buf_size	_FIELD_OFFSET
-%assign _level_2_buf_align	_STRUCT_ALIGN
+%assign _level_buf_base_size	_FIELD_OFFSET
+%assign _level_buf_base_align	_STRUCT_ALIGN
+
+_lvl2_hash_table	equ	_lvl_extra + _hash_table
+_lvl2_matches_next	equ	_lvl_extra + _matches_next
+_lvl2_matches_end	equ	_lvl_extra + _matches_end
+_lvl2_matches		equ	_lvl_extra + _matches
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -127,6 +150,7 @@ FIELD	_has_wrap_hdr,	1,	1
 FIELD	_has_eob_hdr,	1,	1
 FIELD	_has_eob,	1,	1
 FIELD	_has_hist,	1,	1
+FIELD	_has_level_buf_init,	2,	2
 FIELD	_hist,		_isal_mod_hist_size, _isal_mod_hist_align
 FIELD	_count,		4,	4
 FIELD   _tmp_out_buff,	16,	1
@@ -135,8 +159,7 @@ FIELD	_tmp_out_end,	4,	4
 FIELD	_b_bytes_valid,	4,	4
 FIELD	_b_bytes_processed,	4,	4
 FIELD	_buffer,	BSIZE,	1
-FIELD	_head,		IGZIP_HASH_SIZE*2,	2
-
+FIELD	_head,		IGZIP_LVL0_HASH_SIZE*2,	2
 %assign _isal_zstate_size	_FIELD_OFFSET
 %assign _isal_zstate_align	_STRUCT_ALIGN
 
@@ -189,6 +212,7 @@ _internal_state_has_wrap_hdr		  equ   _internal_state+_has_wrap_hdr
 _internal_state_has_eob		  equ   _internal_state+_has_eob
 _internal_state_has_eob_hdr		  equ   _internal_state+_has_eob_hdr
 _internal_state_has_hist		  equ   _internal_state+_has_hist
+_internal_state_has_level_buf_init	  equ   _internal_state+_has_level_buf_init
 _internal_state_buffer			  equ   _internal_state+_buffer
 _internal_state_head			  equ   _internal_state+_head
 _internal_state_bitbuf_m_bits		  equ   _internal_state+_bitbuf_m_bits

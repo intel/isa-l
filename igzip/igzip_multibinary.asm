@@ -39,23 +39,29 @@ extern isal_deflate_body_04
 extern isal_deflate_finish_base
 extern isal_deflate_finish_01
 
-
-extern isal_deflate_icf_body_base
-extern isal_deflate_icf_body_01
-extern isal_deflate_icf_body_02
-extern isal_deflate_icf_body_04
-extern isal_deflate_icf_finish_base
-extern isal_deflate_icf_finish_01
+extern isal_deflate_icf_body_lvl1_base
+extern isal_deflate_icf_body_lvl1_01
+extern isal_deflate_icf_body_lvl1_02
+extern isal_deflate_icf_body_lvl1_04
+extern isal_deflate_icf_finish_lvl1_base
+extern isal_deflate_icf_finish_lvl1_01
+extern isal_deflate_icf_finish_lvl2_base
 
 extern isal_update_histogram_base
 extern isal_update_histogram_01
 extern isal_update_histogram_04
 
+extern gen_icf_map_h1_base
+
 extern encode_deflate_icf_base
 extern encode_deflate_icf_04
 
+extern set_long_icf_fg_base
+
 %ifdef HAVE_AS_KNOWS_AVX512
 extern encode_deflate_icf_06
+extern set_long_icf_fg_06
+extern gen_icf_map_lh1_06
 %endif
 
 extern crc32_gzip_base
@@ -68,6 +74,11 @@ extern adler32_sse
 extern isal_deflate_hash_lvl0_base
 extern isal_deflate_hash_lvl0_01
 
+extern isal_deflate_hash_lvl2_base
+
+extern isal_deflate_icf_body_base
+extern isal_deflate_icf_body_06
+
 section .text
 
 %include "multibinary.asm"
@@ -77,10 +88,14 @@ mbin_dispatch_init5	isal_deflate_body, isal_deflate_body_base, isal_deflate_body
 mbin_interface		isal_deflate_finish
 mbin_dispatch_init5	isal_deflate_finish, isal_deflate_finish_base, isal_deflate_finish_01, isal_deflate_finish_01, isal_deflate_finish_01
 
-mbin_interface		isal_deflate_icf_body
-mbin_dispatch_init5	isal_deflate_icf_body, isal_deflate_icf_body_base, isal_deflate_icf_body_01, isal_deflate_icf_body_02, isal_deflate_icf_body_04
-mbin_interface		isal_deflate_icf_finish
-mbin_dispatch_init5	isal_deflate_icf_finish, isal_deflate_icf_finish_base, isal_deflate_icf_finish_01, isal_deflate_icf_finish_01, isal_deflate_icf_finish_01
+mbin_interface		isal_deflate_icf_body_lvl1
+mbin_dispatch_init5	isal_deflate_icf_body_lvl1, isal_deflate_icf_body_lvl1_base, isal_deflate_icf_body_lvl1_01, isal_deflate_icf_body_lvl1_02, isal_deflate_icf_body_lvl1_04
+
+mbin_interface		isal_deflate_icf_finish_lvl1
+mbin_dispatch_init5	isal_deflate_icf_finish_lvl1, isal_deflate_icf_finish_lvl1_base, isal_deflate_icf_finish_lvl1_01, isal_deflate_icf_finish_lvl1_01, isal_deflate_icf_finish_lvl1_01
+
+mbin_interface		isal_deflate_icf_finish_lvl2
+mbin_dispatch_init5	isal_deflate_icf_finish_lvl2, isal_deflate_icf_finish_lvl2_base, isal_deflate_icf_finish_lvl2_base, isal_deflate_icf_finish_lvl2_base, isal_deflate_icf_finish_lvl2_base
 
 mbin_interface		isal_update_histogram
 mbin_dispatch_init5	isal_update_histogram, isal_update_histogram_base, isal_update_histogram_01, isal_update_histogram_01, isal_update_histogram_04
@@ -88,9 +103,21 @@ mbin_dispatch_init5	isal_update_histogram, isal_update_histogram_base, isal_upda
 %ifdef HAVE_AS_KNOWS_AVX512
 mbin_interface		encode_deflate_icf
 mbin_dispatch_init6	encode_deflate_icf, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_04, encode_deflate_icf_06
+
+mbin_interface		set_long_icf_fg
+mbin_dispatch_init6	set_long_icf_fg, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_06
+
+mbin_interface		gen_icf_map_lh1
+mbin_dispatch_init6	gen_icf_map_lh1, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_lh1_06
 %else
 mbin_interface		encode_deflate_icf
 mbin_dispatch_init5	encode_deflate_icf, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_04
+
+mbin_interface		set_long_icf_fg
+mbin_dispatch_init5	set_long_icf_fg, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base
+
+mbin_interface		gen_icf_map_lh1
+mbin_dispatch_init5	gen_icf_map_lh1, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base
 %endif
 
 mbin_interface		crc32_gzip
@@ -101,3 +128,14 @@ mbin_dispatch_init5	isal_adler32, adler32_base, adler32_sse, adler32_sse, adler3
 
 mbin_interface		isal_deflate_hash_lvl0
 mbin_dispatch_init5	isal_deflate_hash_lvl0, isal_deflate_hash_lvl0_base, isal_deflate_hash_lvl0_01, isal_deflate_hash_lvl0_01, isal_deflate_hash_lvl0_01
+
+mbin_interface		isal_deflate_hash_lvl2
+mbin_dispatch_init5	isal_deflate_hash_lvl2, isal_deflate_hash_lvl2_base, isal_deflate_hash_lvl2_base, isal_deflate_hash_lvl2_base, isal_deflate_hash_lvl2_base
+
+%ifdef HAVE_AS_KNOWS_AVX512
+mbin_interface		isal_deflate_icf_body
+mbin_dispatch_init6	isal_deflate_icf_body, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_06
+%else
+mbin_interface		isal_deflate_icf_body
+mbin_dispatch_init5	isal_deflate_icf_body, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_base
+%endif

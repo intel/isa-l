@@ -209,8 +209,8 @@ MARK __body_compute_hash_ %+ ARCH
 	shr	tmp3, 8
 	compute_hash	hash2, tmp3
 
-	and	hash, HASH_MASK
-	and	hash2, HASH_MASK
+	and	hash, LVL0_HASH_MASK
+	and	hash2, LVL0_HASH_MASK
 
 	cmp	byte [stream + _internal_state_has_hist], IGZIP_NO_HIST
 	je	write_first_byte
@@ -321,7 +321,7 @@ len_dist_lit_huffman:
 	MOVQ	tmp5, xdata
 	shr	tmp5, 24
 	compute_hash	tmp4, tmp5
-	and	tmp4, HASH_MASK
+	and	tmp4, LVL0_HASH_MASK
 
 	SHLX	code4, code4, code_len3
 	or	code4, code3
@@ -359,15 +359,15 @@ loop3:
 	jae	loop3_done
 	mov     tmp6, [file_start + tmp3]
 	compute_hash    tmp4, tmp6
-	and     tmp4 %+ d, HASH_MASK
+	and     tmp4 %+ d, LVL0_HASH_MASK
 	; state->head[hash] = k;
 	mov     [stream + _internal_state_head + 2 * tmp4], tmp3 %+ w
 	jmp      loop3
 loop3_done:
 %endif
-	; hash = compute_hash(state->file_start + f_i) & HASH_MASK;
-	and	hash %+ d, HASH_MASK
-	and	hash2 %+ d, HASH_MASK
+	; hash = compute_hash(state->file_start + f_i) & LVL0_HASH_MASK;
+	and	hash %+ d, LVL0_HASH_MASK
+	and	hash2 %+ d, LVL0_HASH_MASK
 
 	; continue
 	cmp	f_i, f_end_i
@@ -429,15 +429,15 @@ loop4:
 	jae	loop4_done
 	mov     tmp6, [file_start + tmp3]
 	compute_hash    tmp4, tmp6
-	and     tmp4, HASH_MASK
+	and     tmp4, LVL0_HASH_MASK
 	mov     [stream + _internal_state_head + 2 * tmp4], tmp3 %+ w
 	jmp      loop4
 loop4_done:
 %endif
 
-	; hash = compute_hash(state->file_start + f_i) & HASH_MASK;
-	and	hash %+ d, HASH_MASK
-	and	hash2 %+ d, HASH_MASK
+	; hash = compute_hash(state->file_start + f_i) & LVL0_HASH_MASK;
+	and	hash %+ d, LVL0_HASH_MASK
+	and	hash2 %+ d, LVL0_HASH_MASK
 
 	; continue
 	cmp	f_i, f_end_i
@@ -563,5 +563,5 @@ write_first_byte:
 
 section .data
 	align 16
-mask:	dd	HASH_MASK, HASH_MASK, HASH_MASK, HASH_MASK
+mask:	dd	LVL0_HASH_MASK, LVL0_HASH_MASK, LVL0_HASH_MASK, LVL0_HASH_MASK
 const_D: dq	D

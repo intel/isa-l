@@ -42,6 +42,59 @@
 # define RUN_MEM_SIZE 500000000
 #endif
 
+int level_size_buf[10] = {
+#ifdef ISAL_DEF_LVL0_DEFAULT
+	ISAL_DEF_LVL0_DEFAULT,
+#else
+	0,
+#endif
+#ifdef ISAL_DEF_LVL1_DEFAULT
+	ISAL_DEF_LVL1_DEFAULT,
+#else
+	0,
+#endif
+#ifdef ISAL_DEF_LVL2_DEFAULT
+	ISAL_DEF_LVL2_DEFAULT,
+#else
+	0,
+#endif
+#ifdef ISAL_DEF_LVL3_DEFAULT
+	ISAL_DEF_LVL3_DEFAULT,
+#else
+	0,
+#endif
+#ifdef ISAL_DEF_LVL4_DEFAULT
+	ISAL_DEF_LVL4_DEFAULT,
+#else
+	0,
+#endif
+#ifdef ISAL_DEF_LVL5_DEFAULT
+	ISAL_DEF_LVL5_DEFAULT,
+#else
+	0,
+#endif
+#ifdef ISAL_DEF_LVL6_DEFAULT
+	ISAL_DEF_LVL6_DEFAULT,
+#else
+	0,
+#endif
+#ifdef ISAL_DEF_LVL7_DEFAULT
+	ISAL_DEF_LVL7_DEFAULT,
+#else
+	0,
+#endif
+#ifdef ISAL_DEF_LVL8_DEFAULT
+	ISAL_DEF_LVL8_DEFAULT,
+#else
+	0,
+#endif
+#ifdef ISAL_DEF_LVL9_DEFAULT
+	ISAL_DEF_LVL9_DEFAULT,
+#else
+	0,
+#endif
+};
+
 struct isal_zstream stream;
 
 int usage(void)
@@ -49,7 +102,7 @@ int usage(void)
 	fprintf(stderr,
 		"Usage: igzip_stateless_file_perf [options] <infile>\n"
 		"  -h        help\n"
-		"  -X        use compression level X with 0 <= X <= 1\n"
+		"  -X        use compression level X with 0 <= X <= 2\n"
 		"  -i <iter> number of iterations (at least 1)\n"
 		"  -o <file> output file for compresed data\n");
 	exit(0);
@@ -66,7 +119,17 @@ int main(int argc, char *argv[])
 	int level = 0, level_size = 0;
 	char *in_file_name = NULL, *out_file_name = NULL;
 
-	while ((c = getopt(argc, argv, "h01i:o:")) != -1) {
+	while ((c = getopt(argc, argv, "h0123456789i:o:")) != -1) {
+		if (c >= '0' && c <= '9') {
+			if (c > '0' + ISAL_DEF_MAX_LEVEL)
+				usage();
+			else {
+				level = c - '0';
+				level_size = level_size_buf[level];
+			}
+			continue;
+		}
+
 		switch (c) {
 		case 'o':
 			out_file_name = optarg;
@@ -75,12 +138,6 @@ int main(int argc, char *argv[])
 			iterations = atoi(optarg);
 			if (iterations < 1)
 				usage();
-			break;
-		case '1':
-			level = 1;
-			level_size = ISAL_DEF_LVL1_LARGE;
-			break;
-		case '0':
 			break;
 		case 'h':
 		default:

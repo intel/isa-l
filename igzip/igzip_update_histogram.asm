@@ -247,7 +247,7 @@ isal_update_histogram_ %+ ARCH %+ :
 
 	;; Init hash_table
 	PXOR	vtmp0, vtmp0, vtmp0
-	mov	rcx, (IGZIP_HASH_SIZE - V_LENGTH)
+	mov	rcx, (IGZIP_LVL0_HASH_SIZE - V_LENGTH)
 init_hash_table:
 	MOVDQU	[histogram + _hash_offset + 2 * rcx], vtmp0
 	MOVDQU	[histogram + _hash_offset + 2 * (rcx + V_LENGTH / 2)], vtmp0
@@ -262,7 +262,7 @@ init_hash_table:
 	;; Load first literal into histogram
 	mov	curr_data, [file_start + f_i]
 	compute_hash	hash, curr_data
-	and	hash %+ d, HASH_MASK
+	and	hash %+ d, LVL0_HASH_MASK
 	mov	[histogram + _hash_offset + 2 * hash], f_i %+ w
 	and	curr_data, 0xff
 	inc	qword [histogram + _lit_len_offset + HIST_ELEM_SIZE * curr_data]
@@ -276,8 +276,8 @@ init_hash_table:
 	shr	curr_data2, 8
 	compute_hash	hash2, curr_data2
 
-	and	hash2 %+ d, HASH_MASK
-	and	hash, HASH_MASK
+	and	hash2 %+ d, LVL0_HASH_MASK
+	and	hash, LVL0_HASH_MASK
 loop2:
 	xor	dist, dist
 	xor	dist2, dist2
@@ -324,8 +324,8 @@ loop2:
 	xor	len, [tmp1 + dist - 1]
 	jz	compare_loop
 
-	and	hash %+ d, HASH_MASK
-	and	hash2 %+ d, HASH_MASK
+	and	hash %+ d, LVL0_HASH_MASK
+	and	hash2 %+ d, LVL0_HASH_MASK
 
 	MOVQ	len2, xdata
 	xor	len2, [tmp1 + dist2]
@@ -370,7 +370,7 @@ len_dist_lit_huffman:
 	mov	tmp1, curr_data
 	compute_hash	hash, curr_data
 
-	and	hash3, HASH_MASK
+	and	hash3, LVL0_HASH_MASK
 	mov	[histogram + _hash_offset + 2 * hash3], tmp3 %+ w
 
 	dist_to_dist_code2 dist_code2, dist2
@@ -383,8 +383,8 @@ len_dist_lit_huffman:
 	inc	qword [histogram + _lit_len_offset + HIST_ELEM_SIZE * len_code]
 	inc	qword [histogram + _dist_offset + HIST_ELEM_SIZE * dist_code2]
 
-	and	hash2 %+ d, HASH_MASK
-	and	hash, HASH_MASK
+	and	hash2 %+ d, LVL0_HASH_MASK
+	and	hash, LVL0_HASH_MASK
 
 	cmp	f_i, file_length
 	jl	loop2
@@ -418,8 +418,8 @@ len_dist_huffman:
 	inc	qword [histogram + _lit_len_offset + HIST_ELEM_SIZE * len_code]
 	inc	qword [histogram + _dist_offset + HIST_ELEM_SIZE * dist_code]
 
-	and	hash2 %+ d, HASH_MASK
-	and	hash, HASH_MASK
+	and	hash2 %+ d, LVL0_HASH_MASK
+	and	hash, LVL0_HASH_MASK
 
 	cmp	f_i, file_length
 	jl	loop2
@@ -442,7 +442,7 @@ end_loop_2:
 loop2_finish:
 	mov	curr_data %+ d, dword [file_start + f_i]
 	compute_hash	hash, curr_data
-	and	hash %+ d, HASH_MASK
+	and	hash %+ d, LVL0_HASH_MASK
 
 	;; Calculate possible distance for length/dist pair.
 	xor	dist, dist
@@ -513,8 +513,8 @@ exit_ret:
 	ret
 
 compare_loop:
-	and	hash %+ d, HASH_MASK
-	and	hash2 %+ d, HASH_MASK
+	and	hash %+ d, LVL0_HASH_MASK
+	and	hash2 %+ d, LVL0_HASH_MASK
 	lea	tmp2, [tmp1 + dist - 1]
 %if (COMPARE_TYPE == 1)
 	compare250	tmp1, tmp2, len, tmp3
