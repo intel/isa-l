@@ -123,10 +123,10 @@ struct slver isal_deflate_slver = { 0x0082, 0x03, 0x01 };
 struct slver isal_deflate_stateless_slver_01010083;
 struct slver isal_deflate_stateless_slver = { 0x0083, 0x01, 0x01 };
 
-struct slver isal_deflate_set_hufftables_slver_00_01_008b;
+struct slver isal_deflate_set_hufftables_slver_0001008b;
 struct slver isal_deflate_set_hufftables_slver = { 0x008b, 0x01, 0x00 };
 
-struct slver isal_deflate_set_dict_slver_00_01_008c;
+struct slver isal_deflate_set_dict_slver_0001008c;
 struct slver isal_deflate_set_dict_slver = { 0x008c, 0x01, 0x00 };
 
 /*****************************************************************/
