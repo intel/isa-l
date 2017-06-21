@@ -467,6 +467,7 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 	uint32_t comp_tmp_size = 0, uncomp_tmp_size = 0;
 	uint32_t comp_processed = 0, uncomp_processed = 0;
 	int32_t read_in_old = 0;
+	uint32_t reset_test_flag = 0;
 
 	state = malloc(sizeof(struct inflate_state));
 	if (state == NULL) {
@@ -474,16 +475,26 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 		exit(0);
 	}
 
+	create_rand_repeat_data((uint8_t *) state, sizeof(state));
 	isal_inflate_init(state);
 
-	if (dict != NULL)
-		isal_inflate_set_dict(state, dict, dict_len);
+	if (rand() % 4 == 0) {
+		/* Test reset */
+		reset_test_flag = 1;
+		create_rand_repeat_data((uint8_t *) state, sizeof(state));
+	}
 
 	state->next_in = NULL;
 	state->next_out = NULL;
 	state->avail_in = 0;
 	state->avail_out = 0;
 	state->crc_flag = gzip_flag;
+
+	if (reset_test_flag)
+		isal_inflate_reset(state);
+
+	if (dict != NULL)
+		isal_inflate_set_dict(state, dict, dict_len);
 
 	if (gzip_flag == IGZIP_GZIP || gzip_flag == IGZIP_GZIP_NO_HDR)
 		compress_len -= gzip_trl_bytes;
@@ -836,6 +847,8 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	uint32_t loop_count = 0;
 	uint32_t level_buf_size;
 	uint8_t *level_buf = NULL;
+	struct isal_hufftables *huff_tmp;
+	uint32_t reset_test_flag = 0;
 
 #ifdef VERBOSE
 	printf("Starting Compress Multi Pass\n");
@@ -847,6 +860,20 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 
 	if (state->state != ZSTATE_NEW_HDR)
 		return COMPRESS_INCORRECT_STATE;
+
+	if (rand() % 4 == 0) {
+		/* Test reset */
+		reset_test_flag = 1;
+		huff_tmp = stream.hufftables;
+		create_rand_repeat_data((uint8_t *) & stream, sizeof(stream));
+
+		/* Restore variables not necessarily set by user */
+		stream.hufftables = huff_tmp;
+		stream.end_of_stream = 0;
+		stream.level = 0;
+		stream.level_buf = NULL;
+		stream.level_buf_size = 0;
+	}
 
 	stream.flush = flush_type;
 	stream.end_of_stream = 0;
@@ -864,6 +891,12 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 		stream.level_buf = level_buf;
 		stream.level_buf_size = level_buf_size;
 	}
+
+	if (reset_test_flag)
+		isal_deflate_reset(&stream);
+
+	if (dict != NULL)
+		isal_deflate_set_dict(&stream, dict, dict_len);
 
 	while (1) {
 		loop_count++;
@@ -982,6 +1015,8 @@ int compress_single_pass(uint8_t * data, uint32_t data_size, uint8_t * compresse
 	struct isal_zstate *state = &stream.internal_state;
 	uint32_t level_buf_size;
 	uint8_t *level_buf = NULL;
+	struct isal_hufftables *huff_tmp;
+	uint32_t reset_test_flag = 0;
 
 #ifdef VERBOSE
 	printf("Starting Compress Single Pass\n");
@@ -996,8 +1031,19 @@ int compress_single_pass(uint8_t * data, uint32_t data_size, uint8_t * compresse
 	if (state->state != ZSTATE_NEW_HDR)
 		return COMPRESS_INCORRECT_STATE;
 
-	if (dict != NULL)
-		isal_deflate_set_dict(&stream, dict, dict_len);
+	if (rand() % 4 == 0) {
+		/* Test reset */
+		reset_test_flag = 1;
+		huff_tmp = stream.hufftables;
+		create_rand_repeat_data((uint8_t *) & stream, sizeof(stream));
+
+		/* Restore variables not necessarily set by user */
+		stream.hufftables = huff_tmp;
+		stream.end_of_stream = 0;
+		stream.level = 0;
+		stream.level_buf = NULL;
+		stream.level_buf_size = 0;
+	}
 
 	stream.flush = flush_type;
 	stream.avail_in = data_size;
@@ -1016,6 +1062,11 @@ int compress_single_pass(uint8_t * data, uint32_t data_size, uint8_t * compresse
 		stream.level_buf_size = level_buf_size;
 	}
 
+	if (reset_test_flag)
+		isal_deflate_reset(&stream);
+
+	if (dict != NULL)
+		isal_deflate_set_dict(&stream, dict, dict_len);
 	ret =
 	    isal_deflate_with_checks(&stream, data_size, *compressed_size, data, data_size,
 				     data_size, compressed_buf, *compressed_size, 0);
@@ -1042,12 +1093,28 @@ int compress_stateless(uint8_t * data, uint32_t data_size, uint8_t * compressed_
 	struct isal_zstream stream;
 	uint32_t level_buf_size;
 	uint8_t *level_buf = NULL;
+	struct isal_hufftables *huff_tmp;
+	uint32_t reset_test_flag = 0;
 
 	create_rand_repeat_data((uint8_t *) & stream, sizeof(stream));
 
 	isal_deflate_stateless_init(&stream);
 
 	set_random_hufftable(&stream);
+
+	if (rand() % 4 == 0) {
+		/* Test reset */
+		reset_test_flag = 1;
+		huff_tmp = stream.hufftables;
+		create_rand_repeat_data((uint8_t *) & stream, sizeof(stream));
+
+		/* Restore variables not necessarily set by user */
+		stream.hufftables = huff_tmp;
+		stream.end_of_stream = 0;
+		stream.level = 0;
+		stream.level_buf = NULL;
+		stream.level_buf_size = 0;
+	}
 
 	stream.avail_in = data_size;
 	stream.next_in = data;
@@ -1061,6 +1128,7 @@ int compress_stateless(uint8_t * data, uint32_t data_size, uint8_t * compressed_
 
 	if (level >= 1) {
 		level_buf_size = rand() % IBUF_SIZE;
+		/* printf("level_buf_size = %d\n", level_buf_size); */
 		if (level_buf_size >= ISAL_DEF_LVL1_MIN) {
 			level_buf = malloc(level_buf_size);
 			create_rand_repeat_data(level_buf, level_buf_size);
@@ -1069,6 +1137,10 @@ int compress_stateless(uint8_t * data, uint32_t data_size, uint8_t * compressed_
 		}
 	}
 
+	if (reset_test_flag) {
+		isal_deflate_reset(&stream);
+		/* printf("post reset level_buf_size = %d\n", level_buf_size); */
+	}
 	ret = isal_deflate_stateless(&stream);
 
 	if (level_buf != NULL)
@@ -1116,6 +1188,8 @@ int compress_stateless_full_flush(uint8_t * data, uint32_t data_size, uint8_t * 
 	uint32_t in_processed = 00;
 	struct isal_zstream stream;
 	uint32_t loop_count = 0;
+	struct isal_hufftables *huff_tmp;
+	uint32_t reset_test_flag = 0;
 
 #ifdef VERBOSE
 	printf("Starting Stateless Compress Full Flush\n");
@@ -1124,6 +1198,20 @@ int compress_stateless_full_flush(uint8_t * data, uint32_t data_size, uint8_t * 
 	create_rand_repeat_data((uint8_t *) & stream, sizeof(stream));
 
 	isal_deflate_stateless_init(&stream);
+
+	if (rand() % 4 == 0) {
+		/* Test reset */
+		reset_test_flag = 1;
+		huff_tmp = stream.hufftables;
+		create_rand_repeat_data((uint8_t *) & stream, sizeof(stream));
+
+		/* Restore variables not necessarily set by user */
+		stream.hufftables = huff_tmp;
+		stream.end_of_stream = 0;
+		stream.level = 0;
+		stream.level_buf = NULL;
+		stream.level_buf_size = 0;
+	}
 
 	stream.flush = FULL_FLUSH;
 	stream.end_of_stream = 0;
@@ -1140,6 +1228,9 @@ int compress_stateless_full_flush(uint8_t * data, uint32_t data_size, uint8_t * 
 			stream.level_buf_size = level_buf_size;
 		}
 	}
+
+	if (reset_test_flag)
+		isal_deflate_reset(&stream);
 
 	while (1) {
 		loop_count++;
@@ -1228,6 +1319,8 @@ int compress_full_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	struct isal_zstream stream;
 	struct isal_zstate *state = &stream.internal_state;
 	uint32_t loop_count = 0;
+	struct isal_hufftables *huff_tmp;
+	uint32_t reset_test_flag = 0;
 
 #ifdef VERBOSE
 	printf("Starting Compress Full Flush\n");
@@ -1239,6 +1332,20 @@ int compress_full_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 
 	if (state->state != ZSTATE_NEW_HDR)
 		return COMPRESS_INCORRECT_STATE;
+
+	if (rand() % 4 == 0) {
+		/* Test reset */
+		reset_test_flag = 1;
+		huff_tmp = stream.hufftables;
+		create_rand_repeat_data((uint8_t *) & stream, sizeof(stream));
+
+		/* Restore variables not necessarily set by user */
+		stream.hufftables = huff_tmp;
+		stream.end_of_stream = 0;
+		stream.level = 0;
+		stream.level_buf = NULL;
+		stream.level_buf_size = 0;
+	}
 
 	stream.flush = FULL_FLUSH;
 	stream.end_of_stream = 0;
@@ -1257,6 +1364,9 @@ int compress_full_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 			stream.level_buf_size = level_buf_size;
 		}
 	}
+
+	if (reset_test_flag)
+		isal_deflate_reset(&stream);
 
 	while (1) {
 		loop_count++;
@@ -1344,6 +1454,8 @@ int compress_swap_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	struct isal_zstream stream;
 	struct isal_zstate *state = &stream.internal_state;
 	uint32_t partial_size;
+	struct isal_hufftables *huff_tmp;
+	uint32_t reset_test_flag = 0;
 
 #ifdef VERBOSE
 	printf("Starting Compress Swap Flush\n");
@@ -1356,6 +1468,20 @@ int compress_swap_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	if (state->state != ZSTATE_NEW_HDR)
 		return COMPRESS_INCORRECT_STATE;
 
+	if (rand() % 4 == 0) {
+		/* Test reset */
+		reset_test_flag = 1;
+		huff_tmp = stream.hufftables;
+		create_rand_repeat_data((uint8_t *) & stream, sizeof(stream));
+
+		/* Restore variables not necessarily set by user */
+		stream.hufftables = huff_tmp;
+		stream.end_of_stream = 0;
+		stream.level = 0;
+		stream.level_buf = NULL;
+		stream.level_buf_size = 0;
+	}
+
 	partial_size = rand() % (data_size + 1);
 
 	stream.flush = flush_type;
@@ -1365,6 +1491,9 @@ int compress_swap_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	stream.next_out = compressed_buf;
 	stream.end_of_stream = 0;
 	stream.gzip_flag = gzip_flag;
+
+	if (reset_test_flag)
+		isal_deflate_reset(&stream);
 
 	ret =
 	    isal_deflate_with_checks(&stream, data_size, *compressed_size, data, partial_size,

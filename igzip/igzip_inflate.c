@@ -81,6 +81,9 @@ struct slver {
 struct slver isal_inflate_init_slver_00010088;
 struct slver isal_inflate_init_slver = { 0x0088, 0x01, 0x00 };
 
+struct slver isal_inflate_reset_slver_0001008f;
+struct slver isal_inflate_reset_slver = { 0x008f, 0x01, 0x00 };
+
 struct slver isal_inflate_stateless_slver_00010089;
 struct slver isal_inflate_stateless_slver = { 0x0089, 0x01, 0x00 };
 
@@ -1110,6 +1113,23 @@ void isal_inflate_init(struct inflate_state *state)
 	state->block_state = ISAL_BLOCK_NEW_HDR;
 	state->bfinal = 0;
 	state->crc_flag = 0;
+	state->crc = 0;
+	state->type0_block_len = 0;
+	state->copy_overflow_length = 0;
+	state->copy_overflow_distance = 0;
+	state->tmp_in_size = 0;
+	state->tmp_out_processed = 0;
+	state->tmp_out_valid = 0;
+}
+
+void isal_inflate_reset(struct inflate_state *state)
+{
+	state->read_in = 0;
+	state->read_in_length = 0;
+	state->total_out = 0;
+	state->dict_length = 0;
+	state->block_state = ISAL_BLOCK_NEW_HDR;
+	state->bfinal = 0;
 	state->crc = 0;
 	state->type0_block_len = 0;
 	state->copy_overflow_length = 0;

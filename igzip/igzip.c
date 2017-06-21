@@ -114,6 +114,9 @@ struct slver {
 struct slver isal_deflate_init_slver_01030081;
 struct slver isal_deflate_init_slver = { 0x0081, 0x03, 0x01 };
 
+struct slver isal_deflate_reset_slver_0001008e;
+struct slver isal_deflate_reset_slver = { 0x008e, 0x01, 0x00 };
+
 struct slver isal_deflate_stateless_init_slver_00010084;
 struct slver isal_deflate_stateless_init_slver = { 0x0084, 0x01, 0x00 };
 
@@ -788,6 +791,7 @@ void isal_deflate_init(struct isal_zstream *stream)
 
 	state->b_bytes_valid = 0;
 	state->b_bytes_processed = 0;
+	state->has_wrap_hdr = 0;
 	state->has_eob = 0;
 	state->has_eob_hdr = 0;
 	state->has_hist = IGZIP_NO_HIST;
@@ -802,6 +806,31 @@ void isal_deflate_init(struct isal_zstream *stream)
 	state->crc = 0;
 
 	return;
+}
+
+void isal_deflate_reset(struct isal_zstream *stream)
+{
+	struct isal_zstate *state = &stream->internal_state;
+
+	stream->total_in = 0;
+	stream->total_out = 0;
+
+	state->b_bytes_valid = 0;
+	state->b_bytes_processed = 0;
+	state->has_wrap_hdr = 0;
+	state->has_eob = 0;
+	state->has_eob_hdr = 0;
+	state->has_hist = IGZIP_NO_HIST;
+	state->state = ZSTATE_NEW_HDR;
+	state->count = 0;
+
+	state->tmp_out_start = 0;
+	state->tmp_out_end = 0;
+
+	init(&state->bitbuf);
+
+	state->crc = 0;
+
 }
 
 int isal_deflate_set_hufftables(struct isal_zstream *stream,
@@ -840,6 +869,7 @@ void isal_deflate_stateless_init(struct isal_zstream *stream)
 	stream->end_of_stream = 0;
 	stream->flush = NO_FLUSH;
 	stream->gzip_flag = 0;
+	stream->internal_state.has_wrap_hdr = 0;
 	stream->internal_state.state = ZSTATE_NEW_HDR;
 	return;
 }
@@ -880,6 +910,7 @@ int isal_deflate_set_dict(struct isal_zstream *stream, uint8_t * dict, uint32_t 
 
 int isal_deflate_stateless(struct isal_zstream *stream)
 {
+	struct isal_zstate *state = &stream->internal_state;
 	uint8_t *next_in = stream->next_in;
 	const uint32_t avail_in = stream->avail_in;
 	const uint32_t total_in = stream->total_in;
@@ -888,6 +919,7 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 	const uint32_t avail_out = stream->avail_out;
 	const uint32_t total_out = stream->total_out;
 	const uint32_t gzip_flag = stream->gzip_flag;
+	const uint32_t has_wrap_hdr = state->has_wrap_hdr;
 
 	uint32_t stored_len;
 
@@ -958,6 +990,7 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 	stream->total_out = total_out;
 
 	stream->gzip_flag = gzip_flag;
+	state->has_wrap_hdr = has_wrap_hdr;
 	init(&stream->internal_state.bitbuf);
 	stream->internal_state.count = 0;
 
@@ -1085,10 +1118,14 @@ static int write_stream_header_stateless(struct isal_zstream *stream)
 	const uint8_t *hdr;
 	uint32_t next_flag;
 
+	if (stream->internal_state.has_wrap_hdr)
+		return COMP_OK;
+
 	if (stream->gzip_flag == IGZIP_ZLIB) {
 		hdr_bytes = zlib_hdr_bytes;
 		hdr = zlib_hdr;
 		next_flag = IGZIP_ZLIB_NO_HDR;
+
 	} else {
 		hdr_bytes = gzip_hdr_bytes;
 		hdr = gzip_hdr;
@@ -1104,6 +1141,7 @@ static int write_stream_header_stateless(struct isal_zstream *stream)
 	memcpy(stream->next_out, hdr, hdr_bytes);
 
 	stream->next_out += hdr_bytes;
+	stream->internal_state.has_wrap_hdr = 1;
 	stream->gzip_flag = next_flag;
 
 	return COMP_OK;
@@ -1115,16 +1153,16 @@ static void write_stream_header(struct isal_zstream *stream)
 	int bytes_to_write;
 	uint32_t hdr_bytes;
 	const uint8_t *hdr;
-	uint32_t next_flag;
+
+	if (stream->internal_state.has_wrap_hdr)
+		return;
 
 	if (stream->gzip_flag == IGZIP_ZLIB) {
 		hdr_bytes = zlib_hdr_bytes;
 		hdr = zlib_hdr;
-		next_flag = IGZIP_ZLIB_NO_HDR;
 	} else {
 		hdr_bytes = gzip_hdr_bytes;
 		hdr = gzip_hdr;
-		next_flag = IGZIP_GZIP_NO_HDR;
 	}
 
 	bytes_to_write = hdr_bytes;
@@ -1138,7 +1176,7 @@ static void write_stream_header(struct isal_zstream *stream)
 
 	if (state->count == hdr_bytes) {
 		state->count = 0;
-		stream->gzip_flag = next_flag;
+		state->has_wrap_hdr = 1;
 	}
 
 	stream->avail_out -= bytes_to_write;

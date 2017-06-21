@@ -294,6 +294,7 @@ struct isal_zstate {
 	uint8_t tmp_out_buff[16];	//!< temporary array
 	uint32_t tmp_out_start;	//!< temporary variable
 	uint32_t tmp_out_end;	//!< temporary variable
+	uint32_t has_wrap_hdr;	//!< keeps track of wrapper header
 	uint32_t has_eob;	//!< keeps track of eob on the last deflate block
 	uint32_t has_eob_hdr;	//!< keeps track of eob hdr (with BFINAL set)
 	uint32_t has_hist;	//!< flag to track if there is match history
@@ -480,6 +481,17 @@ int isal_create_hufftables_subset(struct isal_hufftables * hufftables,
 void isal_deflate_init(struct isal_zstream *stream);
 
 /**
+ * @brief Reinitialize compression stream data structure. Performs the same
+ * action as isal_deflate_init, but does not change user supplied input such as
+ * the level, flush type, compression wrapper (like gzip), hufftables, and
+ * end_of_stream_flag.
+ *
+ * @param stream Structure holding state information on the compression streams.
+ * @returns none
+ */
+void isal_deflate_reset(struct isal_zstream *stream);
+
+/**
  * @brief Set stream to use a new Huffman code
  *
  * Sets the Huffman code to be used in compression before compression start or
@@ -621,6 +633,14 @@ int isal_deflate_stateless(struct isal_zstream *stream);
  * @returns none
  */
 void isal_inflate_init(struct inflate_state *state);
+
+/**
+ * @brief Reinitialize decompression state data structure
+ *
+ * @param state Structure holding state information on the compression streams.
+ * @returns none
+ */
+void isal_inflate_reset(struct inflate_state *state);
 
 /**
  * @brief Set decompression dictionary to use

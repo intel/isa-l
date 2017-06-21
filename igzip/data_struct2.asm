@@ -129,6 +129,7 @@ FIELD	_count,		4,	4
 FIELD   _tmp_out_buff,	16,	1
 FIELD   _tmp_out_start,	4,	4
 FIELD	_tmp_out_end,	4,	4
+FIELD	_has_wrap_hdr,	4,	4
 FIELD	_has_eob,		4,	4
 FIELD	_has_eob_hdr,	4,	4
 FIELD	_has_hist,	4,	4
@@ -182,6 +183,7 @@ _internal_state_count			  equ   _internal_state+_count
 _internal_state_tmp_out_buff		  equ   _internal_state+_tmp_out_buff
 _internal_state_tmp_out_start		  equ   _internal_state+_tmp_out_start
 _internal_state_tmp_out_end		  equ   _internal_state+_tmp_out_end
+_internal_state_has_wrap_hdr		  equ   _internal_state+_has_wrap_hdr
 _internal_state_has_eob		  equ   _internal_state+_has_eob
 _internal_state_has_eob_hdr		  equ   _internal_state+_has_eob_hdr
 _internal_state_has_hist		  equ   _internal_state+_has_hist
