@@ -98,3 +98,9 @@ crc64_iso_refl                  @94
 crc64_iso_norm                  @95
 crc64_jones_refl                @96
 crc64_jones_norm                @97
+crc32_gzip_refl_base            @98
+crc32_gzip_refl                 @99
+isal_deflate_set_dict           @100
+isal_deflate_reset              @101
+isal_inflate_set_dict           @102
+isal_inflate_reset              @103

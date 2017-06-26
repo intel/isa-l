@@ -131,7 +131,11 @@ objs =  \
 	bin\igzip_update_histogram_01.obj \
 	bin\igzip_update_histogram_04.obj \
 	bin\rfc1951_lookup.obj \
-	bin\detect_repeated_char.obj
+	bin\detect_repeated_char.obj \
+	bin\crc32_gzip_refl_by8.obj \
+	bin\adler32_sse.obj \
+	bin\adler32_avx2_4.obj \
+	bin\igzip_deflate_hash.obj
 
 INCLUDES  = -I./ -Ierasure_code/ -Iraid/ -Icrc/ -Iigzip/ -Iinclude/
 LINKFLAGS = /nologo
@@ -147,10 +151,14 @@ dll: bin isa-l.dll
 bin: ; -mkdir $@
 
 isa-l_static.lib: $(objs)
-	lib -out:$@ $?
+	lib -out:$@ @<<
+$?
+<<
 
 isa-l.dll: $(objs)
-	link -out:$@ -dll -def:isa-l.def $?
+	link -out:$@ -dll -def:isa-l.def @<<
+$?
+<<
 
 {erasure_code}.c.obj:
 	$(CC) $(CFLAGS) /c -Fo$@ $?
@@ -174,7 +182,7 @@ isa-l.dll: $(objs)
 
 
 # Examples
-ex = xor_example.exe crc_simple_test.exe igzip_example.exe igzip_sync_flush_example.exe
+ex = xor_example.exe crc_simple_test.exe crc64_example.exe igzip_example.exe igzip_sync_flush_example.exe
 ex: lib $(ex)
 
 $(ex): $(@B).obj
@@ -196,7 +204,8 @@ checks = \
 	crc32_ieee_test.exe \
 	crc32_iscsi_test.exe \
 	crc64_funcs_test.exe \
-	igzip_rand_test.exe
+	igzip_rand_test.exe \
+	crc32_gzip_refl_test.exe
 
 checks: lib $(checks)
 $(checks): $(@B).obj
@@ -239,7 +248,8 @@ perfs = \
 	crc32_ieee_perf.exe \
 	crc32_iscsi_perf.exe \
 	igzip_perf.exe \
-	igzip_sync_flush_perf.exe
+	igzip_sync_flush_perf.exe \
+	crc32_gzip_refl_perf.exe
 
 perfs: lib $(perfs)
 $(perfs): $(@B).obj
