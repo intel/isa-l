@@ -1,4 +1,4 @@
-v2.18 Intel Intelligent Storage Acceleration Library Release Notes
+v2.19 Intel Intelligent Storage Acceleration Library Release Notes
 ==================================================================
 
 RELEASE NOTE CONTENTS
@@ -15,6 +15,12 @@ RELEASE NOTE CONTENTS
 
 2. FIXED ISSUES
 ---------------
+
+v2.19
+
+* Fix erasure code test that violates rs matrix bounds.
+
+* Fix 0 length file and looping errors in igzip_inflate_test.
 
 v2.18
 
@@ -49,6 +55,24 @@ v2.10
 
 3. CHANGE LOG & FEATURES ADDED
 ------------------------------
+
+v2.19
+
+* Igzip improvements
+
+  - Add optimized Adler-32 checksum.
+
+  - Implement zlib compression format.
+
+  - Add stateful dictionary support.
+
+  - Add struct reset functions for both deflate and inflate.
+
+* Reflected IEEE format CRC32 is released out. Function interface is named
+  crc32_gzip_refl.
+
+* Exact work condition of Erasure Code Reed-Solomon Matrix is determined by new
+  added program gen_rs_matrix_limits.
 
 v2.18
 
