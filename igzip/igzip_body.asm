@@ -137,9 +137,9 @@ isal_deflate_body_ %+ ARCH %+ :
 	;; Set stream's next state
 	mov	rdx, ZSTATE_FLUSH_READ_BUFFER
 	mov	rax, ZSTATE_BODY
-	cmp	dword [rcx + _end_of_stream], 0
+	cmp	word [rcx + _end_of_stream], 0
 	cmovne	rax, rdx
-	cmp	dword [rcx + _flush], _NO_FLUSH
+	cmp	word [rcx + _flush], _NO_FLUSH
 	cmovne	rax, rdx
 	mov	dword [rcx + _internal_state_state], eax
 	ret
@@ -164,7 +164,7 @@ skip1:
 	mov [rsp + gpr_save_mem_offset + 7*8], r15
 
 	mov	stream, rcx
-	mov	dword [stream + _internal_state_has_eob], 0
+	mov	word [stream + _internal_state_has_eob], 0
 
 	MOVDQU	xmask, [mask]
 
@@ -212,7 +212,7 @@ MARK __body_compute_hash_ %+ ARCH
 	and	hash, HASH_MASK
 	and	hash2, HASH_MASK
 
-	cmp	dword [stream + _internal_state_has_hist], IGZIP_NO_HIST
+	cmp	word [stream + _internal_state_has_hist], IGZIP_NO_HIST
 	je	write_first_byte
 
 	jmp	loop2
@@ -464,9 +464,9 @@ write_lit_bits:
 input_end:
 	mov	tmp1, ZSTATE_FLUSH_READ_BUFFER
 	mov	tmp5, ZSTATE_BODY
-	cmp	dword [stream + _end_of_stream], 0
+	cmp	word [stream + _end_of_stream], 0
 	cmovne	tmp5, tmp1
-	cmp	dword [stream + _flush], _NO_FLUSH
+	cmp	word [stream + _flush], _NO_FLUSH
 	cmovne	tmp5, tmp1
 	mov	dword [stream + _internal_state_state], tmp5 %+ d
 
@@ -545,7 +545,7 @@ write_first_byte:
 	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
 	ja	output_end
 
-	mov	dword [stream + _internal_state_has_hist], IGZIP_HIST
+	mov	word [stream + _internal_state_has_hist], IGZIP_HIST
 
 	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
 

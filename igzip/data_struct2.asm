@@ -119,23 +119,23 @@ FIELD	_icf_buf_start,		0,	0
 START_FIELDS	;; isal_zstate
 
 ;;      name		size    align
-FIELD	_b_bytes_valid,	4,	4
-FIELD	_b_bytes_processed,	4,	4
 FIELD	_file_start,	8,	8
-FIELD	_crc,		4,	4
 FIELD	_bitbuf,	_BitBuf2_size,	_BitBuf2_align
+FIELD	_crc,		4,	4
 FIELD	_state,		4,	4
+FIELD	_has_wrap_hdr,	2,	2
+FIELD	_has_eob_hdr,	2,	2
+FIELD	_has_eob,	2,	2
+FIELD	_has_hist,	2,	2
+FIELD	_hist,		_isal_mod_hist_size, _isal_mod_hist_align
 FIELD	_count,		4,	4
 FIELD   _tmp_out_buff,	16,	1
 FIELD   _tmp_out_start,	4,	4
 FIELD	_tmp_out_end,	4,	4
-FIELD	_has_wrap_hdr,	4,	4
-FIELD	_has_eob,		4,	4
-FIELD	_has_eob_hdr,	4,	4
-FIELD	_has_hist,	4,	4
-FIELD	_hist,		_isal_mod_hist_size, _isal_mod_hist_align
-FIELD	_buffer,	BSIZE,	32
-FIELD	_head,		IGZIP_HASH_SIZE*2,	16
+FIELD	_b_bytes_valid,	4,	4
+FIELD	_b_bytes_processed,	4,	4
+FIELD	_buffer,	BSIZE,	1
+FIELD	_head,		IGZIP_HASH_SIZE*2,	2
 
 %assign _isal_zstate_size	_FIELD_OFFSET
 %assign _isal_zstate_align	_STRUCT_ALIGN
@@ -165,8 +165,8 @@ FIELD	_hufftables,	8,	8
 FIELD	_level,		4,	4
 FIELD	_level_buf_size,	4,	4
 FIELD	_level_buf,	8,	8
-FIELD	_end_of_stream,	4,	4
-FIELD   _flush,		4,	4
+FIELD	_end_of_stream,	2,	2
+FIELD   _flush,		2,	2
 FIELD	_gzip_flag,	4,	4
 FIELD	_internal_state,	_isal_zstate_size,	_isal_zstate_align
 

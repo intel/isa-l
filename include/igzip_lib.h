@@ -284,25 +284,25 @@ struct BitBuf2 {
 
 /** @brief Holds the internal state information for input and output compression streams*/
 struct isal_zstate {
-	uint32_t b_bytes_valid;	//!< number of bytes of valid data in buffer
-	uint32_t b_bytes_processed;	//!< keeps track of the number of bytes processed in isal_zstate.buffer
 	uint8_t *file_start;	//!< pointer to where file would logically start
-	uint32_t crc;		//!< Current crc
 	struct BitBuf2 bitbuf;	//!< Bit Buffer
+	uint32_t crc;		//!< Current crc
 	enum isal_zstate_state state;	//!< Current state in processing the data stream
+	uint16_t has_wrap_hdr;	//!< keeps track of wrapper header
+	uint16_t has_eob_hdr;	//!< keeps track of eob hdr (with BFINAL set)
+	uint16_t has_eob;	//!< keeps track of eob on the last deflate block
+	uint16_t has_hist;	//!< flag to track if there is match history
+	struct isal_mod_hist hist;
 	uint32_t count;	//!< used for partial header/trailer writes
 	uint8_t tmp_out_buff[16];	//!< temporary array
 	uint32_t tmp_out_start;	//!< temporary variable
 	uint32_t tmp_out_end;	//!< temporary variable
-	uint32_t has_wrap_hdr;	//!< keeps track of wrapper header
-	uint32_t has_eob;	//!< keeps track of eob on the last deflate block
-	uint32_t has_eob_hdr;	//!< keeps track of eob hdr (with BFINAL set)
-	uint32_t has_hist;	//!< flag to track if there is match history
+	uint32_t b_bytes_valid;	//!< number of valid bytes in buffer
+	uint32_t b_bytes_processed;	//!< number of bytes processed in buffer
+	uint8_t buffer[2 * IGZIP_HIST_SIZE + ISAL_LOOK_AHEAD];	//!< Internal buffer
 
-	struct isal_mod_hist hist;
-
-	DECLARE_ALIGNED(uint8_t buffer[2 * IGZIP_HIST_SIZE + ISAL_LOOK_AHEAD], 32);	//!< Internal buffer
-	DECLARE_ALIGNED(uint16_t head[IGZIP_HASH_SIZE], 16);	//!< Hash array
+	/* Stream should be setup such that the head is cache aligned*/
+	uint16_t head[IGZIP_HASH_SIZE];	//!< Hash array
 
 };
 
@@ -335,8 +335,8 @@ struct isal_zstream {
 	uint32_t level; //!< Compression level to use
 	uint32_t level_buf_size; //!< Size of level_buf
 	uint8_t * level_buf; //!< User allocated buffer required for different compression levels
-	uint32_t end_of_stream;	//!< non-zero if this is the last input buffer
-	uint32_t flush;	//!< Flush type can be NO_FLUSH, SYNC_FLUSH or FULL_FLUSH
+	uint16_t end_of_stream;	//!< non-zero if this is the last input buffer
+	uint16_t flush;	//!< Flush type can be NO_FLUSH, SYNC_FLUSH or FULL_FLUSH
 	uint32_t gzip_flag; //!< Indicate if gzip compression is to be performed
 
 	struct isal_zstate internal_state;	//!< Internal state for this stream
