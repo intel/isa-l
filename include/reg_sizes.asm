@@ -198,6 +198,15 @@ section .text
 section .note.GNU-stack noalloc noexec nowrite progbits
 section .text
 %endif
+
+%ifdef REL_TEXT
+ %define WRT_OPT
+%elifidn __OUTPUT_FORMAT__, elf64
+ %define WRT_OPT        wrt ..plt
+%else
+ %define WRT_OPT
+%endif
+
 %ifidn __OUTPUT_FORMAT__, macho64
 %define elf64 macho64
 %endif
