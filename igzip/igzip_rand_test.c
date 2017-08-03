@@ -83,6 +83,8 @@ enum IGZIP_TEST_ERROR_CODES {
 	INFLATE_LEFTOVER_INPUT,
 	INFLATE_INCORRECT_OUTPUT_SIZE,
 	INFLATE_INVALID_LOOK_BACK_DISTANCE,
+	INFLATE_INPUT_STREAM_INTEGRITY_ERROR,
+	INFLATE_OUTPUT_STREAM_INTEGRITY_ERROR,
 	INVALID_GZIP_HEADER,
 	INCORRECT_GZIP_TRAILER,
 	INVALID_ZLIB_HEADER,
@@ -296,6 +298,12 @@ void print_error(int error_code)
 	case INFLATE_INVALID_LOOK_BACK_DISTANCE:
 		printf("error: invalid look back distance found while decompressing\n");
 		break;
+	case INFLATE_INPUT_STREAM_INTEGRITY_ERROR:
+		printf("error: inconsistent input buffer\n");
+		break;
+	case INFLATE_OUTPUT_STREAM_INTEGRITY_ERROR:
+		printf("error: inconsistent output buffer\n");
+		break;
 	case INVALID_GZIP_HEADER:
 		printf("error: incorrect gzip header found when inflating data\n");
 		break;
@@ -457,6 +465,68 @@ int inflate_stateless_pass(uint8_t * compress_buf, uint64_t compress_len,
 	return ret;
 }
 
+/* Check if that the state of the data stream is consistent */
+int inflate_state_valid_check(struct inflate_state *state, uint8_t * in_buf, uint32_t in_size,
+			      uint8_t * out_buf, uint32_t out_size, uint32_t in_processed,
+			      uint32_t out_processed, uint32_t data_size)
+{
+	uint32_t in_buffer_size, total_out, out_buffer_size;
+
+	in_buffer_size = (in_size == 0) ? 0 : state->next_in - in_buf + state->avail_in;
+
+	/* Check for a consistent amount of data processed */
+	if (in_buffer_size != in_size)
+		return INFLATE_INPUT_STREAM_INTEGRITY_ERROR;
+
+	total_out =
+	    (out_size == 0) ? out_processed : out_processed + (state->next_out - out_buf);
+	out_buffer_size = (out_size == 0) ? 0 : state->next_out - out_buf + state->avail_out;
+
+	/* Check for a consistent amount of data compressed */
+	if (total_out != state->total_out || out_buffer_size != out_size)
+		return INFLATE_OUTPUT_STREAM_INTEGRITY_ERROR;
+
+	return 0;
+}
+
+/* Performs compression with checks to discover and verify the state of the
+ * stream
+ * state: inflate data structure which has been initialized to use
+ * in_buf and out_buf as the buffers
+ * compress_len: size of all input compressed data
+ * data_size: size of all available output buffers
+ * in_buf: next buffer of data to be inflated
+ * in_size: size of in_buf
+ * out_buf: next out put buffer where data is stored
+ * out_size: size of out_buf
+ * in_processed: the amount of input data which has been loaded into buffers
+ * to be inflated, this includes the data in in_buf
+ * out_processed: the amount of output data which has been decompressed and stored,
+ * this does not include the data in the current out_buf
+*/
+int isal_inflate_with_checks(struct inflate_state *state, uint32_t compress_len,
+			     uint32_t data_size, uint8_t * in_buf, uint32_t in_size,
+			     uint32_t in_processed, uint8_t * out_buf, uint32_t out_size,
+			     uint32_t out_processed)
+{
+	int ret, stream_check = 0;
+
+	ret = isal_inflate(state);
+
+	/* Verify the stream is in a valid state when no errors occured */
+	if (ret >= 0) {
+		stream_check =
+		    inflate_state_valid_check(state, in_buf, in_size, out_buf, out_size,
+					      in_processed, out_processed, data_size);
+	}
+
+	if (stream_check != 0)
+		return stream_check;
+
+	return ret;
+
+}
+
 int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 		       uint8_t * uncompress_buf, uint32_t * uncompress_len, uint32_t gzip_flag,
 		       uint8_t * dict, uint32_t dict_len)
@@ -562,7 +632,9 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 			}
 		}
 
-		ret = isal_inflate(state);
+		ret = isal_inflate_with_checks(state, compress_len, *uncompress_len, comp_tmp,
+					       comp_tmp_size, comp_processed, uncomp_tmp,
+					       uncomp_tmp_size, uncomp_processed);
 
 		if (state->block_state == ISAL_BLOCK_FINISH || ret != 0) {
 			memcpy(uncompress_buf + uncomp_processed, uncomp_tmp, uncomp_tmp_size);
@@ -706,7 +778,12 @@ int inflate_check(uint8_t * z_buf, int z_size, uint8_t * in_buf, int in_size,
 	case INCORRECT_ZLIB_TRAILER:
 		gzip_trl_result = INCORRECT_ZLIB_TRAILER;
 		break;
-
+	case INFLATE_INPUT_STREAM_INTEGRITY_ERROR:
+		return INFLATE_INPUT_STREAM_INTEGRITY_ERROR;
+		break;
+	case INFLATE_OUTPUT_STREAM_INTEGRITY_ERROR:
+		return INFLATE_OUTPUT_STREAM_INTEGRITY_ERROR;
+		break;
 	default:
 		return INFLATE_GENERAL_ERROR;
 		break;

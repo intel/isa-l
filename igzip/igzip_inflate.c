@@ -1213,6 +1213,7 @@ int isal_inflate(struct inflate_state *state)
 	int ret = 0;
 
 	if (state->block_state != ISAL_BLOCK_FINISH) {
+		state->total_out += state->tmp_out_valid - state->tmp_out_processed;
 		/* If space in tmp_out buffer, decompress into the tmp_out_buffer */
 		if (state->tmp_out_valid < 2 * ISAL_DEF_HIST_SIZE) {
 			/* Setup to start decoding into temp buffer */
@@ -1346,8 +1347,11 @@ int isal_inflate(struct inflate_state *state)
 			}
 
 			if (ret == ISAL_INVALID_LOOKBACK || ret == ISAL_INVALID_BLOCK
-			    || ret == ISAL_INVALID_SYMBOL)
+			    || ret == ISAL_INVALID_SYMBOL) {
+				state->total_out -=
+				    state->tmp_out_valid - state->tmp_out_processed;
 				return ret;
+			}
 
 		} else if (state->tmp_out_valid == state->tmp_out_processed) {
 			state->block_state = ISAL_BLOCK_FINISH;
@@ -1355,6 +1359,8 @@ int isal_inflate(struct inflate_state *state)
 			    || state->crc_flag == ISAL_ZLIB_NO_HDR)
 				finalize_adler32(state);
 		}
+
+		state->total_out -= state->tmp_out_valid - state->tmp_out_processed;
 	}
 
 	return ISAL_DECOMP_OK;
