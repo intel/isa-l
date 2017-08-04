@@ -98,11 +98,10 @@ void isal_deflate_icf_finish(struct isal_zstream *stream);
 
 /* Forward declarations */
 static inline void reset_match_history(struct isal_zstream *stream);
-void write_header(struct isal_zstream *stream, uint8_t * deflate_hdr,
-		  uint32_t deflate_hdr_count, uint32_t extra_bits_count, uint32_t next_state,
-		  uint32_t toggle_end_of_stream);
-void write_deflate_header(struct isal_zstream *stream);
-void write_trailer(struct isal_zstream *stream);
+static void write_header(struct isal_zstream *stream, uint8_t * deflate_hdr,
+			 uint32_t deflate_hdr_count, uint32_t extra_bits_count,
+			 uint32_t next_state, uint32_t toggle_end_of_stream);
+static void write_trailer(struct isal_zstream *stream);
 
 struct slver {
 	uint16_t snum;
@@ -1288,9 +1287,9 @@ static int write_deflate_header_unaligned_stateless(struct isal_zstream *stream)
 }
 
 /* Toggle end of stream only works when deflate header is aligned */
-void write_header(struct isal_zstream *stream, uint8_t * deflate_hdr,
-		  uint32_t deflate_hdr_count, uint32_t extra_bits_count,
-		  uint32_t next_state, uint32_t toggle_end_of_stream)
+static void write_header(struct isal_zstream *stream, uint8_t * deflate_hdr,
+			 uint32_t deflate_hdr_count, uint32_t extra_bits_count,
+			 uint32_t next_state, uint32_t toggle_end_of_stream)
 {
 	struct isal_zstate *state = &stream->internal_state;
 	uint32_t hdr_extra_bits = deflate_hdr[deflate_hdr_count];
@@ -1354,7 +1353,7 @@ void write_header(struct isal_zstream *stream, uint8_t * deflate_hdr,
 
 }
 
-void write_trailer(struct isal_zstream *stream)
+static void write_trailer(struct isal_zstream *stream)
 {
 	struct isal_zstate *state = &stream->internal_state;
 	unsigned int bytes = 0;

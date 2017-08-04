@@ -832,7 +832,7 @@ static int inline setup_dynamic_header(struct inflate_state *state)
 
 /* Reads in the header pointed to by in_stream and sets up state to reflect that
  * header information*/
-int read_header(struct inflate_state *state)
+static int read_header(struct inflate_state *state)
 {
 	uint8_t bytes;
 	uint32_t btype;
@@ -895,7 +895,7 @@ int read_header(struct inflate_state *state)
 
 /* Reads in the header pointed to by in_stream and sets up state to reflect that
  * header information*/
-int read_header_stateful(struct inflate_state *state)
+static int read_header_stateful(struct inflate_state *state)
 {
 	uint64_t read_in_start = state->read_in;
 	int32_t read_in_length_start = state->read_in_length;
