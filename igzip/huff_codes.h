@@ -95,14 +95,15 @@
  */
 struct huff_code {
 	union {
+                struct {
+                        uint32_t code_and_extra:24;
+                        uint32_t length2:8;
+                };
+
 		struct {
 			uint16_t code;
 			uint8_t extra_bit_count;
 			uint8_t length;
-		};
-		struct {
-			uint32_t code_and_extra:24;
-			uint32_t length2:8;
 		};
 	};
 };
