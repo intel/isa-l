@@ -30,6 +30,10 @@ the included indent script to format C code.
 
     ./tools/iindent your_files.c
 
+And use check format script before submitting.
+
+    ./tools/check_format.sh
+
 [mailing list]:https://lists.01.org/mailman/listinfo/isal
 [license]:LICENSE
 [signed-off-by language]:https://01.org/community/signed-process
