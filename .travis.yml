@@ -1,11 +1,82 @@
-sudo: required
-dist: trusty
-before_script:
-    - sudo apt-get -q update
-    - sudo apt-get install -y yasm nasm
-    - ./autogen.sh
-script: ./configure && make && make check
 language: c
-compiler:
-    - clang
-    - gcc
+sudo: required
+matrix:
+  include:
+    ### OS X
+    - os: osx
+      env: C_COMPILER=clang
+
+    ### linux gcc
+    - dist: trusty
+      env: C_COMPILER=gcc
+
+    ### linux clang
+    - dist: trusty
+      env: C_COMPILER=clang
+
+    ### linux newer clang
+    - dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-trusty-4.0
+          packages:
+            - clang-4.0
+      env: C_COMPILER=clang-4.0
+
+    ### linux older gcc
+    - dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-4.7
+      env: C_COMPILER=gcc-4.7
+
+    ### linux newer gcc
+    - dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
+      env: C_COMPILER=gcc-6
+
+    ### linux with new nasm
+    - dist: trusty
+      addons:
+        apt:
+          sources:
+            - debian-sid
+          packages:
+            - nasm
+      env: C_COMPILER=gcc AS_ASSEMBL=nasm
+
+    ### linux extended tests
+    - dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - binutils-mingw-w64-x86-64
+            - gcc-mingw-w64-x86-64
+            - wine
+      env: TEST_TYPE=ext
+
+before_install:
+  - if [ -n "${C_COMPILER}" ]; then export CC="${C_COMPILER}"; fi
+  - if [ -n "${AS_ASSEMBL}" ]; then export AS="${AS_ASSEMBL}"; fi
+
+before_script:
+  - if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get -q update; fi
+  - if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get install yasm indent; fi
+  - if [ $TRAVIS_OS_NAME = osx ]; then brew install yasm; fi
+
+script:
+  - if [ -n "${CC}" ]; then $CC --version; fi
+  - if [ -n "${AS}" ]; then $AS --version; fi
+  - ./tools/test_autorun.sh "${TEST_TYPE}"
