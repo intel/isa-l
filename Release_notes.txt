@@ -1,4 +1,4 @@
-v2.19 Intel Intelligent Storage Acceleration Library Release Notes
+v2.20 Intel Intelligent Storage Acceleration Library Release Notes
 ==================================================================
 
 RELEASE NOTE CONTENTS
@@ -15,6 +15,12 @@ RELEASE NOTE CONTENTS
 
 2. FIXED ISSUES
 ---------------
+v2.20
+
+* Inflate total_out behavior corrected for in-progress decompression.
+  Previously total_out represented the total bytes decompressed into the output
+  buffer or temp internal buffer.  This is changed to be only the bytes put into
+  the output buffer.
 
 v2.19
 
@@ -55,6 +61,13 @@ v2.10
 
 3. CHANGE LOG & FEATURES ADDED
 ------------------------------
+
+v2.20
+
+* Igzip improvements
+  - Optimized deflate_hash in compression functions.
+    Improves performance of using preset dictionary.
+  - Removed alignment restrictions on input structure.
 
 v2.19
 
