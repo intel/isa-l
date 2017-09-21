@@ -870,6 +870,44 @@ static inline uint32_t init_heap64(struct heap_tree *heap_space, uint64_t * hist
 	return heap_size;
 }
 
+static inline uint32_t init_heap64_semi_complete(struct heap_tree *heap_space,
+						 uint64_t * histogram, uint64_t hist_size,
+						 uint64_t complete_start)
+{
+	uint32_t heap_size, i;
+
+	memset(heap_space, 0, sizeof(struct heap_tree));
+
+	heap_size = 0;
+	for (i = 0; i < complete_start; i++) {
+		if (histogram[i] != 0)
+			heap_space->heap[++heap_size] = ((histogram[i]) << FREQ_SHIFT) | i;
+	}
+
+	for (; i < hist_size; i++)
+		heap_space->heap[++heap_size] = ((histogram[i]) << FREQ_SHIFT) | i;
+
+	// make sure heap has at least two elements in it
+	if (heap_size < 2) {
+		if (heap_size == 0) {
+			heap_space->heap[1] = 1ULL << FREQ_SHIFT;
+			heap_space->heap[2] = (1ULL << FREQ_SHIFT) | 1;
+			heap_size = 2;
+		} else {
+			// heap size == 1
+			if (histogram[0] == 0)
+				heap_space->heap[2] = 1ULL << FREQ_SHIFT;
+			else
+				heap_space->heap[2] = (1ULL << FREQ_SHIFT) | 1;
+			heap_size = 2;
+		}
+	}
+
+	build_heap(heap_space->heap, heap_size);
+
+	return heap_size;
+}
+
 static inline uint32_t init_heap64_complete(struct heap_tree *heap_space, uint64_t * histogram,
 					    uint64_t hist_size)
 {
@@ -1444,7 +1482,9 @@ int isal_create_hufftables_subset(struct isal_hufftables *hufftables,
 
 	memset(hufftables, 0, sizeof(struct isal_hufftables));
 
-	heap_size = init_heap64(&heap_space, lit_len_histogram, LIT_LEN);
+	heap_size =
+	    init_heap64_semi_complete(&heap_space, lit_len_histogram, LIT_LEN,
+				      ISAL_DEF_LIT_SYMBOLS);
 	gen_huff_code_lens(&heap_space, heap_size, code_len_count,
 			   (struct huff_code *)lit_huff_table, LIT_LEN, MAX_DEFLATE_CODE_LEN);
 	max_lit_len_sym = set_huff_codes(lit_huff_table, LIT_LEN, code_len_count);
