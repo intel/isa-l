@@ -1,0 +1,12 @@
+
+default: llvm_fuzz_tests
+
+include ../../igzip/Makefile.am
+include Makefile.am
+include ../../make.inc
+
+CC  = clang
+CXX = clang++
+CXXFLAGS += $(DEFINES)
+
+VPATH = . ../../igzip ../../include

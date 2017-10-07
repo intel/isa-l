@@ -114,7 +114,6 @@ lsrc        += igzip/huff_codes.c
 # Include tools and tests using the reference inflate
 other_tests += igzip/igzip_inflate_perf
 other_tests += igzip/igzip_inflate_test
-other_tests += igzip/igzip_fuzz_inflate
 lsrc   += igzip/igzip_inflate.c
 other_src   += igzip/checksum_test_ref.h
 
@@ -125,6 +124,3 @@ igzip_inflate_test: LDLIBS += -lz
 igzip_igzip_inflate_test_LDADD = libisal.la
 igzip_igzip_inflate_test_LDFLAGS = -lz
 igzip_igzip_hist_perf_LDADD = libisal.la
-igzip_fuzz_inflate: LDLIBS += -lz
-igzip_igzip_fuzz_inflate_LDADD = libisal.la
-igzip_igzip_fuzz_inflate_LDFLAGS = -lz

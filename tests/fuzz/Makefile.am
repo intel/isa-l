@@ -1,5 +1,5 @@
 ########################################################################
-#  Copyright(c) 2011-2015 Intel Corporation All rights reserved.
+#  Copyright(c) 2011-2017 Intel Corporation All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions
@@ -27,19 +27,26 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ########################################################################
 
-units     = erasure_code raid crc igzip
+src_include += -I $(srcdir)/tests/fuzz
 
-default: lib
+# AFL fuzz tests
+other_tests += tests/fuzz/igzip_fuzz_inflate
+igzip_fuzz_inflate: igzip_checked_inflate_fuzz_test.o
+igzip_fuzz_inflate: LDLIBS += -lz
+tests_fuzz_igzip_fuzz_inflate_LDADD = tests/fuzz/igzip_checked_inflate_fuzz_test.lo libisal.la
+tests_fuzz_igzip_fuzz_inflate_LDFLAGS = -lz
 
-include $(foreach unit,$(units), $(unit)/Makefile.am)
+other_tests += tests/fuzz/igzip_dump_inflate_corpus
+tests_fuzz_igzip_dump_inflate_corpus_LDADD = libisal.la
 
-ifneq (,$(findstring igzip,$(units)))
- include tests/fuzz/Makefile.am
-endif
+# LLVM fuzz tests
+llvm_fuzz_tests = tests/fuzz/igzip_simple_inflate_fuzz_test
+other_src      += tests/fuzz/igzip_simple_inflate_fuzz_test.c
 
-# Override individual lib names to make one inclusive library.
-lib_name := bin/isa-l.a
+llvm_fuzz_tests += tests/fuzz/igzip_checked_inflate_fuzz_test
+other_src       += tests/fuzz/igzip_checked_inflate_fuzz_test.c
 
-include make.inc
+llvm_fuzz_tests += tests/fuzz/igzip_simple_round_trip_fuzz_test
+other_src       += tests/fuzz/igzip_simple_round_trip_fuzz_test.c
 
-VPATH = . $(units) include tests/fuzz
+igzip_checked_inflate_fuzz_test: LDLIBS += -lz
