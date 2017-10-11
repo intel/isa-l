@@ -137,9 +137,7 @@ int main(int argc, char *argv[])
 
 	outbuf_size = 2 * infile_size + BUF_SIZE;
 
-	dictfile_size = 0;
-	if (dict_file_name != NULL)
-		dictfile_size = get_filesize(dict);
+	dictfile_size = (dict_file_name != NULL) ? get_filesize(dict) : 0;
 
 	if (iterations == 0) {
 		iterations = infile_size ? RUN_MEM_SIZE / infile_size : MIN_TEST_LOOPS;
@@ -177,6 +175,7 @@ int main(int argc, char *argv[])
 	inbuf_size = inbuf_size ? inbuf_size : infile_size;
 
 	printf("igzip_file_perf: %s %d iterations\n", in_file_name, iterations);
+
 	/* Read complete input file into buffer */
 	stream.avail_in = (uint32_t) fread(inbuf, 1, infile_size, in);
 	if (stream.avail_in != infile_size) {
@@ -184,7 +183,8 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
-	if (dictfile_size != (uint32_t) fread(dictbuf, 1, dictfile_size, dict)) {
+	/* Read complete dictionary into buffer */
+	if ((dictfile_size != 0) && (dictfile_size != fread(dictbuf, 1, dictfile_size, dict))) {
 		fprintf(stderr, "Couldn't fit all of dictionary file into buffer\n");
 		exit(0);
 	}
