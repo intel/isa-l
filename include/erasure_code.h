@@ -890,13 +890,13 @@ unsigned char gf_inv(unsigned char a);
  * for certain pairs m and k. If m and k satisfy one of the following
  * inequalities, no adjustment is required:
  *
- * k <= 3
- * k = 4, m <= 25
- * k = 5, m <= 10
- * k <= 21, m-k = 4
- * m - k <= 3.
+ * - k <= 3
+ * - k = 4, m <= 25
+ * - k = 5, m <= 10
+ * - k <= 21, m-k = 4
+ * - m - k <= 3.
  *
- * @param a  [mxk] array to hold coefficients
+ * @param a  [m x k] array to hold coefficients
  * @param m  number of rows in matrix corresponding to srcs + parity.
  * @param k  number of columns in matrix corresponding to srcs.
  * @returns  none
@@ -911,7 +911,7 @@ void gf_gen_rs_matrix(unsigned char *a, int m, int k);
  * is identity matrix I and lower portion is constructed as 1/(i + j) | i != j,
  * i:{0,k-1} j:{k,m-1}.  Any sub-matrix of a Cauchy matrix should be invertable.
  *
- * @param a  [mxk] array to hold coefficients
+ * @param a  [m x k] array to hold coefficients
  * @param m  number of rows in matrix corresponding to srcs + parity.
  * @param k  number of columns in matrix corresponding to srcs.
  * @returns  none
