@@ -284,7 +284,6 @@ struct BitBuf2 {
 
 /** @brief Holds the internal state information for input and output compression streams*/
 struct isal_zstate {
-	uint8_t *file_start;	//!< pointer to where file would logically start
 	struct BitBuf2 bitbuf;	//!< Bit Buffer
 	uint32_t crc;		//!< Current crc
 	enum isal_zstate_state state;	//!< Current state in processing the data stream

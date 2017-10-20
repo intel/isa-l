@@ -36,6 +36,7 @@ void isal_deflate_icf_body_base(struct isal_zstream *stream)
 	uint32_t code, code2, extra_bits;
 	struct isal_zstate *state = &stream->internal_state;
 	uint16_t *last_seen = state->head;
+	uint8_t *file_start = stream->next_in - stream->total_in;
 
 	if (stream->avail_in == 0) {
 		if (stream->end_of_stream || stream->flush != NO_FLUSH)
@@ -64,8 +65,8 @@ void isal_deflate_icf_body_base(struct isal_zstream *stream)
 
 		literal = *(uint32_t *) next_in;
 		hash = compute_hash(literal) & HASH_MASK;
-		dist = (next_in - state->file_start - last_seen[hash]) & 0xFFFF;
-		last_seen[hash] = (uint64_t) (next_in - state->file_start);
+		dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
+		last_seen[hash] = (uint64_t) (next_in - file_start);
 
 		/* The -1 are to handle the case when dist = 0 */
 		if (dist - 1 < IGZIP_HIST_SIZE - 1) {
@@ -85,8 +86,7 @@ void isal_deflate_icf_body_base(struct isal_zstream *stream)
 				for (; next_hash < end; next_hash++) {
 					literal = *(uint32_t *) next_hash;
 					hash = compute_hash(literal) & HASH_MASK;
-					last_seen[hash] =
-					    (uint64_t) (next_hash - state->file_start);
+					last_seen[hash] = (uint64_t) (next_hash - file_start);
 				}
 
 				get_len_icf_code(match_length, &code);
@@ -130,6 +130,7 @@ void isal_deflate_icf_finish_base(struct isal_zstream *stream)
 	uint32_t code, code2, extra_bits;
 	struct isal_zstate *state = &stream->internal_state;
 	uint16_t *last_seen = state->head;
+	uint8_t *file_start = stream->next_in - stream->total_in;
 
 	start_in = stream->next_in;
 	end_in = start_in + stream->avail_in;
@@ -150,8 +151,8 @@ void isal_deflate_icf_finish_base(struct isal_zstream *stream)
 
 		literal = *(uint32_t *) next_in;
 		hash = compute_hash(literal) & HASH_MASK;
-		dist = (next_in - state->file_start - last_seen[hash]) & 0xFFFF;
-		last_seen[hash] = (uint64_t) (next_in - state->file_start);
+		dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
+		last_seen[hash] = (uint64_t) (next_in - file_start);
 
 		if (dist - 1 < IGZIP_HIST_SIZE - 1) {	/* The -1 are to handle the case when dist = 0 */
 			match_length = compare258(next_in - dist, next_in, end_in - next_in);
@@ -168,8 +169,7 @@ void isal_deflate_icf_finish_base(struct isal_zstream *stream)
 				for (; next_hash < end - 3; next_hash++) {
 					literal = *(uint32_t *) next_hash;
 					hash = compute_hash(literal) & HASH_MASK;
-					last_seen[hash] =
-					    (uint64_t) (next_hash - state->file_start);
+					last_seen[hash] = (uint64_t) (next_hash - file_start);
 				}
 
 				get_len_icf_code(match_length, &code);

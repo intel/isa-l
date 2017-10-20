@@ -630,7 +630,6 @@ static int isal_deflate_int_stateless(struct isal_zstream *stream)
 			reset_match_history(stream);
 		}
 
-		state->file_start = stream->next_in - stream->total_in;
 		isal_deflate_pass(stream);
 
 	} else if (stream->level == 1) {
@@ -644,7 +643,6 @@ static int isal_deflate_int_stateless(struct isal_zstream *stream)
 			reset_match_history(stream);
 
 		state->count = 0;
-		state->file_start = stream->next_in - stream->total_in;
 		isal_deflate_icf_pass(stream);
 
 	} else
@@ -970,8 +968,6 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 		return COMP_OK;
 	else {
 		if (stream->flush == FULL_FLUSH) {
-			stream->internal_state.file_start =
-			    (uint8_t *) & stream->internal_state.buffer;
 			reset_match_history(stream);
 		}
 		stream->internal_state.has_eob_hdr = 0;
@@ -1049,7 +1045,6 @@ int isal_deflate(struct isal_zstream *stream)
 
 		stream->next_in = &state->buffer[state->b_bytes_processed];
 		stream->avail_in = state->b_bytes_valid - state->b_bytes_processed;
-		state->file_start = stream->next_in - stream->total_in;
 		processed += stream->avail_in;
 
 		if (stream->avail_in > IGZIP_HIST_SIZE
@@ -1082,8 +1077,6 @@ int isal_deflate(struct isal_zstream *stream)
 		stream->next_in = next_in - stream->avail_in;
 		stream->avail_in = avail_in + stream->avail_in;
 
-		state->file_start = stream->next_in - stream->total_in;
-
 		if (stream->avail_in > 0 && stream->avail_out > 0)
 			isal_deflate_int(stream);
 
@@ -1104,8 +1097,6 @@ int isal_deflate(struct isal_zstream *stream)
 		stream->total_in += state->b_bytes_valid - state->b_bytes_processed;
 		stream->next_in = next_in;
 		stream->avail_in = avail_in;
-		state->file_start = stream->next_in - stream->total_in;
-
 	}
 
 	return ret;

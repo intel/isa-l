@@ -119,7 +119,6 @@ FIELD	_icf_buf_start,		0,	0
 START_FIELDS	;; isal_zstate
 
 ;;      name		size    align
-FIELD	_file_start,	8,	8
 FIELD	_bitbuf,	_BitBuf2_size,	_BitBuf2_align
 FIELD	_crc,		4,	4
 FIELD	_state,		4,	4
@@ -175,7 +174,6 @@ FIELD	_internal_state,	_isal_zstate_size,	_isal_zstate_align
 
 _internal_state_b_bytes_valid		  equ   _internal_state+_b_bytes_valid
 _internal_state_b_bytes_processed	 equ   _internal_state+_b_bytes_processed
-_internal_state_file_start		  equ   _internal_state+_file_start
 _internal_state_crc			  equ   _internal_state+_crc
 _internal_state_bitbuf			  equ   _internal_state+_bitbuf
 _internal_state_state			  equ   _internal_state+_state
