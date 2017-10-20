@@ -926,6 +926,7 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	uint8_t *level_buf = NULL;
 	struct isal_hufftables *huff_tmp;
 	uint32_t reset_test_flag = 0;
+	uint8_t tmp_symbol;
 
 #ifdef VERBOSE
 	printf("Starting Compress Multi Pass\n");
@@ -1007,6 +1008,20 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 					stream.avail_in = in_size;
 					stream.next_in = in_buf;
 				}
+			}
+		} else {
+			/* Randomly modify data after next in */
+			if (rand() % 4 == 0) {
+
+				tmp_symbol = rand();
+#ifdef VERBOSE
+				printf
+				    ("Modifying data at index 0x%x from 0x%x to 0x%x before recalling isal_deflate\n",
+				     in_processed - stream.avail_in,
+				     data[in_processed - stream.avail_in], tmp_symbol);
+#endif
+				*stream.next_in = tmp_symbol;
+				data[in_processed - stream.avail_in] = tmp_symbol;
 			}
 		}
 
