@@ -260,7 +260,7 @@ static void init_new_icf_block(struct isal_zstream *stream)
 	}
 }
 
-static void create_icf_block_hdr(struct isal_zstream *stream, uint8_t * start_in)
+static void create_icf_block_hdr(struct isal_zstream *stream)
 {
 	struct isal_zstate *state = &stream->internal_state;
 	struct level_2_buf *level_buf = (struct level_2_buf *)stream->level_buf;
@@ -268,6 +268,7 @@ static void create_icf_block_hdr(struct isal_zstream *stream, uint8_t * start_in
 	struct BitBuf2 write_buf_tmp;
 	uint32_t out_size = stream->avail_out;
 	uint8_t *end_out = stream->next_out + out_size;
+	uint8_t *start_in = stream->next_in - stream->total_in + state->total_in_start;
 	uint64_t bit_count;
 	uint64_t block_in_size = stream->total_in - level_buf->block_start_index;
 	uint64_t block_size;
@@ -384,7 +385,7 @@ static void isal_deflate_icf_pass(struct isal_zstream *stream)
 			isal_deflate_icf_finish(stream);
 
 		if (state->state == ZSTATE_CREATE_HDR)
-			create_icf_block_hdr(stream, start_in);
+			create_icf_block_hdr(stream);
 
 		if (state->state == ZSTATE_HDR)
 			/* Note that the header may be prepended by the
@@ -788,6 +789,7 @@ void isal_deflate_init(struct isal_zstream *stream)
 
 	state->b_bytes_valid = 0;
 	state->b_bytes_processed = 0;
+	state->total_in_start = 0;
 	state->has_wrap_hdr = 0;
 	state->has_eob = 0;
 	state->has_eob_hdr = 0;
@@ -814,6 +816,7 @@ void isal_deflate_reset(struct isal_zstream *stream)
 
 	state->b_bytes_valid = 0;
 	state->b_bytes_processed = 0;
+	state->total_in_start = 0;
 	state->has_wrap_hdr = 0;
 	state->has_eob = 0;
 	state->has_eob_hdr = 0;
@@ -925,6 +928,7 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 	init(&stream->internal_state.bitbuf);
 	stream->internal_state.state = ZSTATE_NEW_HDR;
 	stream->internal_state.crc = 0;
+	stream->internal_state.total_in_start = stream->total_in;
 
 	if (stream->flush == NO_FLUSH)
 		stream->end_of_stream = 1;
@@ -1024,6 +1028,7 @@ int isal_deflate(struct isal_zstream *stream)
 	next_in = stream->next_in;
 	avail_in = stream->avail_in;
 	stream->total_in -= state->b_bytes_valid - state->b_bytes_processed;
+	state->total_in_start = stream->total_in - state->b_bytes_processed;
 
 	if (state->has_hist == IGZIP_NO_HIST)
 		reset_match_history(stream);

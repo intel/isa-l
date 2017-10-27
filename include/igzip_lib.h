@@ -284,13 +284,14 @@ struct BitBuf2 {
 
 /** @brief Holds the internal state information for input and output compression streams*/
 struct isal_zstate {
+	uint32_t total_in_start; //!< Start of total_in (inlcuding buffered data) on function call
 	struct BitBuf2 bitbuf;	//!< Bit Buffer
 	uint32_t crc;		//!< Current crc
 	enum isal_zstate_state state;	//!< Current state in processing the data stream
-	uint16_t has_wrap_hdr;	//!< keeps track of wrapper header
-	uint16_t has_eob_hdr;	//!< keeps track of eob hdr (with BFINAL set)
-	uint16_t has_eob;	//!< keeps track of eob on the last deflate block
-	uint16_t has_hist;	//!< flag to track if there is match history
+	uint8_t has_wrap_hdr;	//!< keeps track of wrapper header
+	uint8_t has_eob_hdr;	//!< keeps track of eob hdr (with BFINAL set)
+	uint8_t has_eob;	//!< keeps track of eob on the last deflate block
+	uint8_t has_hist;	//!< flag to track if there is match history
 	struct isal_mod_hist hist;
 	uint32_t count;	//!< used for partial header/trailer writes
 	uint8_t tmp_out_buff[16];	//!< temporary array

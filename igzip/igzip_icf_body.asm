@@ -150,7 +150,7 @@ skip1:
 	mov [rsp + gpr_save_mem_offset + 7*8], r15
 
 	mov	stream, rcx
-	mov	word [stream + _internal_state_has_eob], 0
+	mov	byte [stream + _internal_state_has_eob], 0
 
 	; state->bitbuf.set_buf(stream->next_out, stream->avail_out);
 	mov	tmp1, [stream + _level_buf]
@@ -193,7 +193,7 @@ MARK __body_compute_hash_ %+ ARCH
 	and	hash, HASH_MASK
 	and	hash2, HASH_MASK
 
-	cmp	word [stream + _internal_state_has_hist], IGZIP_NO_HIST
+	cmp	byte [stream + _internal_state_has_hist], IGZIP_NO_HIST
 	je	write_first_byte
 
 	jmp	loop2
@@ -482,7 +482,7 @@ write_first_byte:
 	cmp	m_out_buf, [rsp + m_out_end]
 	ja	output_end
 
-	mov	word [stream + _internal_state_has_hist], IGZIP_HIST
+	mov	byte [stream + _internal_state_has_hist], IGZIP_HIST
 
 	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
 

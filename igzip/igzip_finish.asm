@@ -126,7 +126,7 @@ skip_SLOP:
 
 	mov	curr_data %+ d, [file_start + f_i]
 
-	cmp	word [stream + _internal_state_has_hist], IGZIP_NO_HIST
+	cmp	byte [stream + _internal_state_has_hist], IGZIP_NO_HIST
 	jne	skip_write_first_byte
 
 	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
@@ -135,7 +135,7 @@ skip_SLOP:
 	compute_hash	hash, curr_data
 	and	hash %+ d, HASH_MASK
 	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
-	mov	word [stream + _internal_state_has_hist], IGZIP_HIST
+	mov	byte [stream + _internal_state_has_hist], IGZIP_HIST
 	jmp	encode_literal
 
 skip_write_first_byte:
@@ -276,7 +276,7 @@ write_eob:
 
 	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf, tmp1
 
-	mov	word [stream + _internal_state_has_eob], 1
+	mov	byte [stream + _internal_state_has_eob], 1
 	cmp	word [stream + _end_of_stream], 1
 	jne	sync_flush
 	;	   state->state = ZSTATE_TRL;

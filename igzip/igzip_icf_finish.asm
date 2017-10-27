@@ -122,7 +122,7 @@ isal_deflate_icf_finish_01:
 
 	mov	curr_data %+ d, [file_start + f_i]
 
-	cmp	word [stream + _internal_state_has_hist], IGZIP_NO_HIST
+	cmp	byte [stream + _internal_state_has_hist], IGZIP_NO_HIST
 	jne	skip_write_first_byte
 
 	cmp	m_out_buf, [rsp + m_out_end]
@@ -131,7 +131,7 @@ isal_deflate_icf_finish_01:
 	compute_hash	hash, curr_data
 	and	hash %+ d, HASH_MASK
 	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
-	mov	word [stream + _internal_state_has_hist], IGZIP_HIST
+	mov	byte [stream + _internal_state_has_hist], IGZIP_HIST
 	jmp	encode_literal
 
 skip_write_first_byte:
