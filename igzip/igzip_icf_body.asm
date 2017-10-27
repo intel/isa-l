@@ -416,6 +416,7 @@ end:
 	;; update input buffer
 	add	file_length, LA
 	mov	[stream + _total_in], f_i %+ d
+	mov	[stream + _internal_state_block_end], f_i %+ d
 	add	file_start, f_i
 	mov     [stream + _next_in], file_start
 	sub	file_length, f_i

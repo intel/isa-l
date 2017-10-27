@@ -103,8 +103,6 @@ START_FIELDS	;; level_2_buf
 FIELD	_encode_tables,		_hufftables_icf_size,	_hufftables_icf_align
 FIELD	_deflate_hdr_buf_used,	8,	8
 FIELD	_deflate_hdr_buf,	DEF_MAX_HDR_SIZE,	1
-FIELD	_block_start_index,	4,	4
-FIELD	_block_in_length,	4,	4
 FIELD	_icf_buf_next,		8,	8
 FIELD	_icf_buf_avail_out,	8,	8
 FIELD	_icf_buf_start,		0,	0
@@ -120,6 +118,8 @@ START_FIELDS	;; isal_zstate
 
 ;;      name		size    align
 FIELD	_total_in_start,4,	4
+FIELD	_block_next,	4,	4
+FIELD	_block_end,	4,	4
 FIELD	_bitbuf,	_BitBuf2_size,	_BitBuf2_align
 FIELD	_crc,		4,	4
 FIELD	_state,		4,	4
@@ -174,6 +174,8 @@ FIELD	_internal_state,	_isal_zstate_size,	_isal_zstate_align
 %assign _isal_zstream_align	_STRUCT_ALIGN
 
 _internal_state_total_in_start		equ	_internal_state+_total_in_start
+_internal_state_block_next		equ	_internal_state+_block_next
+_internal_state_block_end		equ	_internal_state+_block_end
 _internal_state_b_bytes_valid		  equ   _internal_state+_b_bytes_valid
 _internal_state_b_bytes_processed	 equ   _internal_state+_b_bytes_processed
 _internal_state_crc			  equ   _internal_state+_crc

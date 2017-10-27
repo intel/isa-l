@@ -18,8 +18,12 @@ static inline void update_state(struct isal_zstream *stream, uint8_t * start_in,
 				struct deflate_icf *start_out, struct deflate_icf *next_out,
 				struct deflate_icf *end_out)
 {
+	if (next_in - start_in > 0)
+		stream->internal_state.has_hist = IGZIP_HIST;
+
 	stream->next_in = next_in;
 	stream->total_in += next_in - start_in;
+	stream->internal_state.block_end = stream->total_in;
 	stream->avail_in = end_in - next_in;
 
 	((struct level_2_buf *)stream->level_buf)->icf_buf_next = next_out;
@@ -140,6 +144,12 @@ void isal_deflate_icf_finish_base(struct isal_zstream *stream)
 	end_out = start_out + ((struct level_2_buf *)stream->level_buf)->icf_buf_avail_out /
 	    sizeof(struct deflate_icf);
 	next_out = start_out;
+
+	if (stream->avail_in == 0) {
+		if (stream->end_of_stream || stream->flush != NO_FLUSH)
+			state->state = ZSTATE_CREATE_HDR;
+		return;
+	}
 
 	while (next_in + 3 < end_in) {
 		if (next_out >= end_out) {

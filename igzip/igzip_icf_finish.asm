@@ -275,6 +275,8 @@ end:
 	;; Update input buffer
 	mov	f_end_i, [rsp + f_end_i_mem_offset]
 	mov	[stream + _total_in], f_i %+ d
+	mov	[stream + _internal_state_block_end], f_i %+ d
+
 	add	file_start, f_i
 	mov	[stream + _next_in], file_start
 	sub	f_end_i, f_i

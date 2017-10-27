@@ -185,6 +185,8 @@ enum isal_zstate_state {
 	ZSTATE_TMP_BODY,	//!< Temporary Body state
 	ZSTATE_TMP_FLUSH_READ_BUFFER, //!< Flush buffer
 	ZSTATE_TMP_FLUSH_ICF_BUFFER,
+	ZSTATE_TMP_TYPE0_HDR, //! Temporary Type0 block header to be written
+	ZSTATE_TMP_TYPE0_BODY, //!< Temporary Type0 block body to be written
 	ZSTATE_TMP_SYNC_FLUSH, //!< Write sync flush block
 	ZSTATE_TMP_FLUSH_WRITE_BUFFER, //!< Flush bitbuf
 	ZSTATE_TMP_TRL,	//!< Temporary Trailer state
@@ -285,6 +287,8 @@ struct BitBuf2 {
 /** @brief Holds the internal state information for input and output compression streams*/
 struct isal_zstate {
 	uint32_t total_in_start; //!< Start of total_in (inlcuding buffered data) on function call
+	uint32_t block_next;	//!< Start of current deflate block in the input
+	uint32_t block_end;	//!< End of current deflate block in the input
 	struct BitBuf2 bitbuf;	//!< Bit Buffer
 	uint32_t crc;		//!< Current crc
 	enum isal_zstate_state state;	//!< Current state in processing the data stream
