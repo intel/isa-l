@@ -2074,7 +2074,7 @@ int test_flush(uint8_t * in_buf, uint32_t in_size)
 	create_rand_repeat_data(z_buf, z_size);
 
 	while (flush_type < 3)
-		flush_type = rand();
+		flush_type = rand() & 0xFFFF;
 
 	/* Test invalid flush */
 	ret = compress_single_pass(in_buf, in_size, z_buf, &z_size, flush_type,
