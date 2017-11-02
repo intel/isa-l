@@ -1761,23 +1761,29 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 				       level);
 
 		if (overflow != COMPRESS_OUT_BUFFER_OVERFLOW) {
-#ifdef VERBOSE
-			printf("overflow error = %d\n", overflow);
-			print_error(overflow);
-			if (overflow == 0) {
-				overflow =
+			if (overflow == 0)
+				ret =
 				    inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag,
 						  NULL, 0);
-				printf("inflate ret = %d\n", overflow);
+
+			if (overflow != 0 || ret != 0) {
+#ifdef VERBOSE
+				printf("overflow error = %d\n", overflow);
 				print_error(overflow);
-			}
-			printf("Compressed array at level %d with gzip flag %d: ", level,
-			       gzip_flag);
-			print_uint8_t(z_buf, z_size);
-			printf("\n");
-			printf("Data: ");
-			print_uint8_t(in_buf, in_size);
+				printf("inflate ret = %d\n", ret);
+				print_error(overflow);
+
+				printf("Compressed array at level %d with gzip flag %d: ",
+				       level, gzip_flag);
+				print_uint8_t(z_buf, z_size);
+				printf("\n");
+				printf("Data: ");
+				print_uint8_t(in_buf, in_size);
 #endif
+				printf("Failed on compress multi pass overflow\n");
+				print_error(ret);
+				ret = OVERFLOW_TEST_ERROR;
+			}
 		}
 	}
 
