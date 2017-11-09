@@ -1684,7 +1684,9 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 
 #ifdef VERBOSE
 	if (ret) {
-		printf("Compressed array at level %d with gzip flag %d: ", level, gzip_flag);
+		printf
+		    ("Compressed array at level %d with gzip flag %d and flush type %d: ",
+		     level, gzip_flag, flush_type);
 		print_uint8_t(z_buf, z_size);
 		printf("\n");
 		printf("Data: ");
@@ -1731,7 +1733,9 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 		ret = inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag, NULL, 0);
 #ifdef VERBOSE
 	if (ret) {
-		printf("Compressed array at level %d with gzip flag %d: ", level, gzip_flag);
+		printf
+		    ("Compressed array at level %d with gzip flag %d and flush type %d: ",
+		     level, gzip_flag, flush_type);
 		print_uint8_t(z_buf, z_size);
 		printf("\n");
 		printf("Data: ");
@@ -1773,14 +1777,16 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 				printf("inflate ret = %d\n", ret);
 				print_error(overflow);
 
-				printf("Compressed array at level %d with gzip flag %d: ",
-				       level, gzip_flag);
+				printf
+				    ("Compressed array at level %d with gzip flag %d and flush type %d: ",
+				     level, gzip_flag, flush_type);
+
 				print_uint8_t(z_buf, z_size);
 				printf("\n");
 				printf("Data: ");
 				print_uint8_t(in_buf, in_size);
 #endif
-				printf("Failed on compress multi pass overflow\n");
+				printf("Failed on compress single pass overflow\n");
 				print_error(ret);
 				ret = OVERFLOW_TEST_ERROR;
 			}
@@ -1822,8 +1828,9 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 		print_error(ret);
 #ifdef VERBOSE
 		if (ret) {
-			printf("Compressed array at level %d with gzip flag %d: ", level,
-			       gzip_flag);
+			printf
+			    ("Compressed array at level %d with gzip flag %d and flush type %d: ",
+			     level, gzip_flag, FULL_FLUSH);
 			print_uint8_t(z_buf, z_size);
 			printf("\n");
 			printf("Data: ");
@@ -1897,7 +1904,9 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 
 	if (ret) {
 #ifdef VERBOSE
-		printf("Compressed array at level %d with gzip flag %d: ", level, gzip_flag);
+		printf
+		    ("Compressed array at level %d with gzip flag %d and flush type %d: ",
+		     level, gzip_flag, flush_type);
 		print_uint8_t(z_buf, z_size);
 		printf("\n");
 		if (dict != NULL) {
@@ -1943,7 +1952,9 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 
 	if (ret) {
 #ifdef VERBOSE
-		printf("Compressed array at level %d with gzip flag %d: ", level, gzip_flag);
+		printf
+		    ("Compressed array at level %d with gzip flag %d and flush type %d: ",
+		     level, gzip_flag, flush_type);
 		print_uint8_t(z_buf, z_size);
 		printf("\n");
 		if (dict != NULL) {
@@ -1992,16 +2003,17 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 			printf("overflow error = %d\n", overflow);
 			print_error(overflow);
 			printf("inflate ret = %d\n", ret);
-			print_error(overflow);
+			print_error(ret);
 
-			printf("Compressed array at level %d with gzip flag %d: ", level,
-			       gzip_flag);
+			printf
+			    ("Compressed array at level %d with gzip flag %d and flush type %d: ",
+			     level, gzip_flag, flush_type);
 			print_uint8_t(z_buf, z_size);
 			printf("\n");
 			printf("Data: ");
 			print_uint8_t(in_buf, in_size);
 #endif
-			printf("Failed on compress multi pass overflow\n");
+			printf("Failed on compress single pass overflow\n");
 			print_error(ret);
 			ret = OVERFLOW_TEST_ERROR;
 		}
@@ -2030,10 +2042,10 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 				printf("overflow error = %d\n", overflow);
 				print_error(overflow);
 				printf("inflate ret = %d\n", ret);
-				print_error(overflow);
-
-				printf("Compressed array at level %d with gzip flag %d: ",
-				       level, gzip_flag);
+				print_error(ret);
+				printf
+				    ("Compressed array at level %d with gzip flag %d and flush type %d: ",
+				     level, gzip_flag, flush_type);
 				print_uint8_t(z_buf, z_size);
 				printf("\n");
 				printf("Data: ");
@@ -2157,7 +2169,9 @@ int test_full_flush(uint8_t * in_buf, uint32_t in_size)
 
 	if (ret) {
 #ifdef VERBOSE
-		printf("Compressed array: ");
+		printf
+		    ("Compressed array at level %d with gzip flag %d and flush type %d: ",
+		     level, gzip_flag, FULL_FLUSH);
 		print_uint8_t(z_buf, z_size);
 		printf("\n");
 		printf("Data: ");
