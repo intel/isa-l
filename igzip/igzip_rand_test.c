@@ -1984,7 +1984,7 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 		z_compressed_size = in_size + 1;
 
 	z_size = rand() % z_compressed_size;
-	create_rand_repeat_data(z_buf, z_size_max);
+	create_rand_repeat_data(z_buf, z_size);
 
 	overflow = compress_single_pass(in_buf, in_size, z_buf, &z_size, flush_type,
 					gzip_flag, level, dict, dict_len);
@@ -2022,7 +2022,7 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 	fin_ret |= ret;
 
 	if (flush_type == NO_FLUSH) {
-		create_rand_repeat_data(z_buf, z_size_max);
+		create_rand_repeat_data(z_buf, z_size);
 
 		overflow =
 		    compress_multi_pass(in_buf, in_size, z_buf, &z_size, flush_type,
