@@ -1330,6 +1330,7 @@ int compress_stateless_full_flush(uint8_t * data, uint32_t data_size, uint8_t * 
 		stream.level = 0;
 		stream.level_buf = NULL;
 		stream.level_buf_size = 0;
+		stream.gzip_flag = 0;
 	}
 
 	stream.flush = FULL_FLUSH;
