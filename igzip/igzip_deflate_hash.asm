@@ -11,61 +11,68 @@
 %define arg1 rcx
 %define arg2 rdx
 %define arg3 r8
-%define swap1 rdi
-%define swap2 rsi
+%define arg4 r9
+%define arg5 rdi
+%define swap1 rsi
+%define stack_size 3 * 8
+%define PS 8
+%define arg(x)      [rsp + stack_size + PS*x]
 %else
 %define arg1 rdi
 %define arg2 rsi
 %define arg3 rdx
-%define swap1 r8
-%define swap2 rcx
+%define arg4 rcx
+%define arg5 r8
+%define swap1 r9
 %endif
 
-%define stream arg1
+%define hash_table arg1
 
-%define dict_offset arg2
+%define hash_mask arg2
 
-%define dict_len arg3
-%define f_i arg3
+%define f_i_end arg3
 
-%define f_i_tmp swap1
+%define dict_offset arg4
 
-%define hash swap2
+%define dict_len arg5
+%define f_i arg5
 
-%define hash2 r9
+%define f_i_tmp rax
 
-%define hash3 r10
+%define hash swap1
 
-%define hash4 r11
+%define hash2 r10
 
-%define f_i_end rax
+%define hash3 r11
+
+%define hash4 r12
+
 
 %macro FUNC_SAVE 0
 %ifidn __OUTPUT_FORMAT__, win64
 	push rsi
 	push rdi
+	push r12
+	mov arg5 %+ d, arg(5)
+%else
+	push r12
 %endif
 %endm
 
 %macro FUNC_RESTORE 0
 %ifidn __OUTPUT_FORMAT__, win64
+	pop r12
 	pop rdi
 	pop rsi
+%else
+	pop r12
 %endif
 %endm
 
-global isal_deflate_hash_lvl0_01
-isal_deflate_hash_lvl0_01:
+global isal_deflate_hash_crc_01
+isal_deflate_hash_crc_01:
 	FUNC_SAVE
 
-%ifnidn (arg1, stream)
-	mov stream, arg1
-%endif
-%ifnidn (arg2, dict_next)
-	mov dict_offset, arg2
-%endif
-
-	mov	f_i_end %+ d, dword [stream + _total_in]
 	neg	f_i
 	add	f_i, f_i_end
 
@@ -90,21 +97,21 @@ main_loop:
 	xor	hash4, hash4
 	crc32	hash4 %+ d, dword [f_i_tmp + dict_offset + 1]
 
-	and	hash, LVL0_HASH_MASK
-	and	hash2, LVL0_HASH_MASK
-	and	hash3, LVL0_HASH_MASK
-	and	hash4, LVL0_HASH_MASK
+	and	hash, hash_mask
+	and	hash2, hash_mask
+	and	hash3, hash_mask
+	and	hash4, hash_mask
 
-	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
+	mov	[hash_table + 2 * hash], f_i %+ w
 	add	f_i, 1
 
-	mov	[stream + _internal_state_head + 2 * hash2], f_i %+ w
+	mov	[hash_table + 2 * hash2], f_i %+ w
 	add	f_i, 3
 
-	mov	[stream + _internal_state_head + 2 * hash3], f_i_tmp %+ w
+	mov	[hash_table + 2 * hash3], f_i_tmp %+ w
 	add	f_i_tmp, 1
 
-	mov	[stream + _internal_state_head + 2 * hash4], f_i_tmp %+ w
+	mov	[hash_table + 2 * hash4], f_i_tmp %+ w
 
 	cmp	f_i, f_i_end
 	jle	main_loop
@@ -118,8 +125,8 @@ end_loop:
 	xor	hash, hash
 	crc32	hash %+ d, dword [f_i + dict_offset]
 
-	and	hash, LVL0_HASH_MASK
-	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
+	and	hash, hash_mask
+	mov	[hash_table + 2 * hash], f_i %+ w
 
 	add	f_i, 1
 	cmp	f_i, f_i_end

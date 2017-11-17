@@ -71,10 +71,10 @@ extern adler32_base
 extern adler32_avx2_4
 extern adler32_sse
 
-extern isal_deflate_hash_lvl0_base
-extern isal_deflate_hash_lvl0_01
+extern isal_deflate_hash_base
+extern isal_deflate_hash_crc_01
 
-extern isal_deflate_hash_lvl2_base
+extern isal_deflate_hash_mad_base
 
 extern isal_deflate_icf_body_base
 extern isal_deflate_icf_body_06
@@ -127,10 +127,10 @@ mbin_interface		isal_adler32
 mbin_dispatch_init5	isal_adler32, adler32_base, adler32_sse, adler32_sse, adler32_avx2_4
 
 mbin_interface		isal_deflate_hash_lvl0
-mbin_dispatch_init5	isal_deflate_hash_lvl0, isal_deflate_hash_lvl0_base, isal_deflate_hash_lvl0_01, isal_deflate_hash_lvl0_01, isal_deflate_hash_lvl0_01
+mbin_dispatch_init5	isal_deflate_hash_lvl0, isal_deflate_hash_base, isal_deflate_hash_crc_01, isal_deflate_hash_crc_01, isal_deflate_hash_crc_01
 
 mbin_interface		isal_deflate_hash_lvl2
-mbin_dispatch_init5	isal_deflate_hash_lvl2, isal_deflate_hash_lvl2_base, isal_deflate_hash_lvl2_base, isal_deflate_hash_lvl2_base, isal_deflate_hash_lvl2_base
+mbin_dispatch_init5	isal_deflate_hash_lvl2, isal_deflate_hash_base, isal_deflate_hash_base, isal_deflate_hash_base, isal_deflate_hash_mad_base
 
 %ifdef HAVE_AS_KNOWS_AVX512
 mbin_interface		isal_deflate_icf_body

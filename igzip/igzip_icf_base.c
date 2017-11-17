@@ -340,22 +340,20 @@ void isal_deflate_icf_finish_lvl2_base(struct isal_zstream *stream)
 	return;
 }
 
-void isal_deflate_hash_lvl2_base(struct isal_zstream *stream, uint8_t * dict,
-				 uint32_t dict_len)
+void isal_deflate_hash_mad_base(uint16_t * hash_table, uint32_t hash_mask,
+				uint32_t current_index, uint8_t * dict, uint32_t dict_len)
 {
 	uint8_t *next_in = dict;
 	uint8_t *end_in = dict + dict_len - SHORTEST_MATCH;
 	uint32_t literal;
 	uint32_t hash;
-	uint16_t lookup_val = stream->total_in - dict_len;
-	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
-	uint16_t *last_seen = level_buf->lvl2.hash_table;
+	uint16_t index = current_index - dict_len;
 
 	while (next_in <= end_in) {
 		literal = *(uint32_t *) next_in;
-		hash = compute_hash_mad(literal) & LVL2_HASH_MASK;
-		last_seen[hash] = lookup_val;
-		lookup_val++;
+		hash = compute_hash_mad(literal) & hash_mask;
+		hash_table[hash] = index;
+		index++;
 		next_in++;
 	}
 }

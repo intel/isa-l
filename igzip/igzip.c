@@ -64,8 +64,8 @@
 # define to_be32(x) _byteswap_ulong(x)
 #endif
 
-extern void isal_deflate_hash_lvl0(struct isal_zstream *stream, uint8_t * dict, int dict_len);
-extern void isal_deflate_hash_lvl2(struct isal_zstream *stream, uint8_t * dict, int dict_len);
+extern void isal_deflate_hash_lvl0(uint16_t *, uint32_t, uint32_t, uint8_t *, uint32_t);
+extern void isal_deflate_hash_lvl2(uint16_t *, uint32_t, uint32_t, uint8_t *, uint32_t);
 extern const uint8_t gzip_hdr[];
 extern const uint32_t gzip_hdr_bytes;
 extern const uint32_t gzip_trl_bytes;
@@ -969,10 +969,12 @@ void isal_deflate_hash(struct isal_zstream *stream, uint8_t * dict, uint32_t dic
 	switch (stream->level) {
 	case 2:
 		memset(level_buf->lvl2.hash_table, -1, sizeof(level_buf->lvl2.hash_table));
-		isal_deflate_hash_lvl2(stream, dict, dict_len);
+		isal_deflate_hash_lvl2(level_buf->lvl2.hash_table, LVL2_HASH_MASK,
+				       stream->total_in, dict, dict_len);
 	default:
 		memset(stream->internal_state.head, -1, sizeof(stream->internal_state.head));
-		isal_deflate_hash_lvl0(stream, dict, dict_len);
+		isal_deflate_hash_lvl0(stream->internal_state.head, LVL0_HASH_MASK,
+				       stream->total_in, dict, dict_len);
 	}
 
 	stream->internal_state.has_hist = IGZIP_HIST;

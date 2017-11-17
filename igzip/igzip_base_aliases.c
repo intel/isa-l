@@ -46,10 +46,9 @@ struct deflate_icf *encode_deflate_icf_base(struct deflate_icf *next_in,
 uint32_t crc32_gzip_base(uint32_t init_crc, const unsigned char *buf, uint64_t len);
 uint32_t adler32_base(uint32_t init, const unsigned char *buf, uint64_t len);
 int decode_huffman_code_block_stateless_base(struct inflate_state *s);
-void isal_deflate_hash_lvl0_base(struct isal_zstream *stream, uint8_t * dict,
-				 uint32_t dict_len);
-void isal_deflate_hash_lvl2_base(struct isal_zstream *stream, uint8_t * dict,
-				 uint32_t dict_len);
+
+extern void isal_deflate_hash_base(uint16_t *, uint32_t, uint32_t, uint8_t *, uint32_t);
+
 void set_long_icf_fg_base(uint8_t * next_in, uint8_t * end_in,
 			  struct deflate_icf *match_lookup, struct level_buf *level_buf);
 void gen_icf_map_h1_base(struct isal_zstream *stream,
@@ -113,14 +112,16 @@ int decode_huffman_code_block_stateless(struct inflate_state *s)
 	return decode_huffman_code_block_stateless_base(s);
 }
 
-void isal_deflate_hash_lvl0(struct isal_zstream *stream, uint8_t * dict, uint32_t dict_len)
+void isal_deflate_hash_lvl0(uint16_t * hash_table, uint32_t hash_mask,
+			    uint32_t current_index, uint8_t * dict, uint32_t dict_len)
 {
-	isal_deflate_hash_lvl0_base(stream, dict, dict_len);
+	isal_deflate_hash_base(hash_table, hash_mask, current_index, dict, dict_len);
 }
 
-void isal_deflate_hash_lvl2(struct isal_zstream *stream, uint8_t * dict, uint32_t dict_len)
+void isal_deflate_hash_lvl2(uint16_t * hash_table, uint32_t hash_mask,
+			    uint32_t current_index, uint8_t * dict, uint32_t dict_len)
 {
-	isal_deflate_hash_lvl2_base(stream, dict, dict_len);
+	isal_deflate_hash_base(hash_table, hash_mask, current_index, dict, dict_len);
 }
 
 void set_long_icf_fg(uint8_t * next_in, uint8_t * end_in,
