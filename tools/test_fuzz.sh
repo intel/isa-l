@@ -103,8 +103,8 @@ fi
 # Optionally build llvm fuzz tests
 if [ $use_llvm -ge 0 ]; then
     echo Build llvm fuzz tests
-    if ! command -V clang++ > /dev/null &&
-	    echo int LLVMFuzzerTestOneInput\(\)\{return 0\;\} | clang++ -x c - -lFuzzer -lpthread -o /dev/null; then
+    if ! ( command -V clang++ > /dev/null &&
+	       echo int LLVMFuzzerTestOneInput\(\)\{return 0\;\} | clang++ -x c - -lFuzzer -lpthread -o /dev/null); then
 	echo $0 option --llvm requires clang++ and libFuzzer
 	exit 0
     fi
