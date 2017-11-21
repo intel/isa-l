@@ -55,12 +55,28 @@ int LLVMFuzzerTestOneInput(const uint8_t * data, size_t size)
 		wrapper_type = (in_param & HEADER_BIT_MASK) % (IGZIP_ZLIB_NO_HDR + 1);
 		in_param >>= HEADER_BITS;
 
-		lev_buf_size = (0 == level) ?
-		    ISAL_DEF_LVL0_MIN + (in_param) * (ISAL_DEF_LVL0_EXTRA_LARGE /
-						      LEVEL_BIT_MASK) :
-		    ISAL_DEF_LVL1_MIN + (in_param) * (ISAL_DEF_LVL1_EXTRA_LARGE /
-						      LEVEL_BIT_MASK);
-
+		switch (level) {
+		case 0:
+			lev_buf_size = ISAL_DEF_LVL0_MIN + (in_param) *
+			    (ISAL_DEF_LVL0_EXTRA_LARGE / LEVEL_BIT_MASK);
+			break;
+		case 1:
+			lev_buf_size = ISAL_DEF_LVL1_MIN + (in_param) *
+			    (ISAL_DEF_LVL1_EXTRA_LARGE / LEVEL_BIT_MASK);
+			break;
+#ifdef ISAL_DEF_LVL2_MIN
+		case 2:
+			lev_buf_size = ISAL_DEF_LVL2_MIN + (in_param) *
+			    (ISAL_DEF_LVL2_EXTRA_LARGE / LEVEL_BIT_MASK);
+			break;
+#endif
+#ifdef ISAL_DEF_LVL3_MIN
+		case 3:
+			lev_buf_size = ISAL_DEF_LVL3_MIN + (in_param) *
+			    (ISAL_DEF_LVL3_EXTRA_LARGE / LEVEL_BIT_MASK);
+			break;
+#endif
+		}
 		if (0 == level)
 			cmp_buf_size = 2 * size + ISAL_DEF_MAX_HDR_SIZE;
 		else

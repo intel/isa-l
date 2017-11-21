@@ -123,6 +123,3 @@ igzip_inflate_test: LDLIBS += -lz
 igzip_igzip_inflate_test_LDADD = libisal.la
 igzip_igzip_inflate_test_LDFLAGS = -lz
 igzip_igzip_hist_perf_LDADD = libisal.la
-igzip_fuzz_inflate: LDLIBS += -lz
-igzip_igzip_fuzz_inflate_LDADD = libisal.la
-igzip_igzip_fuzz_inflate_LDFLAGS = -lz
