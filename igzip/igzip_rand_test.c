@@ -52,6 +52,8 @@
 
 #define PAGE_SIZE 4*1024
 
+#define MAX_FILE_SIZE 0x7fff8fff
+
 #define str1 "Short test string"
 #define str2 "one two three four five six seven eight nine ten eleven twelve " \
 		 "thirteen fourteen fifteen sixteen"
@@ -712,7 +714,7 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 }
 
 /* Inflate the  compressed data and check that the decompressed data agrees with the input data */
-int inflate_check(uint8_t * z_buf, int z_size, uint8_t * in_buf, int in_size,
+int inflate_check(uint8_t * z_buf, uint32_t z_size, uint8_t * in_buf, uint32_t in_size,
 		  uint32_t gzip_flag, uint8_t * dict, uint32_t dict_len)
 {
 	/* Test inflate with reference inflate */
@@ -2278,6 +2280,9 @@ int test_compress_file(char *file_name)
 		return FILE_READ_FAILED;
 
 	in_size = get_filesize(in_file);
+	if (in_size > MAX_FILE_SIZE)
+		in_size = MAX_FILE_SIZE;
+
 	if (in_size != 0) {
 		in_buf = malloc(in_size);
 		if (in_buf == NULL)
