@@ -42,11 +42,16 @@
 %assign IGZIP_LVL0_HASH_SIZE  (8 * K)
 %endif
 
+%ifndef IGZIP_LVL1_HASH_SIZE
+%assign IGZIP_LVL1_HASH_SIZE  (8 * K)
+%endif
+
 %ifndef IGZIP_LVL2_HASH_SIZE
 %assign IGZIP_LVL2_HASH_SIZE  IGZIP_HIST_SIZE
 %endif
 
 %assign LVL0_HASH_MASK  (IGZIP_LVL0_HASH_SIZE - 1)
+%assign LVL1_HASH_MASK  (IGZIP_LVL1_HASH_SIZE - 1)
 %assign LVL2_HASH_MASK  (IGZIP_LVL2_HASH_SIZE - 1)
 
 %assign MIN_DEF_MATCH 3 	; Minimum length of a match in deflate

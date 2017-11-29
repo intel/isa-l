@@ -119,6 +119,10 @@ extern "C" {
 #define IGZIP_LVL0_HASH_SIZE  (8 * IGZIP_K)
 #endif
 
+#ifndef IGZIP_LVL1_HASH_SIZE
+#define IGZIP_LVL1_HASH_SIZE  (8 * IGZIP_K)
+#endif
+
 #ifndef IGZIP_LVL2_HASH_SIZE
 #define IGZIP_LVL2_HASH_SIZE  IGZIP_HIST_SIZE
 #endif

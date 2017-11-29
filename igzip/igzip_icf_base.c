@@ -68,7 +68,7 @@ void isal_deflate_icf_body_lvl1_base(struct isal_zstream *stream)
 		}
 
 		literal = *(uint32_t *) next_in;
-		hash = compute_hash(literal) & LVL0_HASH_MASK;
+		hash = compute_hash(literal) & LVL1_HASH_MASK;
 		dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
 		last_seen[hash] = (uint64_t) (next_in - file_start);
 
@@ -89,7 +89,7 @@ void isal_deflate_icf_body_lvl1_base(struct isal_zstream *stream)
 
 				for (; next_hash < end; next_hash++) {
 					literal = *(uint32_t *) next_hash;
-					hash = compute_hash(literal) & LVL0_HASH_MASK;
+					hash = compute_hash(literal) & LVL1_HASH_MASK;
 					last_seen[hash] = (uint64_t) (next_hash - file_start);
 				}
 
@@ -160,7 +160,7 @@ void isal_deflate_icf_finish_lvl1_base(struct isal_zstream *stream)
 		}
 
 		literal = *(uint32_t *) next_in;
-		hash = compute_hash(literal) & LVL0_HASH_MASK;
+		hash = compute_hash(literal) & LVL1_HASH_MASK;
 		dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
 		last_seen[hash] = (uint64_t) (next_in - file_start);
 
@@ -178,7 +178,7 @@ void isal_deflate_icf_finish_lvl1_base(struct isal_zstream *stream)
 
 				for (; next_hash < end - 3; next_hash++) {
 					literal = *(uint32_t *) next_hash;
-					hash = compute_hash(literal) & LVL0_HASH_MASK;
+					hash = compute_hash(literal) & LVL1_HASH_MASK;
 					last_seen[hash] = (uint64_t) (next_hash - file_start);
 				}
 
