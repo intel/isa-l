@@ -88,7 +88,7 @@ endif
 
 ASFLAGS_Darwin = -f macho64 --prefix=_
 ARFLAGS_Darwin = -r $@
-ifeq ($(arch),Darwin)
+ifeq ($(shell uname),Darwin)
   LDFLAGS_so =
   STRIP_gcc  =
 endif
