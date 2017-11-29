@@ -74,6 +74,9 @@
 
 %define hufftables	r15
 
+%define hash_table stream + _internal_state_head
+%define lit_len_hist stream + _internal_state_hist_lit_len
+%define dist_hist stream + _internal_state_hist_dist
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -130,7 +133,7 @@ isal_deflate_icf_finish_lvl1_01:
 
 	compute_hash	hash, curr_data
 	and	hash %+ d, LVL1_HASH_MASK
-	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
+	mov	[hash_table + 2 * hash], f_i %+ w
 	mov	byte [stream + _internal_state_has_hist], IGZIP_HIST
 	jmp	encode_literal
 
@@ -147,10 +150,10 @@ loop2:
 	and	hash %+ d, LVL1_HASH_MASK
 
 	; f_index = state->head[hash];
-	movzx	f_index %+ d, word [stream + _internal_state_head + 2 * hash]
+	movzx	f_index %+ d, word [hash_table + 2 * hash]
 
 	; state->head[hash] = (uint16_t) f_i;
-	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
+	mov	[hash_table + 2 * hash], f_i %+ w
 
 	; dist = f_i - f_index; // mod 64k
 	mov	dist %+ d, f_i %+ d
@@ -193,7 +196,7 @@ loop2:
 	lea	code, [len + 254]
 
 	or	code2, code
-	inc	word [stream + _internal_state_hist_lit_len + HIST_ELEM_SIZE*code]
+	inc	word [lit_len_hist + HIST_ELEM_SIZE*code]
 
 	; for (k = f_i+1, f_i += len-1; k <= f_i; k++) {
 	lea	tmp3, [f_i + 1]	; tmp3 <= k
@@ -208,7 +211,7 @@ loop2:
 	compute_hash	hash, tmp6
 	and	hash %+ d, LVL1_HASH_MASK
 	; state->head[hash] = k;
-	mov	[stream + _internal_state_head + 2 * hash], tmp3 %+ w
+	mov	[hash_table + 2 * hash], tmp3 %+ w
 
 	add	tmp3, 1
 
@@ -217,13 +220,13 @@ loop2:
 	compute_hash	hash, tmp6
 	and	hash %+ d, LVL1_HASH_MASK
 	; state->head[hash] = k;
-	mov	[stream + _internal_state_head + 2 * hash], tmp3 %+ w
+	mov	[hash_table + 2 * hash], tmp3 %+ w
 
 skip_hash_update:
 	write_dword	code2, m_out_buf
 	shr	code2, DIST_OFFSET
 	and	code2, 0x1F
-	inc	word [stream + _internal_state_hist_dist + HIST_ELEM_SIZE*code2]
+	inc	word [dist_hist + HIST_ELEM_SIZE*code2]
 	; continue
 	cmp	f_i, [rsp + f_end_i_mem_offset]
 	jl	loop2
@@ -232,7 +235,7 @@ skip_hash_update:
 encode_literal:
 	; get_lit_code(state->file_start[f_i], &code2, &code_len2);
 	movzx	tmp5, byte [file_start + f_i]
-	inc	word [stream + _internal_state_hist_lit_len + HIST_ELEM_SIZE*tmp5]
+	inc	word [lit_len_hist + HIST_ELEM_SIZE*tmp5]
 	or	tmp5, LIT
 	write_dword	tmp5, m_out_buf
 	; continue
@@ -254,7 +257,7 @@ final_bytes:
 	ja	out_end
 
 	movzx	tmp5, byte [file_start + f_i]
-	inc	word [stream + _internal_state_hist_lit_len + HIST_ELEM_SIZE*tmp5]
+	inc	word [lit_len_hist + HIST_ELEM_SIZE*tmp5]
 	or	tmp5, LIT
 	write_dword	tmp5, m_out_buf
 

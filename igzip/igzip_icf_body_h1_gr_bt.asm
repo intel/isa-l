@@ -93,6 +93,9 @@ global %1
 %define ytmp0		ymm0	; tmp
 %define ytmp1		ymm1	; tmp
 
+%define hash_table stream + _internal_state_head
+%define lit_len_hist stream + _internal_state_hist_lit_len
+%define dist_hist stream + _internal_state_hist_dist
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -212,8 +215,8 @@ loop2:
 
 	mov	dist %+ w, f_i %+ w
 	dec	dist
-	sub	dist %+ w, word [stream + _internal_state_head + 2 * hash]
-	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
+	sub	dist %+ w, word [hash_table + 2 * hash]
+	mov	[hash_table + 2 * hash], f_i %+ w
 
 	inc	f_i
 
@@ -224,8 +227,8 @@ loop2:
 
 	mov	dist2 %+ w, f_i %+ w
 	dec	dist2
-	sub	dist2 %+ w, word [stream + _internal_state_head + 2 * hash2]
-	mov	[stream + _internal_state_head + 2 * hash2], f_i %+ w
+	sub	dist2 %+ w, word [hash_table + 2 * hash2]
+	mov	[hash_table + 2 * hash2], f_i %+ w
 
 	; if ((dist-1) < (D-1)) {
 	and	dist %+ d, (D-1)
@@ -258,7 +261,7 @@ MARK __body_compare_ %+ ARCH
 	test    len %+ d, 0xFFFFFFFF
 	jz      len_dist_huffman_pre
 
-	inc	word [stream + _internal_state_hist_lit_len + HIST_ELEM_SIZE*lit_code]
+	inc	word [lit_len_hist + HIST_ELEM_SIZE*lit_code]
 	movzx	lit_code2, curr_data %+ b
 	;; Check for len/dist match for second literal
 	test    len2 %+ d, 0xFFFFFFFF
@@ -294,29 +297,29 @@ len_dist_lit_huffman:
 	sub	file_start, f_i
 	add	f_i, len2
 
-	mov	[stream + _internal_state_head + 2 * hash], tmp3 %+ w
+	mov	[hash_table + 2 * hash], tmp3 %+ w
 
 	compute_hash	hash, curr_data
 
 	add	tmp3,1
-	mov	[stream + _internal_state_head + 2 * hash2], tmp3 %+ w
+	mov	[hash_table + 2 * hash2], tmp3 %+ w
 
 	compute_hash	hash2, tmp1
 
 	add	tmp3, 1
-	mov	[stream + _internal_state_head + 2 * hash3], tmp3 %+ w
+	mov	[hash_table + 2 * hash3], tmp3 %+ w
 
 	add	dist_code2, 254
 	add	dist_code2, len2
 
-	inc	word [stream + _internal_state_hist_lit_len + HIST_ELEM_SIZE*(len2 + 254)]
+	inc	word [lit_len_hist + HIST_ELEM_SIZE*(len2 + 254)]
 
 	movnti	dword [m_out_buf + 4], dist_code2 %+ d
 	add	m_out_buf, 8
 
 	shr	dist_code2, DIST_OFFSET
 	and	dist_code2, 0x1F
-	inc	word [stream + _internal_state_hist_dist + HIST_ELEM_SIZE*dist_code2]
+	inc	word [dist_hist + HIST_ELEM_SIZE*dist_code2]
 
 	; hash = compute_hash(state->file_start + f_i) & LVL1_HASH_MASK;
 	and	hash %+ d, LVL1_HASH_MASK
@@ -353,23 +356,23 @@ len_dist_huffman:
 	lea	len_code, [len + 254]
 	or	dist_code, len_code
 
-	mov	[stream + _internal_state_head + 2 * hash], tmp3 %+ w
+	mov	[hash_table + 2 * hash], tmp3 %+ w
 	add	tmp3,1
-	mov	[stream + _internal_state_head + 2 * hash2], tmp3 %+ w
+	mov	[hash_table + 2 * hash2], tmp3 %+ w
 
 	compute_hash	hash, curr_data
 
 	shr	curr_data2, 8
 	compute_hash	hash2, curr_data2
 
-	inc	word [stream + _internal_state_hist_lit_len + HIST_ELEM_SIZE*len_code]
+	inc	word [lit_len_hist + HIST_ELEM_SIZE*len_code]
 
 	movnti	dword [m_out_buf], dist_code %+ d
 	add	m_out_buf, 4
 
 	shr     dist_code, DIST_OFFSET
 	and     dist_code, 0x1F
-	inc     word [stream + _internal_state_hist_dist + HIST_ELEM_SIZE*dist_code]
+	inc     word [dist_hist + HIST_ELEM_SIZE*dist_code]
 
 	; hash = compute_hash(state->file_start + f_i) & LVL1_HASH_MASK;
 	and	hash %+ d, LVL1_HASH_MASK
@@ -386,7 +389,7 @@ write_lit_bits:
 	add	f_i, 1
 	MOVQ	curr_data, xdata
 
-	inc	word [stream + _internal_state_hist_lit_len + HIST_ELEM_SIZE*lit_code2]
+	inc	word [lit_len_hist + HIST_ELEM_SIZE*lit_code2]
 
 	shl	lit_code2, DIST_OFFSET
 	lea	lit_code, [lit_code + lit_code2 + (31 << DIST_OFFSET)]
@@ -475,7 +478,7 @@ compare_loop2:
 %endif
 	movzx	lit_code, curr_data %+ b
 	shr	curr_data, 8
-	inc	word [stream + _internal_state_hist_lit_len + HIST_ELEM_SIZE*lit_code]
+	inc	word [lit_len_hist + HIST_ELEM_SIZE*lit_code]
 	jmp	len_dist_lit_huffman
 
 MARK __write_first_byte_ %+ ARCH
@@ -485,14 +488,14 @@ write_first_byte:
 
 	mov	byte [stream + _internal_state_has_hist], IGZIP_HIST
 
-	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
+	mov	[hash_table + 2 * hash], f_i %+ w
 
 	mov	hash, hash2
 	shr	tmp4, 16
 	compute_hash	hash2, tmp4
 
 	and	curr_data, 0xff
-	inc	word [stream + _internal_state_hist_lit_len + HIST_ELEM_SIZE*curr_data]
+	inc	word [lit_len_hist + HIST_ELEM_SIZE*curr_data]
 	or	curr_data, LIT
 
 	movnti	dword [m_out_buf], curr_data %+ d
