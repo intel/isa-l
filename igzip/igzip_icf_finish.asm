@@ -63,6 +63,8 @@
 
 %define m_out_buf	r8
 
+%define level_buf	r9
+
 %define dist		r10
 
 %define code2		r12
@@ -74,9 +76,10 @@
 
 %define hufftables	r15
 
-%define hash_table stream + _internal_state_head
-%define lit_len_hist stream + _internal_state_hist_lit_len
-%define dist_hist stream + _internal_state_hist_dist
+%define hash_table level_buf + _lvl1_hash_table
+%define lit_len_hist level_buf + _hist_lit_len
+%define dist_hist level_buf + _hist_dist
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -98,10 +101,10 @@ isal_deflate_icf_finish_lvl1_01:
 %endif
 
 	; state->bitbuf.set_buf(stream->next_out, stream->avail_out);
-	mov	tmp1, [stream + _level_buf]
-	mov	m_out_buf, [tmp1 + _icf_buf_next]
+	mov	level_buf, [stream + _level_buf]
+	mov	m_out_buf, [level_buf + _icf_buf_next]
 	mov	[rsp + m_out_start], m_out_buf
-	mov	tmp1, [tmp1 + _icf_buf_avail_out]
+	mov	tmp1, [level_buf + _icf_buf_avail_out]
 	add	tmp1, m_out_buf
 	sub	tmp1, 4
 
@@ -286,14 +289,13 @@ end:
 	mov	[stream + _avail_in], f_end_i %+ d
 
 	;; Update output buffer
-	mov	tmp1, [stream + _level_buf]
-	mov	[tmp1 + _icf_buf_next], m_out_buf
+	mov	[level_buf + _icf_buf_next], m_out_buf
 
 	;    len = state->bitbuf.buffer_used();
 	sub	m_out_buf, [rsp + m_out_start]
 
 	;    stream->avail_out -= len;
-	sub	[tmp1 + _icf_buf_avail_out], m_out_buf
+	sub	[level_buf + _icf_buf_avail_out], m_out_buf
 
 	add	rsp, stack_size
 	POP_ALL

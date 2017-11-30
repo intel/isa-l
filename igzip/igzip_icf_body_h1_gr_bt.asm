@@ -52,7 +52,7 @@ global %1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %define	file_start	rdi
 %define file_length	r15
-%define	stream		r14
+%define level_buf	r14
 %define	f_i		r10
 %define	m_out_buf	r11
 
@@ -68,7 +68,6 @@ global %1
 %define dist_code	r12
 
 %define	tmp1		rsi
-
 %define	lit_code	rsi
 
 %define	curr_data2	r8
@@ -79,6 +78,7 @@ global %1
 %define len_code	rdx
 %define hash3		rdx
 
+%define	stream		r13
 %define	tmp3		r13
 
 %define hash		rbp
@@ -93,9 +93,9 @@ global %1
 %define ytmp0		ymm0	; tmp
 %define ytmp1		ymm1	; tmp
 
-%define hash_table stream + _internal_state_head
-%define lit_len_hist stream + _internal_state_hist_lit_len
-%define dist_hist stream + _internal_state_hist_dist
+%define hash_table level_buf + _lvl1_hash_table
+%define lit_len_hist level_buf + _hist_lit_len
+%define dist_hist level_buf + _hist_dist
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -104,9 +104,10 @@ global %1
 m_out_end           equ  0	 ; local variable (8 bytes)
 m_out_start         equ	 8
 f_end_i_mem_offset  equ 16
-gpr_save_mem_offset equ 24       ; gpr save area (8*8 bytes)
-xmm_save_mem_offset equ 24 + 8*8 ; xmm save area (4*16 bytes) (16 byte aligned)
-stack_size          equ 3*8 + 8*8 + 4*16
+stream_offset       equ 24
+gpr_save_mem_offset equ 32       ; gpr save area (8*8 bytes)
+xmm_save_mem_offset equ gpr_save_mem_offset + 8*8 ; xmm save area (4*16 bytes) (16 byte aligned)
+stack_size          equ 5*8 + 8*8 + 4*16
 
 ;;; 8 because stack address is odd multiple of 8 after a function call and
 ;;; we want it aligned to 16 bytes
@@ -153,14 +154,16 @@ skip1:
 	mov [rsp + gpr_save_mem_offset + 7*8], r15
 
 	mov	stream, rcx
+	mov	[rsp + stream_offset], stream
+
 	mov	byte [stream + _internal_state_has_eob], 0
 
 	; state->bitbuf.set_buf(stream->next_out, stream->avail_out);
-	mov	tmp1, [stream + _level_buf]
-	mov	m_out_buf, [tmp1 + _icf_buf_next]
+	mov	level_buf, [stream + _level_buf]
+	mov	m_out_buf, [level_buf + _icf_buf_next]
 
 	mov     [rsp + m_out_start], m_out_buf
-	mov	tmp1, [tmp1 + _icf_buf_avail_out]
+	mov	tmp1, [level_buf + _icf_buf_avail_out]
 	add	tmp1, m_out_buf
 	sub	tmp1, SLOP
 
@@ -185,13 +188,13 @@ skip1:
 MARK __body_compute_hash_ %+ ARCH
 	MOVDQU	xdata, [file_start + f_i]
 	mov	curr_data, [file_start + f_i]
-	mov	tmp3, curr_data
-	mov	tmp4, curr_data
+	mov	tmp1, curr_data
+	mov	tmp2, curr_data
 
 	compute_hash	hash, curr_data
 
-	shr	tmp3, 8
-	compute_hash	hash2, tmp3
+	shr	tmp1, 8
+	compute_hash	hash2, tmp1
 
 	and	hash, LVL1_HASH_MASK
 	and	hash2, LVL1_HASH_MASK
@@ -402,6 +405,7 @@ write_lit_bits:
 	jl	loop2
 
 input_end:
+	mov	stream, [rsp + stream_offset]
 	mov	tmp1, ZSTATE_FLUSH_READ_BUFFER
 	mov	tmp2, ZSTATE_BODY
 	cmp	word [stream + _end_of_stream], 0
@@ -413,6 +417,7 @@ input_end:
 	jmp	end
 
 output_end:
+	mov	stream, [rsp + stream_offset]
 	mov	dword [stream + _internal_state_state], ZSTATE_CREATE_HDR
 
 end:
@@ -426,10 +431,9 @@ end:
 	mov     [stream + _avail_in], file_length %+ d
 
 	;; update output buffer
-	mov	tmp1, [stream + _level_buf]
-	mov	[tmp1 + _icf_buf_next], m_out_buf
+	mov	[level_buf + _icf_buf_next], m_out_buf
 	sub	m_out_buf, [rsp + m_out_start]
-	sub	[tmp1 + _icf_buf_avail_out], m_out_buf %+ d
+	sub	[level_buf + _icf_buf_avail_out], m_out_buf %+ d
 
 	mov rbx, [rsp + gpr_save_mem_offset + 0*8]
 	mov rsi, [rsp + gpr_save_mem_offset + 1*8]
@@ -491,8 +495,8 @@ write_first_byte:
 	mov	[hash_table + 2 * hash], f_i %+ w
 
 	mov	hash, hash2
-	shr	tmp4, 16
-	compute_hash	hash2, tmp4
+	shr	tmp2, 16
+	compute_hash	hash2, tmp2
 
 	and	curr_data, 0xff
 	inc	word [lit_len_hist + HIST_ELEM_SIZE*curr_data]

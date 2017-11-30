@@ -285,6 +285,9 @@ static int init_lvlX_buf(struct isal_zstream *stream)
 
 		level_struct_size += sizeof(struct lvl2_buf);
 		break;
+	case 1:
+		level_struct_size += sizeof(struct lvl1_buf);
+		break;
 	}
 
 	state->has_level_buf_init = 1;
@@ -308,7 +311,7 @@ static void init_new_icf_block(struct isal_zstream *stream)
 	level_buf->icf_buf_avail_out =
 	    stream->level_buf_size - level_struct_size - sizeof(struct deflate_icf);
 
-	memset(&state->hist, 0, sizeof(struct isal_mod_hist));
+	memset(&level_buf->hist, 0, sizeof(struct isal_mod_hist));
 	state->state = ZSTATE_BODY;
 }
 
@@ -345,7 +348,7 @@ static void create_icf_block_hdr(struct isal_zstream *stream)
 	block_size = block_size ? block_size : TYPE0_BLK_HDR_LEN;
 
 	/* Write EOB in icf_buf */
-	state->hist.ll_hist[256] = 1;
+	level_buf->hist.ll_hist[256] = 1;
 	level_buf->icf_buf_next->lit_len = 0x100;
 	level_buf->icf_buf_next->lit_dist = NULL_DIST_SYM;
 	level_buf->icf_buf_next->dist_extra = 0;
@@ -368,7 +371,7 @@ static void create_icf_block_hdr(struct isal_zstream *stream)
 	}
 
 	bit_count = create_hufftables_icf(write_buf, &level_buf->encode_tables,
-					  &state->hist, state->has_eob_hdr);
+					  &level_buf->hist, state->has_eob_hdr);
 
 	if (bit_count / 8 >= block_size && state->block_next >= state->total_in_start &&
 	    block_size <=
@@ -838,6 +841,10 @@ static inline void reset_match_history(struct isal_zstream *stream)
 		hash_table = level_buf->lvl2.hash_table;
 		hash_table_size = sizeof(level_buf->lvl2.hash_table);
 		break;
+	case 1:
+		hash_table = level_buf->lvl1.hash_table;
+		hash_table_size = sizeof(level_buf->lvl1.hash_table);
+		break;
 	default:
 		hash_table = state->head;
 		hash_table_size = sizeof(state->head);
@@ -971,6 +978,10 @@ void isal_deflate_hash(struct isal_zstream *stream, uint8_t * dict, uint32_t dic
 		memset(level_buf->lvl2.hash_table, -1, sizeof(level_buf->lvl2.hash_table));
 		isal_deflate_hash_lvl2(level_buf->lvl2.hash_table, LVL2_HASH_MASK,
 				       stream->total_in, dict, dict_len);
+	case 1:
+		memset(level_buf->lvl1.hash_table, -1, sizeof(level_buf->lvl1.hash_table));
+		isal_deflate_hash_lvl0(level_buf->lvl1.hash_table, LVL1_HASH_MASK,
+				       stream->total_in, dict, dict_len);
 	default:
 		memset(stream->internal_state.head, -1, sizeof(stream->internal_state.head));
 		isal_deflate_hash_lvl0(stream->internal_state.head, LVL0_HASH_MASK,
@@ -1041,7 +1052,7 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 		if (stream->level == 1 && stream->level_buf == NULL) {
 			/* Default to internal buffer if invalid size is supplied */
 			stream->level_buf = state->buffer;
-			stream->level_buf_size = sizeof(state->buffer);
+			stream->level_buf_size = sizeof(state->buffer) + sizeof(state->head);
 		} else
 			return level_check;
 	}

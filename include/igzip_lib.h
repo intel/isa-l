@@ -259,7 +259,7 @@ struct isal_mod_hist {
 /* Defines used set level data sizes */
 /* has to be at least sizeof(struct level_buf) + sizeof(struct lvlX_buf */
 #define ISAL_DEF_LVL0_REQ 0
-#define ISAL_DEF_LVL1_REQ 4 * IGZIP_K
+#define ISAL_DEF_LVL1_REQ (4 * IGZIP_K + 2 * IGZIP_LVL1_HASH_SIZE)
 #define ISAL_DEF_LVL1_TOKEN_SIZE 4
 #define ISAL_DEF_LVL2_REQ 4 * IGZIP_K + 4 * 4 * IGZIP_K + 2 * IGZIP_LVL2_HASH_SIZE
 #define ISAL_DEF_LVL2_TOKEN_SIZE 4
@@ -317,7 +317,6 @@ struct isal_zstate {
 	uint8_t has_eob;	//!< keeps track of eob on the last deflate block
 	uint8_t has_hist;	//!< flag to track if there is match history
 	uint16_t has_level_buf_init; //!< flag to track if user supplied memory has been initialized.
-	struct isal_mod_hist hist;
 	uint32_t count;	//!< used for partial header/trailer writes
 	uint8_t tmp_out_buff[16];	//!< temporary array
 	uint32_t tmp_out_start;	//!< temporary variable

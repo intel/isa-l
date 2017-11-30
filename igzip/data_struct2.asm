@@ -96,6 +96,18 @@ FIELD	_lit_len_table,	513 * HUFF_CODE_SIZE,	HUFF_CODE_SIZE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+START_FIELDS	;; lvl1_buf
+
+;;      name		size    align
+FIELD	_hash_table_lvl1,	2 * IGZIP_LVL1_HASH_SIZE,	2
+
+%assign _lvl1_buf_size	_FIELD_OFFSET
+%assign _lvl1_buf_align	_STRUCT_ALIGN
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 START_FIELDS	;; lvl2_buf
 
 ;;      name		size    align
@@ -117,6 +129,7 @@ START_FIELDS	;; level_buf
 
 ;;      name		size    align
 FIELD	_encode_tables,		_hufftables_icf_size,	_hufftables_icf_align
+FIELD	_hist,		_isal_mod_hist_size, _isal_mod_hist_align
 FIELD	_deflate_hdr_count,	4,	4
 FIELD	_deflate_hdr_extra_bits,4,	4
 FIELD	_deflate_hdr,		DEF_MAX_HDR_SIZE,	1
@@ -128,10 +141,13 @@ FIELD	_lvl_extra,		_lvl2_buf_size,	_lvl2_buf_align
 %assign _level_buf_base_size	_FIELD_OFFSET
 %assign _level_buf_base_align	_STRUCT_ALIGN
 
+_lvl1_hash_table	equ	_lvl_extra + _hash_table_lvl1
 _lvl2_hash_table	equ	_lvl_extra + _hash_table
 _lvl2_matches_next	equ	_lvl_extra + _matches_next
 _lvl2_matches_end	equ	_lvl_extra + _matches_end
 _lvl2_matches		equ	_lvl_extra + _matches
+_hist_lit_len		equ	_hist+_ll_hist
+_hist_dist		equ	_hist+_d_hist
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -151,7 +167,6 @@ FIELD	_has_eob_hdr,	1,	1
 FIELD	_has_eob,	1,	1
 FIELD	_has_hist,	1,	1
 FIELD	_has_level_buf_init,	2,	2
-FIELD	_hist,		_isal_mod_hist_size, _isal_mod_hist_align
 FIELD	_count,		4,	4
 FIELD   _tmp_out_buff,	16,	1
 FIELD   _tmp_out_start,	4,	4
@@ -169,8 +184,6 @@ _bitbuf_m_out_buf	equ	_bitbuf+_m_out_buf
 _bitbuf_m_out_end	equ	_bitbuf+_m_out_end
 _bitbuf_m_out_start	equ	_bitbuf+_m_out_start
 
-_hist_lit_len		equ	_hist+_ll_hist
-_hist_dist		equ	_hist+_d_hist
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -220,8 +233,6 @@ _internal_state_bitbuf_m_bit_count	equ   _internal_state+_bitbuf_m_bit_count
 _internal_state_bitbuf_m_out_buf	  equ   _internal_state+_bitbuf_m_out_buf
 _internal_state_bitbuf_m_out_end	  equ   _internal_state+_bitbuf_m_out_end
 _internal_state_bitbuf_m_out_start	equ   _internal_state+_bitbuf_m_out_start
-_internal_state_hist_lit_len		equ	_internal_state+_hist_lit_len
-_internal_state_hist_dist		equ	_internal_state+_hist_dist
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

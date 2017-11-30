@@ -18,6 +18,8 @@ static inline void update_state(struct isal_zstream *stream, uint8_t * start_in,
 				struct deflate_icf *start_out, struct deflate_icf *next_out,
 				struct deflate_icf *end_out)
 {
+	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
+
 	if (next_in - start_in > 0)
 		stream->internal_state.has_hist = IGZIP_HIST;
 
@@ -26,8 +28,8 @@ static inline void update_state(struct isal_zstream *stream, uint8_t * start_in,
 	stream->internal_state.block_end = stream->total_in;
 	stream->avail_in = end_in - next_in;
 
-	((struct level_buf *)stream->level_buf)->icf_buf_next = next_out;
-	((struct level_buf *)stream->level_buf)->icf_buf_avail_out = end_out - next_out;
+	level_buf->icf_buf_next = next_out;
+	level_buf->icf_buf_avail_out = end_out - next_out;
 }
 
 void isal_deflate_icf_body_lvl1_base(struct isal_zstream *stream)
@@ -39,7 +41,8 @@ void isal_deflate_icf_body_lvl1_base(struct isal_zstream *stream)
 	uint32_t dist;
 	uint32_t code, code2, extra_bits;
 	struct isal_zstate *state = &stream->internal_state;
-	uint16_t *last_seen = state->head;
+	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
+	uint16_t *last_seen = level_buf->lvl1.hash_table;
 	uint8_t *file_start = stream->next_in - stream->total_in;
 
 	if (stream->avail_in == 0) {
@@ -96,8 +99,8 @@ void isal_deflate_icf_body_lvl1_base(struct isal_zstream *stream)
 				get_len_icf_code(match_length, &code);
 				get_dist_icf_code(dist, &code2, &extra_bits);
 
-				state->hist.ll_hist[code]++;
-				state->hist.d_hist[code2]++;
+				level_buf->hist.ll_hist[code]++;
+				level_buf->hist.d_hist[code2]++;
 
 				write_deflate_icf(next_out, code, code2, extra_bits);
 				next_out++;
@@ -108,7 +111,7 @@ void isal_deflate_icf_body_lvl1_base(struct isal_zstream *stream)
 		}
 
 		get_lit_icf_code(literal & 0xFF, &code);
-		state->hist.ll_hist[code]++;
+		level_buf->hist.ll_hist[code]++;
 		write_deflate_icf(next_out, code, NULL_DIST_SYM, 0);
 		next_out++;
 		next_in++;
@@ -133,7 +136,8 @@ void isal_deflate_icf_finish_lvl1_base(struct isal_zstream *stream)
 	uint32_t dist;
 	uint32_t code, code2, extra_bits;
 	struct isal_zstate *state = &stream->internal_state;
-	uint16_t *last_seen = state->head;
+	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
+	uint16_t *last_seen = level_buf->lvl1.hash_table;
 	uint8_t *file_start = stream->next_in - stream->total_in;
 
 	start_in = stream->next_in;
@@ -185,8 +189,8 @@ void isal_deflate_icf_finish_lvl1_base(struct isal_zstream *stream)
 				get_len_icf_code(match_length, &code);
 				get_dist_icf_code(dist, &code2, &extra_bits);
 
-				state->hist.ll_hist[code]++;
-				state->hist.d_hist[code2]++;
+				level_buf->hist.ll_hist[code]++;
+				level_buf->hist.d_hist[code2]++;
 
 				write_deflate_icf(next_out, code, code2, extra_bits);
 
@@ -198,7 +202,7 @@ void isal_deflate_icf_finish_lvl1_base(struct isal_zstream *stream)
 		}
 
 		get_lit_icf_code(literal & 0xFF, &code);
-		state->hist.ll_hist[code]++;
+		level_buf->hist.ll_hist[code]++;
 		write_deflate_icf(next_out, code, NULL_DIST_SYM, 0);
 		next_out++;
 		next_in++;
@@ -215,7 +219,7 @@ void isal_deflate_icf_finish_lvl1_base(struct isal_zstream *stream)
 
 		literal = *next_in;
 		get_lit_icf_code(literal & 0xFF, &code);
-		state->hist.ll_hist[code]++;
+		level_buf->hist.ll_hist[code]++;
 		write_deflate_icf(next_out, code, NULL_DIST_SYM, 0);
 		next_out++;
 		next_in++;
@@ -293,8 +297,8 @@ void isal_deflate_icf_finish_lvl2_base(struct isal_zstream *stream)
 				get_len_icf_code(match_length, &code);
 				get_dist_icf_code(dist, &code2, &extra_bits);
 
-				state->hist.ll_hist[code]++;
-				state->hist.d_hist[code2]++;
+				level_buf->hist.ll_hist[code]++;
+				level_buf->hist.d_hist[code2]++;
 
 				write_deflate_icf(next_out, code, code2, extra_bits);
 
@@ -306,7 +310,7 @@ void isal_deflate_icf_finish_lvl2_base(struct isal_zstream *stream)
 		}
 
 		get_lit_icf_code(literal & 0xFF, &code);
-		state->hist.ll_hist[code]++;
+		level_buf->hist.ll_hist[code]++;
 		write_deflate_icf(next_out, code, NULL_DIST_SYM, 0);
 		next_out++;
 		next_in++;
@@ -323,7 +327,7 @@ void isal_deflate_icf_finish_lvl2_base(struct isal_zstream *stream)
 
 		literal = *next_in;
 		get_lit_icf_code(literal & 0xFF, &code);
-		state->hist.ll_hist[code]++;
+		level_buf->hist.ll_hist[code]++;
 		write_deflate_icf(next_out, code, NULL_DIST_SYM, 0);
 		next_out++;
 		next_in++;
