@@ -32,7 +32,7 @@ static inline void update_state(struct isal_zstream *stream, uint8_t * start_in,
 	level_buf->icf_buf_avail_out = end_out - next_out;
 }
 
-void isal_deflate_icf_body_lvl1_base(struct isal_zstream *stream)
+void isal_deflate_icf_body_hash8k_base(struct isal_zstream *stream)
 {
 	uint32_t literal, hash;
 	uint8_t *start_in, *next_in, *end_in, *end, *next_hash;
@@ -42,7 +42,7 @@ void isal_deflate_icf_body_lvl1_base(struct isal_zstream *stream)
 	uint32_t code, code2, extra_bits;
 	struct isal_zstate *state = &stream->internal_state;
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
-	uint16_t *last_seen = level_buf->lvl1.hash_table;
+	uint16_t *last_seen = level_buf->hash8k.hash_table;
 	uint8_t *file_start = stream->next_in - stream->total_in;
 
 	if (stream->avail_in == 0) {
@@ -71,7 +71,7 @@ void isal_deflate_icf_body_lvl1_base(struct isal_zstream *stream)
 		}
 
 		literal = *(uint32_t *) next_in;
-		hash = compute_hash(literal) & LVL1_HASH_MASK;
+		hash = compute_hash(literal) & HASH8K_HASH_MASK;
 		dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
 		last_seen[hash] = (uint64_t) (next_in - file_start);
 
@@ -92,7 +92,7 @@ void isal_deflate_icf_body_lvl1_base(struct isal_zstream *stream)
 
 				for (; next_hash < end; next_hash++) {
 					literal = *(uint32_t *) next_hash;
-					hash = compute_hash(literal) & LVL1_HASH_MASK;
+					hash = compute_hash(literal) & HASH8K_HASH_MASK;
 					last_seen[hash] = (uint64_t) (next_hash - file_start);
 				}
 
@@ -127,7 +127,7 @@ void isal_deflate_icf_body_lvl1_base(struct isal_zstream *stream)
 
 }
 
-void isal_deflate_icf_finish_lvl1_base(struct isal_zstream *stream)
+void isal_deflate_icf_finish_hash8k_base(struct isal_zstream *stream)
 {
 	uint32_t literal = 0, hash;
 	uint8_t *start_in, *next_in, *end_in, *end, *next_hash;
@@ -137,7 +137,7 @@ void isal_deflate_icf_finish_lvl1_base(struct isal_zstream *stream)
 	uint32_t code, code2, extra_bits;
 	struct isal_zstate *state = &stream->internal_state;
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
-	uint16_t *last_seen = level_buf->lvl1.hash_table;
+	uint16_t *last_seen = level_buf->hash8k.hash_table;
 	uint8_t *file_start = stream->next_in - stream->total_in;
 
 	start_in = stream->next_in;
@@ -164,7 +164,7 @@ void isal_deflate_icf_finish_lvl1_base(struct isal_zstream *stream)
 		}
 
 		literal = *(uint32_t *) next_in;
-		hash = compute_hash(literal) & LVL1_HASH_MASK;
+		hash = compute_hash(literal) & HASH8K_HASH_MASK;
 		dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
 		last_seen[hash] = (uint64_t) (next_in - file_start);
 
@@ -182,7 +182,7 @@ void isal_deflate_icf_finish_lvl1_base(struct isal_zstream *stream)
 
 				for (; next_hash < end - 3; next_hash++) {
 					literal = *(uint32_t *) next_hash;
-					hash = compute_hash(literal) & LVL1_HASH_MASK;
+					hash = compute_hash(literal) & HASH8K_HASH_MASK;
 					last_seen[hash] = (uint64_t) (next_hash - file_start);
 				}
 
@@ -236,7 +236,7 @@ void isal_deflate_icf_finish_lvl1_base(struct isal_zstream *stream)
 	return;
 }
 
-void isal_deflate_icf_finish_lvl2_base(struct isal_zstream *stream)
+void isal_deflate_icf_finish_hash_map_base(struct isal_zstream *stream)
 {
 	uint32_t literal = 0, hash;
 	uint8_t *start_in, *next_in, *end_in, *end, *next_hash;
@@ -246,7 +246,7 @@ void isal_deflate_icf_finish_lvl2_base(struct isal_zstream *stream)
 	uint32_t code, code2, extra_bits;
 	struct isal_zstate *state = &stream->internal_state;
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
-	uint16_t *last_seen = level_buf->lvl2.hash_table;
+	uint16_t *last_seen = level_buf->hash_map.hash_table;
 	uint8_t *file_start = stream->next_in - stream->total_in;
 
 	start_in = stream->next_in;
@@ -272,7 +272,7 @@ void isal_deflate_icf_finish_lvl2_base(struct isal_zstream *stream)
 		}
 
 		literal = *(uint32_t *) next_in;
-		hash = compute_hash_mad(literal) & LVL2_HASH_MASK;
+		hash = compute_hash_mad(literal) & HASH_MAP_HASH_MASK;
 		dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
 		last_seen[hash] = (uint64_t) (next_in - file_start);
 
@@ -290,7 +290,7 @@ void isal_deflate_icf_finish_lvl2_base(struct isal_zstream *stream)
 
 				for (; next_hash < end - 3; next_hash++) {
 					literal = *(uint32_t *) next_hash;
-					hash = compute_hash_mad(literal) & LVL2_HASH_MASK;
+					hash = compute_hash_mad(literal) & HASH_MAP_HASH_MASK;
 					last_seen[hash] = (uint64_t) (next_hash - file_start);
 				}
 

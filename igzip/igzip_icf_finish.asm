@@ -76,7 +76,7 @@
 
 %define hufftables	r15
 
-%define hash_table level_buf + _lvl1_hash_table
+%define hash_table level_buf + _hash8k_hash_table
 %define lit_len_hist level_buf + _hist_lit_len
 %define dist_hist level_buf + _hist_dist
 
@@ -89,8 +89,8 @@ m_out_start		equ 16
 stack_size		equ 32
 ; void isal_deflate_icf_finish ( isal_zstream *stream )
 ; arg 1: rcx: addr of stream
-global isal_deflate_icf_finish_lvl1_01
-isal_deflate_icf_finish_lvl1_01:
+global isal_deflate_icf_finish_hash8k_01
+isal_deflate_icf_finish_hash8k_01:
 	PUSH_ALL	rbx, rsi, rdi, rbp, r12, r13, r14, r15
 	sub	rsp, stack_size
 
@@ -135,7 +135,7 @@ isal_deflate_icf_finish_lvl1_01:
 	ja	end_loop_2
 
 	compute_hash	hash, curr_data
-	and	hash %+ d, LVL1_HASH_MASK
+	and	hash %+ d, HASH8K_HASH_MASK
 	mov	[hash_table + 2 * hash], f_i %+ w
 	mov	byte [stream + _internal_state_has_hist], IGZIP_HIST
 	jmp	encode_literal
@@ -147,10 +147,10 @@ loop2:
 	cmp	m_out_buf, [rsp + m_out_end]
 	ja	end_loop_2
 
-	; hash = compute_hash(state->file_start + f_i) & LVL1_HASH_MASK;
+	; hash = compute_hash(state->file_start + f_i) & HASH8K_HASH_MASK;
 	mov	curr_data %+ d, [file_start + f_i]
 	compute_hash	hash, curr_data
-	and	hash %+ d, LVL1_HASH_MASK
+	and	hash %+ d, HASH8K_HASH_MASK
 
 	; f_index = state->head[hash];
 	movzx	f_index %+ d, word [hash_table + 2 * hash]
@@ -209,19 +209,19 @@ loop2:
 
 	; only update hash twice
 
-	; hash = compute_hash(state->file_start + k) & LVL1_HASH_MASK;
+	; hash = compute_hash(state->file_start + k) & HASH8K_HASH_MASK;
 	mov	tmp6 %+ d, dword [file_start + tmp3]
 	compute_hash	hash, tmp6
-	and	hash %+ d, LVL1_HASH_MASK
+	and	hash %+ d, HASH8K_HASH_MASK
 	; state->head[hash] = k;
 	mov	[hash_table + 2 * hash], tmp3 %+ w
 
 	add	tmp3, 1
 
-	; hash = compute_hash(state->file_start + k) & LVL1_HASH_MASK;
+	; hash = compute_hash(state->file_start + k) & HASH8K_HASH_MASK;
 	mov	tmp6 %+ d, dword [file_start + tmp3]
 	compute_hash	hash, tmp6
-	and	hash %+ d, LVL1_HASH_MASK
+	and	hash %+ d, HASH8K_HASH_MASK
 	; state->head[hash] = k;
 	mov	[hash_table + 2 * hash], tmp3 %+ w
 

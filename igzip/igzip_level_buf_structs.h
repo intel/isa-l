@@ -7,19 +7,19 @@
 
 #define MATCH_BUF_SIZE (4 * 1024)
 
-struct lvl1_buf {
-	uint16_t hash_table[IGZIP_LVL1_HASH_SIZE];
+struct hash8k_buf1 {
+	uint16_t hash_table[IGZIP_HASH8K_HASH_SIZE];
 };
 
-struct lvl2_buf {
-	uint16_t hash_table[IGZIP_LVL2_HASH_SIZE];
+struct hash_map_buf {
+	uint16_t hash_table[IGZIP_HASH_MAP_HASH_SIZE];
 	struct deflate_icf *matches_next;
 	struct deflate_icf *matches_end;
 	struct deflate_icf matches[MATCH_BUF_SIZE];
 	struct deflate_icf overflow[ISAL_LOOK_AHEAD];
 };
 
-#define MAX_LVL_BUF_SIZE sizeof(struct lvl2_buf)
+#define MAX_LVL_BUF_SIZE sizeof(struct hash_map_buf)
 
 struct level_buf {
 	struct hufftables_icf encode_tables;
@@ -31,8 +31,12 @@ struct level_buf {
 	uint64_t icf_buf_avail_out;
 	struct deflate_icf *icf_buf_start;
 	union {
-		struct lvl1_buf lvl1;
-		struct lvl2_buf lvl2;
+		struct hash8k_buf1 hash8k;
+		struct hash_map_buf hash_map;
+
+		struct hash8k_buf1 lvl1;
+		struct hash_map_buf lvl2;
+
 	};
 };
 

@@ -65,6 +65,7 @@
 #endif
 
 extern void isal_deflate_hash_lvl0(uint16_t *, uint32_t, uint32_t, uint8_t *, uint32_t);
+extern void isal_deflate_hash_lvl1(uint16_t *, uint32_t, uint32_t, uint8_t *, uint32_t);
 extern void isal_deflate_hash_lvl2(uint16_t *, uint32_t, uint32_t, uint8_t *, uint32_t);
 extern const uint8_t gzip_hdr[];
 extern const uint32_t gzip_hdr_bytes;
@@ -267,31 +268,37 @@ static int check_level_req(struct isal_zstream *stream)
 	return 0;
 }
 
+static int init_hash8k_buf(struct isal_zstream *stream)
+{
+	struct isal_zstate *state = &stream->internal_state;
+	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
+	state->has_level_buf_init = 1;
+	return sizeof(struct level_buf) - MAX_LVL_BUF_SIZE + sizeof(level_buf->hash8k);
+}
+
+static int init_hash_map_buf(struct isal_zstream *stream)
+{
+	struct isal_zstate *state = &stream->internal_state;
+	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
+	if (!state->has_level_buf_init) {
+		level_buf->hash_map.matches_next = level_buf->hash_map.matches;
+		level_buf->hash_map.matches_end = level_buf->hash_map.matches;
+	}
+	state->has_level_buf_init = 1;
+
+	return sizeof(struct level_buf) - MAX_LVL_BUF_SIZE + sizeof(level_buf->hash_map);
+
+}
+
 /* returns the size of the level specific buffer */
 static int init_lvlX_buf(struct isal_zstream *stream)
 {
-	int level_struct_size;
-	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
-	struct isal_zstate *state = &stream->internal_state;
-
-	level_struct_size = sizeof(struct level_buf) - MAX_LVL_BUF_SIZE;
-
 	switch (stream->level) {
 	case 2:
-		if (!state->has_level_buf_init) {
-			level_buf->lvl2.matches_next = level_buf->lvl2.matches;
-			level_buf->lvl2.matches_end = level_buf->lvl2.matches;
-		}
-
-		level_struct_size += sizeof(struct lvl2_buf);
-		break;
-	case 1:
-		level_struct_size += sizeof(struct lvl1_buf);
-		break;
+		return init_hash_map_buf(stream);
+	default:
+		return init_hash8k_buf(stream);
 	}
-
-	state->has_level_buf_init = 1;
-	return level_struct_size;
 
 }
 
@@ -315,16 +322,27 @@ static void init_new_icf_block(struct isal_zstream *stream)
 	state->state = ZSTATE_BODY;
 }
 
-static int are_buffers_empty(struct isal_zstream *stream)
+static int are_buffers_empty_hashX(struct isal_zstream *stream)
+{
+	return !stream->avail_in;
+}
+
+static int are_buffers_empty_hash_map(struct isal_zstream *stream)
 {
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
 
+	return (!stream->avail_in
+		&& level_buf->hash_map.matches_next >= level_buf->hash_map.matches_end);
+}
+
+static int are_buffers_empty(struct isal_zstream *stream)
+{
+
 	switch (stream->level) {
 	case 2:
-		return (!stream->avail_in
-			&& level_buf->lvl2.matches_next >= level_buf->lvl2.matches_end);
+		return are_buffers_empty_hash_map(stream);
 	default:
-		return !stream->avail_in;
+		return are_buffers_empty_hashX(stream);
 	}
 }
 
@@ -980,7 +998,7 @@ void isal_deflate_hash(struct isal_zstream *stream, uint8_t * dict, uint32_t dic
 				       stream->total_in, dict, dict_len);
 	case 1:
 		memset(level_buf->lvl1.hash_table, -1, sizeof(level_buf->lvl1.hash_table));
-		isal_deflate_hash_lvl0(level_buf->lvl1.hash_table, LVL1_HASH_MASK,
+		isal_deflate_hash_lvl1(level_buf->lvl1.hash_table, LVL1_HASH_MASK,
 				       stream->total_in, dict, dict_len);
 	default:
 		memset(stream->internal_state.head, -1, sizeof(stream->internal_state.head));

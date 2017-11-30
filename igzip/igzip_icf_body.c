@@ -28,12 +28,12 @@ void hash_section(struct isal_zstream *stream, uint8_t * next_in, uint8_t * end_
 	uint32_t index, hash_input, hash;
 	uint8_t *file_start = stream->next_in - stream->total_in;
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
-	uint16_t *hash_table = level_buf->lvl2.hash_table;
+	uint16_t *hash_table = level_buf->hash_map.hash_table;
 
 	/* Compute Hashes */
 	for (index = 0; index < end_in - next_in - ISAL_LOOK_AHEAD; index++) {
 		hash_input = *(uint32_t *) (next_in + index);
-		hash = compute_hash(hash_input) & LVL2_HASH_MASK;
+		hash = compute_hash(hash_input) & HASH_MAP_HASH_MASK;
 		last_seen[index] = hash_table[hash];
 		hash_table[hash] = (uint64_t) (next_in + index - file_start);
 	}
@@ -93,7 +93,7 @@ void gen_icf_map_h1_base(struct isal_zstream *stream,
 	uint64_t next_bytes, match_bytes;
 	uint64_t match;
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
-	uint16_t *hash_table = level_buf->lvl2.hash_table;
+	uint16_t *hash_table = level_buf->hash_map.hash_table;
 
 	if (input_size < ISAL_LOOK_AHEAD)
 		return;
@@ -102,14 +102,14 @@ void gen_icf_map_h1_base(struct isal_zstream *stream,
 	matches_icf_lookup->lit_dist = 0x1e;
 	matches_icf_lookup->dist_extra = 0;
 
-	hash = compute_hash(*(uint32_t *) next_in) & LVL2_HASH_MASK;
+	hash = compute_hash(*(uint32_t *) next_in) & HASH_MAP_HASH_MASK;
 	hash_table[hash] = (uint64_t) (next_in - file_start);
 
 	next_in++;
 	matches_icf_lookup++;
 
 	while (next_in < end_in - ISAL_LOOK_AHEAD) {
-		hash = compute_hash(*(uint32_t *) next_in) & LVL2_HASH_MASK;
+		hash = compute_hash(*(uint32_t *) next_in) & HASH_MAP_HASH_MASK;
 		dist = (next_in - file_start - hash_table[hash]);
 		dist = ((dist - 1) & (IGZIP_HIST_SIZE - 1)) + 1;
 		hash_table[hash] = (uint64_t) (next_in - file_start);
@@ -244,10 +244,10 @@ void icf_body_hash1_fillgreedy_lazy(struct isal_zstream *stream)
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
 	uint32_t input_size;
 
-	matches_icf = level_buf->lvl2.matches;
+	matches_icf = level_buf->hash_map.matches;
 	matches_icf_lookup = matches_icf;
-	matches_next_icf = level_buf->lvl2.matches_next;
-	matches_end_icf = level_buf->lvl2.matches_end;
+	matches_next_icf = level_buf->hash_map.matches_next;
+	matches_end_icf = level_buf->hash_map.matches_end;
 
 	matches_next_icf = compress_icf_map_g(stream, matches_next_icf, matches_end_icf);
 
@@ -271,8 +271,8 @@ void icf_body_hash1_fillgreedy_lazy(struct isal_zstream *stream)
 		matches_next_icf = compress_icf_map_g(stream, matches_icf, matches_end_icf);
 	}
 
-	level_buf->lvl2.matches_next = matches_next_icf;
-	level_buf->lvl2.matches_end = matches_end_icf;
+	level_buf->hash_map.matches_next = matches_next_icf;
+	level_buf->hash_map.matches_end = matches_end_icf;
 
 	icf_body_next_state(stream);
 }
@@ -284,10 +284,10 @@ void icf_body_lazyhash1_fillgreedy_greedy(struct isal_zstream *stream)
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
 	uint32_t input_size;
 
-	matches_icf = level_buf->lvl2.matches;
+	matches_icf = level_buf->hash_map.matches;
 	matches_icf_lookup = matches_icf;
-	matches_next_icf = level_buf->lvl2.matches_next;
-	matches_end_icf = level_buf->lvl2.matches_end;
+	matches_next_icf = level_buf->hash_map.matches_next;
+	matches_end_icf = level_buf->hash_map.matches_end;
 
 	matches_next_icf = compress_icf_map_g(stream, matches_next_icf, matches_end_icf);
 
@@ -311,8 +311,8 @@ void icf_body_lazyhash1_fillgreedy_greedy(struct isal_zstream *stream)
 		matches_next_icf = compress_icf_map_g(stream, matches_icf, matches_end_icf);
 	}
 
-	level_buf->lvl2.matches_next = matches_next_icf;
-	level_buf->lvl2.matches_end = matches_end_icf;
+	level_buf->hash_map.matches_next = matches_next_icf;
+	level_buf->hash_map.matches_end = matches_end_icf;
 
 	icf_body_next_state(stream);
 }

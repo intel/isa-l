@@ -93,7 +93,7 @@ global %1
 %define ytmp0		ymm0	; tmp
 %define ytmp1		ymm1	; tmp
 
-%define hash_table level_buf + _lvl1_hash_table
+%define hash_table level_buf + _hash8k_hash_table
 %define lit_len_hist level_buf + _hist_lit_len
 %define dist_hist level_buf + _hist_dist
 
@@ -114,8 +114,8 @@ stack_size          equ 5*8 + 8*8 + 4*16
 
 ; void isal_deflate_icf_body ( isal_zstream *stream )
 ; arg 1: rcx: addr of stream
-global isal_deflate_icf_body_lvl1_ %+ ARCH
-isal_deflate_icf_body_lvl1_ %+ ARCH %+ :
+global isal_deflate_icf_body_hash8k_ %+ ARCH
+isal_deflate_icf_body_hash8k_ %+ ARCH %+ :
 %ifidn __OUTPUT_FORMAT__, elf64
 	mov	rcx, rdi
 %endif
@@ -196,8 +196,8 @@ MARK __body_compute_hash_ %+ ARCH
 	shr	tmp1, 8
 	compute_hash	hash2, tmp1
 
-	and	hash, LVL1_HASH_MASK
-	and	hash2, LVL1_HASH_MASK
+	and	hash, HASH8K_HASH_MASK
+	and	hash2, HASH8K_HASH_MASK
 
 	cmp	byte [stream + _internal_state_has_hist], IGZIP_NO_HIST
 	je	write_first_byte
@@ -226,7 +226,7 @@ loop2:
 	mov	tmp2, curr_data
 	shr	curr_data, 16
 	compute_hash	hash, curr_data
-	and	hash %+ d, LVL1_HASH_MASK
+	and	hash %+ d, HASH8K_HASH_MASK
 
 	mov	dist2 %+ w, f_i %+ w
 	dec	dist2
@@ -239,7 +239,7 @@ loop2:
 
 	shr	tmp2, 24
 	compute_hash	hash2, tmp2
-	and	hash2 %+ d, LVL1_HASH_MASK
+	and	hash2 %+ d, HASH8K_HASH_MASK
 
 	and	dist2 %+ d, (D-1)
 	neg	dist2
@@ -292,7 +292,7 @@ len_dist_lit_huffman:
 
 	shr	curr_data, 24
 	compute_hash	hash3, curr_data
-	and	hash3, LVL1_HASH_MASK
+	and	hash3, HASH8K_HASH_MASK
 
 	mov	curr_data, tmp1
 	shr	tmp1, 8
@@ -324,9 +324,9 @@ len_dist_lit_huffman:
 	and	dist_code2, 0x1F
 	inc	word [dist_hist + HIST_ELEM_SIZE*dist_code2]
 
-	; hash = compute_hash(state->file_start + f_i) & LVL1_HASH_MASK;
-	and	hash %+ d, LVL1_HASH_MASK
-	and	hash2 %+ d, LVL1_HASH_MASK
+	; hash = compute_hash(state->file_start + f_i) & HASH8K_HASH_MASK;
+	and	hash %+ d, HASH8K_HASH_MASK
+	and	hash2 %+ d, HASH8K_HASH_MASK
 
 	; continue
 	cmp	f_i, file_length
@@ -377,9 +377,9 @@ len_dist_huffman:
 	and     dist_code, 0x1F
 	inc     word [dist_hist + HIST_ELEM_SIZE*dist_code]
 
-	; hash = compute_hash(state->file_start + f_i) & LVL1_HASH_MASK;
-	and	hash %+ d, LVL1_HASH_MASK
-	and	hash2 %+ d, LVL1_HASH_MASK
+	; hash = compute_hash(state->file_start + f_i) & HASH8K_HASH_MASK;
+	and	hash %+ d, HASH8K_HASH_MASK
+	and	hash2 %+ d, HASH8K_HASH_MASK
 
 	; continue
 	cmp	f_i, file_length
@@ -508,8 +508,8 @@ write_first_byte:
 	MOVDQU	xdata, [file_start + f_i + 1]
 	add	f_i, 1
 	mov	curr_data, [file_start + f_i]
-	and	hash %+ d, LVL1_HASH_MASK
-	and	hash2 %+ d, LVL1_HASH_MASK
+	and	hash %+ d, HASH8K_HASH_MASK
+	and	hash2 %+ d, HASH8K_HASH_MASK
 
 	cmp	f_i, file_length
 	jl	loop2

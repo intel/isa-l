@@ -96,29 +96,29 @@ FIELD	_lit_len_table,	513 * HUFF_CODE_SIZE,	HUFF_CODE_SIZE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-START_FIELDS	;; lvl1_buf
+START_FIELDS	;; hash8k_buf
 
 ;;      name		size    align
-FIELD	_hash_table_lvl1,	2 * IGZIP_LVL1_HASH_SIZE,	2
+FIELD	_hash8k_table,	2 * IGZIP_HASH8K_HASH_SIZE,	2
 
-%assign _lvl1_buf_size	_FIELD_OFFSET
-%assign _lvl1_buf_align	_STRUCT_ALIGN
+%assign _hash_buf1_size	_FIELD_OFFSET
+%assign _hash_buf1_align	_STRUCT_ALIGN
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-START_FIELDS	;; lvl2_buf
+START_FIELDS	;; hash_map_buf
 
 ;;      name		size    align
-FIELD	_hash_table,	2 * IGZIP_LVL2_HASH_SIZE,	2
+FIELD	_hash_table,	2 * IGZIP_HASH_MAP_HASH_SIZE,	2
 FIELD	_matches_next,	8,	8
 FIELD	_matches_end,	8,	8
 FIELD	_matches,	4*4*1024,	4
 FIELD	_overflow,	4*LA,	4
 
-%assign _lvl2_buf_size	_FIELD_OFFSET
-%assign _lvl2_buf_align	_STRUCT_ALIGN
+%assign _hash_map_buf_size	_FIELD_OFFSET
+%assign _hash_map_buf_align	_STRUCT_ALIGN
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -136,16 +136,16 @@ FIELD	_deflate_hdr,		DEF_MAX_HDR_SIZE,	1
 FIELD	_icf_buf_next,		8,	8
 FIELD	_icf_buf_avail_out,	8,	8
 FIELD	_icf_buf_start,		8,	8
-FIELD	_lvl_extra,		_lvl2_buf_size,	_lvl2_buf_align
+FIELD	_lvl_extra,		_hash_map_buf_size,	_hash_map_buf_align
 
 %assign _level_buf_base_size	_FIELD_OFFSET
 %assign _level_buf_base_align	_STRUCT_ALIGN
 
-_lvl1_hash_table	equ	_lvl_extra + _hash_table_lvl1
-_lvl2_hash_table	equ	_lvl_extra + _hash_table
-_lvl2_matches_next	equ	_lvl_extra + _matches_next
-_lvl2_matches_end	equ	_lvl_extra + _matches_end
-_lvl2_matches		equ	_lvl_extra + _matches
+_hash8k_hash_table	equ	_lvl_extra + _hash8k_table
+_hash_map_hash_table	equ	_lvl_extra + _hash_table
+_hash_map_matches_next	equ	_lvl_extra + _matches_next
+_hash_map_matches_end	equ	_lvl_extra + _matches_end
+_hash_map_matches	equ	_lvl_extra + _matches
 _hist_lit_len		equ	_hist+_ll_hist
 _hist_dist		equ	_hist+_d_hist
 
