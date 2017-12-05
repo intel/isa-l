@@ -6,6 +6,7 @@
 extern void gen_icf_map_lh1(struct isal_zstream *, struct deflate_icf *, uint32_t);
 extern void set_long_icf_fg(uint8_t *, uint8_t *, struct deflate_icf *, struct level_buf *);
 extern void isal_deflate_icf_body_lvl1(struct isal_zstream *);
+extern void isal_deflate_icf_body_lvl2(struct isal_zstream *);
 /*
 *************************************************************
  * Helper functions
@@ -320,8 +321,11 @@ void icf_body_lazyhash1_fillgreedy_greedy(struct isal_zstream *stream)
 void isal_deflate_icf_body_base(struct isal_zstream *stream)
 {
 	switch (stream->level) {
-	case 2:
+	case 3:
 		icf_body_hash1_fillgreedy_lazy(stream);
+		break;
+	case 2:
+		isal_deflate_icf_body_lvl2(stream);
 		break;
 	case 1:
 	default:
@@ -332,8 +336,11 @@ void isal_deflate_icf_body_base(struct isal_zstream *stream)
 void isal_deflate_icf_body_06(struct isal_zstream *stream)
 {
 	switch (stream->level) {
-	case 2:
+	case 3:
 		icf_body_lazyhash1_fillgreedy_greedy(stream);
+		break;
+	case 2:
+		isal_deflate_icf_body_lvl2(stream);
 		break;
 	case 1:
 	default:

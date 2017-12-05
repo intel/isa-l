@@ -7,8 +7,12 @@
 
 #define MATCH_BUF_SIZE (4 * 1024)
 
-struct hash8k_buf1 {
+struct hash8k_buf {
 	uint16_t hash_table[IGZIP_HASH8K_HASH_SIZE];
+};
+
+struct hash_hist_buf {
+	uint16_t hash_table[IGZIP_HASH_HIST_SIZE];
 };
 
 struct hash_map_buf {
@@ -31,12 +35,13 @@ struct level_buf {
 	uint64_t icf_buf_avail_out;
 	struct deflate_icf *icf_buf_start;
 	union {
-		struct hash8k_buf1 hash8k;
+		struct hash8k_buf hash8k;
+		struct hash_hist_buf hash_hist;
 		struct hash_map_buf hash_map;
 
-		struct hash8k_buf1 lvl1;
-		struct hash_map_buf lvl2;
-
+		struct hash8k_buf lvl1;
+		struct hash_hist_buf lvl2;
+		struct hash_map_buf lvl3;
 	};
 };
 

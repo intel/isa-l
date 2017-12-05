@@ -67,6 +67,7 @@
 extern void isal_deflate_hash_lvl0(uint16_t *, uint32_t, uint32_t, uint8_t *, uint32_t);
 extern void isal_deflate_hash_lvl1(uint16_t *, uint32_t, uint32_t, uint8_t *, uint32_t);
 extern void isal_deflate_hash_lvl2(uint16_t *, uint32_t, uint32_t, uint8_t *, uint32_t);
+extern void isal_deflate_hash_lvl3(uint16_t *, uint32_t, uint32_t, uint8_t *, uint32_t);
 extern const uint8_t gzip_hdr[];
 extern const uint32_t gzip_hdr_bytes;
 extern const uint32_t gzip_trl_bytes;
@@ -95,6 +96,7 @@ void isal_deflate_finish(struct isal_zstream *stream);
 void isal_deflate_icf_body(struct isal_zstream *stream);
 void isal_deflate_icf_finish_lvl1(struct isal_zstream *stream);
 void isal_deflate_icf_finish_lvl2(struct isal_zstream *stream);
+void isal_deflate_icf_finish_lvl3(struct isal_zstream *stream);
 /*****************************************************************/
 
 /* Forward declarations */
@@ -253,6 +255,11 @@ static int check_level_req(struct isal_zstream *stream)
 		return ISAL_INVALID_LEVEL_BUF;
 
 	switch (stream->level) {
+	case 3:
+		if (stream->level_buf_size < ISAL_DEF_LVL3_MIN)
+			return ISAL_INVALID_LEVEL;
+		break;
+
 	case 2:
 		if (stream->level_buf_size < ISAL_DEF_LVL2_MIN)
 			return ISAL_INVALID_LEVEL;
@@ -276,6 +283,14 @@ static int init_hash8k_buf(struct isal_zstream *stream)
 	return sizeof(struct level_buf) - MAX_LVL_BUF_SIZE + sizeof(level_buf->hash8k);
 }
 
+static int init_hash_hist_buf(struct isal_zstream *stream)
+{
+	struct isal_zstate *state = &stream->internal_state;
+	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
+	state->has_level_buf_init = 1;
+	return sizeof(struct level_buf) - MAX_LVL_BUF_SIZE + sizeof(level_buf->hash_hist);
+}
+
 static int init_hash_map_buf(struct isal_zstream *stream)
 {
 	struct isal_zstate *state = &stream->internal_state;
@@ -294,8 +309,10 @@ static int init_hash_map_buf(struct isal_zstream *stream)
 static int init_lvlX_buf(struct isal_zstream *stream)
 {
 	switch (stream->level) {
-	case 2:
+	case 3:
 		return init_hash_map_buf(stream);
+	case 2:
+		return init_hash_hist_buf(stream);
 	default:
 		return init_hash8k_buf(stream);
 	}
@@ -339,8 +356,10 @@ static int are_buffers_empty(struct isal_zstream *stream)
 {
 
 	switch (stream->level) {
-	case 2:
+	case 3:
 		return are_buffers_empty_hash_map(stream);
+	case 2:
+		return are_buffers_empty_hashX(stream);
 	default:
 		return are_buffers_empty_hashX(stream);
 	}
@@ -455,6 +474,9 @@ static void isal_deflate_pass(struct isal_zstream *stream)
 static void isal_deflate_icf_finish(struct isal_zstream *stream)
 {
 	switch (stream->level) {
+	case 3:
+		isal_deflate_icf_finish_lvl3(stream);
+		break;
 	case 2:
 		isal_deflate_icf_finish_lvl2(stream);
 		break;
@@ -855,6 +877,11 @@ static inline void reset_match_history(struct isal_zstream *stream)
 	int i = 0;
 
 	switch (stream->level) {
+	case 3:
+		hash_table = level_buf->lvl3.hash_table;
+		hash_table_size = sizeof(level_buf->lvl3.hash_table);
+		break;
+
 	case 2:
 		hash_table = level_buf->lvl2.hash_table;
 		hash_table_size = sizeof(level_buf->lvl2.hash_table);
@@ -992,14 +1019,22 @@ void isal_deflate_hash(struct isal_zstream *stream, uint8_t * dict, uint32_t dic
 	 * dictionary must set at least 1 element in the history */
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
 	switch (stream->level) {
+	case 3:
+		memset(level_buf->lvl3.hash_table, -1, sizeof(level_buf->lvl3.hash_table));
+		isal_deflate_hash_lvl3(level_buf->lvl3.hash_table, LVL3_HASH_MASK,
+				       stream->total_in, dict, dict_len);
+		break;
+
 	case 2:
 		memset(level_buf->lvl2.hash_table, -1, sizeof(level_buf->lvl2.hash_table));
 		isal_deflate_hash_lvl2(level_buf->lvl2.hash_table, LVL2_HASH_MASK,
 				       stream->total_in, dict, dict_len);
+		break;
 	case 1:
 		memset(level_buf->lvl1.hash_table, -1, sizeof(level_buf->lvl1.hash_table));
 		isal_deflate_hash_lvl1(level_buf->lvl1.hash_table, LVL1_HASH_MASK,
 				       stream->total_in, dict, dict_len);
+		break;
 	default:
 		memset(stream->internal_state.head, -1, sizeof(stream->internal_state.head));
 		isal_deflate_hash_lvl0(stream->internal_state.head, LVL0_HASH_MASK,

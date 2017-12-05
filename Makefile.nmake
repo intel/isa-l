@@ -120,9 +120,7 @@ objs =  \
 	bin\encode_df.obj \
 	bin\encode_df_04.obj \
 	bin\proc_heap.obj \
-	bin\igzip_icf_body_h1_gr_bt_01.obj \
-	bin\igzip_icf_body_h1_gr_bt_02.obj \
-	bin\igzip_icf_body_h1_gr_bt_04.obj \
+	bin\igzip_icf_body_h1_gr_bt.obj \
 	bin\igzip_icf_finish.obj \
 	bin\igzip_icf_base.obj \
 	bin\igzip_inflate.obj \

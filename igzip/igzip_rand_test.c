@@ -254,6 +254,9 @@ int get_rand_level_buf_size(int level)
 {
 	int size;
 	switch (level) {
+	case 3:
+		size = rand() % IBUF_SIZE + ISAL_DEF_LVL3_MIN;
+		break;
 	case 2:
 		size = rand() % IBUF_SIZE + ISAL_DEF_LVL2_MIN;
 		break;
@@ -1282,8 +1285,11 @@ int compress_stateless(uint8_t * data, uint32_t data_size, uint8_t * compressed_
 			return COMPRESS_OUT_BUFFER_OVERFLOW;
 		else if (ret == INVALID_FLUSH)
 			return INVALID_FLUSH_ERROR;
-		else
+		else {
+			printf("Return due to ret = %d with level = %d or %d\n", ret, level,
+			       stream.level);
 			return COMPRESS_GENERAL_ERROR;
+		}
 	}
 
 	if (!stream.end_of_stream) {

@@ -36,7 +36,9 @@ void isal_deflate_body_base(struct isal_zstream *stream);
 void isal_deflate_finish_base(struct isal_zstream *stream);
 void isal_deflate_icf_body_base(struct isal_zstream *stream);
 void isal_deflate_icf_body_hash8k_base(struct isal_zstream *stream);
+void isal_deflate_icf_body_hash_hist_base(struct isal_zstream *stream);
 void isal_deflate_icf_finish_hash8k_base(struct isal_zstream *stream);
+void isal_deflate_icf_finish_hash_hist_base(struct isal_zstream *stream);
 void isal_deflate_icf_finish_hash_map_base(struct isal_zstream *stream);
 void isal_update_histogram_base(uint8_t * start_stream, int length,
 				struct isal_huff_histogram *histogram);
@@ -74,12 +76,22 @@ void isal_deflate_icf_body_lvl1(struct isal_zstream *stream)
 	isal_deflate_icf_body_hash8k_base(stream);
 }
 
+void isal_deflate_icf_body_lvl2(struct isal_zstream *stream)
+{
+	isal_deflate_icf_body_hash_hist_base(stream);
+}
+
 void isal_deflate_icf_finish_lvl1(struct isal_zstream *stream)
 {
 	isal_deflate_icf_finish_hash8k_base(stream);
 }
 
 void isal_deflate_icf_finish_lvl2(struct isal_zstream *stream)
+{
+	isal_deflate_icf_finish_hash_hist_base(stream);
+}
+
+void isal_deflate_icf_finish_lvl3(struct isal_zstream *stream)
 {
 	isal_deflate_icf_finish_hash_map_base(stream);
 }
@@ -125,6 +137,12 @@ void isal_deflate_hash_lvl1(uint16_t * hash_table, uint32_t hash_mask,
 }
 
 void isal_deflate_hash_lvl2(uint16_t * hash_table, uint32_t hash_mask,
+			    uint32_t current_index, uint8_t * dict, uint32_t dict_len)
+{
+	isal_deflate_hash_base(hash_table, hash_mask, current_index, dict, dict_len);
+}
+
+void isal_deflate_hash_lvl3(uint16_t * hash_table, uint32_t hash_mask,
 			    uint32_t current_index, uint8_t * dict, uint32_t dict_len)
 {
 	isal_deflate_hash_base(hash_table, hash_mask, current_index, dict, dict_len);

@@ -43,9 +43,7 @@ lsrc_x86_64 +=	igzip/igzip_body_01.asm \
 		igzip/igzip_body_02.asm \
 		igzip/igzip_body_04.asm \
 		igzip/igzip_finish.asm \
-		igzip/igzip_icf_body_h1_gr_bt_01.asm \
-		igzip/igzip_icf_body_h1_gr_bt_02.asm \
-		igzip/igzip_icf_body_h1_gr_bt_04.asm \
+		igzip/igzip_icf_body_h1_gr_bt.asm \
 		igzip/igzip_icf_finish.asm \
 		igzip/rfc1951_lookup.asm \
 		igzip/crc32_gzip.asm igzip/detect_repeated_char.asm \
@@ -82,7 +80,6 @@ other_src   += 	igzip/bitbuf2.asm  \
 		igzip/data_struct2.asm \
 		igzip/inflate_data_structs.asm \
 		igzip/igzip_body.asm \
-		igzip/igzip_icf_body_h1_gr_bt.asm \
 		igzip/igzip_finish.asm \
 		igzip/lz0a_const.asm \
 		igzip/options.asm \
