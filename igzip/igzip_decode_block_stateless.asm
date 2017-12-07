@@ -12,8 +12,24 @@ default rel
 %define ISAL_DECODE_LONG_BITS 12
 %define ISAL_DECODE_SHORT_BITS 10
 
-%define MAX_LONG_CODE_LARGE (288 + (1 << (15 - ISAL_DECODE_LONG_BITS)))
-%define MAX_LONG_CODE_SMALL (32 + (1 << (15 - ISAL_DECODE_SHORT_BITS)))
+;; See inflate_huff_code structure declaration in igzip_lib.h calculation explanation
+%define L_REM (15 - ISAL_DECODE_LONG_BITS)
+%define S_REM (15 - ISAL_DECODE_SHORT_BITS)
+
+%define L_DUP ((1 << L_REM) - (L_REM + 1))
+%define S_DUP ((1 << S_REM) - (S_REM + 1))
+
+%define L_UNUSED ((1 << L_REM) - (1 << ((L_REM)/2)) - (1 << ((L_REM + 1)/2)) + 1)
+%define S_UNUSED ((1 << S_REM) - (1 << ((S_REM)/2)) - (1 << ((S_REM + 1)/2)) + 1)
+
+%define L_SIZE (286 + L_DUP + L_UNUSED)
+%define S_SIZE (30 + S_DUP + S_UNUSED)
+
+%define HUFF_CODE_LARGE_LONG_ALIGNED (L_SIZE + (-L_SIZE & 0xf))
+%define HUFF_CODE_SMALL_LONG_ALIGNED (S_SIZE + (-S_SIZE & 0xf))
+
+%define MAX_LONG_CODE_LARGE (L_SIZE + (-L_SIZE & 0xf))
+%define MAX_LONG_CODE_SMALL (S_SIZE + (-S_SIZE & 0xf))
 
 %define COPY_SIZE 16
 %define	COPY_LEN_MAX 258

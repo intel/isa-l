@@ -408,28 +408,51 @@ struct isal_zstream {
  * Since small_code_lookup is a lookup on DECODE_LOOKUP_SIZE bits, it must have
  * size 2^DECODE_LOOKUP_SIZE.
  *
- * Since deflate Huffman are stored such that the code size and the code value
- * form an increasing function, At most 2^(15 - DECODE_LOOKUP_SIZE) - 1 elements
- * of long_code_lookup duplicate an existing symbol. Since there are at most 285
- * - DECODE_LOOKUP_SIZE possible symbols contained in long_code lookup. Rounding
- * this to the nearest 16 byte boundary yields the size of long_code_lookup of
- * 288 + 2^(15 - DECODE_LOOKUP_SIZE).
+ * To determine the amoutn of memory required for long_code_lookup, note that
+ * any element of long_code_lookup corresponds to a code, a duplicate of an
+ * existing code, or a invalid code. Since deflate Huffman are stored such that
+ * the code size and the code value form an increasing function, the number of
+ * duplicates is maximized when all the duplicates are contained in a single
+ * array, thus there are at most 2^(15 - DECODE_LOOKUP_SIZE) -
+ * (DECODE_LOOKUP_SIZE + 1) duplicate elements. Similarly the number of invalid
+ * elements is maximized at 2^(15 - DECODE_LOOKUP_SIZE) - 2^(floor((15 -
+ * DECODE_LOOKUP_SIZE)/2) - 2^(ceil((15 - DECODE_LOOKUP_SIZE)/2) + 1. Thus the
+ * amount of memory requried is: NUM_CODES + 2^(16 - DECODE_LOOKUP_SIZE) -
+ * (DECODE_LOOKUP_SIZE + 1) - 2^(floor((15 - DECODE_LOOKUP_SIZE)/2) -
+ * 2^(ceil((15 - DECODE_LOOKUP_SIZE)/2) + 1. The values used below are those
+ * valuse rounded up to the nearest 16 byte boundary
  *
  * Note that DECODE_LOOKUP_SIZE can be any length even though the offset in
  * small_lookup_code is 9 bits long because the increasing relationship between
  * code length and code value forces the maximum offset to be less than 288.
  */
 
+/* In the following defines, L stands for LARGE and S for SMALL */
+#define ISAL_L_REM (15 - ISAL_DECODE_LONG_BITS)
+#define ISAL_S_REM (15 - ISAL_DECODE_SHORT_BITS)
+
+#define ISAL_L_DUP ((1 << ISAL_L_REM) - (ISAL_L_REM + 1))
+#define ISAL_S_DUP ((1 << ISAL_S_REM) - (ISAL_S_REM + 1))
+
+#define ISAL_L_UNUSED ((1 << ISAL_L_REM) - (1 << ((ISAL_L_REM)/2)) - (1 << ((ISAL_L_REM + 1)/2)) + 1)
+#define ISAL_S_UNUSED ((1 << ISAL_S_REM) - (1 << ((ISAL_S_REM)/2)) - (1 << ((ISAL_S_REM + 1)/2)) + 1)
+
+#define ISAL_L_SIZE (ISAL_DEF_LIT_LEN_SYMBOLS + ISAL_L_DUP + ISAL_L_UNUSED)
+#define ISAL_S_SIZE (ISAL_DEF_DIST_SYMBOLS + ISAL_S_DUP + ISAL_S_UNUSED)
+
+#define ISAL_HUFF_CODE_LARGE_LONG_ALIGNED (ISAL_L_SIZE + (-ISAL_L_SIZE & 0xf))
+#define ISAL_HUFF_CODE_SMALL_LONG_ALIGNED (ISAL_S_SIZE + (-ISAL_S_SIZE & 0xf))
+
 /* Large lookup table for decoding huffman codes */
 struct inflate_huff_code_large {
 	uint16_t short_code_lookup[1 << (ISAL_DECODE_LONG_BITS)];
-	uint16_t long_code_lookup[288 + (1 << (15 - ISAL_DECODE_LONG_BITS))];
+	uint16_t long_code_lookup[ISAL_HUFF_CODE_LARGE_LONG_ALIGNED];
 };
 
 /* Small lookup table for decoding huffman codes */
 struct inflate_huff_code_small {
 	uint16_t short_code_lookup[1 << (ISAL_DECODE_SHORT_BITS)];
-	uint16_t long_code_lookup[32 + (1 << (15 - ISAL_DECODE_SHORT_BITS))];
+	uint16_t long_code_lookup[ISAL_HUFF_CODE_SMALL_LONG_ALIGNED];
 };
 
 /** @brief Holds decompression state information*/
