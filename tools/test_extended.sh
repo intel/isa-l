@@ -80,11 +80,11 @@ time $MAKE -f Makefile.unx -j $cpus perfs
 msg+=$'Std makefile build perf: Pass\n'
 
 # Std makefile run tests
-time $MAKE -f Makefile.unx -j $cpus $build_opt $test_level
+time $MAKE -f Makefile.unx -j $cpus $build_opt D="TEST_SEED=$S" $test_level
 msg+=$'Std makefile tests: Pass\n'
 
 # Std makefile build other
-time $MAKE -f Makefile.unx -j $cpus $build_opt other
+time $MAKE -f Makefile.unx -j $cpus $build_opt D="TEST_SEED=$S" other
 msg+=$'Other tests build: Pass\n'
 
 # Try to pick a random src file
@@ -133,7 +133,7 @@ $MAKE -f Makefile.unx clean
 
 # noarch build
 time $MAKE -f Makefile.unx -j $cpus arch=noarch $build_opt
-time $MAKE -f Makefile.unx -j $cpus arch=noarch $build_opt check
+time $MAKE -f Makefile.unx -j $cpus arch=noarch $build_opt D="TEST_SEED=$S" check
 $MAKE -f Makefile.unx arch=noarch clean
 msg+=$'Noarch build: Pass\n'
 
@@ -143,7 +143,7 @@ if command -V x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
     msg+=$'Mingw build: Pass\n'
 
     if command -V wine >/dev/null 2>&1; then
-	time $MAKE -f Makefile.unx -j $cpus arch=mingw check
+	time $MAKE -f Makefile.unx -j $cpus arch=mingw D="TEST_SEED=$S" check
 	msg+=$'Mingw check tests: Pass\n'
     else
 	msg+=$'No wine, mingw check: Skip\n'
