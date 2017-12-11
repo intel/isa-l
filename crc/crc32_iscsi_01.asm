@@ -190,9 +190,13 @@ full_block:
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 crc_array:
+	cmp 	len, 128*24*2
+	jbe 	non_prefetch
+
 %assign i 128
 %rep 128-1
-CONCAT(crc_,i,:)
+
+CONCAT(_crc_,i,:)
 	crc32	crc_init,  qword [block_0 - i*8]
 	crc32	crc1,      qword [block_1 - i*8]
 	crc32	crc2,      qword [block_2 - i*8]
@@ -200,9 +204,23 @@ CONCAT(crc_,i,:)
  %if i > 128*8 / 32	; prefetch next 3KB data
 	prefetchnta [block_2 + 128*32 - i*32]
  %endif
+
+%assign i (i-1)
+%endrep
+ 	jmp next_
+
+non_prefetch:
+%assign i 128
+%rep 128-1
+
+CONCAT(crc_,i,:)
+	crc32	crc_init,  qword [block_0 - i*8]
+	crc32	crc1,      qword [block_1 - i*8]
+	crc32	crc2,      qword [block_2 - i*8]
 %assign i (i-1)
 %endrep
 
+next_:
 CONCAT(crc_,i,:)
 	crc32	crc_init,  qword [block_0 - i*8]
 	crc32	crc1,      qword [block_1 - i*8]
@@ -568,5 +586,5 @@ K_table:
 	dq 0x1a0f717c4, 0x0170076fa
 
 ;;;       func            core, ver, snum
-slversion crc32_iscsi_01, 01,   03,  0015
+slversion crc32_iscsi_01, 01,   04,  0015
 

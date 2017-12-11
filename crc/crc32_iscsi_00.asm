@@ -55,6 +55,9 @@ default rel
 	xor     rbx, rbx                ;; rbx = crc1 = 0;
 	xor     r10, r10                ;; r10 = crc2 = 0;
 
+	cmp 	len, %%bSize*3*2
+	jbe 	%%non_prefetch
+
  %assign i 0
  %rep %%bSize/8 - 1
   %if i < %%bSize*3/4
@@ -65,6 +68,18 @@ default rel
 	crc32   r10, qword [bufptmp+i + 2*%%bSize]  ;; update crc2
 	%assign i (i+8)
  %endrep
+ 	jmp %%next %+ %1
+
+%%non_prefetch:
+ %assign i 0
+ %rep %%bSize/8 - 1
+	crc32   rax, qword [bufptmp+i + 0*%%bSize]  ;; update crc0
+	crc32   rbx, qword [bufptmp+i + 1*%%bSize]  ;; update crc1
+	crc32   r10, qword [bufptmp+i + 2*%%bSize]  ;; update crc2
+	%assign i (i+8)
+ %endrep
+
+%%next %+ %1:
 	crc32   rax, qword [bufptmp+i + 0*%%bSize]  ;; update crc0
 	crc32   rbx, qword [bufptmp+i + 1*%%bSize]  ;; update crc1
 ; SKIP  ;crc32  r10, [bufptmp+i + 2*%%bSize]  ;; update crc2
@@ -652,5 +667,5 @@ DD 0x2f2aa980,0xf24c623b,0x900b4807,0x4d6d83bc
 DD 0x54851c7f,0x89e3d7c4,0xeba4fdf8,0x36c23643
 
 ;;;       func            core, ver, snum
-slversion crc32_iscsi_00, 00,   03,  0014
+slversion crc32_iscsi_00, 00,   04,  0014
 
