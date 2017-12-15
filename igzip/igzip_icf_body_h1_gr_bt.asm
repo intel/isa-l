@@ -283,7 +283,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	test    len %+ d, 0xFFFFFFFF
 	jz      .len_dist_huffman_pre
 
-	inc	word [lit_len_hist + HIST_ELEM_SIZE*lit_code]
+	inc	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code]
 	movzx	lit_code2, curr_data %+ b
 	;; Check for len/dist match for second literal
 	test    len2 %+ d, 0xFFFFFFFF
@@ -333,14 +333,14 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	add	dist_code2, 254
 	add	dist_code2, len2
 
-	inc	word [lit_len_hist + HIST_ELEM_SIZE*(len2 + 254)]
+	inc	dword [lit_len_hist + HIST_ELEM_SIZE*(len2 + 254)]
 
 	movnti	dword [m_out_buf + 4], dist_code2 %+ d
 	add	m_out_buf, 8
 
 	shr	dist_code2, DIST_OFFSET
 	and	dist_code2, 0x1F
-	inc	word [dist_hist + HIST_ELEM_SIZE*dist_code2]
+	inc	dword [dist_hist + HIST_ELEM_SIZE*dist_code2]
 
 	; hash = compute_hash(state->file_start + f_i) & HASH_MASK;
 	and	hash %+ d, HASH_MASK
@@ -385,14 +385,14 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	shr	curr_data2, 8
 	compute_hash	hash2, curr_data2
 
-	inc	word [lit_len_hist + HIST_ELEM_SIZE*len_code]
+	inc	dword [lit_len_hist + HIST_ELEM_SIZE*len_code]
 
 	movnti	dword [m_out_buf], dist_code %+ d
 	add	m_out_buf, 4
 
 	shr     dist_code, DIST_OFFSET
 	and     dist_code, 0x1F
-	inc     word [dist_hist + HIST_ELEM_SIZE*dist_code]
+	inc     dword [dist_hist + HIST_ELEM_SIZE*dist_code]
 
 	; hash = compute_hash(state->file_start + f_i) & HASH_MASK;
 	and	hash %+ d, HASH_MASK
@@ -408,7 +408,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	add	f_i, 1
 	MOVQ	curr_data, xdata
 
-	inc	word [lit_len_hist + HIST_ELEM_SIZE*lit_code2]
+	inc	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code2]
 
 	shl	lit_code2, DIST_OFFSET
 	lea	lit_code, [lit_code + lit_code2 + (31 << DIST_OFFSET)]
@@ -497,7 +497,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 %endif
 	movzx	lit_code, curr_data %+ b
 	shr	curr_data, 8
-	inc	word [lit_len_hist + HIST_ELEM_SIZE*lit_code]
+	inc	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code]
 	jmp	.len_dist_lit_huffman
 
 .write_first_byte:
@@ -513,7 +513,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	compute_hash	hash2, tmp2
 
 	and	curr_data, 0xff
-	inc	word [lit_len_hist + HIST_ELEM_SIZE*curr_data]
+	inc	dword [lit_len_hist + HIST_ELEM_SIZE*curr_data]
 	or	curr_data, LIT
 
 	movnti	dword [m_out_buf], curr_data %+ d

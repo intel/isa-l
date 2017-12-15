@@ -206,7 +206,7 @@ isal_deflate_icf_finish_ %+ METHOD %+ _01:
 	lea	code, [len + 254]
 
 	or	code2, code
-	inc	word [lit_len_hist + HIST_ELEM_SIZE*code]
+	inc	dword [lit_len_hist + HIST_ELEM_SIZE*code]
 
 	; for (k = f_i+1, f_i += len-1; k <= f_i; k++) {
 	lea	tmp3, [f_i + 1]	; tmp3 <= k
@@ -236,7 +236,7 @@ isal_deflate_icf_finish_ %+ METHOD %+ _01:
 	write_dword	code2, m_out_buf
 	shr	code2, DIST_OFFSET
 	and	code2, 0x1F
-	inc	word [dist_hist + HIST_ELEM_SIZE*code2]
+	inc	dword [dist_hist + HIST_ELEM_SIZE*code2]
 	; continue
 	cmp	f_i, [rsp + f_end_i_mem_offset]
 	jl	.loop2
@@ -245,7 +245,7 @@ isal_deflate_icf_finish_ %+ METHOD %+ _01:
 .encode_literal:
 	; get_lit_code(state->file_start[f_i], &code2, &code_len2);
 	movzx	tmp5, byte [file_start + f_i]
-	inc	word [lit_len_hist + HIST_ELEM_SIZE*tmp5]
+	inc	dword [lit_len_hist + HIST_ELEM_SIZE*tmp5]
 	or	tmp5, LIT
 	write_dword	tmp5, m_out_buf
 	; continue
@@ -267,7 +267,7 @@ isal_deflate_icf_finish_ %+ METHOD %+ _01:
 	ja	.out_end
 
 	movzx	tmp5, byte [file_start + f_i]
-	inc	word [lit_len_hist + HIST_ELEM_SIZE*tmp5]
+	inc	dword [lit_len_hist + HIST_ELEM_SIZE*tmp5]
 	or	tmp5, LIT
 	write_dword	tmp5, m_out_buf
 
