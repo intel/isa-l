@@ -1,5 +1,5 @@
 /**********************************************************************
-  Copyright(c) 2011-2015 Intel Corporation All rights reserved.
+  Copyright(c) 2011-2017 Intel Corporation All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -31,21 +31,23 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <sys/time.h>
 #include "crc.h"
 #include "test.h"
+
+#define BLKSIZE (512)
 
 //#define CACHED_TEST
 #ifdef CACHED_TEST
 // Cached test, loop many times over small dataset
-# define TEST_LEN     8*1024
-# define TEST_LOOPS   4000000
+# define NBLOCKS      100
+# define TEST_LOOPS   1000000
 # define TEST_TYPE_STR "_warm"
 #else
 // Uncached test.  Pull from large mem base.
 #  define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
 #  define TEST_LEN     (2 * GT_L3_CACHE)
-#  define TEST_LOOPS   100
+#  define NBLOCKS      (TEST_LEN / BLKSIZE)
+#  define TEST_LOOPS    100
 #  define TEST_TYPE_STR "_cold"
 #endif
 
@@ -53,34 +55,59 @@
 # define TEST_SEED 0x1234
 #endif
 
-#define TEST_MEM TEST_LEN
+struct blk {
+	uint8_t data[BLKSIZE];
+};
+
+struct blk_ext {
+	uint8_t data[BLKSIZE];
+	uint32_t tag;
+	uint16_t meta;
+	uint16_t crc;
+};
 
 int main(int argc, char *argv[])
 {
-	int i;
-	void *buf;
+	int i, j;
 	uint16_t crc;
+	struct blk *blks, *blkp;
+	struct blk_ext *blks_ext, *blkp_ext;
 	struct perf start, stop;
 
-	printf("crc16_t10dif_perf:\n");
+	printf("crc16_t10dif_streaming_insert_perf:\n");
 
-	if (posix_memalign(&buf, 1024, TEST_LEN)) {
+	if (posix_memalign((void *)&blks, 1024, NBLOCKS * sizeof(*blks))) {
+		printf("alloc error: Fail");
+		return -1;
+	}
+	if (posix_memalign((void *)&blks_ext, 1024, NBLOCKS * sizeof(*blks_ext))) {
 		printf("alloc error: Fail");
 		return -1;
 	}
 
+	printf(" size blk: %ld, blk_ext: %ld, blk data: %ld, stream: %ld\n",
+	       sizeof(*blks), sizeof(*blks_ext), sizeof(blks->data),
+	       NBLOCKS * sizeof(blks->data));
+	memset(blks, 0xe5, NBLOCKS * sizeof(*blks));
+	memset(blks_ext, 0xe5, NBLOCKS * sizeof(*blks_ext));
+
 	printf("Start timed tests\n");
 	fflush(0);
 
-	memset(buf, 0, TEST_LEN);
-	crc = crc16_t10dif(TEST_SEED, buf, TEST_LEN);
+	// Copy and insert test
 	perf_start(&start);
-	for (i = 0; i < TEST_LOOPS; i++) {
-		crc = crc16_t10dif(TEST_SEED, buf, TEST_LEN);
+	for (j = 0; j < TEST_LOOPS; j++) {
+		for (i = 0, blkp = blks, blkp_ext = blks_ext; i < NBLOCKS; i++) {
+			crc = crc16_t10dif_copy(TEST_SEED, blkp_ext->data, blkp->data,
+						sizeof(blks->data));
+			blkp_ext->crc = crc;
+			blkp++;
+			blkp_ext++;
+		}
 	}
 	perf_stop(&stop);
-	printf("crc16_t10dif" TEST_TYPE_STR ": ");
-	perf_print(stop, start, (long long)TEST_LEN * i);
+	printf("crc16_t10pi_op_copy_insert" TEST_TYPE_STR ": ");
+	perf_print(stop, start, (long long)sizeof(blks->data) * NBLOCKS * TEST_LOOPS);
 
 	printf("finish 0x%x\n", crc);
 	return 0;

@@ -90,6 +90,7 @@ objs =  \
 	bin\xor_gen_sse.obj \
 	bin\crc16_t10dif_01.obj \
 	bin\crc16_t10dif_by4.obj \
+	bin\crc16_t10dif_copy_by4.obj \
 	bin\crc32_gzip.obj \
 	bin\crc32_ieee_01.obj \
 	bin\crc32_ieee_by4.obj \
@@ -202,6 +203,7 @@ checks = \
 	xor_check_test.exe \
 	pq_check_test.exe \
 	crc16_t10dif_test.exe \
+	crc16_t10dif_copy_test.exe \
 	crc32_ieee_test.exe \
 	crc32_iscsi_test.exe \
 	crc64_funcs_test.exe \

@@ -62,6 +62,21 @@ uint16_t crc16_t10dif(
 
 
 /**
+ * @brief Generate CRC and copy T10 standard, runs appropriate version.
+ *
+ * Stitched CRC + copy function.
+ *
+ * @returns 16 bit CRC
+ */
+uint16_t crc16_t10dif_copy(
+	uint16_t init_crc,  //!< initial CRC value, 16 bits
+	uint8_t *dst,       //!< buffer destination for copy
+	uint8_t *src,       //!< buffer source to crc + copy
+	uint64_t len        //!< buffer length in bytes (64-bit data)
+	);
+
+
+/**
  * @brief Generate CRC from the IEEE standard, runs appropriate version.
  *
  * This function determines what instruction sets are enabled and
@@ -152,6 +167,18 @@ uint16_t crc16_t10dif_base(
 	uint16_t seed,	//!< initial CRC value, 16 bits
 	uint8_t *buf,	//!< buffer to calculate CRC on
 	uint64_t len 	//!< buffer length in bytes (64-bit data)
+	);
+
+
+/**
+ * @brief Generate CRC and copy T10 standard, runs baseline version.
+ * @returns 16 bit CRC
+ */
+uint16_t crc16_t10dif_copy_base(
+	uint16_t init_crc,  //!< initial CRC value, 16 bits
+	uint8_t *dst,       //!< buffer destination for copy
+	uint8_t *src,       //!< buffer source to crc + copy
+	uint64_t len        //!< buffer length in bytes (64-bit data)
 	);
 
 

@@ -104,3 +104,4 @@ isal_deflate_set_dict           @100
 isal_deflate_reset              @101
 isal_inflate_set_dict           @102
 isal_inflate_reset              @103
+crc16_t10dif_copy               @104

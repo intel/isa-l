@@ -27,61 +27,66 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#include "crc.h"
-#include "crc64.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <stdint.h>
+#include <sys/time.h>
+#include "crc.h"
+#include "test.h"
 
-unsigned int crc32_iscsi(unsigned char *buffer, int len, unsigned int crc_init)
-{
-	return crc32_iscsi_base(buffer, len, crc_init);
-}
+//#define CACHED_TEST
+#ifdef CACHED_TEST
+// Cached test, loop many times over small dataset
+# define TEST_LEN     8*1024
+# define TEST_LOOPS   4000000
+# define TEST_TYPE_STR "_warm"
+#else
+// Uncached test.  Pull from large mem base.
+#  define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
+#  define TEST_LEN     (2 * GT_L3_CACHE)
+#  define TEST_LOOPS   100
+#  define TEST_TYPE_STR "_cold"
+#endif
 
-uint16_t crc16_t10dif(uint16_t seed, const unsigned char *buf, uint64_t len)
-{
-	return crc16_t10dif_base(seed, (uint8_t *) buf, len);
-}
+#ifndef TEST_SEED
+# define TEST_SEED 0x1234
+#endif
 
-uint16_t crc16_t10dif_copy(uint16_t seed, uint8_t * dst, uint8_t * src, uint64_t len)
-{
-	return crc16_t10dif_copy_base(seed, dst, src, len);
-}
+#define TEST_MEM TEST_LEN
 
-uint32_t crc32_ieee(uint32_t seed, const unsigned char *buf, uint64_t len)
+int main(int argc, char *argv[])
 {
-	return crc32_ieee_base(seed, (uint8_t *) buf, len);
-}
+	int i;
+	void *src, *dst;
+	uint16_t crc;
+	struct perf start, stop;
 
-uint32_t crc32_gzip_refl(uint32_t seed, const unsigned char *buf, uint64_t len)
-{
-	return crc32_gzip_refl_base(seed, (uint8_t *) buf, len);
-}
+	printf("crc16_t10dif_copy_perf:\n");
 
-uint64_t crc64_ecma_refl(uint64_t seed, const uint8_t * buf, uint64_t len)
-{
-	return crc64_ecma_refl_base(seed, buf, len);
-}
+	if (posix_memalign(&src, 1024, TEST_LEN)) {
+		printf("alloc error: Fail");
+		return -1;
+	}
+	if (posix_memalign(&dst, 1024, TEST_LEN)) {
+		printf("alloc error: Fail");
+		return -1;
+	}
 
-uint64_t crc64_ecma_norm(uint64_t seed, const uint8_t * buf, uint64_t len)
-{
-	return crc64_ecma_norm_base(seed, buf, len);
-}
+	printf("Start timed tests\n");
+	fflush(0);
 
-uint64_t crc64_iso_refl(uint64_t seed, const uint8_t * buf, uint64_t len)
-{
-	return crc64_iso_refl_base(seed, buf, len);
-}
+	memset(src, 0, TEST_LEN);
+	crc = crc16_t10dif_copy(TEST_SEED, dst, src, TEST_LEN);
 
-uint64_t crc64_iso_norm(uint64_t seed, const uint8_t * buf, uint64_t len)
-{
-	return crc64_iso_norm_base(seed, buf, len);
-}
+	perf_start(&start);
+	for (i = 0; i < TEST_LOOPS; i++) {
+		crc = crc16_t10dif_copy(TEST_SEED, dst, src, TEST_LEN);
+	}
+	perf_stop(&stop);
+	printf("crc16_t10dif_copy" TEST_TYPE_STR ": ");
+	perf_print(stop, start, (long long)TEST_LEN * i);
 
-uint64_t crc64_jones_refl(uint64_t seed, const uint8_t * buf, uint64_t len)
-{
-	return crc64_jones_refl_base(seed, buf, len);
-}
-
-uint64_t crc64_jones_norm(uint64_t seed, const uint8_t * buf, uint64_t len)
-{
-	return crc64_jones_norm_base(seed, buf, len);
+	printf("finish 0x%x\n", crc);
+	return 0;
 }

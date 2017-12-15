@@ -37,6 +37,7 @@ lsrc_x86_32       += crc/crc_base_aliases.c
 lsrc_x86_64 += \
 	crc/crc16_t10dif_01.asm \
 	crc/crc16_t10dif_by4.asm \
+	crc/crc16_t10dif_copy_by4.asm \
 	crc/crc32_ieee_01.asm \
 	crc/crc32_ieee_by4.asm \
 	crc/crc32_iscsi_01.asm \
@@ -57,9 +58,12 @@ extern_hdrs +=  include/crc.h include/crc64.h
 other_src   +=  include/reg_sizes.asm include/types.h include/test.h
 
 check_tests +=  crc/crc16_t10dif_test crc/crc32_ieee_test crc/crc32_iscsi_test \
+		crc/crc16_t10dif_copy_test \
 		crc/crc64_funcs_test crc/crc32_gzip_refl_test
 
-perf_tests  +=  crc/crc16_t10dif_perf crc/crc32_ieee_perf crc/crc32_iscsi_perf \
+perf_tests  +=  crc/crc16_t10dif_perf crc/crc16_t10dif_copy_perf \
+		crc/crc16_t10dif_op_perf \
+		crc/crc32_ieee_perf crc/crc32_iscsi_perf \
 		crc/crc64_funcs_perf crc/crc32_gzip_refl_perf
 
 examples    +=  crc/crc_simple_test crc/crc64_example

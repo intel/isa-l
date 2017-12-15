@@ -135,6 +135,26 @@ uint16_t crc16_t10dif_base(uint16_t seed, uint8_t * buf, uint64_t len)
 	return rem;
 }
 
+// crc16_t10dif baseline function
+// Slow crc16 from the definition.  Can be sped up with a lookup table.
+uint16_t crc16_t10dif_copy_base(uint16_t seed, uint8_t * dst, uint8_t * src, uint64_t len)
+{
+	size_t rem = seed;
+	unsigned int i, j;
+
+	uint16_t poly = 0x8bb7;	// t10dif standard
+
+	for (i = 0; i < len; i++) {
+		rem = rem ^ (src[i] << 8);
+		dst[i] = src[i];
+		for (j = 0; j < MAX_ITER; j++) {
+			rem = rem << 1;
+			rem = (rem & 0x10000) ? rem ^ poly : rem;
+		}
+	}
+	return rem;
+}
+
 // crc32_ieee baseline function
 // Slow crc32 from the definition.  Can be sped up with a lookup table.
 uint32_t crc32_ieee_base(uint32_t seed, uint8_t * buf, uint64_t len)
