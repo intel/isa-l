@@ -797,8 +797,7 @@ static void write_type0_header(struct isal_zstream *stream)
 		memcpy(stream->next_out, &stored_blk_hdr, memcpy_len);
 	} else if (stream->avail_out >= 8) {
 		set_buf(bitbuf, stream->next_out, stream->avail_out);
-		write_bits(bitbuf, stream->internal_state.has_eob_hdr, 3);
-		flush(bitbuf);
+		write_bits_flush(bitbuf, stream->internal_state.has_eob_hdr, 3);
 		stream->next_out = buffer_ptr(bitbuf);
 		stream->total_out += buffer_used(bitbuf);
 		stream->avail_out -= buffer_used(bitbuf);

@@ -95,6 +95,19 @@ static inline void flush_bits(struct BitBuf2 *me)
 
 }
 
+/* Can write up to 8 bytes to output buffer */
+static inline void flush(struct BitBuf2 *me)
+{
+	uint32_t bytes;
+	if (me->m_bit_count) {
+		_mm_stream_si64x((int64_t *) me->m_out_buf, me->m_bits);
+		bytes = (me->m_bit_count + 7) / 8;
+		me->m_out_buf += bytes;
+	}
+	me->m_bits = 0;
+	me->m_bit_count = 0;
+}
+
 static inline void check_space(struct BitBuf2 *me, uint32_t num_bits)
 {
 	/* Checks if bitbuf has num_bits extra space and flushes the bytes in
@@ -116,17 +129,11 @@ static inline void write_bits(struct BitBuf2 *me, uint64_t code, uint32_t count)
 	flush_bits(me);
 }
 
-/* Can write up to 8 bytes to output buffer */
-static inline void flush(struct BitBuf2 *me)
-{
-	uint32_t bytes;
-	if (me->m_bit_count) {
-		_mm_stream_si64x((int64_t *) me->m_out_buf, me->m_bits);
-		bytes = (me->m_bit_count + 7) / 8;
-		me->m_out_buf += bytes;
-	}
-	me->m_bits = 0;
-	me->m_bit_count = 0;
+static inline void write_bits_flush(struct BitBuf2 *me, uint64_t code, uint32_t count)
+{	/* Assumes there is space to fit code into m_bits. */
+	me->m_bits |= code << me->m_bit_count;
+	me->m_bit_count += count;
+	flush(me);
 }
 
 #endif //BITBUF2_H
