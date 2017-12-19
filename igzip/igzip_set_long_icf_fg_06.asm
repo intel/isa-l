@@ -59,6 +59,7 @@
 
 %ifidn __OUTPUT_FORMAT__, win64
 %define stack_size  8*16 + 2 * 8 + 8
+%define func(x) proc_frame x
 %macro FUNC_SAVE 0
 	alloc_stack	stack_size
 	vmovdqa	[rsp + 0*16], xmm6
@@ -84,11 +85,12 @@
 	vmovdqa	xmm12, [rsp + 6*16]
 	vmovdqa	xmm13, [rsp + 7*16]
 
-	mov	8*16 + 0*8, rsi
-	mov	8*16 + 1*8, rdi
+	mov	[rsp + 8*16 + 0*8], rsi
+	mov	[rsp + 8*16 + 1*8], rdi
 	add	rsp, stack_size
 %endm
 %else
+%define func(x) x:
 %macro FUNC_SAVE 0
 %endm
 
@@ -98,7 +100,7 @@
 %define VECT_SIZE 16
 
 global set_long_icf_fg_06
-set_long_icf_fg_06:
+func(set_long_icf_fg_06)
 	FUNC_SAVE
 
 	sub	end_in, LA + 15

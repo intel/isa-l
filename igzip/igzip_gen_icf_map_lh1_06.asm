@@ -66,6 +66,8 @@
 
 %ifidn __OUTPUT_FORMAT__, win64
 %define stack_size  10*16 + 4 * 8 + 8
+%define func(x) proc_frame x
+
 %macro FUNC_SAVE 0
 	alloc_stack	stack_size
 	vmovdqa	[rsp + 0*16], xmm6
@@ -97,13 +99,14 @@
 	vmovdqa	xmm14, [rsp + 8*16]
 	vmovdqa	xmm15, [rsp + 9*16]
 
-	mov	10*16 + 0*8, rsi
-	mov	10*16 + 1*8, rdi
-	mov	10*16 + 2*8, rbp
-	mov	10*16 + 3*8, r12
+	mov	[rsp + 10*16 + 0*8], rsi
+	mov	[rsp + 10*16 + 1*8], rdi
+	mov	[rsp + 10*16 + 2*8], rbp
+	mov	[rsp + 10*16 + 3*8], r12
 	add	rsp, stack_size
 %endm
 %else
+%define func(x) x:
 %macro FUNC_SAVE 0
 	push	rbp
 	push	r12
@@ -119,7 +122,7 @@
 %define HASH_BYTES 2
 
 global gen_icf_map_lh1_06
-gen_icf_map_lh1_06:
+func(gen_icf_map_lh1_06)
 	FUNC_SAVE
 
 	mov	file_start, [stream + _next_in]
