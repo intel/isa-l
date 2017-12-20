@@ -3,7 +3,7 @@
 
 AC_PREREQ(2.69)
 AC_INIT([libisal],
-        [2.20.0],
+        [2.21.0],
         [sg.support.isal@intel.com],
         [isa-l],
         [http://01.org/storage-acceleration-library])

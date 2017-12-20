@@ -39,7 +39,7 @@
 #	trace - get simulator trace
 #	clean - remove object files
 
-version ?= 2.20.0
+version ?= 2.21.0
 host_cpu ?= $(shell uname -m | sed -e 's/amd/x86_/')
 arch ?= $(shell uname | grep -v -e Linux -e BSD )
 
