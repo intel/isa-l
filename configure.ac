@@ -85,8 +85,8 @@ else
     with_modern_nasm=yes
     AC_MSG_RESULT([yes])
     AC_MSG_CHECKING([for optional nasm AVX512 support])
-    AC_LANG_CONFTEST([AC_LANG_SOURCE([[vpshufb zmm0, zmm1, zmm2;]])])
-    sed -i -e '/vpshufb/!d' conftest.c
+    AC_LANG_CONFTEST([AC_LANG_SOURCE([[vinserti32x8 zmm0, ymm1, 1;]])])
+    sed -i -e '/vinsert/!d' conftest.c
     if nasm -f elf64  conftest.c 2> /dev/null; then
       nasm_knows_avx512=yes
       AC_MSG_RESULT([yes])
@@ -109,7 +109,7 @@ if test x"$AS" = x""; then
   elif test x"$with_modern_nasm" = x"yes"; then
     AS=nasm
   else
-    AC_MSG_ERROR([No modern yasm or nasm found as required. Yasm should be 1.2.0 or later, and nasm should be v2.11.01 or later.])
+    AC_MSG_ERROR([No modern yasm or nasm found as required. Yasm should be 1.2.0 or later, and nasm should be v2.11.01 or later (v2.13 for AVX512).])
   fi
 fi
 echo "Using assembler $AS"
