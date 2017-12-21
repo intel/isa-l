@@ -204,11 +204,9 @@ checks = \
 	pq_check_test.exe \
 	crc16_t10dif_test.exe \
 	crc16_t10dif_copy_test.exe \
-	crc32_ieee_test.exe \
-	crc32_iscsi_test.exe \
+	crc32_funcs_test.exe \
 	crc64_funcs_test.exe \
-	igzip_rand_test.exe \
-	crc32_gzip_refl_test.exe
+	igzip_rand_test.exe
 
 checks: lib $(checks)
 $(checks): $(@B).obj

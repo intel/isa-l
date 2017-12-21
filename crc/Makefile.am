@@ -57,9 +57,10 @@ extern_hdrs +=  include/crc.h include/crc64.h
 
 other_src   +=  include/reg_sizes.asm include/types.h include/test.h
 
-check_tests +=  crc/crc16_t10dif_test crc/crc32_ieee_test crc/crc32_iscsi_test \
+check_tests +=  crc/crc16_t10dif_test \
 		crc/crc16_t10dif_copy_test \
-		crc/crc64_funcs_test crc/crc32_gzip_refl_test
+		crc/crc64_funcs_test \
+		crc/crc32_funcs_test
 
 perf_tests  +=  crc/crc16_t10dif_perf crc/crc16_t10dif_copy_perf \
 		crc/crc16_t10dif_op_perf \
