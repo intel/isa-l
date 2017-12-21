@@ -1,4 +1,4 @@
-v2.20 Intel Intelligent Storage Acceleration Library Release Notes
+v2.21 Intel Intelligent Storage Acceleration Library Release Notes
 ==================================================================
 
 RELEASE NOTE CONTENTS
@@ -66,6 +66,23 @@ v2.10
 
 3. CHANGE LOG & FEATURES ADDED
 ------------------------------
+v2.21
+
+* Igzip improvements
+  - New compression levels added.  ISA-L fast deflate now has more levels to
+    balance speed vs. target compression level.  Level 0, 1 are as in previous
+    generations.  New levels 2 & 3 target higher compression roughly comparable
+    to zlib levels 2-3.  Level 3 is currently only optimized for processors with
+    AVX512 instructions.
+
+* New T10dif & copy function - crc16_t10dif_copy()
+  - CRC and copy was added to emulate T10dif operations such as DIF insert and
+    strip.  This function stitches together CRC and memcpy operations
+    eliminating an extra data read.
+
+* CRC32 iscsi performance improvements
+  - Fixes issue under some distributions where warm cache performance was
+    reduced.
 
 v2.20
 
