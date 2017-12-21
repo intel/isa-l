@@ -2282,8 +2282,10 @@ int test_compress_file(char *file_name)
 	FILE *in_file = NULL;
 
 	in_file = fopen(file_name, "rb");
-	if (!in_file)
+	if (!in_file) {
+		printf("Failed to open file %s\n", file_name);
 		return FILE_READ_FAILED;
+	}
 
 	in_size = get_filesize(in_file);
 	if (in_size > MAX_FILE_SIZE)
@@ -2291,8 +2293,10 @@ int test_compress_file(char *file_name)
 
 	if (in_size != 0) {
 		in_buf = malloc(in_size);
-		if (in_buf == NULL)
+		if (in_buf == NULL) {
+			printf("Failed to allocate in_buf for test_compress_file\n");
 			return MALLOC_FAILED;
+		}
 		fread(in_buf, 1, in_size, in_file);
 	}
 
