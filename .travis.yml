@@ -46,14 +46,15 @@ matrix:
       env: C_COMPILER=gcc-6
 
     ### linux with new nasm
-    - dist: trusty
-      addons:
-        apt:
-          sources:
-            - debian-sid
-          packages:
-            - nasm
-      env: C_COMPILER=gcc AS_ASSEMBL=nasm
+    # Removed until travis issue fixed pulling from nasm from debian
+    #- dist: trusty
+    #  addons:
+    #    apt:
+    #      sources:
+    #        - debian-sid
+    #      packages:
+    #        - nasm
+    #  env: C_COMPILER=gcc AS_ASSEMBL=nasm
 
     ### linux extended tests
     - dist: trusty
