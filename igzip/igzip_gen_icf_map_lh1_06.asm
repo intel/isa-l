@@ -405,6 +405,8 @@ end_main:
 	FUNC_RESTORE
 	ret
 
+endproc_frame
+
 section .data
 align 64
 datas_perm:

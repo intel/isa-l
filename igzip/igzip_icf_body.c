@@ -333,6 +333,21 @@ void isal_deflate_icf_body_base(struct isal_zstream *stream)
 	}
 }
 
+void isal_deflate_icf_body_04(struct isal_zstream *stream)
+{
+	switch (stream->level) {
+	case 3:
+		icf_body_lazyhash1_fillgreedy_greedy(stream);
+		break;
+	case 2:
+		isal_deflate_icf_body_lvl2(stream);
+		break;
+	case 1:
+	default:
+		isal_deflate_icf_body_lvl1(stream);
+	}
+}
+
 void isal_deflate_icf_body_06(struct isal_zstream *stream)
 {
 	switch (stream->level) {

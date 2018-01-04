@@ -60,6 +60,7 @@ extern isal_update_histogram_01
 extern isal_update_histogram_04
 
 extern gen_icf_map_h1_base
+extern gen_icf_map_lh1_04
 
 extern encode_deflate_icf_base
 extern encode_deflate_icf_04
@@ -85,6 +86,7 @@ extern isal_deflate_hash_crc_01
 extern isal_deflate_hash_mad_base
 
 extern isal_deflate_icf_body_base
+extern isal_deflate_icf_body_04
 extern isal_deflate_icf_body_06
 
 section .text
@@ -122,7 +124,7 @@ mbin_interface		set_long_icf_fg
 mbin_dispatch_init6	set_long_icf_fg, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_06
 
 mbin_interface		gen_icf_map_lh1
-mbin_dispatch_init6	gen_icf_map_lh1, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_lh1_06
+mbin_dispatch_init6	gen_icf_map_lh1, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_lh1_04, gen_icf_map_lh1_06
 %else
 mbin_interface		encode_deflate_icf
 mbin_dispatch_init5	encode_deflate_icf, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_04
@@ -131,7 +133,7 @@ mbin_interface		set_long_icf_fg
 mbin_dispatch_init5	set_long_icf_fg, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base
 
 mbin_interface		gen_icf_map_lh1
-mbin_dispatch_init5	gen_icf_map_lh1, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base
+mbin_dispatch_init5	gen_icf_map_lh1, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_lh1_04
 %endif
 
 mbin_interface		crc32_gzip
@@ -154,8 +156,8 @@ mbin_dispatch_init5	isal_deflate_hash_lvl3, isal_deflate_hash_base, isal_deflate
 
 %ifdef HAVE_AS_KNOWS_AVX512
 mbin_interface		isal_deflate_icf_body
-mbin_dispatch_init6	isal_deflate_icf_body, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_06
+mbin_dispatch_init6	isal_deflate_icf_body, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_04, isal_deflate_icf_body_06
 %else
 mbin_interface		isal_deflate_icf_body
-mbin_dispatch_init5	isal_deflate_icf_body, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_base
+mbin_dispatch_init5	isal_deflate_icf_body, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_04
 %endif
