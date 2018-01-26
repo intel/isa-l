@@ -66,6 +66,7 @@ extern encode_deflate_icf_base
 extern encode_deflate_icf_04
 
 extern set_long_icf_fg_base
+extern set_long_icf_fg_04
 
 %ifdef HAVE_AS_KNOWS_AVX512
 extern encode_deflate_icf_06
@@ -121,7 +122,7 @@ mbin_interface		encode_deflate_icf
 mbin_dispatch_init6	encode_deflate_icf, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_04, encode_deflate_icf_06
 
 mbin_interface		set_long_icf_fg
-mbin_dispatch_init6	set_long_icf_fg, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_06
+mbin_dispatch_init6	set_long_icf_fg, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_04, set_long_icf_fg_06
 
 mbin_interface		gen_icf_map_lh1
 mbin_dispatch_init6	gen_icf_map_lh1, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_lh1_04, gen_icf_map_lh1_06
@@ -130,7 +131,7 @@ mbin_interface		encode_deflate_icf
 mbin_dispatch_init5	encode_deflate_icf, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_04
 
 mbin_interface		set_long_icf_fg
-mbin_dispatch_init5	set_long_icf_fg, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base
+mbin_dispatch_init5	set_long_icf_fg, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_04
 
 mbin_interface		gen_icf_map_lh1
 mbin_dispatch_init5	gen_icf_map_lh1, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_lh1_04

@@ -247,6 +247,8 @@ end_fill:
 	FUNC_RESTORE
 	ret
 
+end_proc_frame
+
 section .data
 align 64
 dist_start:

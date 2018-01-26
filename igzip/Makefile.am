@@ -61,6 +61,7 @@ lsrc_x86_64 +=	igzip/igzip_body_01.asm \
 		igzip/igzip_deflate_hash.asm \
 		igzip/igzip_gen_icf_map_lh1_06.asm \
 		igzip/igzip_gen_icf_map_lh1_04.asm \
+		igzip/igzip_set_long_icf_fg_04.asm \
 		igzip/igzip_set_long_icf_fg_06.asm
 
 src_include += -I $(srcdir)/igzip
