@@ -85,8 +85,8 @@
 	vmovdqa	xmm12, [rsp + 6*16]
 	vmovdqa	xmm13, [rsp + 7*16]
 
-	mov	[rsp + 8*16 + 0*8], rsi
-	mov	[rsp + 8*16 + 1*8], rdi
+	mov	rsi, [rsp + 8*16 + 0*8]
+	mov	rdi, [rsp + 8*16 + 1*8]
 	add	rsp, stack_size
 %endm
 %else
@@ -247,7 +247,7 @@ end_fill:
 	FUNC_RESTORE
 	ret
 
-end_proc_frame
+endproc_frame
 
 section .data
 align 64

@@ -99,10 +99,10 @@
 	vmovdqa	xmm14, [rsp + 8*16]
 	vmovdqa	xmm15, [rsp + 9*16]
 
-	mov	[rsp + 10*16 + 0*8], rsi
-	mov	[rsp + 10*16 + 1*8], rdi
-	mov	[rsp + 10*16 + 2*8], rbp
-	mov	[rsp + 10*16 + 3*8], r12
+	mov	rsi, [rsp + 10*16 + 0*8]
+	mov	rdi, [rsp + 10*16 + 1*8]
+	mov	rbp, [rsp + 10*16 + 2*8]
+	mov	r12, [rsp + 10*16 + 3*8]
 	add	rsp, stack_size
 %endm
 %else
