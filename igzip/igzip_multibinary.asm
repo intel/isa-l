@@ -86,9 +86,8 @@ extern isal_deflate_hash_crc_01
 
 extern isal_deflate_hash_mad_base
 
-extern isal_deflate_icf_body_base
-extern isal_deflate_icf_body_04
-extern isal_deflate_icf_body_06
+extern icf_body_hash1_fillgreedy_lazy
+extern icf_body_lazyhash1_fillgreedy_greedy
 
 section .text
 
@@ -104,6 +103,9 @@ mbin_dispatch_init5	isal_deflate_icf_body_lvl1, isal_deflate_icf_body_hash8k_bas
 
 mbin_interface		isal_deflate_icf_body_lvl2
 mbin_dispatch_init5	isal_deflate_icf_body_lvl2, isal_deflate_icf_body_hash_hist_base, isal_deflate_icf_body_hash_hist_01, isal_deflate_icf_body_hash_hist_02, isal_deflate_icf_body_hash_hist_04
+
+mbin_interface		isal_deflate_icf_body_lvl3
+mbin_dispatch_init5	isal_deflate_icf_body_lvl3, icf_body_hash1_fillgreedy_lazy, icf_body_hash1_fillgreedy_lazy, icf_body_hash1_fillgreedy_lazy, icf_body_lazyhash1_fillgreedy_greedy
 
 mbin_interface		isal_deflate_icf_finish_lvl1
 mbin_dispatch_init5	isal_deflate_icf_finish_lvl1, isal_deflate_icf_finish_hash8k_base, isal_deflate_icf_finish_hash8k_01, isal_deflate_icf_finish_hash8k_01, isal_deflate_icf_finish_hash8k_01
@@ -155,10 +157,3 @@ mbin_dispatch_init5	isal_deflate_hash_lvl2, isal_deflate_hash_base, isal_deflate
 mbin_interface		isal_deflate_hash_lvl3
 mbin_dispatch_init5	isal_deflate_hash_lvl3, isal_deflate_hash_base, isal_deflate_hash_base, isal_deflate_hash_base, isal_deflate_hash_mad_base
 
-%ifdef HAVE_AS_KNOWS_AVX512
-mbin_interface		isal_deflate_icf_body
-mbin_dispatch_init6	isal_deflate_icf_body, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_04, isal_deflate_icf_body_06
-%else
-mbin_interface		isal_deflate_icf_body
-mbin_dispatch_init5	isal_deflate_icf_body, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_base, isal_deflate_icf_body_04
-%endif

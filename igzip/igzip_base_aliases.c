@@ -34,9 +34,9 @@
 
 void isal_deflate_body_base(struct isal_zstream *stream);
 void isal_deflate_finish_base(struct isal_zstream *stream);
-void isal_deflate_icf_body_base(struct isal_zstream *stream);
 void isal_deflate_icf_body_hash8k_base(struct isal_zstream *stream);
 void isal_deflate_icf_body_hash_hist_base(struct isal_zstream *stream);
+void icf_body_hash1_fillgreedy_lazy(struct isal_zstream *stream);
 void isal_deflate_icf_finish_hash8k_base(struct isal_zstream *stream);
 void isal_deflate_icf_finish_hash_hist_base(struct isal_zstream *stream);
 void isal_deflate_icf_finish_hash_map_base(struct isal_zstream *stream);
@@ -66,11 +66,6 @@ void isal_deflate_finish(struct isal_zstream *stream)
 	isal_deflate_finish_base(stream);
 }
 
-void isal_deflate_icf_body(struct isal_zstream *stream)
-{
-	isal_deflate_icf_body_base(stream);
-}
-
 void isal_deflate_icf_body_lvl1(struct isal_zstream *stream)
 {
 	isal_deflate_icf_body_hash8k_base(stream);
@@ -79,6 +74,11 @@ void isal_deflate_icf_body_lvl1(struct isal_zstream *stream)
 void isal_deflate_icf_body_lvl2(struct isal_zstream *stream)
 {
 	isal_deflate_icf_body_hash_hist_base(stream);
+}
+
+void isal_deflate_icf_body_lvl3(struct isal_zstream *stream)
+{
+	icf_body_hash1_fillgreedy_lazy(stream);
 }
 
 void isal_deflate_icf_finish_lvl1(struct isal_zstream *stream)
