@@ -111,6 +111,11 @@ CLEANFILES += isa-l.h
 isa-l.h:
 	@echo 'Building $@'
 	@echo ''			>> $@
+	@echo '/**'                     >> $@
+	@echo ' *  @file isa-l.h'       >> $@
+	@echo ' *  @brief Include for ISA-L library' >> $@
+	@echo ' */'                     >> $@
+	@echo ''                        >> $@
 	@echo '#ifndef _ISAL_H_'	>> $@
 	@echo '#define _ISAL_H_'	>> $@
 	@echo ''			>> $@
