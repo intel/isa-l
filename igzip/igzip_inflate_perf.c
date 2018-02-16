@@ -30,13 +30,12 @@
 #define _FILE_OFFSET_BITS 64
 #include <stdio.h>
 #include <assert.h>
+#include <getopt.h>
 #include "huff_codes.h"
 #include "igzip_lib.h"
 #include "test.h"
 
-#if defined(ZLIB_9) || defined(ZLIB_1) || defined(ZLIB_COMPARE)
 # include <zlib.h>
-#endif
 
 #define BUF_SIZE 1024
 #define MIN_TEST_LOOPS   8
@@ -44,157 +43,125 @@
 # define RUN_MEM_SIZE 1000000000
 #endif
 
-int main(int argc, char *argv[])
-{
-	FILE *in, *out = NULL;
-	unsigned char *inbuf, *outbuf, *tempbuf;
-	int i, iterations, check;
-	uint64_t infile_size, outbuf_size, inbuf_size;
-	struct inflate_state state;
+#define OPTARGS "hl:z:i:"
 
-	if (argc > 3 || argc < 2) {
-		fprintf(stderr, "Usage: isal_inflate_file_perf  infile\n"
-			"\t - Runs multiple iterations of igzip on a file to "
-			"get more accurate time results.\n");
-		exit(0);
-	}
-	in = fopen(argv[1], "rb");
-	if (!in) {
-		fprintf(stderr, "Can't open %s for reading\n", argv[1]);
-		exit(0);
-	}
-	if (argc > 2) {
-		out = fopen(argv[2], "wb");
-		if (!out) {
-			fprintf(stderr, "Can't open %s for writing\n", argv[2]);
-			exit(0);
-		}
-		printf("outfile=%s\n", argv[2]);
-	}
-	printf("isal_inflate_perf: \n");
-	fflush(0);
-	/* Allocate space for entire input file and output
-	 * (assuming some possible expansion on output size)
-	 */
-	infile_size = get_filesize(in);
-
-	if (infile_size != 0) {
-		outbuf_size = infile_size;
-		iterations = RUN_MEM_SIZE / infile_size;
-	} else {
-		printf("Error: input file has 0 size\n");
-		exit(0);
-	}
-	if (iterations < MIN_TEST_LOOPS)
-		iterations = MIN_TEST_LOOPS;
-
-	tempbuf = malloc(infile_size);
-	if (tempbuf == NULL) {
-		fprintf(stderr, "Can't allocate temp buffer memory\n");
-		exit(0);
-	}
-	inbuf_size = 2 * infile_size;
-	inbuf = malloc(inbuf_size);
-	if (inbuf == NULL) {
-		fprintf(stderr, "Can't allocate input buffer memory\n");
-		exit(0);
-	}
-	outbuf = malloc(outbuf_size);
-	if (outbuf == NULL) {
-		fprintf(stderr, "Can't allocate output buffer memory\n");
-		exit(0);
-	}
-
-	fread(tempbuf, 1, infile_size, in);
-
-#ifdef ZLIB_9
-	printf("Using zlib -9 compression\n");
-	i = compress2(inbuf, &inbuf_size, tempbuf, infile_size, 9);
-	if (i != Z_OK) {
-		printf("Compression of input file failed\n");
-		exit(0);
-	}
-
-	inbuf += 2;
-	inbuf_size -= 2;
-#elif defined(ZLIB_1)
-	printf("Using zlib -1 compression\n");
-	i = compress2(inbuf, &inbuf_size, tempbuf, infile_size, 1);
-	if (i != Z_OK) {
-		printf("Compression of input file failed\n");
-		exit(0);
-	}
-
-	inbuf += 2;
-	inbuf_size -= 2;
+#define LEVEL_QUEUE_LIMIT 16
+int level_size_buf[10] = {
+#ifdef ISAL_DEF_LVL0_DEFAULT
+	ISAL_DEF_LVL0_DEFAULT,
 #else
-	printf("Using igzip compression\n");
+	0,
+#endif
+#ifdef ISAL_DEF_LVL1_DEFAULT
+	ISAL_DEF_LVL1_DEFAULT,
+#else
+	0,
+#endif
+#ifdef ISAL_DEF_LVL2_DEFAULT
+	ISAL_DEF_LVL2_DEFAULT,
+#else
+	0,
+#endif
+#ifdef ISAL_DEF_LVL3_DEFAULT
+	ISAL_DEF_LVL3_DEFAULT,
+#else
+	0,
+#endif
+#ifdef ISAL_DEF_LVL4_DEFAULT
+	ISAL_DEF_LVL4_DEFAULT,
+#else
+	0,
+#endif
+#ifdef ISAL_DEF_LVL5_DEFAULT
+	ISAL_DEF_LVL5_DEFAULT,
+#else
+	0,
+#endif
+#ifdef ISAL_DEF_LVL6_DEFAULT
+	ISAL_DEF_LVL6_DEFAULT,
+#else
+	0,
+#endif
+#ifdef ISAL_DEF_LVL7_DEFAULT
+	ISAL_DEF_LVL7_DEFAULT,
+#else
+	0,
+#endif
+#ifdef ISAL_DEF_LVL8_DEFAULT
+	ISAL_DEF_LVL8_DEFAULT,
+#else
+	0,
+#endif
+#ifdef ISAL_DEF_LVL9_DEFAULT
+	ISAL_DEF_LVL9_DEFAULT,
+#else
+	0,
+#endif
+};
+
+int usage(void)
+{
+	fprintf(stderr,
+		"Usage: igzip_stateless_file_perf [options] <infile>\n"
+		"  -h          help\n"
+		"  -l <level>  isa-l compression level to test, may be specified upto %d times\n"
+		"  -z <level>  zlib  compression level to test, may be specified upto %d times\n"
+		"  -i <iter>   number of iterations (at least 1)\n", LEVEL_QUEUE_LIMIT,
+		LEVEL_QUEUE_LIMIT);
+	exit(0);
+}
+
+void isal_compress(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t * inbuf,
+		   uint64_t inbuf_size, int level)
+{
 	struct isal_zstream stream;
+	uint8_t *level_buf = NULL;
+
+	if (level_size_buf[level] > 0) {
+		level_buf = malloc(level_size_buf[level]);
+	}
+
 	isal_deflate_init(&stream);
 	stream.end_of_stream = 1;	/* Do the entire file at once */
 	stream.flush = NO_FLUSH;
-	stream.next_in = tempbuf;
-	stream.avail_in = infile_size;
-	stream.next_out = inbuf;
-	stream.avail_out = inbuf_size;
-#ifdef IGZIP_CUSTOM
-	struct isal_huff_histogram histogram;
-	struct isal_hufftables hufftables_custom;
-
-	memset(&histogram, 0, sizeof(histogram));
-	isal_update_histogram(tempbuf, infile_size, &histogram);
-	isal_create_hufftables(&hufftables_custom, &histogram);
-	stream.hufftables = &hufftables_custom;
-#endif
+	stream.next_in = inbuf;
+	stream.avail_in = inbuf_size;
+	stream.next_out = outbuf;
+	stream.avail_out = *outbuf_size;
+	stream.level = level;
+	stream.level_buf = level_buf;
+	stream.level_buf_size = level_size_buf[level];
 	isal_deflate(&stream);
+	free(level_buf);
+
+	*outbuf_size = stream.total_out;
+
 	if (stream.avail_in != 0) {
 		printf("Compression of input file failed\n");
 		exit(0);
 	}
-#endif
+}
 
-#ifdef ZLIB_COMPARE
-	{
-		printf("igzip_zlib_inflate_perf: %s %d iterations\n", argv[1], iterations);
-		/* Read complete input file into buffer */
-
-		struct perf start, stop;
-		perf_start(&start);
-
-		z_stream gstream;
-
-		for (i = 0; i < iterations; i++) {
-			gstream.next_in = inbuf;
-			gstream.avail_in = inbuf_size;
-			gstream.zalloc = Z_NULL;
-			gstream.zfree = Z_NULL;
-			gstream.opaque = Z_NULL;
-			if (0 != inflateInit2(&gstream, -15)) {
-				printf("Fail zlib init\n");
-				exit(-1);
-			}
-			gstream.next_out = outbuf;
-			gstream.avail_out = outbuf_size;
-			check = inflate(&gstream, Z_FINISH);
-			if (check != 1) {
-				printf("Error in decompression with error %d\n", check);
-				break;
-			}
-		}
-		perf_stop(&stop);
-		printf("  file %s - in_size=%lu out_size=%lu iter=%d\n", argv[1],
-		       infile_size, gstream.total_out, i);
-
-		printf("igzip_file: ");
-		perf_print(stop, start, (long long)infile_size * i);
-
-		printf("End of igzip_zlib_inflate_perf\n\n");
-	}
-#endif
-	printf("isal_inflate_stateless_perf: %s %d iterations\n", argv[1], iterations);
-	/* Read complete input file into buffer */
-	fclose(in);
+void isal_inflate_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * outbuf,
+		       uint64_t outbuf_size, int iterations)
+{
+	struct inflate_state state;
 	struct perf start, stop;
+	int i, check;
+
+	/* Check that data decompresses */
+	isal_inflate_init(&state);
+	state.next_in = inbuf;
+	state.avail_in = inbuf_size;
+	state.next_out = outbuf;
+	state.avail_out = outbuf_size;
+
+	check = isal_inflate(&state);
+	if (check) {
+		printf("Error in decompression with error %d\n", check);
+		return;
+	}
+
 	perf_start(&start);
 
 	for (i = 0; i < iterations; i++) {
@@ -203,29 +170,159 @@ int main(int argc, char *argv[])
 		state.avail_in = inbuf_size;
 		state.next_out = outbuf;
 		state.avail_out = outbuf_size;
+		isal_inflate(&state);
+	}
+	perf_stop(&stop);
 
-		check = isal_inflate(&state);
-		if (check) {
-			printf("Error in decompression with error %d\n", check);
+	perf_print(stop, start, (long long)outbuf_size * i);
+
+}
+
+int main(int argc, char *argv[])
+{
+	FILE *in;
+	unsigned char *compressbuf, *decompbuf, *filebuf;
+	int i, c, iterations = 0;
+	uint64_t infile_size, decompbuf_size, compressbuf_size, compress_size;
+
+	char *in_file_name = NULL;
+
+	uint32_t level_queue[LEVEL_QUEUE_LIMIT] = {
+		0
+	};
+	int level_queue_size = 0;
+	uint32_t level = 0;
+
+	uint32_t zlib_queue[LEVEL_QUEUE_LIMIT] = {
+		0
+	};
+
+	int zlib_queue_size = 0;
+
+	while ((c = getopt(argc, argv, OPTARGS)) != -1) {
+		switch (c) {
+		case 'l':
+			if (level_queue_size >= LEVEL_QUEUE_LIMIT) {
+				printf("Too many levels specified");
+				exit(0);
+			}
+
+			level = atoi(optarg);
+			if (level > ISAL_DEF_MAX_LEVEL) {
+				printf("Unsupported isa-l compression level\n");
+				exit(0);
+			}
+
+			level_queue[level_queue_size] = level;
+			level_queue_size++;
+			break;
+		case 'z':
+			if (zlib_queue_size >= LEVEL_QUEUE_LIMIT) {
+				printf("Too many levels specified");
+				exit(0);
+			}
+
+			level = atoi(optarg);
+			if (level > Z_BEST_COMPRESSION) {
+				printf("Unsupported zlib compression level\n");
+				exit(0);
+			}
+
+			zlib_queue[zlib_queue_size] = atoi(optarg);
+			zlib_queue_size++;
+			break;
+		case 'i':
+			iterations = atoi(optarg);
+			if (iterations < 1)
+				usage();
+			break;
+		case 'h':
+		default:
+			usage();
 			break;
 		}
 	}
-	perf_stop(&stop);
-	printf("  file %s - in_size=%lu out_size=%d iter=%d\n", argv[1],
-	       infile_size, state.total_out, i);
 
-	printf("igzip_file: ");
-	perf_print(stop, start, (long long)infile_size * i);
+	if (optind < argc) {
+		in_file_name = argv[optind];
+		in = fopen(in_file_name, "rb");
+	} else
+		usage();
 
-	printf("End of isal_inflate_stateless_perf\n\n");
-	fflush(0);
+	/* Allocate space for entire input file and output
+	 * (assuming some possible expansion on output size)
+	 */
+	infile_size = get_filesize(in);
 
-#if defined(ZLIB_1) || defined(ZLIB_9)
-	inbuf -= 2;
-#endif
-	free(inbuf);
-	free(outbuf);
-	free(tempbuf);
+	if (infile_size != 0) {
+		decompbuf_size = infile_size;
+	} else {
+		printf("Error: input file has 0 size\n");
+		exit(0);
+	}
+
+	if (iterations == 0) {
+		iterations = infile_size ? RUN_MEM_SIZE / infile_size : MIN_TEST_LOOPS;
+		if (iterations < MIN_TEST_LOOPS)
+			iterations = MIN_TEST_LOOPS;
+	}
+
+	if (level_queue_size == 0 && zlib_queue_size == 0)
+		level_queue_size = 1;
+
+	filebuf = malloc(infile_size);
+	if (filebuf == NULL) {
+		fprintf(stderr, "Can't allocate temp buffer memory\n");
+		exit(0);
+	}
+
+	compressbuf_size = 2 * infile_size;
+	compressbuf = malloc(compressbuf_size);
+	if (compressbuf == NULL) {
+		fprintf(stderr, "Can't allocate input buffer memory\n");
+		exit(0);
+	}
+	decompbuf = malloc(decompbuf_size);
+	if (decompbuf == NULL) {
+		fprintf(stderr, "Can't allocate output buffer memory\n");
+		exit(0);
+	}
+
+	fread(filebuf, 1, infile_size, in);
+	fclose(in);
+
+	for (i = 0; i < level_queue_size; i++) {
+		printf("isal_inflate_stateless_perf: compress_type = isal\n");
+
+		compress_size = compressbuf_size;
+		isal_compress(compressbuf, &compress_size, filebuf, infile_size,
+			      level_queue[i]);
+
+		printf("  file = %s - size = %lu compress_size = %lu iter = %d level = %d\n",
+		       in_file_name, infile_size, compress_size, iterations, level_queue[i]);
+		printf("  ");
+		isal_inflate_perf(compressbuf, compress_size, decompbuf, decompbuf_size,
+				  iterations);
+
+	}
+
+	for (i = 0; i < zlib_queue_size; i++) {
+		printf("isal_inflate_stateless_perf: compress_type = zlib\n");
+
+		compress_size = compressbuf_size;
+		compress2(compressbuf, &compress_size, filebuf, infile_size, zlib_queue[i]);
+
+		printf("  file = %s - size = %lu compress_size = %lu iter = %d level = %d\n",
+		       in_file_name, infile_size, compress_size, iterations, zlib_queue[i]);
+		printf("  ");
+
+		isal_inflate_perf(compressbuf + 2, compress_size - 2, decompbuf,
+				  decompbuf_size, iterations);
+	}
+
+	free(compressbuf);
+	free(decompbuf);
+	free(filebuf);
 
 	return 0;
 }
