@@ -30,18 +30,20 @@
 #ifndef HUFF_CODES_H
 #define HUFF_CODES_H
 
-#include <immintrin.h>
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
 #include "igzip_lib.h"
 #include "bitbuf2.h"
 
+#if __x86_64__  || __i386__ || _M_X64 || _M_IX86
+# include <immintrin.h>
 #ifdef _MSC_VER
 # include <intrin.h>
 #else
 # include <x86intrin.h>
 #endif
+#endif //__x86_64__  || __i386__ || _M_X64 || _M_IX86
 
 #define LIT_LEN ISAL_DEF_LIT_LEN_SYMBOLS
 #define DIST_LEN ISAL_DEF_DIST_SYMBOLS

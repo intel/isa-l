@@ -32,12 +32,16 @@
 #include <assert.h>
 #include "igzip_lib.h"
 
+#if __x86_64__  || __i386__ || _M_X64 || _M_IX86
 #ifdef _MSC_VER
 # include <intrin.h>
 # define inline __inline
 #else
 # include <x86intrin.h>
 #endif
+#else
+# define inline __inline
+#endif //__x86_64__  || __i386__ || _M_X64 || _M_IX86
 
 static inline uint32_t bsr(uint32_t val)
 {

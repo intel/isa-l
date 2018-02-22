@@ -30,6 +30,7 @@
 #include "erasure_code.h"
 #include "types.h"
 
+#if __x86_64__  || __i386__ || _M_X64 || _M_IX86
 void ec_encode_data_sse(int len, int k, int rows, unsigned char *g_tbls, unsigned char **data,
 			unsigned char **coding)
 {
@@ -320,6 +321,7 @@ void ec_encode_data_update_avx2(int len, int k, int rows, int vec_i, unsigned ch
 }
 
 #endif //__WORDSIZE == 64 || _WIN64 || __x86_64__
+#endif //__x86_64__  || __i386__ || _M_X64 || _M_IX86
 
 struct slver {
 	UINT16 snum;

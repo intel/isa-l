@@ -27,14 +27,8 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#include <immintrin.h>
-#include <stdint.h>
-#include <string.h>
-#include <assert.h>
-#include "igzip_lib.h"
 #include "huff_codes.h"
 #include "huffman.h"
-#include "bitbuf2.h"
 #include "flatten_ll.h"
 
 /* The order code length codes are written in the dynamic code header. This is

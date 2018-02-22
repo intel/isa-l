@@ -4,11 +4,13 @@
 #include <memory.h>
 #include <assert.h>
 
+#if __x86_64__  || __i386__ || _M_X64 || _M_IX86
 #ifdef _MSC_VER
 # include <intrin.h>
 #else
 # include <x86intrin.h>
 #endif
+#endif //__x86_64__  || __i386__ || _M_X64 || _M_IX86
 
 #include "encode_df.h"
 #include "bitbuf2.h"
