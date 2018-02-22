@@ -472,6 +472,8 @@ struct inflate_state {
 	uint32_t crc_flag;	//!< Flag identifying whether to track of crc
 	uint32_t crc;		//!< Contains crc of output if crc_flag is set
 	int32_t type0_block_len;	//!< Length left to read of type 0 block when outbuffer overflow occured
+	int32_t write_overflow_lits;
+	int32_t write_overflow_len;
 	int32_t copy_overflow_length; 	//!< Length left to copy when outbuffer overflow occured
 	int32_t copy_overflow_distance;	//!< Lookback distance when outbuffer overlow occured
 	int32_t tmp_in_size;	//!< Number of bytes in tmp_in_buffer

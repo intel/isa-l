@@ -119,6 +119,8 @@ FIELD	_bfinal,	4,	4
 FIELD	_crc_flag,	4,	4
 FIELD	_crc,		4,	4
 FIELD	_type0_block_len,	4, 	4
+FIELD	_write_overflow_lits,	4,	4
+FIELD	_write_overflow_len,	4,	4
 FIELD	_copy_overflow_len,  	4,	4
 FIELD	_copy_overflow_dist,	4,	4
 
@@ -135,7 +137,7 @@ ISAL_BLOCK_NEW_HDR	equ	0
 ISAL_BLOCK_HDR		equ	1
 ISAL_BLOCK_TYPE0	equ	2
 ISAL_BLOCK_CODED	equ	3
-ISAL_BLOCK_END		equ	4
+ISAL_BLOCK_INPUT_DONE	equ	4
 ISAL_BLOCK_FINISH	equ	5
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
