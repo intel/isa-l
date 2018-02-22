@@ -66,8 +66,12 @@
 %define MAX_LONG_CODE_LARGE (L_SIZE + (-L_SIZE & 0xf))
 %define MAX_LONG_CODE_SMALL (S_SIZE + (-S_SIZE & 0xf))
 
-%define SHORT_CODE_SIZE 2
-%define LONG_CODE_SIZE 2
+%define LARGE_SHORT_CODE_SIZE 4
+%define LARGE_LONG_CODE_SIZE 2
+
+%define SMALL_SHORT_CODE_SIZE 2
+%define SMALL_LONG_CODE_SIZE 2
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -75,8 +79,8 @@
 START_FIELDS	;; inflate huff code
 
 ;;      name				size    align
-FIELD	_short_code_lookup_large,	SHORT_CODE_SIZE * (1 << (ISAL_DECODE_LONG_BITS)), LONG_CODE_SIZE
-FIELD	_long_code_lookup_large,	LONG_CODE_SIZE * MAX_LONG_CODE_LARGE,		  SHORT_CODE_SIZE
+FIELD	_short_code_lookup_large,	LARGE_SHORT_CODE_SIZE * (1 << (ISAL_DECODE_LONG_BITS)),	LARGE_LONG_CODE_SIZE
+FIELD	_long_code_lookup_large,	LARGE_LONG_CODE_SIZE * MAX_LONG_CODE_LARGE,		LARGE_SHORT_CODE_SIZE
 
 %assign _inflate_huff_code_large_size	_FIELD_OFFSET
 %assign _inflate_huff_code_large_align	_STRUCT_ALIGN
@@ -88,8 +92,8 @@ FIELD	_long_code_lookup_large,	LONG_CODE_SIZE * MAX_LONG_CODE_LARGE,		  SHORT_CO
 START_FIELDS	;; inflate huff code
 
 ;;      name				size    align
-FIELD	_short_code_lookup_small,	SHORT_CODE_SIZE * (1 << (ISAL_DECODE_SHORT_BITS)), LONG_CODE_SIZE
-FIELD	_long_code_lookup_small,	LONG_CODE_SIZE * MAX_LONG_CODE_SMALL,		   SHORT_CODE_SIZE
+FIELD	_short_code_lookup_small,	SMALL_SHORT_CODE_SIZE * (1 << (ISAL_DECODE_SHORT_BITS)), SMALL_LONG_CODE_SIZE
+FIELD	_long_code_lookup_small,	SMALL_LONG_CODE_SIZE * MAX_LONG_CODE_SMALL,		 SMALL_SHORT_CODE_SIZE
 
 %assign _inflate_huff_code_small_size	_FIELD_OFFSET
 %assign _inflate_huff_code_small_align	_STRUCT_ALIGN

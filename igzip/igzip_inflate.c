@@ -214,7 +214,7 @@ static void inline make_inflate_huff_code_large(struct inflate_huff_code_large *
 	uint32_t insert_index;
 	uint32_t last_length;
 	uint32_t copy_size;
-	uint16_t *short_code_lookup = result->short_code_lookup;
+	uint32_t *short_code_lookup = result->short_code_lookup;
 
 	count_total[0] = 0;
 	count_total[1] = 0;

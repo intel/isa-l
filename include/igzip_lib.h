@@ -445,7 +445,7 @@ struct isal_zstream {
 
 /* Large lookup table for decoding huffman codes */
 struct inflate_huff_code_large {
-	uint16_t short_code_lookup[1 << (ISAL_DECODE_LONG_BITS)];
+	uint32_t short_code_lookup[1 << (ISAL_DECODE_LONG_BITS)];
 	uint16_t long_code_lookup[ISAL_HUFF_CODE_LARGE_LONG_ALIGNED];
 };
 
