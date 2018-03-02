@@ -234,9 +234,11 @@ static void inline make_inflate_huff_code_large(struct inflate_huff_code_large *
 	uint32_t code_list_len;
 	uint32_t count_total[17], count_total_tmp[17];
 	uint32_t insert_index;
-	uint32_t last_length;
+	uint32_t last_length, min_length;
 	uint32_t copy_size;
 	uint32_t *short_code_lookup = result->short_code_lookup;
+	int index1, index2, sym1, sym2;
+	uint32_t sym1_code, sym2_code, sym1_len, sym2_len;
 
 	count_total[0] = 0;
 	count_total[1] = 0;
@@ -290,6 +292,7 @@ static void inline make_inflate_huff_code_large(struct inflate_huff_code_large *
 	/* Initialize short_code_lookup, so invalid lookups process data */
 	memset(short_code_lookup, 0x00, copy_size * sizeof(*short_code_lookup));
 
+	min_length = last_length;
 	k = 0;
 	for (; last_length <= ISAL_DECODE_LONG_BITS; last_length++) {
 		/* Copy forward previosly set codes */
@@ -297,6 +300,7 @@ static void inline make_inflate_huff_code_large(struct inflate_huff_code_large *
 		       sizeof(*short_code_lookup) * copy_size);
 		copy_size <<= 1;
 
+		/* Encode code singletons */
 		while (k < code_list_len
 		       && huff_code_table[code_list[k]].length == last_length) {
 			i = code_list[k];
@@ -309,6 +313,42 @@ static void inline make_inflate_huff_code_large(struct inflate_huff_code_large *
 			else
 				short_code_lookup[huff_code_table[i].code] = 0;
 			k++;
+		}
+
+		/* Continue if no pairs are possible */
+		if (last_length < 2 * min_length)
+			continue;
+
+		/* Encode code pairs */
+		for (index1 = count_total[min_length];
+		     index1 < count_total[last_length - min_length + 1]; index1++) {
+			sym1 = code_list[index1];
+			sym1_len = huff_code_table[sym1].length;
+			sym1_code = huff_code_table[sym1].code;
+
+			/*Check that sym1 is a literal */
+			if (sym1 >= 256) {
+				index1 = count_total[sym1_len + 1] - 1;
+				continue;
+			}
+
+			sym2_len = last_length - sym1_len;
+			for (index2 = count_total[sym2_len];
+			     index2 < count_total[sym2_len + 1]; index2++) {
+				sym2 = code_list[index2];
+
+				/* Check that sym2 is an existing symbol */
+				if (sym2 >= max_symbol)
+					break;
+
+				sym2_code = huff_code_table[sym2].code;
+				code = sym1_code | (sym2_code << sym1_len);
+				code_length = sym1_len + sym2_len;
+				short_code_lookup[code] =
+				    sym1 | (sym2 << 8) |
+				    (code_length << LARGE_SHORT_CODE_LEN_OFFSET)
+				    | (2 << LARGE_SYM_COUNT_OFFSET);
+			}
 		}
 	}
 
