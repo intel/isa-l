@@ -237,8 +237,8 @@ static void inline make_inflate_huff_code_large(struct inflate_huff_code_large *
 	uint32_t last_length, min_length;
 	uint32_t copy_size;
 	uint32_t *short_code_lookup = result->short_code_lookup;
-	int index1, index2, sym1, sym2;
-	uint32_t sym1_code, sym2_code, sym1_len, sym2_len;
+	int index1, index2, index3, sym1, sym2, sym3;
+	uint32_t sym1_code, sym2_code, sym3_code, sym1_len, sym2_len, sym3_len;
 
 	count_total[0] = 0;
 	count_total[1] = 0;
@@ -350,6 +350,62 @@ static void inline make_inflate_huff_code_large(struct inflate_huff_code_large *
 				    | (2 << LARGE_SYM_COUNT_OFFSET);
 			}
 		}
+
+		/* Continue if no triples are possible */
+		if (last_length < 3 * min_length)
+			continue;
+
+		/* Encode code triples */
+		for (index1 = count_total[min_length];
+		     index1 < count_total[last_length - 2 * min_length + 1]; index1++) {
+			sym1 = code_list[index1];
+			sym1_len = huff_code_table[sym1].length;
+			sym1_code = huff_code_table[sym1].code;
+			/*Check that sym1 is a literal */
+			if (sym1 >= 256) {
+				index1 = count_total[sym1_len + 1] - 1;
+				continue;
+			}
+
+			if (last_length - sym1_len < 2 * min_length)
+				break;
+
+			for (index2 = count_total[min_length];
+			     index2 < count_total[last_length - sym1_len - min_length + 1];
+			     index2++) {
+				sym2 = code_list[index2];
+				sym2_len = huff_code_table[sym2].length;
+				sym2_code = huff_code_table[sym2].code;
+
+				/* Check that sym2 is a literal */
+				if (sym2 >= 256) {
+					index2 = count_total[sym2_len + 1] - 1;
+					continue;
+				}
+
+				sym3_len = last_length - sym1_len - sym2_len;
+				for (index3 = count_total[sym3_len];
+				     index3 < count_total[sym3_len + 1]; index3++) {
+					sym3 = code_list[index3];
+					sym3_code = huff_code_table[sym3].code;
+
+					/* Check that sym3 is an existing symbol */
+					if (sym3 >= max_symbol)
+						break;
+
+					code = sym1_code | (sym2_code << sym1_len) |
+					    (sym3_code << (sym2_len + sym1_len));
+					code_length = sym1_len + sym2_len + sym3_len;
+					short_code_lookup[code] =
+					    sym1 | (sym2 << 8) | sym3 << 16 |
+					    (code_length << LARGE_SHORT_CODE_LEN_OFFSET)
+					    | (3 << LARGE_SYM_COUNT_OFFSET);
+
+				}
+
+			}
+		}
+
 	}
 
 	for (i = 0; i < long_code_length; i++) {
