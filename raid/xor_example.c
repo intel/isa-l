@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 	printf("XOR example\n");
 	for (i = 0; i < TEST_SOURCES + 1; i++) {
 		void *buf;
-		if (posix_memalign(&buf, 16, TEST_LEN)) {
+		if (posix_memalign(&buf, 32, TEST_LEN)) {
 			printf("alloc error: Fail");
 			return 1;
 		}
