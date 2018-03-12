@@ -618,6 +618,9 @@ struct slver isal_create_hufftables_subset_slver = { 0x0087, 0x01, 0x00 };
 extern uint32_t build_huff_tree(struct heap_tree *heap, uint64_t heap_size, uint64_t node_ptr);
 extern void build_heap(uint64_t * heap, uint64_t heap_size);
 
+static uint32_t convert_dist_to_dist_sym(uint32_t dist);
+static uint32_t convert_length_to_len_sym(uint32_t length);
+
 static const uint8_t bitrev8[0x100] = {
 	0x00, 0x80, 0x40, 0xC0, 0x20, 0xA0, 0x60, 0xE0,
 	0x10, 0x90, 0x50, 0xD0, 0x30, 0xB0, 0x70, 0xF0,
@@ -732,7 +735,10 @@ void isal_update_histogram_base(uint8_t * start_stream, int length,
 	return;
 }
 
-uint32_t convert_dist_to_dist_sym(uint32_t dist)
+/**
+ * @brief  Returns the deflate symbol value for a look back distance.
+ */
+static uint32_t convert_dist_to_dist_sym(uint32_t dist)
 {
 	assert(dist <= 32768 && dist > 0);
 	if (dist <= 2)
@@ -770,7 +776,10 @@ uint32_t convert_dist_to_dist_sym(uint32_t dist)
 
 }
 
-uint32_t convert_length_to_len_sym(uint32_t length)
+/**
+ * @brief  Returns the deflate symbol value for a repeat length.
+ */
+static uint32_t convert_length_to_len_sym(uint32_t length)
 {
 	assert(length > 2 && length < 259);
 
@@ -1001,8 +1010,16 @@ gen_huff_code_lens(struct heap_tree *heap_space, uint32_t heap_size, uint32_t * 
 
 }
 
-inline uint32_t set_huff_codes(struct huff_code *huff_code_table, int table_length,
-			       uint32_t * count)
+/**
+ * @brief Determines the code each element of a deflate compliant huffman tree and stores
+ * it in a lookup table
+ * @requires table has been initialized to already contain the code length for each element.
+ * @param table: A lookup table used to store the codes.
+ * @param table_length: The length of table.
+ * @param count: a histogram representing the number of occurences of codes of a given length
+ */
+static inline uint32_t set_huff_codes(struct huff_code *huff_code_table, int table_length,
+				      uint32_t * count)
 {
 	/* Uses the algorithm mentioned in the deflate standard, Rfc 1951. */
 	int i;
@@ -1057,11 +1074,24 @@ static inline uint32_t set_dist_huff_codes(struct huff_code *codes, uint32_t * b
 	return max_code;
 }
 
-int create_huffman_header(struct BitBuf2 *header_bitbuf,
-			  struct huff_code *lookup_table,
-			  struct rl_code *huffman_rep,
-			  uint16_t huffman_rep_length, uint32_t end_of_block,
-			  uint32_t hclen, uint32_t hlit, uint32_t hdist)
+/**
+ * @brief Creates the header for run length encoded huffman trees.
+ * @param header: the output header.
+ * @param lookup_table: a huffman lookup table.
+ * @param huffman_rep: a run length encoded huffman tree.
+ * @extra_bits: extra bits associated with the corresponding spot in huffman_rep
+ * @param huffman_rep_length: the length of huffman_rep.
+ * @param end_of_block: Value determining whether end of block header is produced or not;
+ * 0 corresponds to not end of block and all other inputs correspond to end of block.
+ * @param hclen: Length of huffman code for huffman codes minus 4.
+ * @param hlit: Length of literal/length table minus 257.
+ * @parm hdist: Length of distance table minus 1.
+ */
+static int create_huffman_header(struct BitBuf2 *header_bitbuf,
+				 struct huff_code *lookup_table,
+				 struct rl_code *huffman_rep,
+				 uint16_t huffman_rep_length, uint32_t end_of_block,
+				 uint32_t hclen, uint32_t hlit, uint32_t hdist)
 {
 	/* hlit, hdist, hclen are as defined in the deflate standard, head is the
 	 * first three deflate header bits.*/
@@ -1098,9 +1128,19 @@ int create_huffman_header(struct BitBuf2 *header_bitbuf,
 	return bit_count;
 }
 
-inline int create_header(struct BitBuf2 *header_bitbuf, struct rl_code *huffman_rep,
-			 uint32_t length, uint64_t * histogram, uint32_t hlit,
-			 uint32_t hdist, uint32_t end_of_block)
+/**
+ * @brief Creates the dynamic huffman deflate header.
+ * @returns Returns the  length of header in bits.
+ * @requires This function requires header is large enough to store the whole header.
+ * @param header: The output header.
+ * @param lit_huff_table: A literal/length code huffman lookup table.\
+ * @param dist_huff_table: A distance huffman code lookup table.
+ * @param end_of_block: Value determining whether end of block header is produced or not;
+ * 0 corresponds to not end of block and all other inputs correspond to end of block.
+ */
+static inline int create_header(struct BitBuf2 *header_bitbuf, struct rl_code *huffman_rep,
+				uint32_t length, uint64_t * histogram, uint32_t hlit,
+				uint32_t hdist, uint32_t end_of_block)
 {
 	int i;
 
@@ -1243,8 +1283,15 @@ static inline uint32_t rl_encode(uint16_t * codes, uint32_t num_codes, uint64_t 
 	return (uint32_t) (pout - out);
 }
 
-void create_code_tables(uint16_t * code_table, uint8_t * code_length_table, uint32_t length,
-			struct huff_code *hufftable)
+/**
+ * @brief Creates a two table representation of huffman codes.
+ * @param code_table: output table containing the code
+ * @param code_size_table: output table containing the code length
+ * @param length: the lenght of hufftable
+ * @param hufftable: a huffman lookup table
+ */
+static void create_code_tables(uint16_t * code_table, uint8_t * code_length_table,
+			       uint32_t length, struct huff_code *hufftable)
 {
 	int i;
 	for (i = 0; i < length; i++) {
@@ -1253,7 +1300,16 @@ void create_code_tables(uint16_t * code_table, uint8_t * code_length_table, uint
 	}
 }
 
-void create_packed_len_table(uint32_t * packed_table, struct huff_code *lit_len_hufftable)
+/**
+ * @brief Creates a packed representation of length huffman codes.
+ * @details In packed_table, bits 32:8 contain the extra bits appended to the huffman
+ * code and bits 8:0 contain the code length.
+ * @param packed_table: the output table
+ * @param length: the length of lit_len_hufftable
+ * @param lit_len_hufftable: a literal/length huffman lookup table
+ */
+static void create_packed_len_table(uint32_t * packed_table,
+				    struct huff_code *lit_len_hufftable)
 {
 	int i, count = 0;
 	uint16_t extra_bits;
@@ -1283,8 +1339,16 @@ void create_packed_len_table(uint32_t * packed_table, struct huff_code *lit_len_
 	    (lit_len_hufftable[LIT_LEN - 1].length);
 }
 
-void create_packed_dist_table(uint32_t * packed_table, uint32_t length,
-			      struct huff_code *dist_hufftable)
+/**
+ * @brief Creates a packed representation of distance  huffman codes.
+ * @details In packed_table, bits 32:8 contain the extra bits appended to the huffman
+ * code and bits 8:0 contain the code length.
+ * @param packed_table: the output table
+ * @param length: the length of lit_len_hufftable
+ * @param dist_hufftable: a distance huffman lookup table
+ */
+static void create_packed_dist_table(uint32_t * packed_table, uint32_t length,
+				     struct huff_code *dist_hufftable)
 {
 	int i, count = 0;
 	uint16_t extra_bits;
@@ -1313,8 +1377,15 @@ void create_packed_dist_table(uint32_t * packed_table, uint32_t length,
 	}
 }
 
-int are_hufftables_useable(struct huff_code *lit_len_hufftable,
-			   struct huff_code *dist_hufftable)
+/**
+ * @brief Checks to see if the hufftable is usable by igzip
+ *
+ * @param lit_len_hufftable: literal/length huffman code
+ * @param dist_hufftable: distance huffman code
+ * @returns Returns 0 if the table is usable
+ */
+static int are_hufftables_useable(struct huff_code *lit_len_hufftable,
+				  struct huff_code *dist_hufftable)
 {
 	int max_lit_code_len = 0, max_len_code_len = 0, max_dist_code_len = 0;
 	int dist_extra_bits = 0, len_extra_bits = 0;
@@ -1539,7 +1610,7 @@ int isal_create_hufftables_subset(struct isal_hufftables *hufftables,
 	return 0;
 }
 
-void expand_hufftables_icf(struct hufftables_icf *hufftables)
+static void expand_hufftables_icf(struct hufftables_icf *hufftables)
 {
 	uint32_t i, eb, j, k, len, code;
 	struct huff_code orig[21], *p_code;
