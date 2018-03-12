@@ -45,17 +45,6 @@ extern "C" {
 #ifdef __MINGW32__
 # include <_mingw.h>
 #endif
-typedef unsigned __int64 UINT64;
-typedef          __int64  INT64;
-typedef unsigned __int32 UINT32;
-typedef unsigned __int16 UINT16;
-typedef unsigned char    UINT8;
-#else
-typedef unsigned long int  UINT64;
-typedef          long int   INT64;
-typedef unsigned int       UINT32;
-typedef unsigned short int UINT16;
-typedef unsigned char      UINT8;
 #endif
 
 
