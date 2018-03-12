@@ -341,9 +341,9 @@ void gf_vect_mul_base(int len, unsigned char *a, unsigned char *src, unsigned ch
 }
 
 struct slver {
-	UINT16 snum;
-	UINT8 ver;
-	UINT8 core;
+	unsigned short snum;
+	unsigned char ver;
+	unsigned char core;
 };
 
 // Version info

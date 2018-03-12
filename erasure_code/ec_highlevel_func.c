@@ -324,9 +324,9 @@ void ec_encode_data_update_avx2(int len, int k, int rows, int vec_i, unsigned ch
 #endif //__x86_64__  || __i386__ || _M_X64 || _M_IX86
 
 struct slver {
-	UINT16 snum;
-	UINT8 ver;
-	UINT8 core;
+	unsigned short snum;
+	unsigned char ver;
+	unsigned char core;
 };
 
 // Version info
