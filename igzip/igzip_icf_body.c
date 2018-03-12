@@ -121,9 +121,9 @@ void gen_icf_map_h1_base(struct isal_zstream *stream,
  * One pass methods for parsing provided match lookup table
  ************************************************************
 */
-struct deflate_icf *compress_icf_map_g(struct isal_zstream *stream,
-				       struct deflate_icf *matches_next,
-				       struct deflate_icf *matches_end)
+static struct deflate_icf *compress_icf_map_g(struct isal_zstream *stream,
+					      struct deflate_icf *matches_next,
+					      struct deflate_icf *matches_end)
 {
 	uint32_t lit_len, lit_len2, dist;
 	uint64_t code;
