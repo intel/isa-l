@@ -161,20 +161,6 @@ uint32_t convert_dist_to_dist_sym(uint32_t dist);
 uint32_t set_huff_codes(struct huff_code *table, int table_length, uint32_t * count);
 
 /**
- * @brief Checks if a literal/length huffman table can be stored in the igzip hufftables files.
- * @param table: A literal/length huffman code lookup table.
- * @returns index of the first symbol which fails and 0xFFFF otherwise.
- */
-uint16_t valid_lit_huff_table(struct huff_code *huff_code_table);
-
-/**
- * @brief Checks if a distance huffman table can be stored in the igzip hufftables files.
- * @param table: A distance huffman code lookup table.
- * @returnsthe index of the first symbol which fails and 0xFFFF otherwise.
- */
-uint16_t valid_dist_huff_table(struct huff_code *huff_code_table);
-
-/**
  * @brief Creates the dynamic huffman deflate header.
  * @returns Returns the  length of header in bits.
  * @requires This function requires header is large enough to store the whole header.
