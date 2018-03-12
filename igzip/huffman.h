@@ -208,7 +208,7 @@ static inline uint32_t compute_hash_mad(uint32_t data)
 	int16_t data_low;
 	int16_t data_high;
 
-	data_low = data;        ;
+	data_low = data;
 	data_high = data >> 16;
 	data = PROD1 * data_low + PROD2 * data_high;
 
