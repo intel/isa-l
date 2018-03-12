@@ -24,25 +24,6 @@ static inline void write_deflate_icf(struct deflate_icf *icf, uint32_t lit_len,
 	    | (extra_bits << (LIT_LEN_BIT_COUNT + DIST_LIT_BIT_COUNT));
 }
 
-void hash_section(struct isal_zstream *stream, uint8_t * next_in, uint8_t * end_in,
-		  uint16_t * last_seen)
-{
-	uint32_t index, hash_input, hash;
-	uint8_t *file_start = stream->next_in - stream->total_in;
-	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
-	uint16_t *hash_table = level_buf->hash_map.hash_table;
-
-	/* Compute Hashes */
-	for (index = 0; index < end_in - next_in - ISAL_LOOK_AHEAD; index++) {
-		hash_input = *(uint32_t *) (next_in + index);
-		hash = compute_hash(hash_input) & HASH_MAP_HASH_MASK;
-		last_seen[index] = hash_table[hash];
-		hash_table[hash] = (uint64_t) (next_in + index - file_start);
-	}
-
-	return;
-}
-
 void set_long_icf_fg_base(uint8_t * next_in, uint8_t * end_in,
 			  struct deflate_icf *match_lookup, struct level_buf *level_buf)
 {
