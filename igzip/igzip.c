@@ -703,7 +703,7 @@ static void write_constant_compressed_stateless(struct isal_zstream *stream,
 	return;
 }
 
-int detect_repeated_char_length(uint8_t * in, uint32_t length)
+static int detect_repeated_char_length(uint8_t * in, uint32_t length)
 {
 	/* This currently assumes the first 8 bytes are the same character.
 	 * This won't work effectively if the input stream isn't aligned well. */
