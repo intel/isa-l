@@ -30,7 +30,7 @@
 #include "igzip_lib.h"
 #include "huff_codes.h"
 
-void inline heapify(uint64_t * heap, uint64_t heap_size, uint64_t index)
+static inline void heapify(uint64_t * heap, uint64_t heap_size, uint64_t index)
 {
 	uint64_t child = 2 * index, tmp;
 	while (child <= heap_size) {
