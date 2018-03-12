@@ -84,8 +84,6 @@ static void write_stream_header(struct isal_zstream *stream);
 static int write_deflate_header_stateless(struct isal_zstream *stream);
 static int write_deflate_header_unaligned_stateless(struct isal_zstream *stream);
 
-unsigned int detect_repeated_char(uint8_t * buf, uint32_t size);
-
 #define TYPE0_HDR_LEN 4
 #define TYPE0_BLK_HDR_LEN 5
 #define TYPE0_MAX_BLK_LEN 65535
