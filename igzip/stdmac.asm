@@ -243,11 +243,11 @@ ssc:
 %ifdef USE_HSWNI
 	shrx	%%dest, %%src, %%index
 %else
-%ifnidn	%%src, %%dest
-	mov	%%dest, %%src
-%endif
 %ifnidn	%%index, rcx
 	mov	rcx, %%index
+%endif
+%ifnidn	%%src, %%dest
+	mov	%%dest, %%src
 %endif
 	shr	%%dest, cl
 %endif
