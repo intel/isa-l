@@ -1452,7 +1452,6 @@ int isal_create_hufftables(struct isal_hufftables *hufftables,
 	uint16_t *dcodes = hufftables->dcodes;
 	uint8_t *lit_table_sizes = hufftables->lit_table_sizes;
 	uint8_t *dcodes_sizes = hufftables->dcodes_sizes;
-	uint8_t *deflate_hdr = hufftables->deflate_hdr;
 	uint64_t *lit_len_histogram = histogram->lit_len_histogram;
 	uint64_t *dist_histogram = histogram->dist_histogram;
 
@@ -1492,7 +1491,7 @@ int isal_create_hufftables(struct isal_hufftables *hufftables,
 	create_packed_len_table(len_table, lit_huff_table);
 	create_packed_dist_table(dist_table, IGZIP_DIST_TABLE_SIZE, dist_huff_table);
 
-	set_buf(&header_bitbuf, deflate_hdr, sizeof(deflate_hdr));
+	set_buf(&header_bitbuf, hufftables->deflate_hdr, sizeof(hufftables->deflate_hdr));
 	init(&header_bitbuf);
 
 	hlit = max_lit_len_sym - 256;
@@ -1543,7 +1542,6 @@ int isal_create_hufftables_subset(struct isal_hufftables *hufftables,
 	uint16_t *dcodes = hufftables->dcodes;
 	uint8_t *lit_table_sizes = hufftables->lit_table_sizes;
 	uint8_t *dcodes_sizes = hufftables->dcodes_sizes;
-	uint8_t *deflate_hdr = hufftables->deflate_hdr;
 	uint64_t *lit_len_histogram = histogram->lit_len_histogram;
 	uint64_t *dist_histogram = histogram->dist_histogram;
 
@@ -1585,7 +1583,7 @@ int isal_create_hufftables_subset(struct isal_hufftables *hufftables,
 	create_packed_len_table(len_table, lit_huff_table);
 	create_packed_dist_table(dist_table, IGZIP_DIST_TABLE_SIZE, dist_huff_table);
 
-	set_buf(&header_bitbuf, deflate_hdr, sizeof(deflate_hdr));
+	set_buf(&header_bitbuf, hufftables->deflate_hdr, sizeof(hufftables->deflate_hdr));
 	init(&header_bitbuf);
 
 	hlit = max_lit_len_sym - 256;
