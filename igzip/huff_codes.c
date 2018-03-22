@@ -970,6 +970,7 @@ static inline uint32_t fix_code_lens(struct heap_tree *heap_space, uint32_t root
 				code_len--;
 		}
 
+		bl_count[0] = 0;
 		for (i = 1; i <= code_len; i++)
 			bl_count[i] = code_len_count[i];
 		for (; i <= max_code_len; i++)
@@ -982,6 +983,7 @@ static inline uint32_t fix_code_lens(struct heap_tree *heap_space, uint32_t root
 			for (; code_len_count[k] == 0; k++) ;
 		}
 	} else {
+		bl_count[0] = 0;
 		for (i = 1; i <= code_len; i++)
 			bl_count[i] = code_len_count[i];
 		for (; i <= max_code_len; i++)
