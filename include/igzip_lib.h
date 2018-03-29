@@ -428,7 +428,7 @@ struct isal_zstream {
  */
 
 /* In the following defines, L stands for LARGE and S for SMALL */
-#define ISAL_L_REM (15 - ISAL_DECODE_LONG_BITS)
+#define ISAL_L_REM (21 - ISAL_DECODE_LONG_BITS)
 #define ISAL_S_REM (15 - ISAL_DECODE_SHORT_BITS)
 
 #define ISAL_L_DUP ((1 << ISAL_L_REM) - (ISAL_L_REM + 1))

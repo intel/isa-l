@@ -48,7 +48,7 @@
 %endm
 
 ;; See inflate_huff_code structure declaration in igzip_lib.h calculation explanation
-%define L_REM (15 - ISAL_DECODE_LONG_BITS)
+%define L_REM (21 - ISAL_DECODE_LONG_BITS)
 %define S_REM (15 - ISAL_DECODE_SHORT_BITS)
 
 %define L_DUP ((1 << L_REM) - (L_REM + 1))

@@ -27,15 +27,16 @@ extern rfc1951_lookup_table
 
 %define LARGE_SHORT_SYM_LEN 25
 %define LARGE_SHORT_SYM_MASK ((1 << LARGE_SHORT_SYM_LEN) - 1)
-%define LARGE_LONG_SYM_LEN 9
+%define LARGE_LONG_SYM_LEN 10
 %define LARGE_LONG_SYM_MASK ((1 << LARGE_LONG_SYM_LEN) - 1)
 %define LARGE_SHORT_CODE_LEN_OFFSET 28
-%define LARGE_LONG_CODE_LEN_OFFSET 9
-%define LARGE_FLAG_BIT_OFFSET 27
+%define LARGE_LONG_CODE_LEN_OFFSET 10
+%define LARGE_FLAG_BIT_OFFSET 25
 %define LARGE_FLAG_BIT (1 << LARGE_FLAG_BIT_OFFSET)
-%define LARGE_SYM_COUNT_OFFSET 25
+%define LARGE_SYM_COUNT_OFFSET 26
 %define LARGE_SYM_COUNT_LEN 2
 %define LARGE_SYM_COUNT_MASK ((1 << LARGE_SYM_COUNT_LEN) - 1)
+%define LARGE_SHORT_MAX_LEN_OFFSET 26
 
 %define SMALL_SHORT_SYM_LEN 9
 %define SMALL_SHORT_SYM_MASK ((1 << SMALL_SHORT_SYM_LEN) - 1)
@@ -309,19 +310,21 @@ stack_size		equ	4 * 8 + 8 * 8
 	test	%%next_sym, LARGE_FLAG_BIT
 	jz	%%end
 
+	shl	rcx, LARGE_SYM_COUNT_LEN
+	or	rcx, %%next_sym_num
+
 	;; Save length associated with symbol
 	mov	%%next_bits, %%read_in
 	shr	%%next_bits, %%lookup_size
 
-	;; Extract the 15-DECODE_LOOKUP_SIZE bits beyond the first %%lookup_size bits.
+	;; Extract the bits beyond the first %%lookup_size bits.
 	CLEAR_HIGH_BITS %%next_bits, rcx, %%lookup_size
 
 	and	%%next_sym, LARGE_SHORT_SYM_MASK
 	add	%%next_sym, %%next_bits
-	lea	%%next_sym, [%%state + LARGE_LONG_CODE_SIZE * %%next_sym]
 
 	;; Lookup actual next symbol
-	movzx	%%next_sym, word [%%next_sym + %%state_offset + LARGE_SHORT_CODE_SIZE * (1 << %%lookup_size)]
+	movzx	%%next_sym, word [%%state + LARGE_LONG_CODE_SIZE * %%next_sym + %%state_offset + LARGE_SHORT_CODE_SIZE * (1 << %%lookup_size)]
 	mov	%%next_sym_num, 1
 
 	;; Save length associated with symbol
@@ -480,7 +483,7 @@ loop_block:
 	;; Decode next symbol and reload the read_in buffer
 	decode_next_lit_len	state, ISAL_DECODE_LONG_BITS, _lit_huff_code, read_in, read_in_length, next_sym, next_sym_num, tmp1
 
-	;; Specutively write next_sym2 if it is a literal
+	;; Specutively write next_sym if it is a literal
 	mov	[next_out], next_sym
 	add	next_out, next_sym_num
 	lea	next_sym2, [8 * next_sym_num - 8]
@@ -496,8 +499,7 @@ loop_block:
 	or	read_in, tmp1
 
 	;; Specutively load data associated with length symbol
-	movzx	rcx, byte [rfc_lookup + _len_extra_bit_count + next_sym2 - 257]
-	movzx	repeat_length, word [rfc_lookup + _len_start + 2 * (next_sym2 - 257)]
+	lea	repeat_length, [next_sym2 - 254]
 
 	;; Test for end of block symbol
 	cmp	next_sym2, 256
@@ -514,9 +516,8 @@ loop_block:
 	lea	read_in_length, [read_in_length + 8 * tmp1]
 
 	;; Specultively load next dist code
-	SHRX	read_in_2, read_in, rcx
 	mov	next_bits2, (1 << ISAL_DECODE_SHORT_BITS) - 1
-	and	next_bits2, read_in_2
+	and	next_bits2, read_in
 	movzx	next_sym3, word [state + _dist_huff_code + SMALL_SHORT_CODE_SIZE * next_bits2]
 
 	;; Check if next_sym2 is a literal, length, or end of block symbol
@@ -524,29 +525,20 @@ loop_block:
 	jl	loop_block
 
 decode_len_dist:
-	;; Find length for length/dist pair
-	mov	next_bits, read_in
-
-	BZHI	next_bits, next_bits, rcx, tmp4
-	add	repeat_length, next_bits
-
-	;; Update read_in for the length extra bits which were read in
-	sub	read_in_length, rcx
-
-	;; Decode distance code
-	decode_next_dist state, ISAL_DECODE_SHORT_BITS, _dist_huff_code, read_in_2, read_in_length, next_sym3, rcx, tmp2
-
-	mov	look_back_dist2 %+ d, [rfc_lookup + _dist_start + 4 * next_sym3]
-
-	;; Load distance code extra bits
-	mov	next_bits, read_in_2
-
 	;; Determine next_out after the copy is finished
 	lea	next_out, [next_out + repeat_length - 1]
 
+	;; Decode distance code
+	decode_next_dist state, ISAL_DECODE_SHORT_BITS, _dist_huff_code, read_in, read_in_length, next_sym3, rcx, tmp2
+
+	mov	look_back_dist2 %+ d, [rfc_lookup + _dist_start + 4 * next_sym3]
+
+	; ;; Load distance code extra bits
+	mov	next_bits, read_in
+
 	;; Calculate the look back distance
 	BZHI	next_bits, next_bits, rcx, tmp4
-	SHRX	read_in, read_in_2, rcx
+	SHRX	read_in, read_in, rcx
 
 	;; Setup next_sym, read_in, and read_in_length for next loop
 	mov	read_in_2, (1 << ISAL_DECODE_LONG_BITS) - 1
@@ -569,8 +561,7 @@ decode_len_dist:
 
 	;; Set tmp2 to be the minimum of COPY_SIZE and repeat_length
 	;; This is to decrease use of small_byte_copy branch
-	xor	tmp2, tmp2
-	or	tmp2, COPY_SIZE
+	mov	tmp2, COPY_SIZE
 	cmp	tmp2, repeat_length
 	cmovg	tmp2, repeat_length
 
@@ -634,20 +625,7 @@ multi_symbol_start:
 	je	end_symbol
 
 decode_len_dist_2:
-	;; Load length exta bits
-	mov	next_bits, read_in
-
-	movzx	repeat_length, word [rfc_lookup + _len_start + 2 * (next_sym - 257)]
-	movzx	rcx, byte [rfc_lookup + _len_extra_bit_count + next_sym - 257]
-
-	;; Calculate repeat length
-	BZHI	next_bits, next_bits, rcx, tmp1
-	add	repeat_length, next_bits
-
-	;; Update read_in for the length extra bits which were read in
-	SHRX	read_in, read_in, rcx
-	sub	read_in_length, rcx
-
+	lea	repeat_length, [next_sym - 254]
 	;; Decode distance code
 	decode_next_dist_with_load state, ISAL_DECODE_SHORT_BITS, _dist_huff_code, read_in, read_in_length, next_sym, rcx, tmp1
 
