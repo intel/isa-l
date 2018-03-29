@@ -115,6 +115,7 @@ fi
 time $MAKE -f Makefile.unx -j $cpus $build_opt ex
 msg+=$'Examples build: Pass\n'
 
+./ec_simple_example -r $S
 ./crc_simple_test
 ./crc64_example
 ./xor_example

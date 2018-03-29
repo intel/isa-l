@@ -32,6 +32,7 @@ include raid/Makefile.am
 include crc/Makefile.am
 include igzip/Makefile.am
 include tests/fuzz/Makefile.am
+include examples/ec/Makefile.am
 
 # LIB version info not necessarily the same as package version
 LIBISAL_CURRENT=2
