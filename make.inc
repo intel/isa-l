@@ -133,11 +133,11 @@ $(all_perf_tests): % : %.c $(lib_name)
 $(sort $(notdir $(examples))): % : %.c $(lib_name)
 $(sort $(notdir $(other_tests))): % : %.c $(lib_name)
 
-$(all_llvm_fuzz_tests): LDLIBS += -lFuzzer
+$(all_llvm_fuzz_tests): FUZZLINK = -lFuzzer
 $(all_llvm_fuzz_tests): CFLAGS += -fsanitize-coverage=trace-pc-guard -fsanitize=address
 $(all_llvm_fuzz_tests): CXXFLAGS += -fsanitize-coverage=trace-pc-guard -fsanitize=address
 $(all_llvm_fuzz_tests): % : %.o $(lib_name)
-	$(CXX) $(CXXFLAGS)  $^ $(LDLIBS) -o $@
+	$(CXX) $(CXXFLAGS)  $^ $(LDLIBS) $(FUZZLINK) -o $@
 
 
 sim test trace: $(addsuffix .run,$(all_unit_tests))

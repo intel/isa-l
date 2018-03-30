@@ -103,13 +103,20 @@ fi
 # Optionally build llvm fuzz tests
 if [ $use_llvm -ge 0 ]; then
     echo Build llvm fuzz tests
-    if ! ( command -V clang++ > /dev/null &&
-	       echo int LLVMFuzzerTestOneInput\(\)\{return 0\;\} | clang++ -x c - -lFuzzer -lpthread -o /dev/null); then
-	echo $0 option --llvm requires clang++ and libFuzzer
-	exit 0
+    if ( command -V clang++ > /dev/null ); then
+	if (echo int LLVMFuzzerTestOneInput\(\)\{return 0\;\} | clang++ -x c - -fsanitize=fuzzer,address -lpthread -o /dev/null >& /dev/null); then
+	    echo have modern clang
+	    llvm_link_args='FUZZLINK=-fsanitize=fuzzer,address'
+	elif (echo int LLVMFuzzerTestOneInput\(\)\{return 0\;\} | clang++ -x c - -lFuzzer -lpthread -o /dev/null >& /dev/null); then
+	    echo have libFuzzer
+	    llvm_link_args='FUZZLINK=-lFuzzer'
+	else
+	    echo $0 option --llvm requires clang++ and libFuzzer
+	    exit 0
+	fi
     fi
     rm -rf bin
-    make -f Makefile.unx units=igzip llvm_fuzz_tests igzip_dump_inflate_corpus CC=clang CXX=clang++
+    make -f Makefile.unx units=igzip llvm_fuzz_tests igzip_dump_inflate_corpus CC=clang CXX=clang++ ${llvm_link_args}
 fi
 
 # Optionally fill fuzz input with internal tests corpus
