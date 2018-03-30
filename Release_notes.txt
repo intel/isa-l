@@ -1,4 +1,4 @@
-v2.21 Intel Intelligent Storage Acceleration Library Release Notes
+v2.22 Intel Intelligent Storage Acceleration Library Release Notes
 ==================================================================
 
 RELEASE NOTE CONTENTS
@@ -15,6 +15,13 @@ RELEASE NOTE CONTENTS
 
 2. FIXED ISSUES
 ---------------
+v2.22
+
+* Fix ISA-L builds for other architectures.  Base function and examples
+  sanitized for non-IA builds.
+
+* Fix fuzz test script to work with llvm 6.0 builtin libFuzz.
+
 v2.20
 
 * Inflate total_out behavior corrected for in-progress decompression.
@@ -66,6 +73,14 @@ v2.10
 
 3. CHANGE LOG & FEATURES ADDED
 ------------------------------
+v2.22
+
+* Igzip: AVX2 version of level 3 compression added.
+
+* Erasure code examples
+  - New examples for standard EC encode and decode.
+  - Example of piggyback EC encode and decode.
+
 v2.21
 
 * Igzip improvements
