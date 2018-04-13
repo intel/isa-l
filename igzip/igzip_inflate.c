@@ -72,6 +72,11 @@ extern int decode_huffman_code_block_stateless(struct inflate_state *);
 
 #define MIN_DEF_MATCH 3
 
+#define TRIPLE_SYM_FLAG 0
+#define DOUBLE_SYM_FLAG TRIPLE_SYM_FLAG + 1
+#define SINGLE_SYM_FLAG DOUBLE_SYM_FLAG + 1
+#define DEFAULT_SYM_FLAG TRIPLE_SYM_FLAG
+
 /* structure contain lookup data based on RFC 1951 */
 struct rfc1951_tables {
 	uint8_t dist_extra_bit_count[32];
@@ -297,7 +302,8 @@ static void inline expand_lit_len_huffcode(struct huff_code *lit_len_huff,
  * of each code length */
 static void make_inflate_huff_code_lit_len(struct inflate_huff_code_large *result,
 					   struct huff_code *huff_code_table,
-					   uint32_t table_length, uint16_t * count_total)
+					   uint32_t table_length, uint16_t * count_total,
+					   uint32_t multisym)
 {
 	int i, j, k;
 	uint16_t code = 0;
@@ -384,7 +390,7 @@ static void make_inflate_huff_code_lit_len(struct inflate_huff_code_large *resul
 		}
 
 		/* Continue if no pairs are possible */
-		if (last_length < 2 * min_length)
+		if (multisym >= SINGLE_SYM_FLAG || last_length < 2 * min_length)
 			continue;
 
 		/* Encode code pairs */
@@ -420,7 +426,7 @@ static void make_inflate_huff_code_lit_len(struct inflate_huff_code_large *resul
 		}
 
 		/* Continue if no triples are possible */
-		if (last_length < 3 * min_length)
+		if (multisym >= DOUBLE_SYM_FLAG || last_length < 3 * min_length)
 			continue;
 
 		/* Encode code triples */
@@ -856,6 +862,7 @@ static int inline setup_static_header(struct inflate_state *state)
 	int i;
 	struct huff_code lit_code[LIT_LEN_ELEMS];
 	struct huff_code dist_code[DIST_LEN + 2];
+	uint32_t multisym = SINGLE_SYM_FLAG;
 	/* These tables are based on the static huffman tree described in RFC
 	 * 1951 */
 	uint16_t lit_count[MAX_LIT_LEN_COUNT] = {
@@ -889,7 +896,7 @@ static int inline setup_static_header(struct inflate_state *state)
 	expand_lit_len_huffcode(lit_code, lit_count);
 
 	make_inflate_huff_code_lit_len(&state->lit_huff_code, lit_code, LIT_LEN_ELEMS,
-				       lit_count);
+				       lit_count, multisym);
 	make_inflate_huff_code_dist(&state->dist_huff_code, dist_code, DIST_LEN + 2,
 				    dist_count, DIST_LEN);
 
@@ -1069,13 +1076,17 @@ static int inline setup_dynamic_header(struct inflate_state *state)
 	uint16_t code_count[16], lit_count[MAX_LIT_LEN_COUNT], dist_count[16];
 	uint16_t *count;
 	uint16_t symbol;
-
+	uint32_t multisym = DEFAULT_SYM_FLAG;
 	/* This order is defined in RFC 1951 page 13 */
 	const uint8_t code_length_code_order[CODE_LEN_CODES] = {
 		0x10, 0x11, 0x12, 0x00, 0x08, 0x07, 0x09, 0x06,
 		0x0a, 0x05, 0x0b, 0x04, 0x0c, 0x03, 0x0d, 0x02,
 		0x0e, 0x01, 0x0f
 	};
+
+	if (state->bfinal && state->avail_in <= 8 * 1024) {
+		multisym = DOUBLE_SYM_FLAG;
+	}
 
 	memset(code_count, 0, sizeof(code_count));
 	memset(lit_count, 0, sizeof(lit_count));
@@ -1221,7 +1232,7 @@ static int inline setup_dynamic_header(struct inflate_state *state)
 	set_codes(lit_and_dist_huff, LIT_LEN, lit_count);
 	expand_lit_len_huffcode(lit_and_dist_huff, lit_count);
 	make_inflate_huff_code_lit_len(&state->lit_huff_code, lit_and_dist_huff, LIT_LEN_ELEMS,
-				       lit_count);
+				       lit_count, multisym);
 
 	state->block_state = ISAL_BLOCK_CODED;
 
