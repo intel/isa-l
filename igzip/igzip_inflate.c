@@ -230,10 +230,11 @@ static uint64_t inline inflate_in_read_bits(struct inflate_state *state, uint8_t
 	return ret;
 }
 
-static void inline set_codes(struct huff_code *huff_code_table, int table_length,
-			     uint16_t * count)
+static int inline set_codes(struct huff_code *huff_code_table, int table_length,
+			    uint16_t * count)
 {
-	uint16_t next_code[MAX_HUFF_TREE_DEPTH + 1];
+	uint32_t max;
+	uint32_t next_code[MAX_HUFF_TREE_DEPTH + 1];
 	int i;
 
 	/* Setup for calculating huffman codes */
@@ -241,6 +242,11 @@ static void inline set_codes(struct huff_code *huff_code_table, int table_length
 	next_code[1] = 0;
 	for (i = 2; i < MAX_HUFF_TREE_DEPTH + 1; i++)
 		next_code[i] = (next_code[i - 1] + count[i - 1]) << 1;
+
+	max = (next_code[MAX_HUFF_TREE_DEPTH] + count[MAX_HUFF_TREE_DEPTH]);
+
+	if (max > (1 << MAX_HUFF_TREE_DEPTH))
+		return ISAL_INVALID_BLOCK;
 
 	/* Calculate code corresponding to a given symbol */
 	for (i = 0; i < table_length; i++) {
@@ -251,6 +257,7 @@ static void inline set_codes(struct huff_code *huff_code_table, int table_length
 
 		next_code[huff_code_table[i].length] += 1;
 	}
+	return 0;
 }
 
 static void inline expand_lit_len_huffcode(struct huff_code *lit_len_huff,
@@ -538,8 +545,6 @@ static void inline make_inflate_huff_code_dist(struct inflate_huff_code_small *r
 					       uint32_t max_symbol)
 {
 	int i, j, k;
-	uint16_t code = 0;
-	uint16_t next_code[MAX_HUFF_TREE_DEPTH + 1];
 	uint16_t long_code_list[LIT_LEN];
 	uint32_t long_code_length = 0;
 	uint16_t temp_code_list[1 << (15 - ISAL_DECODE_SHORT_BITS)];
@@ -578,10 +583,6 @@ static void inline make_inflate_huff_code_dist(struct inflate_huff_code_small *r
 		}
 	}
 
-	next_code[0] = code;
-	for (i = 1; i < MAX_HUFF_TREE_DEPTH + 1; i++)
-		next_code[i] = (next_code[i - 1] + count[i - 1]) << 1;
-
 	last_length = huff_code_table[code_list[0]].length;
 	if (last_length > ISAL_DECODE_SHORT_BITS)
 		last_length = ISAL_DECODE_SHORT_BITS;
@@ -601,13 +602,6 @@ static void inline make_inflate_huff_code_dist(struct inflate_huff_code_small *r
 			last_length++;
 			copy_size <<= 1;
 		}
-
-		/* Store codes as zero for invalid codes used in static header construction */
-		huff_code_table[i].code =
-		    bit_reverse2(next_code[huff_code_table[i].length],
-				 huff_code_table[i].length);
-
-		next_code[huff_code_table[i].length] += 1;
 
 		/* Set lookup table to return the current symbol concatenated
 		 * with the code length when the first DECODE_LENGTH bits of the
@@ -631,11 +625,6 @@ static void inline make_inflate_huff_code_dist(struct inflate_huff_code_small *r
 
 	while (k < code_list_len) {
 		i = code_list[k];
-		huff_code_table[i].code =
-		    bit_reverse2(next_code[huff_code_table[i].length],
-				 huff_code_table[i].length);
-
-		next_code[huff_code_table[i].length] += 1;
 
 		/* Store the element in a list of elements with long codes. */
 		long_code_list[long_code_length] = i;
@@ -699,8 +688,6 @@ static void inline make_inflate_huff_code_header(struct inflate_huff_code_small 
 						 uint32_t max_symbol)
 {
 	int i, j, k;
-	uint16_t code = 0;
-	uint16_t next_code[MAX_HUFF_TREE_DEPTH + 1];
 	uint16_t long_code_list[LIT_LEN];
 	uint32_t long_code_length = 0;
 	uint16_t temp_code_list[1 << (15 - ISAL_DECODE_SHORT_BITS)];
@@ -739,10 +726,6 @@ static void inline make_inflate_huff_code_header(struct inflate_huff_code_small 
 		}
 	}
 
-	next_code[0] = code;
-	for (i = 1; i < MAX_HUFF_TREE_DEPTH + 1; i++)
-		next_code[i] = (next_code[i - 1] + count[i - 1]) << 1;
-
 	last_length = huff_code_table[code_list[0]].length;
 	if (last_length > ISAL_DECODE_SHORT_BITS)
 		last_length = ISAL_DECODE_SHORT_BITS;
@@ -762,13 +745,6 @@ static void inline make_inflate_huff_code_header(struct inflate_huff_code_small 
 			last_length++;
 			copy_size <<= 1;
 		}
-
-		/* Store codes as zero for invalid codes used in static header construction */
-		huff_code_table[i].code =
-		    bit_reverse2(next_code[huff_code_table[i].length],
-				 huff_code_table[i].length);
-
-		next_code[huff_code_table[i].length] += 1;
 
 		/* Set lookup table to return the current symbol concatenated
 		 * with the code length when the first DECODE_LENGTH bits of the
@@ -791,11 +767,6 @@ static void inline make_inflate_huff_code_header(struct inflate_huff_code_small 
 
 	while (k < code_list_len) {
 		i = code_list[k];
-		huff_code_table[i].code =
-		    bit_reverse2(next_code[huff_code_table[i].length],
-				 huff_code_table[i].length);
-
-		next_code[huff_code_table[i].length] += 1;
 
 		/* Store the element in a list of elements with long codes. */
 		long_code_list[long_code_length] = i;
@@ -894,6 +865,8 @@ static int inline setup_static_header(struct inflate_state *state)
 	set_codes(lit_code, LIT_LEN + 2, lit_count);
 	lit_count[8] -= 2;
 	expand_lit_len_huffcode(lit_code, lit_count);
+
+	set_codes(dist_code, DIST_LEN + 2, dist_count);
 
 	make_inflate_huff_code_lit_len(&state->lit_huff_code, lit_code, LIT_LEN_ELEMS,
 				       lit_count, multisym);
@@ -1118,7 +1091,7 @@ static int inline setup_dynamic_header(struct inflate_state *state)
 	if (state->read_in_length < 0)
 		return ISAL_END_INPUT;
 
-	if (i == 16)
+	if (i == 16 || set_codes(code_huff, CODE_LEN_CODES, code_count))
 		return ISAL_INVALID_BLOCK;
 
 	make_inflate_huff_code_header(&inflate_code_huff, code_huff, CODE_LEN_CODES,
@@ -1226,10 +1199,15 @@ static int inline setup_dynamic_header(struct inflate_state *state)
 	if (state->read_in_length < 0)
 		return ISAL_END_INPUT;
 
+	if (set_codes(&lit_and_dist_huff[LIT_LEN], DIST_LEN, dist_count))
+		return ISAL_INVALID_BLOCK;
+
 	make_inflate_huff_code_dist(&state->dist_huff_code, &lit_and_dist_huff[LIT_LEN],
 				    DIST_LEN, dist_count, DIST_LEN);
 
-	set_codes(lit_and_dist_huff, LIT_LEN, lit_count);
+	if (set_codes(lit_and_dist_huff, LIT_LEN, lit_count))
+		return ISAL_INVALID_BLOCK;
+
 	expand_lit_len_huffcode(lit_and_dist_huff, lit_count);
 	make_inflate_huff_code_lit_len(&state->lit_huff_code, lit_and_dist_huff, LIT_LEN_ELEMS,
 				       lit_count, multisym);
