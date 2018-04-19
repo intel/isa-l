@@ -43,9 +43,22 @@
 # define RUN_MEM_SIZE 1000000000
 #endif
 
-#define OPTARGS "hl:z:i:"
+#define OPTARGS "hl:z:i:sb:"
 
 #define LEVEL_QUEUE_LIMIT 16
+
+#define STATELESS_PERF 0
+#define STATEFUL_PERF 1
+
+char stateless_perf_line[] = "isal_inflate_stateless_perf - iter: %d\n";
+char stateful_perf_line[] = "isal_inflate_stateful_perf - iter: %d in_block_size: %d\n";
+
+char stateless_file_perf_line[] =
+    "  inflate_file-> name: %s size: %lu compress_size: %lu strategy: %s %d\n";
+char stateful_file_perf_line[] =
+    "  inflate_file-> name: %s size: %lu compress_size: %lu strategy: %s %d\n";
+#define perf_perf_line "  inflate_perf-> "
+
 int level_size_buf[10] = {
 #ifdef ISAL_DEF_LVL0_DEFAULT
 	ISAL_DEF_LVL0_DEFAULT,
@@ -102,12 +115,14 @@ int level_size_buf[10] = {
 int usage(void)
 {
 	fprintf(stderr,
-		"Usage: igzip_stateless_file_perf [options] <infile>\n"
+		"Usage: igzip_inflate_perf [options] <infile>\n"
 		"  -h          help\n"
 		"  -l <level>  isa-l compression level to test, may be specified upto %d times\n"
 		"  -z <level>  zlib  compression level to test, may be specified upto %d times\n"
-		"  -i <iter>   number of iterations (at least 1)\n", LEVEL_QUEUE_LIMIT,
-		LEVEL_QUEUE_LIMIT);
+		"  -i <iter>   number of iterations (at least 1)\n"
+		"  -s          use stateful inflate instead of stateless\n"
+		"  -b <size>   input buffer size, implies -s, 0 buffers all the input\n",
+		LEVEL_QUEUE_LIMIT, LEVEL_QUEUE_LIMIT);
 	exit(0);
 }
 
@@ -150,6 +165,43 @@ void isal_inflate_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * outbuf,
 	int i, check;
 
 	/* Check that data decompresses */
+	state.next_in = inbuf;
+	state.avail_in = inbuf_size;
+	state.next_out = outbuf;
+	state.avail_out = outbuf_size;
+
+	check = isal_inflate_stateless(&state);
+	if (check) {
+		printf("Error in decompression with error %d\n", check);
+		return;
+	}
+
+	perf_start(&start);
+
+	for (i = 0; i < iterations; i++) {
+		state.next_in = inbuf;
+		state.avail_in = inbuf_size;
+		state.next_out = outbuf;
+		state.avail_out = outbuf_size;
+		isal_inflate_stateless(&state);
+	}
+	perf_stop(&stop);
+
+	perf_print(stop, start, (long long)outbuf_size * i);
+
+}
+
+void isal_inflate_stateful_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * outbuf,
+				uint64_t outbuf_size, uint64_t in_block_size, int iterations)
+{
+	struct inflate_state state;
+	struct perf start, stop;
+	int i, check;
+	uint64_t inbuf_remaining;
+
+	if (in_block_size == 0)
+		in_block_size = inbuf_size;
+	/* Check that data decompresses */
 	isal_inflate_init(&state);
 	state.next_in = inbuf;
 	state.avail_in = inbuf_size;
@@ -166,11 +218,28 @@ void isal_inflate_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * outbuf,
 
 	for (i = 0; i < iterations; i++) {
 		isal_inflate_init(&state);
-		state.next_in = inbuf;
-		state.avail_in = inbuf_size;
 		state.next_out = outbuf;
 		state.avail_out = outbuf_size;
-		isal_inflate(&state);
+		inbuf_remaining = inbuf_size;
+
+		while (inbuf_remaining > 0) {
+
+			state.avail_in = (inbuf_remaining <= in_block_size) ?
+			    in_block_size : inbuf_remaining;
+			inbuf_remaining -= state.avail_in;
+
+			check = isal_inflate(&state);
+
+			if (check < 0) {
+				printf("Error in decompression with error %d\n", check);
+				return;
+			}
+		}
+
+		if (check != ISAL_DECOMP_OK) {
+			printf("Error decompression finished with return value %d\n", check);
+			return;
+		}
 	}
 	perf_stop(&stop);
 
@@ -187,17 +256,16 @@ int main(int argc, char *argv[])
 
 	char *in_file_name = NULL;
 
-	uint32_t level_queue[LEVEL_QUEUE_LIMIT] = {
-		0
-	};
+	uint32_t level_queue[LEVEL_QUEUE_LIMIT] = { 1 };
 	int level_queue_size = 0;
 	uint32_t level = 0;
 
-	uint32_t zlib_queue[LEVEL_QUEUE_LIMIT] = {
-		0
-	};
+	uint32_t zlib_queue[LEVEL_QUEUE_LIMIT] = { 0 };
 
 	int zlib_queue_size = 0;
+	int perf_type = STATELESS_PERF;
+	uint64_t in_block_size = 0;
+	char *perf_line = stateless_perf_line;
 
 	while ((c = getopt(argc, argv, OPTARGS)) != -1) {
 		switch (c) {
@@ -235,6 +303,15 @@ int main(int argc, char *argv[])
 			iterations = atoi(optarg);
 			if (iterations < 1)
 				usage();
+			break;
+		case 's':
+			perf_type = STATEFUL_PERF;
+			perf_line = stateful_perf_line;
+			break;
+		case 'b':
+			perf_type = STATEFUL_PERF;
+			perf_line = stateful_perf_line;
+			in_block_size = atoi(optarg);
 			break;
 		case 'h':
 		default:
@@ -292,32 +369,53 @@ int main(int argc, char *argv[])
 	fclose(in);
 
 	for (i = 0; i < level_queue_size; i++) {
-		printf("isal_inflate_stateless_perf: compress_type = isal\n");
+		printf(perf_line, iterations, in_block_size);
 
 		compress_size = compressbuf_size;
 		isal_compress(compressbuf, &compress_size, filebuf, infile_size,
 			      level_queue[i]);
 
-		printf("  file = %s - size = %lu compress_size = %lu iter = %d level = %d\n",
-		       in_file_name, infile_size, compress_size, iterations, level_queue[i]);
-		printf("  ");
-		isal_inflate_perf(compressbuf, compress_size, decompbuf, decompbuf_size,
-				  iterations);
+		if (perf_type == STATEFUL_PERF) {
+			printf(stateful_file_perf_line, in_file_name, infile_size,
+			       compress_size, "isal", level_queue[i]);
+			printf(perf_perf_line);
 
+			isal_inflate_stateful_perf(compressbuf, compress_size, decompbuf,
+						   decompbuf_size, in_block_size, iterations);
+
+		} else {
+			printf(stateless_file_perf_line, in_file_name, infile_size,
+			       compress_size, "isal", level_queue[i]);
+			printf(perf_perf_line);
+
+			isal_inflate_perf(compressbuf, compress_size, decompbuf,
+					  decompbuf_size, iterations);
+		}
 	}
 
 	for (i = 0; i < zlib_queue_size; i++) {
-		printf("isal_inflate_stateless_perf: compress_type = zlib\n");
+		printf(perf_line, iterations, in_block_size);
 
 		compress_size = compressbuf_size;
 		compress2(compressbuf, &compress_size, filebuf, infile_size, zlib_queue[i]);
 
-		printf("  file = %s - size = %lu compress_size = %lu iter = %d level = %d\n",
-		       in_file_name, infile_size, compress_size, iterations, zlib_queue[i]);
-		printf("  ");
+		if (perf_type == STATEFUL_PERF) {
+			printf(stateful_file_perf_line, in_file_name, infile_size,
+			       compress_size, "zlib", zlib_queue[i]);
+			printf(perf_perf_line);
 
-		isal_inflate_perf(compressbuf + 2, compress_size - 2, decompbuf,
-				  decompbuf_size, iterations);
+			isal_inflate_stateful_perf(compressbuf + 2, compress_size - 2,
+						   decompbuf, decompbuf_size, in_block_size,
+						   iterations);
+
+		} else {
+			printf(stateless_file_perf_line, in_file_name, infile_size,
+			       compress_size, "zlib", zlib_queue[i]);
+			printf(perf_perf_line);
+
+			isal_inflate_perf(compressbuf + 2, compress_size - 2, decompbuf,
+					  decompbuf_size, iterations);
+		}
 	}
 
 	free(compressbuf);
