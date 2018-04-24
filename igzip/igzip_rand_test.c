@@ -656,10 +656,31 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 				state->next_out = uncomp_tmp;
 			}
 		}
+#ifdef VERBOSE
+		printf("Pre inflate\n");
+		printf
+		    ("compressed_size = 0x%05x, in_processed = 0x%05x, in_size = 0x%05x, avail_in = 0x%05x\n",
+		     compress_len, comp_processed, comp_tmp_size, state->avail_in);
+		printf
+		    ("data_size       = 0x%05x, out_processed  = 0x%05x, out_size  = 0x%05x, avail_out  = 0x%05x, total_out  = 0x%05x\n",
+		     *uncompress_len, uncomp_processed, uncomp_tmp_size, state->avail_out,
+		     state->total_out);
+#endif
 
 		ret = isal_inflate_with_checks(state, compress_len, *uncompress_len, comp_tmp,
 					       comp_tmp_size, comp_processed, uncomp_tmp,
 					       uncomp_tmp_size, uncomp_processed);
+
+#ifdef VERBOSE
+		printf("Post inflate\n");
+		printf
+		    ("compressed_size = 0x%05x, in_processed = 0x%05x, in_size = 0x%05x, avail_in = 0x%05x\n",
+		     compress_len, comp_processed, comp_tmp_size, state->avail_in);
+		printf
+		    ("data_size       = 0x%05x, out_processed  = 0x%05x, out_size  = 0x%05x, avail_out  = 0x%05x, total_out  = 0x%05x\n",
+		     *uncompress_len, uncomp_processed, uncomp_tmp_size, state->avail_out,
+		     state->total_out);
+#endif
 
 		if (state->block_state == ISAL_BLOCK_FINISH || ret != 0) {
 			memcpy(uncompress_buf + uncomp_processed, uncomp_tmp, uncomp_tmp_size);
