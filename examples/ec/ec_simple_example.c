@@ -100,8 +100,9 @@ int main(int argc, char *argv[])
 		case 'r':
 			srand(atoi(optarg));
 			k = rand() % MMAX;
-			k = (k < 1) ? 1 : k;
+			k++;	// Pick k (1 to MMAX)
 			p = rand() % (MMAX - k);
+			p++;	// Pick p (1 to MMAX - k)
 			for (i = 0; i < k + p && nerrs < p; i++)
 				if (rand() & 1)
 					frag_err_list[nerrs++] = i;
@@ -115,7 +116,7 @@ int main(int argc, char *argv[])
 	m = k + p;
 
 	// Check for valid parameters
-	if (m > MMAX || k > KMAX || m < 0 || p < 0 || k < 1) {
+	if (m > MMAX || k > KMAX || m < 0 || p < 1 || k < 1) {
 		printf(" Input test parameter error m=%d, k=%d, p=%d, erasures=%d\n",
 		       m, k, p, nerrs);
 		usage();
