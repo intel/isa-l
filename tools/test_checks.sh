@@ -46,6 +46,13 @@ time ./autogen.sh
 time ./configure --prefix=$tmp_install_dir $opt_config_target
 time $MAKE -j $cpus
 time $MAKE check -j $cpus D="-D TEST_SEED=$S"
+if command -V ldconfig >/dev/null 2>&1; then
+    if ldconfig -p | grep -q libz.so; then
+	time $MAKE other -j $cpus
+	time $MAKE ex    -j $cpus
+	time $MAKE tests -j $cpus
+    fi
+fi
 time $MAKE install
 
 # Check for gnu executable stack set
@@ -62,6 +69,17 @@ fi
 
 $MAKE clean
 
+# Check that make clean did not leave any junk behind
+if git status > /dev/null 2>&1; then
+    if git status --porcelain --ignored |& grep -x '.*\.o\|.*\.lo\|.*\.a\|.*\.la\|.*\.s'; then
+	echo Clean directory check Fail
+	exit 1
+    else
+	echo Clean directory check Pass
+    fi
+else
+    echo Clean directory check not supported
+fi
 
 
 echo $0: Pass
