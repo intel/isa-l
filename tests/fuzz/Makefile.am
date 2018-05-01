@@ -33,7 +33,7 @@ src_include += -I $(srcdir)/tests/fuzz
 other_tests += tests/fuzz/igzip_fuzz_inflate
 igzip_fuzz_inflate: igzip_checked_inflate_fuzz_test.o
 igzip_fuzz_inflate: LDLIBS += -lz
-tests_fuzz_igzip_fuzz_inflate_LDADD = tests/fuzz/igzip_checked_inflate_fuzz_test.lo libisal.la
+tests_fuzz_igzip_fuzz_inflate_LDADD = tests/fuzz/igzip_checked_inflate_fuzz_test.o libisal.la
 tests_fuzz_igzip_fuzz_inflate_LDFLAGS = -lz
 
 other_tests += tests/fuzz/igzip_dump_inflate_corpus
