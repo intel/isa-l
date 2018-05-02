@@ -182,8 +182,10 @@ void create_rand_repeat_data(uint8_t * data, int size)
 
 	max_repeat_data += power_of_2_array[power];
 
-	if (size-- > 0)
+	if (size > 0) {
+		size--;
 		*data++ = rand();
+	}
 
 	while (size > 0) {
 		next_data = rand() % max_repeat_data;
@@ -208,8 +210,10 @@ void create_rand_repeat_data(uint8_t * data, int size)
 					*data = *(data - distance);
 					data++;
 				}
-			} else
+			} else {
 				memcpy(data, data - distance, length);
+				data += length;
+			}
 		}
 	}
 }
