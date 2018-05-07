@@ -41,11 +41,13 @@ if uname | grep -q 'Darwin' 2>&1; then
     export SED=`which sed`
 fi
 
-# Tests
+# Build and run check tests
 time ./autogen.sh
 time ./configure --prefix=$tmp_install_dir $opt_config_target
 time $MAKE -j $cpus
 time $MAKE check -j $cpus D="-D TEST_SEED=$S"
+
+# Build other tests if deps found
 if command -V ldconfig >/dev/null 2>&1; then
     if ldconfig -p | grep -q libz.so; then
 	time $MAKE other -j $cpus
@@ -71,7 +73,7 @@ $MAKE clean
 
 # Check that make clean did not leave any junk behind
 if git status > /dev/null 2>&1; then
-    if git status --porcelain --ignored |& grep -x '.*\.o\|.*\.lo\|.*\.a\|.*\.la\|.*\.s'; then
+    if git status --porcelain --ignored | grep -x '.*\.o\|.*\.lo\|.*\.a\|.*\.la\|.*\.s'; then
 	echo Clean directory check Fail
 	exit 1
     else
