@@ -1,5 +1,5 @@
 /**********************************************************************
-  Copyright(c) 2011-2016 Intel Corporation All rights reserved.
+  Copyright(c) 2011-2018 Intel Corporation All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -34,8 +34,7 @@
 #include "huff_codes.h"
 #include "igzip_lib.h"
 #include "test.h"
-
-# include <zlib.h>
+#include <zlib.h>
 
 #define BUF_SIZE 1024
 #define MIN_TEST_LOOPS   8
@@ -249,7 +248,7 @@ void isal_inflate_stateful_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * 
 
 int main(int argc, char *argv[])
 {
-	FILE *in;
+	FILE *in = NULL;
 	unsigned char *compressbuf, *decompbuf, *filebuf;
 	int i, c, iterations = 0;
 	uint64_t infile_size, decompbuf_size, compressbuf_size, compress_size;
@@ -320,24 +319,22 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (optind < argc) {
-		in_file_name = argv[optind];
-		in = fopen(in_file_name, "rb");
-	} else
+	if (optind >= argc)
 		usage();
 
 	/* Allocate space for entire input file and output
 	 * (assuming some possible expansion on output size)
 	 */
+	in_file_name = argv[optind];
+	in = fopen(in_file_name, "rb");
 	infile_size = get_filesize(in);
 
-	if (infile_size != 0) {
-		decompbuf_size = infile_size;
-	} else {
+	if (infile_size == 0) {
 		printf("Error: input file has 0 size\n");
 		exit(0);
 	}
 
+	decompbuf_size = infile_size;
 	if (iterations == 0) {
 		iterations = infile_size ? RUN_MEM_SIZE / infile_size : MIN_TEST_LOOPS;
 		if (iterations < MIN_TEST_LOOPS)
@@ -365,7 +362,10 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
-	fread(filebuf, 1, infile_size, in);
+	if (infile_size != fread(filebuf, 1, infile_size, in)) {
+		fprintf(stderr, "Could not read in all input\n");
+		exit(0);
+	}
 	fclose(in);
 
 	for (i = 0; i < level_queue_size; i++) {
