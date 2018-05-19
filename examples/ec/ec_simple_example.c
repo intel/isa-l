@@ -99,10 +99,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'r':
 			srand(atoi(optarg));
-			k = rand() % MMAX;
-			k++;	// Pick k (1 to MMAX)
-			p = rand() % (MMAX - k);
-			p++;	// Pick p (1 to MMAX - k)
+			k = (rand() % (MMAX - 1)) + 1;	// Pick k {1 to MMAX - 1}
+			p = (rand() % (MMAX - k)) + 1;	// Pick p {1 to MMAX - k}
+
 			for (i = 0; i < k + p && nerrs < p; i++)
 				if (rand() & 1)
 					frag_err_list[nerrs++] = i;
@@ -255,21 +254,23 @@ static int gf_gen_decode_matrix_simple(u8 * encode_matrix,
 		return -1;
 
 	// Get decode matrix with only wanted recovery rows
-	for (i = 0; i < nsrcerrs; i++) {
-		for (j = 0; j < k; j++) {
-			decode_matrix[k * i + j] = invert_matrix[k * frag_err_list[i] + j];
-		}
+	for (i = 0; i < nerrs; i++) {
+		if (frag_err_list[i] < k)	// A src err
+			for (j = 0; j < k; j++)
+				decode_matrix[k * i + j] =
+				    invert_matrix[k * frag_err_list[i] + j];
 	}
 
 	// For non-src (parity) erasures need to multiply encode matrix * invert
-	for (p = nsrcerrs; p < nerrs; p++) {
-		for (i = 0; i < k; i++) {
-			s = 0;
-			for (j = 0; j < k; j++)
-				s ^= gf_mul(invert_matrix[j * k + i],
-					    encode_matrix[k * frag_err_list[p] + j]);
-
-			decode_matrix[k * p + i] = s;
+	for (p = 0; p < nerrs; p++) {
+		if (frag_err_list[p] >= k) {	// A parity err
+			for (i = 0; i < k; i++) {
+				s = 0;
+				for (j = 0; j < k; j++)
+					s ^= gf_mul(invert_matrix[j * k + i],
+						    encode_matrix[k * frag_err_list[p] + j]);
+				decode_matrix[k * p + i] = s;
+			}
 		}
 	}
 	return 0;
