@@ -55,7 +55,7 @@ static inline uint32_t bsr(uint32_t val)
 	return msb;
 }
 
-static inline uint32_t tzcnt(uint64_t val)
+static inline uint32_t tzbytecnt(uint64_t val)
 {
 	uint32_t cnt;
 
@@ -243,7 +243,7 @@ static inline int compare258(uint8_t * str1, uint8_t * str2, uint32_t max_length
 		test = *(uint64_t *) str1;
 		test ^= *(uint64_t *) str2;
 		if(test != 0)
-			return count + tzcnt(test);
+			return count + tzbytecnt(test);
 		str1 += 8;
 		str2 += 8;
 	}

@@ -101,7 +101,7 @@ void gen_icf_map_h1_base(struct isal_zstream *stream,
 		next_bytes = *(uint64_t *) next_in;
 		match = next_bytes ^ match_bytes;
 
-		len = tzcnt(match);
+		len = tzbytecnt(match);
 
 		if (len >= SHORTEST_MATCH) {
 			len += LEN_OFFSET;
