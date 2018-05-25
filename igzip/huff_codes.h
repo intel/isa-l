@@ -114,6 +114,8 @@ struct huff_code {
 			uint8_t extra_bit_count;
 			uint8_t length;
 		};
+
+		uint32_t code_and_length;
 	};
 };
 
