@@ -64,9 +64,7 @@ static inline uint32_t tzcnt(uint64_t val)
 	cnt = cnt / 8;
 #elif defined(__x86_64__)
 
-	cnt = __bsfq(val);
-	if(val == 0)
-		cnt = 64;
+	cnt = (val == 0)? 64 : __builtin_ctzll(val);
 	cnt = cnt / 8;
 
 #else
