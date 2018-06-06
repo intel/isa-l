@@ -224,13 +224,14 @@ isal_deflate_body_ %+ ARCH %+ :
 	align	16
 
 .loop2:
+	mov	tmp3 %+ d, dword [stream + _internal_state_dist_mask]
+
 	; if (state->bitbuf.is_full()) {
 	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
 	ja	.output_end
 
 	xor	dist, dist
 	xor	dist2, dist2
-	xor	tmp3, tmp3
 
 	lea	tmp1, [file_start + f_i]
 
@@ -252,13 +253,13 @@ isal_deflate_body_ %+ ARCH %+ :
 	mov	[stream + _internal_state_head + 2 * hash2], f_i %+ w
 
 	; if ((dist-1) < (D-1)) {
-	and	dist %+ d, (D-1)
+	and	dist, tmp3
 	neg	dist
 
 	shr	tmp8, 8
 	compute_hash	tmp2, tmp8
 
-	and	dist2 %+ d, (D-1)
+	and	dist2, tmp3
 	neg	dist2
 
 	;; Check for long len/dist match (>7) with first literal

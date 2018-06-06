@@ -101,6 +101,7 @@
 
 %ifidn __OUTPUT_FORMAT__, win64
 %define stack_size  10*16 + 6 * 8 + 8
+%define local_storage_offset (stack_size - 8)
 %define func(x) proc_frame x
 
 %macro FUNC_SAVE 0
@@ -143,19 +144,26 @@
 	add	rsp, stack_size
 %endm
 %else
+%define stack_size  8
+%define local_storage_offset 0
+
 %define func(x) x:
 %macro FUNC_SAVE 0
 	push	rbp
 	push	r12
 	push	r13
+	sub	rsp, stack_size
 %endm
 
 %macro FUNC_RESTORE 0
+	add	rsp, stack_size
 	pop	r13
 	pop	r12
 	pop	rbp
 %endm
 %endif
+
+%define dist_mask_offset local_storage_offset
 
 %define VECT_SIZE 8
 %define HASH_BYTES 2
@@ -174,6 +182,8 @@ func(gen_icf_map_lh1_04)
 	jge	end_main
 
 ;; Prep for main loop
+	mov	tmp %+ d, dword [stream + _internal_state_dist_mask]
+	mov	[rsp + dist_mask_offset], tmp
 	mov	tmp, stream
 	mov	level_buf, [stream + _level_buf]
 	sub	f_i_end, LA
@@ -207,7 +217,7 @@ func(gen_icf_map_lh1_04)
 	dec	tmp
 	sub	tmp %+ w, word [hash_table + HASH_BYTES * hash]
 
-	and	tmp %+ d, [dist_mask]
+	and	tmp %+ d, [rsp + dist_mask_offset]
 	neg	tmp
 
 	;; Check first 8 bytes of match
@@ -307,7 +317,7 @@ loop1:
 	lea	next_in, [f_i + file_start]
 
 ;; Calculate look back dists
-	vpbroadcastd ydist_mask, [dist_mask]
+	vpbroadcastd ydist_mask, [rsp + dist_mask_offset]
 	vpaddd	ydists, ydists_lookup, yones
 	vpsubd	ydists, yindex, ydists
 	vpand	ydists, ydists, ydist_mask
@@ -503,7 +513,7 @@ loop1_end:
 	lea	next_in, [f_i + file_start]
 
 ;; Calculate look back dists
-	vpbroadcastd ydist_mask, [dist_mask]
+	vpbroadcastd ydist_mask, [rsp + dist_mask_offset]
 	vpaddd	ydists, ydists_lookup, yones
 	vpsubd	ydists, yindex, ydists
 	vpand	ydists, ydists, ydist_mask
@@ -710,8 +720,6 @@ ones:
 %define PROD2 0x97B1
 hash_prod:
 	dw PROD1, PROD2
-dist_mask:
-	dd D-1
 null_dist_syms:
 	dd LIT
 hash_mask:

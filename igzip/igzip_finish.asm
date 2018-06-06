@@ -141,6 +141,8 @@ skip_SLOP:
 skip_write_first_byte:
 
 loop2:
+	mov     tmp3 %+ d, dword [stream + _internal_state_dist_mask]
+
 	; if (state->bitbuf.is_full()) {
 	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
 	ja	end_loop_2
@@ -164,7 +166,7 @@ loop2:
 	; if ((dist-1) <= (D-1)) {
 	mov	tmp1 %+ d, dist %+ d
 	sub	tmp1 %+ d, 1
-	cmp	tmp1 %+ d, (D-1)
+	cmp	tmp1 %+ d, tmp3 %+ d
 	jae	encode_literal
 
 	; len = f_end_i - f_i;

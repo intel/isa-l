@@ -86,6 +86,7 @@
 f_end_i_mem_offset	equ 0    ; local variable (8 bytes)
 m_out_end		equ 8
 m_out_start		equ 16
+dist_mask_offset	equ 24
 stack_size		equ 32
 
 %xdefine HASH_MASK HASH8K_HASH_MASK
@@ -108,6 +109,7 @@ isal_deflate_icf_finish_ %+ METHOD %+ _01:
 %endif
 
 	; state->bitbuf.set_buf(stream->next_out, stream->avail_out);
+	mov	tmp2, [stream + _internal_state_dist_mask]
 	mov	level_buf, [stream + _level_buf]
 	mov	m_out_buf, [level_buf + _icf_buf_next]
 	mov	[rsp + m_out_start], m_out_buf
@@ -115,6 +117,7 @@ isal_deflate_icf_finish_ %+ METHOD %+ _01:
 	add	tmp1, m_out_buf
 	sub	tmp1, 4
 
+	mov     [rsp + dist_mask_offset], tmp2
 	mov	[rsp + m_out_end], tmp1
 
 	mov	hufftables, [stream + _hufftables]
@@ -150,6 +153,7 @@ isal_deflate_icf_finish_ %+ METHOD %+ _01:
 .skip_write_first_byte:
 
 .loop2:
+	mov	tmp3 %+ d, [rsp + dist_mask_offset]
 	; if (state->bitbuf.is_full()) {
 	cmp	m_out_buf, [rsp + m_out_end]
 	ja	.end_loop_2
@@ -173,7 +177,7 @@ isal_deflate_icf_finish_ %+ METHOD %+ _01:
 	; if ((dist-1) <= (D-1)) {
 	mov	tmp1 %+ d, dist %+ d
 	sub	tmp1 %+ d, 1
-	cmp	tmp1 %+ d, (D-1)
+	cmp	tmp1 %+ d, tmp3 %+ d
 	jae	.encode_literal
 
 	; len = f_end_i - f_i;

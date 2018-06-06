@@ -911,6 +911,18 @@ static inline void reset_match_history(struct isal_zstream *stream)
 	}
 }
 
+static void inline set_dist_mask(struct isal_zstream *stream)
+{
+	struct isal_zstate *state = &stream->internal_state;
+	uint32_t hist_size = (1 << (stream->hist_bits));
+
+	if (stream->hist_bits != 0 && hist_size < IGZIP_HIST_SIZE)
+		state->dist_mask = hist_size - 1;
+	else
+		state->dist_mask = IGZIP_HIST_SIZE - 1;
+
+}
+
 void isal_deflate_init(struct isal_zstream *stream)
 {
 	struct isal_zstate *state = &stream->internal_state;
@@ -924,6 +936,7 @@ void isal_deflate_init(struct isal_zstream *stream)
 	stream->end_of_stream = 0;
 	stream->flush = NO_FLUSH;
 	stream->gzip_flag = 0;
+	stream->hist_bits = 0;
 
 	state->block_next = 0;
 	state->block_end = 0;
@@ -1097,6 +1110,7 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 	state->state = ZSTATE_NEW_HDR;
 	state->crc = 0;
 	state->has_level_buf_init = 0;
+	set_dist_mask(stream);
 
 	if (stream->flush == NO_FLUSH)
 		stream->end_of_stream = 1;
@@ -1248,13 +1262,16 @@ int isal_deflate(struct isal_zstream *stream)
 	hist_size = get_hist_size(stream, start_in, buf_hist_start);
 
 	if (state->has_hist == IGZIP_NO_HIST) {
+		set_dist_mask(stream);
 		stream->total_in -= buffered_size;
 		reset_match_history(stream);
 		stream->total_in += buffered_size;
 		buf_hist_start = state->b_bytes_processed;
 
-	} else if (state->has_hist == IGZIP_DICT_HIST)
+	} else if (state->has_hist == IGZIP_DICT_HIST) {
+		set_dist_mask(stream);
 		isal_deflate_hash(stream, state->buffer, state->b_bytes_processed);
+	}
 
 	in_size = stream->avail_in + buffered_size;
 	out_size = stream->total_out;

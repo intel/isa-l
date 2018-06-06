@@ -103,11 +103,12 @@ global %1
 
 m_out_end           equ  0	 ; local variable (8 bytes)
 m_out_start         equ	 8
-f_end_i_mem_offset  equ 16
-stream_offset       equ 24
-gpr_save_mem_offset equ 32       ; gpr save area (8*8 bytes)
+dist_mask_offset    equ 16
+f_end_i_mem_offset  equ 24
+stream_offset       equ 32
+gpr_save_mem_offset equ 40       ; gpr save area (8*8 bytes)
 xmm_save_mem_offset equ gpr_save_mem_offset + 8*8 ; xmm save area (4*16 bytes) (16 byte aligned)
-stack_size          equ 5*8 + 8*8 + 4*16
+stack_size          equ 7*8 + 8*8 + 4*16
 
 ;;; 8 because stack address is odd multiple of 8 after a function call and
 ;;; we want it aligned to 16 bytes
@@ -182,6 +183,8 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	mov	[rsp + stream_offset], stream
 
 	mov	byte [stream + _internal_state_has_eob], 0
+	mov	tmp1 %+ d, dword[stream + _internal_state_dist_mask]
+	mov	[rsp + dist_mask_offset], tmp1
 
 	; state->bitbuf.set_buf(stream->next_out, stream->avail_out);
 	mov	level_buf, [stream + _level_buf]
@@ -230,13 +233,13 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	align	16
 
 .loop2:
+	mov	tmp3 %+ d, [rsp + dist_mask_offset]
 	; if (state->bitbuf.is_full()) {
 	cmp	m_out_buf, [rsp + m_out_end]
 	ja	.output_end
 
 	xor	dist, dist
 	xor	dist2, dist2
-	xor	tmp3, tmp3
 
 	lea	tmp1, [file_start + f_i]
 
@@ -258,14 +261,14 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	mov	[hash_table + 2 * hash2], f_i %+ w
 
 	; if ((dist-1) < (D-1)) {
-	and	dist %+ d, (D-1)
+	and	dist %+ d, tmp3 %+ d
 	neg	dist
 
 	shr	tmp2, 24
 	compute_hash	hash2, tmp2
 	and	hash2 %+ d, HASH_MASK
 
-	and	dist2 %+ d, (D-1)
+	and	dist2 %+ d, tmp3 %+ d
 	neg	dist2
 
 	;; Check for long len/dist match (>7) with first literal

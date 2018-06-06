@@ -44,6 +44,7 @@ void isal_deflate_icf_body_hash8k_base(struct isal_zstream *stream)
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
 	uint16_t *last_seen = level_buf->hash8k.hash_table;
 	uint8_t *file_start = stream->next_in - stream->total_in;
+	uint32_t hist_size = state->dist_mask;
 
 	if (stream->avail_in == 0) {
 		if (stream->end_of_stream || stream->flush != NO_FLUSH)
@@ -76,7 +77,7 @@ void isal_deflate_icf_body_hash8k_base(struct isal_zstream *stream)
 		last_seen[hash] = (uint64_t) (next_in - file_start);
 
 		/* The -1 are to handle the case when dist = 0 */
-		if (dist - 1 < IGZIP_HIST_SIZE - 1) {
+		if (dist - 1 < hist_size) {
 			assert(dist != 0);
 
 			match_length = compare258(next_in - dist, next_in, 258);
@@ -139,6 +140,7 @@ void isal_deflate_icf_body_hash_hist_base(struct isal_zstream *stream)
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
 	uint16_t *last_seen = level_buf->hash_hist.hash_table;
 	uint8_t *file_start = stream->next_in - stream->total_in;
+	uint32_t hist_size = state->dist_mask;
 
 	if (stream->avail_in == 0) {
 		if (stream->end_of_stream || stream->flush != NO_FLUSH)
@@ -171,7 +173,7 @@ void isal_deflate_icf_body_hash_hist_base(struct isal_zstream *stream)
 		last_seen[hash] = (uint64_t) (next_in - file_start);
 
 		/* The -1 are to handle the case when dist = 0 */
-		if (dist - 1 < IGZIP_HIST_SIZE - 1) {
+		if (dist - 1 < hist_size) {
 			assert(dist != 0);
 
 			match_length = compare258(next_in - dist, next_in, 258);
@@ -234,6 +236,7 @@ void isal_deflate_icf_finish_hash8k_base(struct isal_zstream *stream)
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
 	uint16_t *last_seen = level_buf->hash8k.hash_table;
 	uint8_t *file_start = stream->next_in - stream->total_in;
+	uint32_t hist_size = state->dist_mask;
 
 	start_in = stream->next_in;
 	end_in = start_in + stream->avail_in;
@@ -263,7 +266,7 @@ void isal_deflate_icf_finish_hash8k_base(struct isal_zstream *stream)
 		dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
 		last_seen[hash] = (uint64_t) (next_in - file_start);
 
-		if (dist - 1 < IGZIP_HIST_SIZE - 1) {	/* The -1 are to handle the case when dist = 0 */
+		if (dist - 1 < hist_size) {	/* The -1 are to handle the case when dist = 0 */
 			match_length = compare258(next_in - dist, next_in, end_in - next_in);
 
 			if (match_length >= SHORTEST_MATCH) {
@@ -343,6 +346,7 @@ void isal_deflate_icf_finish_hash_hist_base(struct isal_zstream *stream)
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
 	uint16_t *last_seen = level_buf->hash_hist.hash_table;
 	uint8_t *file_start = stream->next_in - stream->total_in;
+	uint32_t hist_size = state->dist_mask;
 
 	start_in = stream->next_in;
 	end_in = start_in + stream->avail_in;
@@ -372,7 +376,7 @@ void isal_deflate_icf_finish_hash_hist_base(struct isal_zstream *stream)
 		dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
 		last_seen[hash] = (uint64_t) (next_in - file_start);
 
-		if (dist - 1 < IGZIP_HIST_SIZE - 1) {	/* The -1 are to handle the case when dist = 0 */
+		if (dist - 1 < hist_size) {	/* The -1 are to handle the case when dist = 0 */
 			match_length = compare258(next_in - dist, next_in, end_in - next_in);
 
 			if (match_length >= SHORTEST_MATCH) {
@@ -452,6 +456,7 @@ void isal_deflate_icf_finish_hash_map_base(struct isal_zstream *stream)
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
 	uint16_t *last_seen = level_buf->hash_map.hash_table;
 	uint8_t *file_start = stream->next_in - stream->total_in;
+	uint32_t hist_size = state->dist_mask;
 
 	start_in = stream->next_in;
 	end_in = start_in + stream->avail_in;
@@ -480,7 +485,7 @@ void isal_deflate_icf_finish_hash_map_base(struct isal_zstream *stream)
 		dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
 		last_seen[hash] = (uint64_t) (next_in - file_start);
 
-		if (dist - 1 < IGZIP_HIST_SIZE - 1) {	/* The -1 are to handle the case when dist = 0 */
+		if (dist - 1 < hist_size) {	/* The -1 are to handle the case when dist = 0 */
 			match_length = compare258(next_in - dist, next_in, end_in - next_in);
 
 			if (match_length >= SHORTEST_MATCH) {

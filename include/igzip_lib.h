@@ -314,6 +314,7 @@ struct isal_zstate {
 	uint32_t total_in_start; //!< Not used, may be replaced with something else
 	uint32_t block_next;	//!< Start of current deflate block in the input
 	uint32_t block_end;	//!< End of current deflate block in the input
+	uint32_t dist_mask;	//!< Distance mask used.
 	struct BitBuf2 bitbuf;	//!< Bit Buffer
 	uint32_t crc;		//!< Current crc
 	enum isal_zstate_state state;	//!< Current state in processing the data stream
@@ -365,8 +366,8 @@ struct isal_zstream {
 	uint8_t * level_buf; //!< User allocated buffer required for different compression levels
 	uint16_t end_of_stream;	//!< non-zero if this is the last input buffer
 	uint16_t flush;	//!< Flush type can be NO_FLUSH, SYNC_FLUSH or FULL_FLUSH
-	uint32_t gzip_flag; //!< Indicate if gzip compression is to be performed
-
+	uint16_t gzip_flag; //!< Indicate if gzip compression is to be performed
+	uint16_t hist_bits; //!< Log base 2 of maximum lookback distance, 0 is use default
 	struct isal_zstate internal_state;	//!< Internal state for this stream
 };
 

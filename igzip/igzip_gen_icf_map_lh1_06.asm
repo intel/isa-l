@@ -174,6 +174,7 @@ func(gen_icf_map_lh1_06)
 	jge	end_main
 
 ;; Prep for main loop
+	vpbroadcastd zdist_mask, dword [stream + _internal_state_dist_mask]
 	mov	tmp, stream
 	mov	level_buf, [stream + _level_buf]
 	sub	f_i_end, LA
@@ -189,7 +190,6 @@ func(gen_icf_map_lh1_06)
 	vbroadcasti32x4 zbswap, [bswap_shuf]
 	vpbroadcastd zthirty, [thirty]
 	vmovdqu64 zrot_left, [drot_left]
-	vpbroadcastd zdist_mask, dword [dist_mask]
 	vpbroadcastd zshortest_matches, [shortest_matches]
 	vpbroadcastd ztwofiftyfour, [twofiftyfour]
 	vpbroadcastd znull_dist_syms, [null_dist_syms]
@@ -569,8 +569,6 @@ thirty:
 	dd 0x1e
 twofiftyfour:
 	dd 0xfe
-dist_mask:
-	dd D-1
 hash_mask:
 	dd HASH_MAP_HASH_MASK
 lit_len_mask:
