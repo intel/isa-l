@@ -40,6 +40,7 @@
 %define ydists2 ymm5
 %define yscatter ymm5
 %define ytmp2 ymm5
+%define ynull_syms ymm5
 
 %define ylens1 ymm6
 %define ylens2 ymm7
@@ -60,6 +61,8 @@
 
 %define ytmp ymm15
 %define ydist_extra ymm15
+%define yhash_mask ymm15
+%define ydist_mask ymm15
 
 %ifidn __OUTPUT_FORMAT__, win64
 %define stack_size  10*16 + 4 * 8 + 8
@@ -134,18 +137,19 @@ func(gen_icf_map_lh1_04)
 	mov	level_buf, [stream + _level_buf]
 	sub	f_i_end, LA
 	vmovdqu yincrement, [increment]
-	vmovdqu yones, [ones]
+	vpbroadcastd yones, [ones]
 	vmovdqu ydatas_perm2, [datas_perm2]
 
 	xor	prev_len, prev_len
 	xor	prev_dist, prev_dist
 
 ;; Process first byte
+	vpbroadcastd	yhash_prod, [hash_prod]
+	vpbroadcastd	yhash_mask, [hash_mask]
 	vmovd	yhashes %+ x, dword [f_i + file_start]
-	vmovdqu	yhash_prod, [hash_prod]
 	vpmaddwd yhashes, yhashes, yhash_prod
 	vpmaddwd yhashes, yhashes, yhash_prod
-	vpand	yhashes, yhashes, [hash_mask]
+	vpand	yhashes, yhashes, yhash_mask
 	vmovd	hash %+ d, yhashes %+ x
 	mov	word [hash_table + HASH_BYTES * hash], f_i %+ w
 
@@ -157,10 +161,9 @@ func(gen_icf_map_lh1_04)
 	vmovdqu datas, [f_i + file_start]
 	vpermq	yhashes, datas, 0x44
 	vpshufb	yhashes, yhashes, [datas_shuf]
-	vmovdqu	yhash_prod, [hash_prod]
 	vpmaddwd yhashes, yhashes, yhash_prod
 	vpmaddwd yhashes, yhashes, yhash_prod
-	vpand	yhashes, yhashes, [hash_mask]
+	vpand	yhashes, yhashes, yhash_mask
 
 	vpermq	ylookup, datas, 0x44
 	vmovdqu	yqword_shuf, [qword_shuf]
@@ -172,11 +175,13 @@ func(gen_icf_map_lh1_04)
 	vpcmpeqq ytmp, ytmp, ytmp
 	vpgatherdd ydists_lookup, [hash_table + HASH_BYTES * yhashes], ytmp
 
+	vpbroadcastd ytmp2, [upper_word]
+	vpbroadcastd ytmp, [low_word]
 	vmovd	yindex %+ x, f_i %+ d
 	vpbroadcastd yindex, yindex %+ x
 	vpaddd	yindex, yindex, yincrement
-	vpand	yscatter, ydists_lookup, [upper_word]
-	vpand ytmp, yindex, [low_word]
+	vpand	yscatter, ydists_lookup, ytmp2
+ 	vpand ytmp, yindex, ytmp
 	vpor	yscatter, yscatter, ytmp
 
 	vmovd tmp %+ d, yhashes %+ x
@@ -201,13 +206,14 @@ func(gen_icf_map_lh1_04)
 	vpextrd [hash_table + HASH_BYTES * tmp], yscatter %+ x, 3
 
 ;; Compute hash for next loop
+	vpbroadcastd	yhash_prod, [hash_prod]
+	vpbroadcastd	yhash_mask, [hash_mask]
 	vmovdqu datas, [f_i + file_start + VECT_SIZE]
 	vpermq	yhashes, datas, 0x44
 	vpshufb	yhashes, yhashes, [datas_shuf]
-	vmovdqu	yhash_prod, [hash_prod]
 	vpmaddwd yhashes, yhashes, yhash_prod
 	vpmaddwd yhashes, yhashes, yhash_prod
-	vpand	yhashes, yhashes, [hash_mask]
+	vpand	yhashes, yhashes, yhash_mask
 
 	vmovdqu datas_lookup, [f_i + file_start + 2 * VECT_SIZE]
 
@@ -219,9 +225,10 @@ loop1:
 	lea	next_in, [f_i + file_start]
 
 ;; Calculate look back dists
+	vpbroadcastd ydist_mask, [dist_mask]
 	vpaddd	ydists, ydists_lookup, yones
 	vpsubd	ydists, yindex, ydists
-	vpand	ydists, ydists, [dist_mask]
+	vpand	ydists, ydists, ydist_mask
 	vpaddd	ydists, ydists, yones
 	vpsubd	ydists, yincrement, ydists
 
@@ -231,11 +238,13 @@ loop1:
 	vpcmpeqq ytmp, ytmp, ytmp
 	vpgatherdd ydists_lookup, [hash_table + HASH_BYTES * yhashes], ytmp
 
+	vpbroadcastd ytmp2, [upper_word]
+	vpbroadcastd ytmp, [low_word]
 	vmovd	yindex %+ x, f_i %+ d
 	vpbroadcastd yindex, yindex %+ x
 	vpaddd	yindex, yindex, yincrement
-	vpand	yscatter, ydists_lookup, [upper_word]
-	vpand ytmp, yindex, [low_word]
+	vpand	yscatter, ydists_lookup, ytmp2
+	vpand ytmp, yindex, ytmp
 	vpor	yscatter, yscatter, ytmp
 
 	vmovd tmp %+ d, yhashes %+ x
@@ -260,12 +269,13 @@ loop1:
 	vpextrd [hash_table + HASH_BYTES * tmp], yscatter %+ x, 3
 
 ;; Compute hash for next loop
+	vpbroadcastd	yhash_prod, [hash_prod]
+	vpbroadcastd	yhash_mask, [hash_mask]
 	vpermq	yhashes, datas_lookup, 0x44
 	vpshufb	yhashes, yhashes, [datas_shuf]
-	vmovdqu	yhash_prod, [hash_prod]
 	vpmaddwd yhashes, yhashes, yhash_prod
 	vpmaddwd yhashes, yhashes, yhash_prod
-	vpand	yhashes, yhashes, [hash_mask]
+	vpand	yhashes, yhashes, yhash_mask
 
 ;;lookup old codes
 	vextracti128 ydists2 %+ x, ydists, 1
@@ -279,11 +289,13 @@ loop1:
 	vpaddd	ydists, ydists, yones
 	vpsubd	ydists, yincrement, ydists
 
+	vpbroadcastd ytmp2, [low_nibble]
+	vbroadcasti128 ytmp3, [nibble_order]
 	vpslld	ydist_extra, ydists, 12
 	vpor	ydist_extra, ydists, ydist_extra
-	vpand	ydist_extra, ydist_extra, [low_nibble]
-	vpshufb ydist_extra, ydist_extra, [nibble_order]
-	vmovdqu ytmp2, [bit_index]
+	vpand	ydist_extra, ydist_extra, ytmp2
+	vpshufb ydist_extra, ydist_extra, ytmp3
+	vbroadcasti128 ytmp2, [bit_index]
 	vpshufb ydist_extra, ytmp2, ydist_extra
 	vpxor	ytmp2, ytmp2, ytmp2
 	vpcmpgtb ytmp2, ydist_extra, ytmp2
@@ -293,7 +305,8 @@ loop1:
 	vpandn	ytmp2, ytmp3, ytmp2
 	vpsrld	ytmp3, ytmp2, 24
 	vpandn	ytmp2, ytmp3, ytmp2
-	vpaddb	ydist_extra, [base_offset]
+	vpbroadcastd ytmp3, [base_offset]
+	vpaddb	ydist_extra, ytmp3
 	vpand	ydist_extra, ydist_extra, ytmp2
 	vpsrlq	ytmp2, ydist_extra, 32
 	vpxor	ytmp3, ytmp3, ytmp3
@@ -305,7 +318,6 @@ loop1:
 	vpcmpgtb ytmp3, ydist_extra, ytmp3
 	vpand ydist_extra, ydist_extra, ytmp3
 
-	vmovdqu yones, yones
 	vpsllvd	ycode, yones, ydist_extra
 	vpsubd	ycode, ycode, yones
 	vpcmpgtd ytmp2, ydists, yones
@@ -335,7 +347,7 @@ loop1:
 	vpxor	ytmp, ytmp, ytmp
 	vpcmpeqb ylens1, ylens1, ytmp
 	vpcmpeqb ylens2, ylens2, ytmp
-	vmovdqu yshift_finish, [shift_finish]
+	vpbroadcastq yshift_finish, [shift_finish]
 	vpand	ylens1, ylens1, yshift_finish
 	vpand	ylens2, ylens2, yshift_finish
 	vpsadbw ylens1, ylens1, ytmp
@@ -348,12 +360,14 @@ loop1:
 	vextracti128 ytmp %+ x, ylens2, 1
 	vpor	ylens2, ylens2, ytmp
 	vinserti128 ylens1, ylens1, ylens2 %+ x, 1
+	vpbroadcastd ytmp, [low_nibble]
 	vpsrld	ylens2, ylens1, 4
-	vpand	ylens1, ylens1, [low_nibble]
-	vmovdqu	ytmp, [match_cnt_perm]
+	vpand	ylens1, ylens1, ytmp
+	vbroadcasti128	ytmp, [match_cnt_perm]
+	vpbroadcastd ytmp2, [match_cnt_low_max]
 	vpshufb	ylens1, ytmp, ylens1
 	vpshufb	ylens2, ytmp, ylens2
-	vpcmpeqb ytmp, ylens1, [match_cnt_low_max]
+	vpcmpeqb ytmp, ylens1, ytmp2
 	vpand	ylens2, ylens2, ytmp
 	vpaddd	ylens1, ylens1, ylens2
 
@@ -374,7 +388,8 @@ loop1:
 	vmovd	prev_dist %+ d, ydists %+ x
 	vinserti128 ydists, ydists, ytmp %+ x, 0
 
-	vpcmpgtd ytmp, ylens2, [shortest_matches]
+	vpbroadcastd ytmp, [shortest_matches]
+	vpcmpgtd ytmp, ylens2, ytmp
 	vpcmpgtd ytmp2, ylens1, ylens2
 
 	vpcmpeqd ytmp3, ytmp3, ytmp3
@@ -384,11 +399,13 @@ loop1:
 	vpandn	ylens1, ytmp, ylens2
 
 ;; Update zdists to match ylens1
+	vpbroadcastd ytmp2, [twofiftyfour]
 	vpaddd	ydists, ydists, ylens1
-	vpaddd	ydists, ydists, [twofiftyfour]
+	vpaddd	ydists, ydists, ytmp2
 
+	vpbroadcastd ynull_syms, [null_dist_syms]
 	vpmovzxbd ytmp3, [f_i + file_start - VECT_SIZE - 1]
-	vpaddd	ytmp3, [null_dist_syms]
+	vpaddd	ytmp3, ynull_syms
 	vpand	ytmp3, ytmp3, ytmp
 	vpandn	ydists, ytmp, ydists
 	vpor	ydists, ydists, ytmp3
@@ -404,9 +421,10 @@ loop1_end:
 	lea	next_in, [f_i + file_start]
 
 ;; Calculate look back dists
+	vpbroadcastd ydist_mask, [dist_mask]
 	vpaddd	ydists, ydists_lookup, yones
 	vpsubd	ydists, yindex, ydists
-	vpand	ydists, ydists, [dist_mask]
+	vpand	ydists, ydists, ydist_mask
 	vpaddd	ydists, ydists, yones
 	vpsubd	ydists, yincrement, ydists
 
@@ -421,11 +439,13 @@ loop1_end:
 	vpaddd	ydists, ydists, yones
 	vpsubd	ydists, yincrement, ydists
 
+	vpbroadcastd ytmp2, [low_nibble]
+	vbroadcasti128 ytmp3, [nibble_order]
 	vpslld	ydist_extra, ydists, 12
 	vpor	ydist_extra, ydists, ydist_extra
-	vpand	ydist_extra, ydist_extra, [low_nibble]
-	vpshufb ydist_extra, ydist_extra, [nibble_order]
-	vmovdqu ytmp2, [bit_index]
+	vpand	ydist_extra, ydist_extra, ytmp2
+	vpshufb ydist_extra, ydist_extra, ytmp3
+	vbroadcasti128 ytmp2, [bit_index]
 	vpshufb ydist_extra, ytmp2, ydist_extra
 	vpxor	ytmp2, ytmp2, ytmp2
 	vpcmpgtb ytmp2, ydist_extra, ytmp2
@@ -435,7 +455,8 @@ loop1_end:
 	vpandn	ytmp2, ytmp3, ytmp2
 	vpsrld	ytmp3, ytmp2, 24
 	vpandn	ytmp2, ytmp3, ytmp2
-	vpaddb	ydist_extra, [base_offset]
+	vpbroadcastd ytmp3, [base_offset]
+	vpaddb	ydist_extra, ytmp3
 	vpand	ydist_extra, ydist_extra, ytmp2
 	vpsrlq	ytmp2, ydist_extra, 32
 	vpxor	ytmp3, ytmp3, ytmp3
@@ -469,7 +490,7 @@ loop1_end:
 	vpxor	ytmp, ytmp, ytmp
 	vpcmpeqb ylens1, ylens1, ytmp
 	vpcmpeqb ylens2, ylens2, ytmp
-	vmovdqu yshift_finish, [shift_finish]
+	vpbroadcastq yshift_finish, [shift_finish]
 	vpand	ylens1, ylens1, yshift_finish
 	vpand	ylens2, ylens2, yshift_finish
 	vpsadbw ylens1, ylens1, ytmp
@@ -482,12 +503,14 @@ loop1_end:
 	vextracti128 ytmp %+ x, ylens2, 1
 	vpor	ylens2, ylens2, ytmp
 	vinserti128 ylens1, ylens1, ylens2 %+ x, 1
+	vpbroadcastd ytmp, [low_nibble]
 	vpsrld	ylens2, ylens1, 4
-	vpand	ylens1, ylens1, [low_nibble]
-	vmovdqu	ytmp, [match_cnt_perm]
+	vpand	ylens1, ylens1, ytmp
+	vbroadcasti128	ytmp, [match_cnt_perm]
+	vpbroadcastd ytmp2, [match_cnt_low_max]
 	vpshufb	ylens1, ytmp, ylens1
 	vpshufb	ylens2, ytmp, ylens2
-	vpcmpeqb ytmp, ylens1, [match_cnt_low_max]
+	vpcmpeqb ytmp, ylens1, ytmp2
 	vpand	ylens2, ylens2, ytmp
 	vpaddd	ylens1, ylens1, ylens2
 
@@ -502,7 +525,8 @@ loop1_end:
 	vpinsrd ytmp %+ x, ydists %+ x, prev_dist %+ d, 0
 	vinserti128 ydists, ydists, ytmp %+ x, 0
 
-	vpcmpgtd ytmp, ylens2, [shortest_matches]
+	vpbroadcastd ytmp, [shortest_matches]
+	vpcmpgtd ytmp, ylens2, ytmp
 	vpcmpgtd ytmp2, ylens1, ylens2
 
 	vpcmpeqd ytmp3, ytmp3, ytmp3
@@ -512,11 +536,13 @@ loop1_end:
 	vpandn	ylens1, ytmp, ylens2
 
 ;; Update zdists to match ylens1
+	vpbroadcastd ytmp2, [twofiftyfour]
 	vpaddd	ydists, ydists, ylens1
-	vpaddd	ydists, ydists, [twofiftyfour]
+	vpaddd	ydists, ydists, ytmp2
 
+	vpbroadcastd ynull_syms, [null_dist_syms]
 	vpmovzxbd ytmp3, [f_i + file_start - 1]
-	vpaddd	ytmp3, [null_dist_syms]
+	vpaddd	ytmp3, ynull_syms
 	vpand	ytmp3, ytmp3, ytmp
 	vpandn	ydists, ytmp, ydists
 	vpor	ydists, ydists, ytmp3
@@ -532,6 +558,7 @@ endproc_frame
 
 section .data
 align 32
+;; 32 byte data
 datas_perm2:
 	dd 0x1, 0x2, 0x3, 0x4, 0x1, 0x2, 0x3, 0x4
 drot_left:
@@ -545,82 +572,57 @@ datas_shuf:
 	db 0x5, 0x6, 0x7, 0x8
 	db 0x6, 0x7, 0x8, 0x9
 	db 0x7, 0x8, 0x9, 0xa
-bswap_shuf:
-	db 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00
-	db 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08
-	db 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00
-	db 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08
-
 qword_shuf:
 	db 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7
 	db 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8
 	db 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9
 	db 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa
-
-%define PROD1 0xE84B
-%define PROD2 0x97B1
-
-hash_prod:
-	dw PROD1, PROD2, PROD1, PROD2, PROD1, PROD2, PROD1, PROD2
-	dw PROD1, PROD2, PROD1, PROD2, PROD1, PROD2, PROD1, PROD2
-null_dist_syms:
-	dd LIT, LIT, LIT, LIT, LIT, LIT, LIT, LIT
 increment:
 	dd 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7
-ones:
-	dd 0x1, 0x1, 0x1, 0x1, 0x1, 0x1, 0x1, 0x1
-twofiftyfour:
-	dd 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe
-dist_mask:
-	dd D-1, D-1, D-1, D-1, D-1, D-1, D-1, D-1
-hash_mask:
-	dd HASH_MAP_HASH_MASK, HASH_MAP_HASH_MASK, HASH_MAP_HASH_MASK, HASH_MAP_HASH_MASK
-	dd HASH_MAP_HASH_MASK, HASH_MAP_HASH_MASK, HASH_MAP_HASH_MASK, HASH_MAP_HASH_MASK
-shortest_matches:
-	dd MIN_DEF_MATCH, MIN_DEF_MATCH, MIN_DEF_MATCH, MIN_DEF_MATCH
-	dd MIN_DEF_MATCH, MIN_DEF_MATCH, MIN_DEF_MATCH, MIN_DEF_MATCH
-upper_word:
-	dw 0x0000, 0xffff, 0x0000, 0xffff, 0x0000, 0xffff, 0x0000, 0xffff
-	dw 0x0000, 0xffff, 0x0000, 0xffff, 0x0000, 0xffff, 0x0000, 0xffff
-	dw 0x0000, 0xffff, 0x0000, 0xffff, 0x0000, 0xffff, 0x0000, 0xffff
-	dw 0x0000, 0xffff, 0x0000, 0xffff, 0x0000, 0xffff, 0x0000, 0xffff
-low_word:
-	dw 0xffff, 0x0000, 0xffff, 0x0000, 0xffff, 0x0000, 0xffff, 0x0000
-	dw 0xffff, 0x0000, 0xffff, 0x0000, 0xffff, 0x0000, 0xffff, 0x0000
-	dw 0xffff, 0x0000, 0xffff, 0x0000, 0xffff, 0x0000, 0xffff, 0x0000
-	dw 0xffff, 0x0000, 0xffff, 0x0000, 0xffff, 0x0000, 0xffff, 0x0000
-shift_finish:
-	db 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
-	db 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
-	db 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
-	db 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
 downconvert_qd:
 	db 0x00, 0xff, 0xff, 0xff, 0x08, 0xff, 0xff, 0xff
 	db 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
 	db 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
 	db 0x00, 0xff, 0xff, 0xff, 0x08, 0xff, 0xff, 0xff
-low_nibble:
-	db 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f
-	db 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f
-	db 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f
-	db 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f
+
+;; 16 byte data
 match_cnt_perm:
 	db 0x0, 0x1, 0x0, 0x2, 0x0, 0x1, 0x0, 0x3, 0x0, 0x1, 0x0, 0x2, 0x0, 0x1, 0x0, 0x4
-	db 0x0, 0x1, 0x0, 0x2, 0x0, 0x1, 0x0, 0x3, 0x0, 0x1, 0x0, 0x2, 0x0, 0x1, 0x0, 0x4
-match_cnt_low_max:
-	dd 0x4, 0x4, 0x4, 0x4, 0x4, 0x4, 0x4, 0x4
 bit_index:
 	db 0x0, 0x1, 0x2, 0x2, 0x3, 0x3, 0x3, 0x3
 	db 0x4, 0x4, 0x4, 0x4, 0x4, 0x4, 0x4, 0x4
-	db 0x0, 0x1, 0x2, 0x2, 0x3, 0x3, 0x3, 0x3
-	db 0x4, 0x4, 0x4, 0x4, 0x4, 0x4, 0x4, 0x4
-base_offset:
-	db -0x2, 0x2, 0x6, 0xa, -0x2, 0x2, 0x6, 0xa
-	db -0x2, 0x2, 0x6, 0xa, -0x2, 0x2, 0x6, 0xa
-	db -0x2, 0x2, 0x6, 0xa, -0x2, 0x2, 0x6, 0xa
-	db -0x2, 0x2, 0x6, 0xa, -0x2, 0x2, 0x6, 0xa
 nibble_order:
 	db 0x0, 0x2, 0x1, 0x3, 0x4, 0x6, 0x5, 0x7
 	db 0x8, 0xa, 0x9, 0xb, 0xc, 0xe, 0xd, 0xf
-	db 0x0, 0x2, 0x1, 0x3, 0x4, 0x6, 0x5, 0x7
-	db 0x8, 0xa, 0x9, 0xb, 0xc, 0xe, 0xd, 0xf
+
+;; 8 byte data
+shift_finish:
+	db 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
+
+;; 4 byte data
+ones:
+	dd 0x1
+%define PROD1 0xE84B
+%define PROD2 0x97B1
+hash_prod:
+	dw PROD1, PROD2
+dist_mask:
+	dd D-1
+null_dist_syms:
+	dd LIT
+hash_mask:
+	dd HASH_MAP_HASH_MASK
+twofiftyfour:
+	dd 0xfe
+shortest_matches:
+	dd MIN_DEF_MATCH
+upper_word:
+	dw 0x0000, 0xffff
+low_word:
+	dw 0xffff, 0x0000
+low_nibble:
+	db 0x0f, 0x0f, 0x0f, 0x0f
+match_cnt_low_max:
+	dd 0x4
+base_offset:
+	db -0x2, 0x2, 0x6, 0xa
