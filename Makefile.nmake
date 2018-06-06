@@ -111,9 +111,7 @@ objs =  \
 	bin\hufftables_c.obj \
 	bin\igzip.obj \
 	bin\igzip_base.obj \
-	bin\igzip_body_01.obj \
-	bin\igzip_body_02.obj \
-	bin\igzip_body_04.obj \
+	bin\igzip_body.obj \
 	bin\igzip_decode_block_stateless_01.obj \
 	bin\igzip_decode_block_stateless_04.obj \
 	bin\igzip_finish.obj \

@@ -39,9 +39,7 @@ lsrc        += 	igzip/igzip.c \
 lsrc_base_aliases += igzip/igzip_base_aliases.c igzip/proc_heap_base.c
 lsrc_x86_32       += igzip/igzip_base_aliases.c igzip/proc_heap_base.c
 
-lsrc_x86_64 +=	igzip/igzip_body_01.asm \
-		igzip/igzip_body_02.asm \
-		igzip/igzip_body_04.asm \
+lsrc_x86_64 +=	igzip/igzip_body.asm \
 		igzip/igzip_finish.asm \
 		igzip/igzip_icf_body_h1_gr_bt.asm \
 		igzip/igzip_icf_finish.asm \

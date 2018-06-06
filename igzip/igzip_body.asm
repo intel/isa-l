@@ -38,16 +38,6 @@
 
 %include "stdmac.asm"
 
-%ifdef DEBUG
-%macro MARK 1
-global %1
-%1:
-%endm
-%else
-%macro MARK 1
-%endm
-%endif
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -122,6 +112,19 @@ stack_size          equ 2*8 + 8*8 + 4*16 + 8
 ;;; 8 because stack address is odd multiple of 8 after a function call and
 ;;; we want it aligned to 16 bytes
 
+;; Defines to generate functions for different architecture
+%xdefine ARCH 01
+%xdefine ARCH1 02
+%xdefine ARCH2 04
+
+%ifndef COMPARE_TYPE
+%xdefine COMPARE_TYPE_NOT_DEF
+%xdefine COMPARE_TYPE 1
+%xdefine COMPARE_TYPE1 2
+%xdefine COMPARE_TYPE2 3
+%endif
+
+%rep 3
 ; void isal_deflate_body ( isal_zstream *stream )
 ; arg 1: rcx: addr of stream
 global isal_deflate_body_ %+ ARCH
@@ -132,7 +135,7 @@ isal_deflate_body_ %+ ARCH %+ :
 
 	;; do nothing if (avail_in == 0)
 	cmp	dword [rcx + _avail_in], 0
-	jne	skip1
+	jne	.skip1
 
 	;; Set stream's next state
 	mov	rdx, ZSTATE_FLUSH_READ_BUFFER
@@ -143,7 +146,7 @@ isal_deflate_body_ %+ ARCH %+ :
 	cmovne	rax, rdx
 	mov	dword [rcx + _internal_state_state], eax
 	ret
-skip1:
+.skip1:
 
 %ifdef ALIGN_STACK
 	push	rbp
@@ -195,10 +198,9 @@ skip1:
 	; if (f_end_i <= 0) continue;
 
 	cmp	f_end_i, f_i
-	jle	input_end
+	jle	.input_end
 
 	; for (f_i = f_start_i; f_i < f_end_i; f_i++) {
-MARK __body_compute_hash_ %+ ARCH
 	MOVDQU	xdata, [file_start + f_i]
 	mov	curr_data, [file_start + f_i]
 	mov	tmp3, curr_data
@@ -213,15 +215,15 @@ MARK __body_compute_hash_ %+ ARCH
 	and	hash2, LVL0_HASH_MASK
 
 	cmp	byte [stream + _internal_state_has_hist], IGZIP_NO_HIST
-	je	write_first_byte
+	je	.write_first_byte
 
-	jmp	loop2
+	jmp	.loop2
 	align	16
 
-loop2:
+.loop2:
 	; if (state->bitbuf.is_full()) {
 	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
-	ja	output_end
+	ja	.output_end
 
 	xor	dist, dist
 	xor	dist2, dist2
@@ -256,13 +258,12 @@ loop2:
 	and	dist2 %+ d, (D-1)
 	neg	dist2
 
-MARK __body_compare_ %+ ARCH
 	;; Check for long len/dist match (>7) with first literal
 	MOVQ	len, xdata
 	mov	curr_data, len
 	PSRLDQ	xdata, 1
 	xor	len, [tmp1 + dist - 1]
-	jz	compare_loop
+	jz	.compare_loop
 
 	MOVD	xhash, tmp6 %+ d
 	PINSRD	xhash, tmp2 %+ d, 1
@@ -271,7 +272,7 @@ MARK __body_compare_ %+ ARCH
 	;; Check for len/dist match (>7) with second literal
 	MOVQ	len2, xdata
 	xor	len2, [tmp1 + dist2]
-	jz	compare_loop2
+	jz	.compare_loop2
 
 	;; Specutively load the code for the first literal
 	movzx   tmp1, curr_data %+ b
@@ -279,7 +280,7 @@ MARK __body_compare_ %+ ARCH
 
 	;; Check for len/dist match for first literal
 	test    len %+ d, 0xFFFFFFFF
-	jz      len_dist_huffman_pre
+	jz      .len_dist_huffman_pre
 
 	;; Specutively load the code for the second literal
 	shr     curr_data, 8
@@ -292,15 +293,14 @@ MARK __body_compare_ %+ ARCH
 
 	;; Check for len/dist match for second literal
 	test    len2 %+ d, 0xFFFFFFFF
-	jnz     write_lit_bits
+	jnz     .write_lit_bits
 
-MARK __body_len_dist_lit_huffman_ %+ ARCH
-len_dist_lit_huffman_pre:
+.len_dist_lit_huffman_pre:
 	mov     code_len3, rcx
 	bsf	len2, len2
 	shr	len2, 3
 
-len_dist_lit_huffman:
+.len_dist_lit_huffman:
 	neg	dist2
 
 %ifndef LONGER_HUFFTABLE
@@ -353,17 +353,17 @@ len_dist_lit_huffman:
 	compute_hash	hash2, curr_data2
 
 %ifdef	NO_LIMIT_HASH_UPDATE
-loop3:
+.loop3:
 	add     tmp3,1
 	cmp	tmp3, f_i
-	jae	loop3_done
+	jae	.loop3_done
 	mov     tmp6, [file_start + tmp3]
 	compute_hash    tmp4, tmp6
 	and     tmp4 %+ d, LVL0_HASH_MASK
 	; state->head[hash] = k;
 	mov     [stream + _internal_state_head + 2 * tmp4], tmp3 %+ w
-	jmp      loop3
-loop3_done:
+	jmp      .loop3
+.loop3_done:
 %endif
 	; hash = compute_hash(state->file_start + f_i) & LVL0_HASH_MASK;
 	and	hash %+ d, LVL0_HASH_MASK
@@ -371,16 +371,15 @@ loop3_done:
 
 	; continue
 	cmp	f_i, f_end_i
-	jl	loop2
-	jmp	input_end
+	jl	.loop2
+	jmp	.input_end
 	;; encode as dist/len
 
-MARK __body_len_dist_huffman_ %+ ARCH
-len_dist_huffman_pre:
+.len_dist_huffman_pre:
 	bsf	len, len
 	shr	len, 3
 
-len_dist_huffman:
+.len_dist_huffman:
 	dec	f_i
 	neg	dist
 
@@ -423,16 +422,16 @@ len_dist_huffman:
 	compute_hash	hash2, curr_data2
 
 %ifdef	NO_LIMIT_HASH_UPDATE
-loop4:
+.loop4:
 	add     tmp3,1
 	cmp	tmp3, f_i
-	jae	loop4_done
+	jae	.loop4_done
 	mov     tmp6, [file_start + tmp3]
 	compute_hash    tmp4, tmp6
 	and     tmp4, LVL0_HASH_MASK
 	mov     [stream + _internal_state_head + 2 * tmp4], tmp3 %+ w
-	jmp      loop4
-loop4_done:
+	jmp     .loop4
+.loop4_done:
 %endif
 
 	; hash = compute_hash(state->file_start + f_i) & LVL0_HASH_MASK;
@@ -441,11 +440,10 @@ loop4_done:
 
 	; continue
 	cmp	f_i, f_end_i
-	jl	loop2
-	jmp	input_end
+	jl	.loop2
+	jmp	.input_end
 
-MARK __body_write_lit_bits_ %+ ARCH
-write_lit_bits:
+.write_lit_bits:
 	MOVDQU	xdata, [file_start + f_i + 1]
 	mov	f_end_i, [rsp + f_end_i_mem_offset]
 	add	f_i, 1
@@ -459,9 +457,9 @@ write_lit_bits:
 
 	; continue
 	cmp	f_i, f_end_i
-	jl	loop2
+	jl	.loop2
 
-input_end:
+.input_end:
 	mov	tmp1, ZSTATE_FLUSH_READ_BUFFER
 	mov	tmp5, ZSTATE_BODY
 	cmp	word [stream + _end_of_stream], 0
@@ -470,7 +468,7 @@ input_end:
 	cmovne	tmp5, tmp1
 	mov	dword [stream + _internal_state_state], tmp5 %+ d
 
-output_end:
+.output_end:
 	;; update input buffer
 	add	f_end_i, LA
 	mov	[stream + _total_in], f_i %+ d
@@ -505,8 +503,7 @@ output_end:
 %endif
 	ret
 
-MARK __body_compare_loops_ %+ ARCH
-compare_loop:
+.compare_loop:
 	MOVD	xhash, tmp6 %+ d
 	PINSRD	xhash, tmp2 %+ d, 1
 	PAND	xhash, xhash, xmask
@@ -521,9 +518,9 @@ compare_loop:
 	%error Unknown Compare type COMPARE_TYPE
 	 % error
 %endif
-	jmp	len_dist_huffman
+	jmp	.len_dist_huffman
 
-compare_loop2:
+.compare_loop2:
 	lea	tmp2, [tmp1 + dist2]
 	add	tmp1, 1
 %if (COMPARE_TYPE == 1)
@@ -538,12 +535,11 @@ compare_loop2:
 %endif
 	and	curr_data, 0xff
 	get_lit_code	curr_data, code3, code_len3, hufftables
-	jmp	len_dist_lit_huffman
+	jmp	.len_dist_lit_huffman
 
-MARK __write_first_byte_ %+ ARCH
-write_first_byte:
+.write_first_byte:
 	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
-	ja	output_end
+	ja	.output_end
 
 	mov	byte [stream + _internal_state_has_hist], IGZIP_HIST
 
@@ -559,9 +555,22 @@ write_first_byte:
 
 	and	curr_data, 0xff
 	get_lit_code	curr_data, code2, code_len2, hufftables
-	jmp	write_lit_bits
+	jmp	.write_lit_bits
+
+;; Shift defines over in order to iterate over all versions
+%undef ARCH
+%xdefine ARCH ARCH1
+%undef ARCH1
+%xdefine ARCH1 ARCH2
+
+%ifdef COMPARE_TYPE_NOT_DEF
+%undef COMPARE_TYPE
+%xdefine COMPARE_TYPE COMPARE_TYPE1
+%undef COMPARE_TYPE1
+%xdefine COMPARE_TYPE1 COMPARE_TYPE2
+%endif
+%endrep
 
 section .data
 	align 16
 mask:	dd	LVL0_HASH_MASK, LVL0_HASH_MASK, LVL0_HASH_MASK, LVL0_HASH_MASK
-const_D: dq	D
