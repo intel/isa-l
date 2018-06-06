@@ -470,31 +470,17 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 
 .compare_loop:
 	lea	tmp2, [tmp1 + dist - 1]
-%if (COMPARE_TYPE == 1)
-	compare250	tmp1, tmp2, len, tmp3
-%elif (COMPARE_TYPE == 2)
-	compare250_x	tmp1, tmp2, len, tmp3, xtmp0, xtmp1
-%elif (COMPARE_TYPE == 3)
-	compare250_y	tmp1, tmp2, len, tmp3, ytmp0, ytmp1
-%else
-	%error Unknown Compare type COMPARE_TYPE
-	 % error
-%endif
+
+	compare250	tmp1, tmp2, len, tmp3, ytmp0, ytmp1
+
 	jmp	.len_dist_huffman
 
 .compare_loop2:
 	lea	tmp2, [tmp1 + dist2]
 	add	tmp1, 1
-%if (COMPARE_TYPE == 1)
-	compare250	tmp1, tmp2, len2, tmp3
-%elif (COMPARE_TYPE == 2)
-	compare250_x	tmp1, tmp2, len2, tmp3, xtmp0, xtmp1
-%elif (COMPARE_TYPE == 3)
-	compare250_y	tmp1, tmp2, len2, tmp3, ytmp0, ytmp1
-%else
-%error Unknown Compare type COMPARE_TYPE
- % error
-%endif
+
+	compare250	tmp1, tmp2, len2, tmp3, ytmp0, ytmp1
+
 	movzx	lit_code, curr_data %+ b
 	shr	curr_data, 8
 	inc	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code]

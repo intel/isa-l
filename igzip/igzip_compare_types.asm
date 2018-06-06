@@ -83,7 +83,7 @@
 ;; compare 258 bytes = 8 * 32 + 2
 ;; tmp16 is a 16-bit version of tmp
 ;; compare258 src1, src2, result, tmp
-%macro compare250 4
+%macro compare250_r 4
 %define %%src1		%1
 %define %%src2		%2
 %define %%result	%3
@@ -371,6 +371,29 @@
 	add	%%result, %%tmp
 %%end:
 %endm
+
+%macro compare250 6
+%define %%src1		%1
+%define %%src2		%2
+%define %%result	%3
+%define %%tmp		%4
+%define %%xtmp0		%5x
+%define %%xtmp1		%6x
+%define %%ytmp0		%5
+%define %%ytmp1		%6
+
+%if (COMPARE_TYPE == 1)
+	compare250_r	%%src1, %%src2, %%result, %%tmp
+%elif (COMPARE_TYPE == 2)
+	compare250_x	%%src1, %%src2, %%result, %%tmp, %%xtmp0, %%xtmp1
+%elif (COMPARE_TYPE == 3)
+	compare250_y	%%src1, %%src2, %%result, %%tmp, %%ytmp0, %%ytmp1
+%else
+%error Unknown Compare type COMPARE_TYPE
+ % error
+%endif
+%endmacro
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

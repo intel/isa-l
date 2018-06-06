@@ -508,31 +508,17 @@ isal_deflate_body_ %+ ARCH %+ :
 	PINSRD	xhash, tmp2 %+ d, 1
 	PAND	xhash, xhash, xmask
 	lea	tmp2, [tmp1 + dist - 1]
-%if (COMPARE_TYPE == 1)
-	compare250	tmp1, tmp2, len, tmp3
-%elif (COMPARE_TYPE == 2)
-	compare250_x	tmp1, tmp2, len, tmp3, xtmp0, xtmp1
-%elif (COMPARE_TYPE == 3)
-	compare250_y	tmp1, tmp2, len, tmp3, ytmp0, ytmp1
-%else
-	%error Unknown Compare type COMPARE_TYPE
-	 % error
-%endif
+
+	compare250	tmp1, tmp2, len, tmp3, ytmp0, ytmp1
+
 	jmp	.len_dist_huffman
 
 .compare_loop2:
 	lea	tmp2, [tmp1 + dist2]
 	add	tmp1, 1
-%if (COMPARE_TYPE == 1)
-	compare250	tmp1, tmp2, len2, tmp3
-%elif (COMPARE_TYPE == 2)
-	compare250_x	tmp1, tmp2, len2, tmp3, xtmp0, xtmp1
-%elif (COMPARE_TYPE == 3)
-	compare250_y	tmp1, tmp2, len2, tmp3, ytmp0, ytmp1
-%else
-%error Unknown Compare type COMPARE_TYPE
- % error
-%endif
+
+	compare250	tmp1, tmp2, len2, tmp3, ytmp0, ytmp1
+
 	and	curr_data, 0xff
 	get_lit_code	curr_data, code3, code_len3, hufftables
 	jmp	.len_dist_lit_huffman

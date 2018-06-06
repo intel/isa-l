@@ -516,16 +516,9 @@ compare_loop:
 	and	hash %+ d, LVL0_HASH_MASK
 	and	hash2 %+ d, LVL0_HASH_MASK
 	lea	tmp2, [tmp1 + dist - 1]
-%if (COMPARE_TYPE == 1)
-	compare250	tmp1, tmp2, len, tmp3
-%elif (COMPARE_TYPE == 2)
-	compare250_x	tmp1, tmp2, len, tmp3, xtmp0, xtmp1
-%elif (COMPARE_TYPE == 3)
-	compare250_y	tmp1, tmp2, len, tmp3, ytmp0, ytmp1
-%else
-	%error Unknown Compare type COMPARE_TYPE
-	 % error
-%endif
+
+	compare250	tmp1, tmp2, len, tmp3, ytmp0, ytmp1
+
 	lea	tmp3, [f_i + 1]
 	jmp	len_dist_huffman
 
@@ -533,16 +526,8 @@ compare_loop2:
 	add	tmp1, 1
 	lea	tmp2, [tmp1 + dist2 - 1]
 
-%if (COMPARE_TYPE == 1)
-	compare250	tmp1, tmp2, len2, tmp3
-%elif (COMPARE_TYPE == 2)
-	compare250_x	tmp1, tmp2, len2, tmp3, xtmp0, xtmp1
-%elif (COMPARE_TYPE == 3)
-	compare250_y	tmp1, tmp2, len2, tmp3, ytmp0, ytmp1
-%else
-%error Unknown Compare type COMPARE_TYPE
- % error
-%endif
+	compare250	tmp1, tmp2, len2, tmp3, ytmp0, ytmp1
+
 	and	curr_data, 0xff
 	inc	qword [histogram + _lit_len_offset + 8 * curr_data]
 	lea	tmp3, [f_i + 1]
