@@ -215,7 +215,14 @@ enum isal_block_state {
 	ISAL_BLOCK_TYPE0,	/* Decoding a type 0 block */
 	ISAL_BLOCK_CODED,	/* Decoding a huffman coded block */
 	ISAL_BLOCK_INPUT_DONE,	/* Decompression of input is completed */
-	ISAL_BLOCK_FINISH	/* Decompression of input is completed and all data has been flushed to output */
+	ISAL_BLOCK_FINISH,	/* Decompression of input is completed and all data has been flushed to output */
+	ISAL_GZIP_EXTRA_LEN,
+	ISAL_GZIP_EXTRA,
+	ISAL_GZIP_NAME,
+	ISAL_GZIP_COMMENT,
+	ISAL_GZIP_HCRC,
+	ISAL_ZLIB_DICT,
+	ISAL_CHECKSUM_CHECK,
 };
 
 
@@ -225,14 +232,23 @@ enum isal_block_state {
 #define ISAL_GZIP_NO_HDR	2
 #define ISAL_ZLIB	3
 #define ISAL_ZLIB_NO_HDR	4
+#define ISAL_ZLIB_NO_HDR_VER	5
+#define ISAL_GZIP_NO_HDR_VER	6
 
 /* Inflate Return values */
 #define ISAL_DECOMP_OK 0	/* No errors encountered while decompressing */
 #define ISAL_END_INPUT 1	/* End of input reached */
 #define ISAL_OUT_OVERFLOW 2	/* End of output reached */
+#define ISAL_NAME_OVERFLOW 3	/* End of gzip name buffer reached */
+#define ISAL_COMMENT_OVERFLOW 4	/* End of gzip name buffer reached */
+#define ISAL_EXTRA_OVERFLOW 5	/* End of extra buffer reached */
+#define ISAL_NEED_DICT 6 /* Stream needs a dictionary to continue */
 #define ISAL_INVALID_BLOCK -1	/* Invalid deflate block found */
 #define ISAL_INVALID_SYMBOL -2	/* Invalid deflate symbol found */
 #define ISAL_INVALID_LOOKBACK -3	/* Invalid lookback distance found */
+#define ISAL_INVALID_WRAPPER -4 /* Invalid gzip/zlib wrapper found */
+#define ISAL_UNSUPPORTED_METHOD -5	/* Gzip/zlib wrapper specifies unsupported compress method */
+#define ISAL_INCORRECT_CHECKSUM -6 /* Incorrect checksum found */
 
 /******************************************************************************/
 /* Compression structures */
@@ -302,6 +318,29 @@ struct BitBuf2 {
 	uint8_t *m_out_buf;	//!< current index of buffer to write to
 	uint8_t *m_out_end;	//!< end of buffer to write to
 	uint8_t *m_out_start;	//!< start of buffer to write to
+};
+
+struct isal_zlib_header {
+	uint32_t info;		//!< base-2 logarithm of the LZ77 window size minus 8
+	uint32_t level;		//!< Compression level (fastest, fast, default, maximum)
+	uint32_t dict_id;	//!< Dictionary id
+	uint32_t dict_flag;	//!< Whether to use a dictionary
+};
+
+struct isal_gzip_header {
+	uint32_t text;		//!< Optional Text hint
+	uint32_t time;		//!< Unix modification time in gzip header
+	uint32_t xflags;		//!< xflags in gzip header
+	uint32_t os;		//!< OS in gzip header
+	uint8_t *extra;		//!< Extra field in gzip header
+	uint32_t extra_buf_len;	//!< Length of extra buffer
+	uint32_t extra_len;	//!< Actual length of gzip header extra field
+	char *name;		//!< Name in gzip header
+	uint32_t name_buf_len;	//!< Length of name buffer
+	char *comment;		//!< Comments in gzip header
+	uint32_t comment_buf_len;	//!< Length of comment buffer
+	uint32_t hcrc;		//!< Header crc or header crc flag
+	uint32_t flags;		//!< Internal data
 };
 
 /* Variable prefixes:
@@ -473,12 +512,17 @@ struct inflate_state {
 	uint32_t crc_flag;	//!< Flag identifying whether to track of crc
 	uint32_t crc;		//!< Contains crc of output if crc_flag is set
 	uint32_t hist_bits; //!< Log base 2 of maximum lookback distance
-	int32_t type0_block_len;	//!< Length left to read of type 0 block when outbuffer overflow occured
+	union {
+		int32_t type0_block_len;	//!< Length left to read of type 0 block when outbuffer overflow occured
+		int32_t count; //!< Count of bytes remaining to be parsed
+		uint32_t dict_id;
+	};
 	int32_t write_overflow_lits;
 	int32_t write_overflow_len;
 	int32_t copy_overflow_length; 	//!< Length left to copy when outbuffer overflow occured
 	int32_t copy_overflow_distance;	//!< Lookback distance when outbuffer overlow occured
-	int32_t tmp_in_size;	//!< Number of bytes in tmp_in_buffer
+	int16_t wrapper_flag;
+	int16_t tmp_in_size;	//!< Number of bytes in tmp_in_buffer
 	int32_t tmp_out_valid;	//!< Number of bytes in tmp_out_buffer
 	int32_t tmp_out_processed;	//!< Number of bytes processed in tmp_out_buffer
 	uint8_t tmp_in_buffer[ISAL_DEF_MAX_HDR_SIZE];	//!< Temporary buffer containing data from the input stream
@@ -716,6 +760,44 @@ void isal_inflate_reset(struct inflate_state *state);
 int isal_inflate_set_dict(struct inflate_state *state, uint8_t *dict, uint32_t dict_len);
 
 /**
+ * @brief Read and return gzip header information
+ *
+ * On entry state must be initialized and next_in pointing to a gzip compressed
+ * buffer. The buffers gz_hdr->extra, gz_hdr->name, gz_hdr->comments and the
+ * buffer lengths must be set to record the corresponding field, or set to NULL
+ * to disregard that gzip header information. If one of these buffers overflows,
+ * the user can reallocate a larger buffer and call this function again to
+ * continue reading the header information.
+ *
+ * @param state: Structure holding state information on the decompression stream.
+ * @param gz_hdr: Structure to return data encoded in the gzip header
+ * @returns ISAL_DECOMP_OK (header was successfully parsed)
+ *          ISAL_END_INPUT (all input was parsed),
+ *          ISAL_NAME_OVERFLOW (gz_hdr->name overflowed while parsing),
+ *          ISAL_COMMENT_OVERFLOW (gz_hdr->comment overflowed while parsing),
+ *          ISAL_EXTRA_OVERFLOW (gz_hdr->extra overflowed while parsing),
+ *          ISAL_INVALID_WRAPPER (invalid gzip header found),
+ *          ISAL_UNSUPPORTED_METHOD (deflate is not the compression method),
+ *          ISAL_INCORRECT_CHECKSUM (gzip header checksum was incorrect)
+ */
+int isal_read_gzip_header (struct inflate_state *state, struct isal_gzip_header *gz_hdr);
+
+/**
+ * @brief Read and return zlib header information
+ *
+ * On entry state must be initialized and next_in pointing to a zlib compressed
+ * buffer.
+ *
+ * @param state: Structure holding state information on the decompression stream.
+ * @param zlib_hdr: Structure to return data encoded in the zlib header
+ * @returns ISAL_DECOMP_OK (header was successfully parsed),
+ *          ISAL_END_INPUT (all input was parsed),
+ *          ISAL_UNSUPPORTED_METHOD (deflate is not the compression method),
+ *          ISAL_INCORRECT_CHECKSUM (zlib header checksum was incorrect)
+ */
+int isal_read_zlib_header (struct inflate_state *state, struct isal_zlib_header *zlib_hdr);
+
+/**
  * @brief Fast data (deflate) decompression for storage applications.
  *
  * On entry to isal_inflate(), next_in points to an input buffer and avail_in
@@ -728,12 +810,18 @@ int isal_inflate_set_dict(struct inflate_state *state, uint8_t *dict, uint32_t d
  * The call to isal_inflate() will take data from the input buffer (updating
  * next_in, avail_in and write a decompressed stream to the output buffer
  * (updating next_out and avail_out). The function returns when the input buffer
- * is empty, the output buffer is full or invalid data is found. The current
- * state of the decompression on exit can be read from state->block-state. If
- * the crc_flag is set to ISAL_GZIP_NO_HDR the gzip crc of the output is stored
- * in state->crc. Alternatively, if the crc_flag is set to ISAL_ZLIB_NO_HDR the
- * adler32 of the output is stored in state->crc. The element state->hist_bits
- * has values from 0 to 15, where values of 1 to 15 are the log base 2 size of the
+ * is empty, the output buffer is full, invalid data is found, or in the case of
+ * zlib formatted data if a dictionary is specified. The current state of the
+ * decompression on exit can be read from state->block-state. If the crc_flag is
+ * set to ISAL_GZIP_NO_HDR the gzip crc of the output is stored in
+ * state->crc. Alternatively, if the crc_flag is set to ISAL_ZLIB_NO_HDR the
+ * adler32 of the output is stored in state->crc. When the crc_flag is set to
+ * ISAL_GZIP_NO_HDR_VER or ISAL_ZLIB_NO_HDR_VER, the behaviour is the same,
+ * except the checksum is verified with the checksum after immediately followin
+ * the deflate data. Finally, if the crc_flag is set to ISAL_GZIP or ISAL_ZLIB,
+ * the gzip/zlib header is parsed, state->crc is set to the appropriate
+ * checksum, and the checksum is verfied. The element state->hist_bits has
+ * values from 0 to 15, where values of 1 to 15 are the log base 2 size of the
  * matching window and 0 is the default with maximum history size.
  *
  * If a dictionary is required, a call to isal_inflate_set_dict will set the
@@ -741,11 +829,13 @@ int isal_inflate_set_dict(struct inflate_state *state, uint8_t *dict, uint32_t d
  *
  * @param  state Structure holding state information on the compression streams.
  * @return ISAL_DECOMP_OK (if everything is ok),
- *         ISAL_END_INPUT (if all input was decompressed),
- *         ISAL_OUT_OVERFLOW (if output buffer ran out of space),
  *         ISAL_INVALID_BLOCK,
+ *         ISAL_NEED_DICT,
  *         ISAL_INVALID_SYMBOL,
- *         ISAL_INVALID_LOOKBACK.
+ *         ISAL_INVALID_LOOKBACK,
+ *         ISAL_INVALID_WRAPPER,
+ *         ISAL_UNSUPPORTED_METHOD,
+ *         ISAL_INCORRECT_CHECKSUM.
  */
 
 int isal_inflate(struct inflate_state *state);
@@ -755,15 +845,20 @@ int isal_inflate(struct inflate_state *state);
  *
  * Stateless (one shot) decompression routine with a similar interface to
  * isal_inflate() but operates on entire input buffer at one time. Parameter
- * avail_out must be large enough to fit the entire decompressed output.
+ * avail_out must be large enough to fit the entire decompressed
+ * output. Dictionaries are not supported.
  *
  * @param  state Structure holding state information on the compression streams.
  * @return ISAL_DECOMP_OK (if everything is ok),
  *         ISAL_END_INPUT (if all input was decompressed),
+ *         ISAL_NEED_DICT,
  *         ISAL_OUT_OVERFLOW (if output buffer ran out of space),
  *         ISAL_INVALID_BLOCK,
  *         ISAL_INVALID_SYMBOL,
- *         ISAL_INVALID_LOOKBACK.
+ *         ISAL_INVALID_LOOKBACK,
+ *         ISAL_INVALID_WRAPPER,
+ *         ISAL_UNSUPPORTED_METHOD,
+ *         ISAL_INCORRECT_CHECKSUM.
  */
 int isal_inflate_stateless(struct inflate_state *state);
 

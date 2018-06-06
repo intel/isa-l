@@ -205,6 +205,7 @@ checks = \
 	crc16_t10dif_copy_test.exe \
 	crc32_funcs_test.exe \
 	crc64_funcs_test.exe \
+	igzip_wrapper_hdr_test.exe \
 	igzip_rand_test.exe
 
 checks: lib $(checks)

@@ -66,7 +66,7 @@
 #define MAX_LOOPS 20
 /* Defines for the possible error conditions */
 enum IGZIP_TEST_ERROR_CODES {
-	IGZIP_COMP_OK,
+	IGZIP_COMP_OK = 0,
 
 	MALLOC_FAILED,
 	FILE_READ_FAILED,
@@ -94,6 +94,8 @@ enum IGZIP_TEST_ERROR_CODES {
 	INVALID_ZLIB_HEADER,
 	INCORRECT_ZLIB_TRAILER,
 
+	UNSUPPORTED_METHOD,
+
 	INFLATE_GENERAL_ERROR,
 
 	INVALID_FLUSH_ERROR,
@@ -104,17 +106,6 @@ enum IGZIP_TEST_ERROR_CODES {
 
 static const int hdr_bytes = 300;
 
-static const uint8_t gzip_hdr[10] = {
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0xff
-};
-
-static const uint8_t zlib_hdr[2] = {
-	0x78, 0x01
-};
-
-static const uint32_t gzip_hdr_bytes = 10;
-static const uint32_t zlib_hdr_bytes = 2;
 static const uint32_t gzip_trl_bytes = 8;
 static const uint32_t zlib_trl_bytes = 4;
 static const int gzip_extra_bytes = 18;	/* gzip_hdr_bytes + gzip_trl_bytes */
@@ -347,6 +338,9 @@ void print_error(int error_code)
 	case INCORRECT_ZLIB_TRAILER:
 		printf("error: incorrect zlib trailer found when inflating data\n");
 		break;
+	case UNSUPPORTED_METHOD:
+		printf("error: invalid compression method in wrapper header\n");
+		break;
 	case INVALID_FLUSH_ERROR:
 		printf("error: invalid flush did not cause compression to error\n");
 		break;
@@ -375,51 +369,6 @@ void print_uint8_t(uint8_t * array, uint64_t length)
 		printf("0x%02x,", array[i]);
 	}
 	printf("\n");
-}
-
-uint32_t check_gzip_header(uint8_t * z_buf)
-{
-	/* These values are defined in RFC 1952 page 4 */
-	const uint8_t ID1 = 0x1f, ID2 = 0x8b, CM = 0x08, FLG = 0;
-	uint32_t ret = 0;
-	int i;
-	/* Verify that the gzip header is the one used in hufftables_c.c */
-	for (i = 0; i < gzip_hdr_bytes; i++)
-		if (z_buf[i] != gzip_hdr[i])
-			ret = INVALID_GZIP_HEADER;
-
-	/* Verify that the gzip header is a valid gzip header */
-	if (*z_buf++ != ID1)
-		ret = INVALID_GZIP_HEADER;
-
-	if (*z_buf++ != ID2)
-		ret = INVALID_GZIP_HEADER;
-
-	/* Verfiy compression method is Deflate */
-	if (*z_buf++ != CM)
-		ret = INVALID_GZIP_HEADER;
-
-	/* The following comparison is specific to how gzip headers are written in igzip */
-	/* Verify no extra flags are set */
-	if (*z_buf != FLG)
-		ret = INVALID_GZIP_HEADER;
-
-	/* The last 6 bytes in the gzip header do not contain any information
-	 * important to decomrpessing the data */
-
-	return ret;
-}
-
-uint32_t check_zlib_header(uint8_t * z_buf)
-{
-	/* These values are defined in RFC 1952 page 4 */
-	uint32_t ret = 0;
-	int i;
-	/* Verify that the gzip header is the one used in hufftables_c.c */
-	for (i = 0; i < zlib_hdr_bytes; i++)
-		if (z_buf[i] != zlib_hdr[i])
-			ret = INVALID_ZLIB_HEADER;
-	return ret;
 }
 
 uint32_t check_gzip_trl(uint64_t gzip_trl, uint32_t inflate_crc, uint8_t * uncompress_buf,
@@ -460,12 +409,33 @@ int inflate_stateless_pass(uint8_t * compress_buf, uint64_t compress_len,
 			   uint32_t gzip_flag)
 {
 	struct inflate_state state;
-	int ret = 0;
+	int ret = 0, offset = 0;
+	struct isal_gzip_header gz_hdr;
+	struct isal_zlib_header z_hdr;
 
 	state.next_in = compress_buf;
 	state.avail_in = compress_len;
 	state.next_out = uncompress_buf;
 	state.avail_out = *uncompress_len;
+
+	if (gzip_flag == IGZIP_GZIP) {
+		if (rand() % 2 == 0) {
+			memset(&gz_hdr, 0, sizeof(gz_hdr));
+			isal_inflate_reset(&state);
+			state.tmp_in_size = 0;
+			gzip_flag = ISAL_GZIP_NO_HDR_VER;
+
+			isal_read_gzip_header(&state, &gz_hdr);
+		}
+	} else if (gzip_flag == IGZIP_ZLIB) {
+		if (rand() % 2 == 0) {
+			memset(&z_hdr, 0, sizeof(z_hdr));
+			isal_inflate_reset(&state);
+			gzip_flag = ISAL_ZLIB_NO_HDR_VER;
+			isal_read_zlib_header(&state, &z_hdr);
+		}
+	}
+
 	state.crc_flag = gzip_flag;
 
 	ret = isal_inflate_stateless(&state);
@@ -473,18 +443,30 @@ int inflate_stateless_pass(uint8_t * compress_buf, uint64_t compress_len,
 	*uncompress_len = state.total_out;
 
 	if (gzip_flag) {
-		if (gzip_flag == IGZIP_GZIP || gzip_flag == IGZIP_GZIP_NO_HDR) {
+		if (gzip_flag == IGZIP_GZIP || gzip_flag == IGZIP_GZIP_NO_HDR
+		    || gzip_flag == ISAL_GZIP_NO_HDR_VER) {
+			if (gzip_flag == IGZIP_GZIP || gzip_flag == ISAL_GZIP_NO_HDR_VER)
+				offset = gzip_trl_bytes;
+
 			if (!ret)
 				ret =
-				    check_gzip_trl(*(uint64_t *) state.next_in, state.crc,
-						   uncompress_buf, *uncompress_len);
-			state.avail_in -= gzip_trl_bytes;
-		} else if (gzip_flag == IGZIP_ZLIB || gzip_flag == IGZIP_ZLIB_NO_HDR) {
+				    check_gzip_trl(*(uint64_t *) (state.next_in - offset),
+						   state.crc, uncompress_buf, *uncompress_len);
+			else if (ret == ISAL_INCORRECT_CHECKSUM)
+				ret = INCORRECT_GZIP_TRAILER;
+			state.avail_in -= (gzip_trl_bytes - offset);
+		} else if (gzip_flag == IGZIP_ZLIB || gzip_flag == IGZIP_ZLIB_NO_HDR
+			   || gzip_flag == ISAL_ZLIB_NO_HDR_VER) {
+			if (gzip_flag == IGZIP_ZLIB || gzip_flag == ISAL_ZLIB_NO_HDR_VER)
+				offset = zlib_trl_bytes;
+
 			if (!ret)
 				ret =
-				    check_zlib_trl(*(uint32_t *) state.next_in, state.crc,
-						   uncompress_buf, *uncompress_len);
-			state.avail_in -= zlib_trl_bytes;
+				    check_zlib_trl(*(uint32_t *) (state.next_in - offset),
+						   state.crc, uncompress_buf, *uncompress_len);
+			else if (ret == ISAL_INCORRECT_CHECKSUM)
+				ret = INCORRECT_ZLIB_TRAILER;
+			state.avail_in -= (zlib_trl_bytes - offset);
 
 		}
 
@@ -585,6 +567,18 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 		create_rand_repeat_data((uint8_t *) state, sizeof(state));
 	}
 
+	if (gzip_flag == IGZIP_GZIP_NO_HDR) {
+		if (rand() % 2 == 0)
+			compress_len -= gzip_trl_bytes;
+		else
+			gzip_flag = ISAL_GZIP_NO_HDR_VER;
+	} else if (gzip_flag == IGZIP_ZLIB_NO_HDR) {
+		if (rand() % 2 == 0)
+			compress_len -= zlib_trl_bytes;
+		else
+			gzip_flag = ISAL_ZLIB_NO_HDR_VER;
+	}
+
 	state->next_in = NULL;
 	state->next_out = NULL;
 	state->avail_in = 0;
@@ -597,11 +591,6 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 
 	if (dict != NULL)
 		isal_inflate_set_dict(state, dict, dict_len);
-
-	if (gzip_flag == IGZIP_GZIP || gzip_flag == IGZIP_GZIP_NO_HDR)
-		compress_len -= gzip_trl_bytes;
-	else if (gzip_flag == IGZIP_ZLIB || gzip_flag == IGZIP_ZLIB_NO_HDR)
-		compress_len -= zlib_trl_bytes;
 
 	while (1) {
 		if (state->avail_in == 0) {
@@ -714,12 +703,19 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 
 	if (gzip_flag) {
 		if (!ret) {
-			if (gzip_flag == IGZIP_GZIP || gzip_flag == IGZIP_GZIP_NO_HDR) {
+			if (gzip_flag == IGZIP_GZIP || gzip_flag == IGZIP_GZIP_NO_HDR
+			    || gzip_flag == ISAL_GZIP_NO_HDR_VER) {
+				if (gzip_flag == ISAL_GZIP_NO_HDR_VER
+				    || gzip_flag == IGZIP_GZIP)
+					compress_len -= gzip_trl_bytes;
 				ret =
 				    check_gzip_trl(*(uint64_t *) & compress_buf[compress_len],
 						   state->crc, uncompress_buf,
 						   *uncompress_len);
-			} else if (gzip_flag == IGZIP_ZLIB || gzip_flag == IGZIP_ZLIB_NO_HDR) {
+			} else if (gzip_flag == IGZIP_ZLIB_NO_HDR) {
+				if (gzip_flag == IGZIP_ZLIB
+				    || gzip_flag == ISAL_ZLIB_NO_HDR_VER)
+					compress_len -= zlib_trl_bytes;
 				ret =
 				    check_zlib_trl(*(uint32_t *) & compress_buf[compress_len],
 						   state->crc, uncompress_buf,
@@ -786,16 +782,6 @@ int inflate_check(uint8_t * z_buf, uint32_t z_size, uint8_t * in_buf, uint32_t i
 	if (test_buf != NULL)
 		memset(test_buf, 0xff, test_size);
 
-	if (gzip_flag == IGZIP_GZIP) {
-		gzip_hdr_result = check_gzip_header(z_buf);
-		z_buf += gzip_hdr_bytes;
-		z_size -= gzip_hdr_bytes;
-	} else if (gzip_flag == IGZIP_ZLIB) {
-		gzip_hdr_result = check_zlib_header(z_buf);
-		z_buf += zlib_hdr_bytes;
-		z_size -= zlib_hdr_bytes;
-	}
-
 	if (inflate_type == 0 && dict == NULL) {
 		ret = inflate_stateless_pass(z_buf, z_size, test_buf, &test_size, gzip_flag);
 		inflate_type = 1;
@@ -851,6 +837,16 @@ int inflate_check(uint8_t * z_buf, uint32_t z_size, uint8_t * in_buf, uint32_t i
 	case INCORRECT_ZLIB_TRAILER:
 		gzip_trl_result = INCORRECT_ZLIB_TRAILER;
 		break;
+	case ISAL_INCORRECT_CHECKSUM:
+		if (gzip_flag == IGZIP_GZIP || gzip_flag == IGZIP_GZIP_NO_HDR
+		    || gzip_flag == ISAL_GZIP_NO_HDR_VER)
+			gzip_trl_result = INCORRECT_GZIP_TRAILER;
+		else if (gzip_flag == IGZIP_ZLIB || gzip_flag == IGZIP_ZLIB_NO_HDR
+			 || gzip_flag == ISAL_ZLIB_NO_HDR_VER)
+			gzip_trl_result = INCORRECT_GZIP_TRAILER;
+		break;
+	case ISAL_UNSUPPORTED_METHOD:
+		return UNSUPPORTED_METHOD;
 	case INFLATE_INPUT_STREAM_INTEGRITY_ERROR:
 		return INFLATE_INPUT_STREAM_INTEGRITY_ERROR;
 		break;

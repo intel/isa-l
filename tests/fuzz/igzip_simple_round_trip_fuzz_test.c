@@ -104,8 +104,8 @@ int LLVMFuzzerTestOneInput(const uint8_t * data, size_t size)
 	ret = isal_deflate_stateless(&cstate);
 
 	isal_inflate_init(&istate);
-	istate.next_in = isal_cmp_buf + header_size[wrapper_type];
-	istate.avail_in = cstate.total_out - header_size[wrapper_type];;
+	istate.next_in = isal_cmp_buf;
+	istate.avail_in = cstate.total_out;
 	istate.next_out = isal_out_buf;
 	istate.avail_out = size;
 	istate.crc_flag = wrapper_type;
