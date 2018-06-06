@@ -2,6 +2,7 @@
 
 usage ()
 {
+test_ids=$(echo "${llvm_all_ids[*]}" | sed 's/ /, /g')
 cat << EOF
 usage: $0 options
 options:
@@ -9,7 +10,7 @@ options:
    -l, --llvm <n>     Use llvm fuzz tests and run n times 0=just build, -1=skip (default $use_llvm).
    -a, --afl  <n>     Use AFL fuzz tests and run n times 0=just build, -1=skip (default $use_afl).
    -t, --time <n>     Run each group of max time <n>[s,h,m,d] - n seconds, hours, minutes or days.
-   -e <exec|rand|all> Run a specific llvm test or [test, rand, all].
+   -e <exec|rand|all> Run a specific llvm test or [$test_ids, rand, all].
    -f <file>          Use this file as initial raw input.  Can be repeated.
    -d <0,1>           Use dump of internal inflate test corpus (default $use_internal_corp).
    -i <dir>           Fuzz input dir (default $fuzzin_dir).
@@ -22,13 +23,14 @@ exit 0
 use_afl=-1
 use_llvm=1
 samp_files=
-use_internal_corp=1
+use_internal_corp=0
 fuzzin_dir=fuzzin
 fuzzout_dir=fuzzout
 llvm_opts=" -print_final_stats=1"
 afl_timeout_cmd=""
 run_secs=0
 llvm_tests=("igzip_simple_inflate_fuzz_test")
+llvm_all_ids=("simple" "checked" "round_trip")
 llvm_all_tests=("igzip_simple_inflate_fuzz_test" "igzip_checked_inflate_fuzz_test" "igzip_simple_round_trip_fuzz_test")
 
 # Options
@@ -70,7 +72,20 @@ while [ "$1" != "${1##-}" ]; do
 		    llvm_tests=${llvm_all_tests[$RANDOM % ${#llvm_all_tests[@]} ]}
 		    ;;
 		*)
-		    llvm_tests[0]="$2"
+		    flag=0
+		    for id_index in "${!llvm_all_ids[@]}"; do
+			 if [[ "${llvm_all_ids[$id_index]}" = "$2" ]]; then
+			     flag=1
+			     llvm_tests[0]="${llvm_all_tests[$id_index]}"
+			     break;
+			 fi
+		    done
+
+		    if [ $flag -eq 0 ]; then
+			test_ids=$(echo "${llvm_all_ids[*]}" | sed 's/ /, /g')
+			echo "Invalid test, valid options: $test_ids, rand, or all"
+			exit 0
+		    fi
 		    ;;
 	    esac
 	    shift 2
@@ -87,7 +102,6 @@ while [ "$1" != "${1##-}" ]; do
 done
 
 set -xe #exit on fail
-mkdir -p $fuzzout_dir $fuzzin_dir
 
 # Optionally build afl fuzz tests
 if [ $use_afl -ge 0 ]; then
@@ -117,6 +131,12 @@ if [ $use_llvm -ge 0 ]; then
     fi
     rm -rf bin
     make -f Makefile.unx units=igzip llvm_fuzz_tests igzip_dump_inflate_corpus CC=clang CXX=clang++ ${llvm_link_args}
+fi
+
+#Create fuzz input/output directories
+mkdir -p $fuzzin_dir
+if [ $use_afl -ge 0 ]; then
+       mkdir -p $fuzzout_dir
 fi
 
 # Optionally fill fuzz input with internal tests corpus
