@@ -63,9 +63,11 @@ global %1
 %define	dist		rbx
 %define dist_code2	rbx
 %define	lit_code2	rbx
+%define hmask2		rbx
 
 %define	dist2		r12
 %define dist_code	r12
+%define hmask3		r12
 
 %define	tmp1		rsi
 %define	lit_code	rsi
@@ -73,6 +75,7 @@ global %1
 %define	curr_data2	r8
 %define	len2		r8
 %define	tmp4		r8
+%define hmask1		r8
 
 %define	len		rdx
 %define len_code	rdx
@@ -104,9 +107,10 @@ global %1
 m_out_end           equ  0	 ; local variable (8 bytes)
 m_out_start         equ	 8
 dist_mask_offset    equ 16
-f_end_i_mem_offset  equ 24
-stream_offset       equ 32
-gpr_save_mem_offset equ 40       ; gpr save area (8*8 bytes)
+hash_mask_offset    equ 24
+f_end_i_mem_offset  equ 32
+stream_offset       equ 40
+gpr_save_mem_offset equ 48       ; gpr save area (8*8 bytes)
 xmm_save_mem_offset equ gpr_save_mem_offset + 8*8 ; xmm save area (4*16 bytes) (16 byte aligned)
 stack_size          equ 7*8 + 8*8 + 4*16
 
@@ -125,14 +129,10 @@ stack_size          equ 7*8 + 8*8 + 4*16
 %xdefine COMPARE_TYPE2 3
 %endif
 
-%rep 3
 ;; Defines to generate functions for different levels
-%xdefine HASH_MASK HASH8K_HASH_MASK
-%xdefine HASH_MASK1 HASH_HIST_HASH_MASK
-%xdefine METHOD hash8k
-%xdefine METHOD1 hash_hist
+%xdefine METHOD hash_hist
 
-%rep 2
+%rep 3
 %if ARCH == 04
 %define USE_HSWNI
 %endif
@@ -183,8 +183,11 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	mov	[rsp + stream_offset], stream
 
 	mov	byte [stream + _internal_state_has_eob], 0
+
 	mov	tmp1 %+ d, dword[stream + _internal_state_dist_mask]
 	mov	[rsp + dist_mask_offset], tmp1
+	mov	tmp1 %+ d, dword[stream + _internal_state_hash_mask]
+	mov	[rsp + hash_mask_offset], tmp1
 
 	; state->bitbuf.set_buf(stream->next_out, stream->avail_out);
 	mov	level_buf, [stream + _level_buf]
@@ -208,6 +211,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	; file_length -= LA;
 	sub	file_length, LA
 	; if (file_length <= 0) continue;
+	mov	hmask1 %+ d, [rsp + hash_mask_offset]
 
 	cmp	file_length, f_i
 	jle	.input_end
@@ -223,8 +227,8 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	shr	tmp1, 8
 	compute_hash	hash2, tmp1
 
-	and	hash, HASH_MASK
-	and	hash2, HASH_MASK
+	and	hash, hmask1
+	and	hash2, hmask1
 
 	cmp	byte [stream + _internal_state_has_hist], IGZIP_NO_HIST
 	je	.write_first_byte
@@ -234,6 +238,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 
 .loop2:
 	mov	tmp3 %+ d, [rsp + dist_mask_offset]
+	mov	hmask1 %+ d, [rsp + hash_mask_offset]
 	; if (state->bitbuf.is_full()) {
 	cmp	m_out_buf, [rsp + m_out_end]
 	ja	.output_end
@@ -253,7 +258,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	mov	tmp2, curr_data
 	shr	curr_data, 16
 	compute_hash	hash, curr_data
-	and	hash %+ d, HASH_MASK
+	and	hash %+ d, hmask1 %+ d
 
 	mov	dist2 %+ w, f_i %+ w
 	dec	dist2
@@ -266,7 +271,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 
 	shr	tmp2, 24
 	compute_hash	hash2, tmp2
-	and	hash2 %+ d, HASH_MASK
+	and	hash2 %+ d, hmask1 %+ d
 
 	and	dist2 %+ d, tmp3 %+ d
 	neg	dist2
@@ -308,6 +313,8 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 
 	get_dist_icf_code	dist2, dist_code2, tmp1
 
+	mov hmask3 %+ d, dword [rsp + hash_mask_offset]
+
 	;; Setup for updating hash
 	lea	tmp3, [f_i + 1]	; tmp3 <= k
 
@@ -317,7 +324,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 
 	shr	curr_data, 24
 	compute_hash	hash3, curr_data
-	and	hash3, HASH_MASK
+	and	hash3 %+ d, hmask3 %+ d
 
 	mov	curr_data, tmp1
 	shr	tmp1, 8
@@ -349,9 +356,9 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	and	dist_code2, 0x1F
 	inc	dword [dist_hist + HIST_ELEM_SIZE*dist_code2]
 
-	; hash = compute_hash(state->file_start + f_i) & HASH_MASK;
-	and	hash %+ d, HASH_MASK
-	and	hash2 %+ d, HASH_MASK
+	; hash = compute_hash(state->file_start + f_i) & hash_mask;
+	and	hash %+ d, hmask3 %+ d
+	and	hash2 %+ d, hmask3 %+ d
 
 	; continue
 	cmp	f_i, file_length
@@ -372,6 +379,8 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 
 	; get_dist_code(dist, &code2, &code_len2);
 	get_dist_icf_code   dist, dist_code, tmp1
+
+	mov	hmask2 %+ d, [rsp + hash_mask_offset]
 
 	add	file_start, f_i
 	MOVDQU	xdata, [file_start + len]
@@ -401,9 +410,9 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	and     dist_code, 0x1F
 	inc     dword [dist_hist + HIST_ELEM_SIZE*dist_code]
 
-	; hash = compute_hash(state->file_start + f_i) & HASH_MASK;
-	and	hash %+ d, HASH_MASK
-	and	hash2 %+ d, HASH_MASK
+	; hash = compute_hash(state->file_start + f_i) & hash_mask;
+	and	hash %+ d, hmask2 %+ d
+	and	hash2 %+ d, hmask2 %+ d
 
 	; continue
 	cmp	f_i, file_length
@@ -494,6 +503,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	jmp	.len_dist_lit_huffman
 
 .write_first_byte:
+	mov	hmask1 %+ d, [rsp + hash_mask_offset]
 	cmp	m_out_buf, [rsp + m_out_end]
 	ja	.output_end
 
@@ -515,25 +525,16 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	MOVDQU	xdata, [file_start + f_i + 1]
 	add	f_i, 1
 	mov	curr_data, [file_start + f_i]
-	and	hash %+ d, HASH_MASK
-	and	hash2 %+ d, HASH_MASK
+	and	hash %+ d, hmask1 %+ d
+	and	hash2 %+ d, hmask1 %+ d
 
 	cmp	f_i, file_length
 	jl	.loop2
 	jmp	.input_end
 
-
 %ifdef USE_HSWNI
 %undef USE_HSWNI
 %endif
-
-;; Shift defines over in order to iterate over all versions
-%undef HASH_MASK
-%xdefine HASH_MASK HASH_MASK1
-
-%undef METHOD
-%xdefine METHOD METHOD1
-%endrep
 
 ;; Shift defines over in order to iterate over all versions
 %undef ARCH

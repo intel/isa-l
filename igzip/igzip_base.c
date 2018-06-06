@@ -37,6 +37,7 @@ void isal_deflate_body_base(struct isal_zstream *stream)
 	uint16_t *last_seen = state->head;
 	uint8_t *file_start = stream->next_in - stream->total_in;
 	uint32_t hist_size = state->dist_mask;
+	uint32_t hash_mask = state->hash_mask;
 
 	if (stream->avail_in == 0) {
 		if (stream->end_of_stream || stream->flush != NO_FLUSH)
@@ -58,7 +59,7 @@ void isal_deflate_body_base(struct isal_zstream *stream)
 		}
 
 		literal = *(uint32_t *) next_in;
-		hash = compute_hash(literal) & LVL0_HASH_MASK;
+		hash = compute_hash(literal) & hash_mask;
 		dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
 		last_seen[hash] = (uint64_t) (next_in - file_start);
 
@@ -79,7 +80,7 @@ void isal_deflate_body_base(struct isal_zstream *stream)
 
 				for (; next_hash < end; next_hash++) {
 					literal = *(uint32_t *) next_hash;
-					hash = compute_hash(literal) & LVL0_HASH_MASK;
+					hash = compute_hash(literal) & hash_mask;
 					last_seen[hash] = (uint64_t) (next_hash - file_start);
 				}
 
@@ -124,6 +125,7 @@ void isal_deflate_finish_base(struct isal_zstream *stream)
 	uint16_t *last_seen = state->head;
 	uint8_t *file_start = stream->next_in - stream->total_in;
 	uint32_t hist_size = state->dist_mask;
+	uint32_t hash_mask = state->hash_mask;
 
 	set_buf(&state->bitbuf, stream->next_out, stream->avail_out);
 
@@ -139,7 +141,7 @@ void isal_deflate_finish_base(struct isal_zstream *stream)
 			}
 
 			literal = *(uint32_t *) next_in;
-			hash = compute_hash(literal) & LVL0_HASH_MASK;
+			hash = compute_hash(literal) & hash_mask;
 			dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
 			last_seen[hash] = (uint64_t) (next_in - file_start);
 
@@ -158,7 +160,7 @@ void isal_deflate_finish_base(struct isal_zstream *stream)
 
 					for (; next_hash < end - 3; next_hash++) {
 						literal = *(uint32_t *) next_hash;
-						hash = compute_hash(literal) & LVL0_HASH_MASK;
+						hash = compute_hash(literal) & hash_mask;
 						last_seen[hash] =
 						    (uint64_t) (next_hash - file_start);
 					}

@@ -60,12 +60,14 @@
 %define f_i		rdi
 
 %define code_len2	rbp
+%define hmask1		rbp
 
 %define m_out_buf	r8
 
 %define level_buf	r9
 
-%define dist		r10
+%define dist 		r10
+%define hmask2		r10
 
 %define code2		r12
 %define f_end_i		r12
@@ -87,14 +89,11 @@ f_end_i_mem_offset	equ 0    ; local variable (8 bytes)
 m_out_end		equ 8
 m_out_start		equ 16
 dist_mask_offset	equ 24
-stack_size		equ 32
+hash_mask_offset	equ 32
+stack_size		equ 5*8
 
-%xdefine HASH_MASK HASH8K_HASH_MASK
-%xdefine HASH_MASK1 HASH_HIST_HASH_MASK
-%xdefine METHOD hash8k
-%xdefine METHOD1 hash_hist
+%xdefine METHOD hash_hist
 
-%rep 2
 ; void isal_deflate_icf_finish ( isal_zstream *stream )
 ; arg 1: rcx: addr of stream
 global isal_deflate_icf_finish_ %+ METHOD %+ _01
@@ -109,7 +108,8 @@ isal_deflate_icf_finish_ %+ METHOD %+ _01:
 %endif
 
 	; state->bitbuf.set_buf(stream->next_out, stream->avail_out);
-	mov	tmp2, [stream + _internal_state_dist_mask]
+	mov	tmp2 %+ d, dword [stream + _internal_state_dist_mask]
+	mov	tmp3 %+ d, dword [stream + _internal_state_hash_mask]
 	mov	level_buf, [stream + _level_buf]
 	mov	m_out_buf, [level_buf + _icf_buf_next]
 	mov	[rsp + m_out_start], m_out_buf
@@ -118,6 +118,7 @@ isal_deflate_icf_finish_ %+ METHOD %+ _01:
 	sub	tmp1, 4
 
 	mov     [rsp + dist_mask_offset], tmp2
+	mov	[rsp + hash_mask_offset], tmp3
 	mov	[rsp + m_out_end], tmp1
 
 	mov	hufftables, [stream + _hufftables]
@@ -144,8 +145,9 @@ isal_deflate_icf_finish_ %+ METHOD %+ _01:
 	cmp	m_out_buf, [rsp + m_out_end]
 	ja	.end_loop_2
 
+	mov	hmask1 %+ d, [rsp + hash_mask_offset]
 	compute_hash	hash, curr_data
-	and	hash %+ d, HASH_MASK
+	and	hash %+ d, hmask1 %+ d
 	mov	[hash_table + 2 * hash], f_i %+ w
 	mov	byte [stream + _internal_state_has_hist], IGZIP_HIST
 	jmp	.encode_literal
@@ -154,14 +156,15 @@ isal_deflate_icf_finish_ %+ METHOD %+ _01:
 
 .loop2:
 	mov	tmp3 %+ d, [rsp + dist_mask_offset]
+	mov	hmask1 %+ d, [rsp + hash_mask_offset]
 	; if (state->bitbuf.is_full()) {
 	cmp	m_out_buf, [rsp + m_out_end]
 	ja	.end_loop_2
 
-	; hash = compute_hash(state->file_start + f_i) & HASH_MASK;
+	; hash = compute_hash(state->file_start + f_i) & hash_mask;
 	mov	curr_data %+ d, [file_start + f_i]
 	compute_hash	hash, curr_data
-	and	hash %+ d, HASH_MASK
+	and	hash %+ d, hmask1 %+ d
 
 	; f_index = state->head[hash];
 	movzx	f_index %+ d, word [hash_table + 2 * hash]
@@ -209,6 +212,8 @@ isal_deflate_icf_finish_ %+ METHOD %+ _01:
 	;; get_len_code
 	lea	code, [len + 254]
 
+	mov	hmask2 %+ d, [rsp + hash_mask_offset]
+
 	or	code2, code
 	inc	dword [lit_len_hist + HIST_ELEM_SIZE*code]
 
@@ -220,19 +225,19 @@ isal_deflate_icf_finish_ %+ METHOD %+ _01:
 
 	; only update hash twice
 
-	; hash = compute_hash(state->file_start + k) & HASH_MASK;
+	; hash = compute_hash(state->file_start + k) & hash_mask;
 	mov	tmp6 %+ d, dword [file_start + tmp3]
 	compute_hash	hash, tmp6
-	and	hash %+ d, HASH_MASK
+	and	hash %+ d, hmask2 %+ d
 	; state->head[hash] = k;
 	mov	[hash_table + 2 * hash], tmp3 %+ w
 
 	add	tmp3, 1
 
-	; hash = compute_hash(state->file_start + k) & HASH_MASK;
+	; hash = compute_hash(state->file_start + k) & hash_mask;
 	mov	tmp6 %+ d, dword [file_start + tmp3]
 	compute_hash	hash, tmp6
-	and	hash %+ d, HASH_MASK
+	and	hash %+ d, hmask2 %+ d
 	; state->head[hash] = k;
 	mov	[hash_table + 2 * hash], tmp3 %+ w
 
@@ -311,14 +316,6 @@ isal_deflate_icf_finish_ %+ METHOD %+ _01:
 	add	rsp, stack_size
 	POP_ALL
 	ret
-
-;; Shift defines over in order to iterate over all versions
-%undef HASH_MASK
-%xdefine HASH_MASK HASH_MASK1
-
-%undef METHOD
-%xdefine METHOD METHOD1
-%endrep
 
 section .data
 	align 4

@@ -52,6 +52,7 @@
 %define	tmp4		rbx
 %define	dist		rbx
 %define	code2		rbx
+%define hmask1		rbx
 
 %define	hash		rdx
 %define	len		rdx
@@ -172,7 +173,8 @@ isal_deflate_body_ %+ ARCH %+ :
 	mov	stream, rcx
 	mov	byte [stream + _internal_state_has_eob], 0
 
-	MOVDQU	xmask, [mask]
+	MOVD	xmask, [stream + _internal_state_hash_mask]
+	PSHUFD	xmask, xmask, 0
 
 	; state->bitbuf.set_buf(stream->next_out, stream->avail_out);
 	mov	m_out_buf, [stream + _next_out]
@@ -203,6 +205,7 @@ isal_deflate_body_ %+ ARCH %+ :
 	cmp	f_end_i, f_i
 	jle	.input_end
 
+	MOVD	hmask1 %+ d, xmask
 	; for (f_i = f_start_i; f_i < f_end_i; f_i++) {
 	MOVDQU	xdata, [file_start + f_i]
 	mov	curr_data, [file_start + f_i]
@@ -214,8 +217,8 @@ isal_deflate_body_ %+ ARCH %+ :
 	shr	tmp3, 8
 	compute_hash	hash2, tmp3
 
-	and	hash, LVL0_HASH_MASK
-	and	hash2, LVL0_HASH_MASK
+	and	hash %+ d, hmask1 %+ d
+	and	hash2 %+ d, hmask1 %+ d
 
 	cmp	byte [stream + _internal_state_has_hist], IGZIP_NO_HIST
 	je	.write_first_byte
@@ -315,6 +318,8 @@ isal_deflate_body_ %+ ARCH %+ :
 %endif
 	get_len_code	len2, code, rcx, hufftables ;; rcx is code_len
 
+	MOVD	hmask1 %+ d, xmask
+
 	SHLX	code4, code4, rcx
 	or	code4, code
 	add	code_len2, rcx
@@ -322,12 +327,13 @@ isal_deflate_body_ %+ ARCH %+ :
 	add	f_i, len2
 	neg	len2
 
+	SHLX	code4, code4, code_len3
+
 	MOVQ	tmp5, xdata
 	shr	tmp5, 24
-	compute_hash	tmp4, tmp5
-	and	tmp4, LVL0_HASH_MASK
+	compute_hash	hash2, tmp5
+	and	hash2 %+ d, hmask1 %+ d
 
-	SHLX	code4, code4, code_len3
 	or	code4, code3
 	add	code_len2, code_len3
 
@@ -336,23 +342,23 @@ isal_deflate_body_ %+ ARCH %+ :
 
 	MOVDQU	xdata, [file_start + f_i]
 	mov	curr_data, [file_start + f_i]
-	mov	curr_data2, curr_data
 
 	MOVD	hash %+ d, xhash
-	PEXTRD	hash2 %+ d, xhash, 1
+	PEXTRD	tmp6 %+ d, xhash, 1
 	mov	[stream + _internal_state_head + 2 * hash], tmp3 %+ w
 
 	compute_hash	hash, curr_data
 
 	add	tmp3,1
-	mov	[stream + _internal_state_head + 2 * hash2], tmp3 %+ w
+	mov	[stream + _internal_state_head + 2 * tmp6], tmp3 %+ w
 
 	add	tmp3, 1
-	mov	[stream + _internal_state_head + 2 * tmp4], tmp3 %+ w
+	mov	[stream + _internal_state_head + 2 * hash2], tmp3 %+ w
 
-	write_bits	m_bits, m_bit_count, code4, code_len2, m_out_buf, tmp4
+	write_bits	m_bits, m_bit_count, code4, code_len2, m_out_buf
 	mov	f_end_i, [rsp + f_end_i_mem_offset]
 
+	mov	curr_data2, curr_data
 	shr	curr_data2, 8
 	compute_hash	hash2, curr_data2
 
@@ -362,16 +368,16 @@ isal_deflate_body_ %+ ARCH %+ :
 	cmp	tmp3, f_i
 	jae	.loop3_done
 	mov     tmp6, [file_start + tmp3]
-	compute_hash    tmp4, tmp6
-	and     tmp4 %+ d, LVL0_HASH_MASK
+	compute_hash    tmp1, tmp6
+	and     tmp1 %+ d, hmask1 %+ d
 	; state->head[hash] = k;
-	mov     [stream + _internal_state_head + 2 * tmp4], tmp3 %+ w
+	mov     [stream + _internal_state_head + 2 * tmp1], tmp3 %+ w
 	jmp      .loop3
 .loop3_done:
 %endif
-	; hash = compute_hash(state->file_start + f_i) & LVL0_HASH_MASK;
-	and	hash %+ d, LVL0_HASH_MASK
-	and	hash2 %+ d, LVL0_HASH_MASK
+	; hash = compute_hash(state->file_start + f_i) & hash_mask;
+	and	hash %+ d, hmask1 %+ d
+	and	hash2 %+ d, hmask1 %+ d
 
 	; continue
 	cmp	f_i, f_end_i
@@ -400,8 +406,8 @@ isal_deflate_body_ %+ ARCH %+ :
 	; code2 <<= code_len
 	; code2 |= code
 	; code_len2 += code_len
-	SHLX	code2, code2, rcx
-	or	code2, code
+	SHLX	code4, code2, rcx
+	or	code4, code
 	add	code_len2, rcx
 
 	;; Setup for updateing hash
@@ -414,14 +420,15 @@ isal_deflate_body_ %+ ARCH %+ :
 	add	tmp3,1
 	mov	[stream + _internal_state_head + 2 * hash2], tmp3 %+ w
 
+	MOVD	hmask1 %+ d, xmask
 	MOVDQU	xdata, [file_start + f_i]
 	mov	curr_data, [file_start + f_i]
-	mov	curr_data2, curr_data
 	compute_hash	hash, curr_data
 
-	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf, tmp7
+	write_bits	m_bits, m_bit_count, code4, code_len2, m_out_buf
 	mov	f_end_i, [rsp + f_end_i_mem_offset]
 
+	mov	curr_data2, curr_data
 	shr	curr_data2, 8
 	compute_hash	hash2, curr_data2
 
@@ -431,16 +438,16 @@ isal_deflate_body_ %+ ARCH %+ :
 	cmp	tmp3, f_i
 	jae	.loop4_done
 	mov     tmp6, [file_start + tmp3]
-	compute_hash    tmp4, tmp6
-	and     tmp4, LVL0_HASH_MASK
-	mov     [stream + _internal_state_head + 2 * tmp4], tmp3 %+ w
+	compute_hash    tmp1, tmp6
+	and     tmp1 %+ d, hmask1 %+ d
+	mov     [stream + _internal_state_head + 2 * tmp1], tmp3 %+ w
 	jmp     .loop4
 .loop4_done:
 %endif
 
-	; hash = compute_hash(state->file_start + f_i) & LVL0_HASH_MASK;
-	and	hash %+ d, LVL0_HASH_MASK
-	and	hash2 %+ d, LVL0_HASH_MASK
+	; hash = compute_hash(state->file_start + f_i) & hash_mask;
+	and	hash %+ d, hmask1 %+ d
+	and	hash2 %+ d, hmask1 %+ d
 
 	; continue
 	cmp	f_i, f_end_i
@@ -455,7 +462,7 @@ isal_deflate_body_ %+ ARCH %+ :
 
 	MOVD	hash %+ d, xhash
 
-	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf, tmp3
+	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf
 
 	PEXTRD	hash2 %+ d, xhash, 1
 
@@ -564,7 +571,3 @@ isal_deflate_body_ %+ ARCH %+ :
 %xdefine COMPARE_TYPE1 COMPARE_TYPE2
 %endif
 %endrep
-
-section .data
-	align 16
-mask:	dd	LVL0_HASH_MASK, LVL0_HASH_MASK, LVL0_HASH_MASK, LVL0_HASH_MASK

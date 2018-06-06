@@ -78,6 +78,7 @@ uint64_t gen_icf_map_h1_base(struct isal_zstream *stream,
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
 	uint16_t *hash_table = level_buf->hash_map.hash_table;
 	uint32_t hist_size = stream->internal_state.dist_mask;
+	uint32_t hash_mask = stream->internal_state.hash_mask;
 
 	if (input_size < ISAL_LOOK_AHEAD)
 		return 0;
@@ -87,7 +88,7 @@ uint64_t gen_icf_map_h1_base(struct isal_zstream *stream,
 		matches_icf_lookup->lit_dist = 0x1e;
 		matches_icf_lookup->dist_extra = 0;
 
-		hash = compute_hash(*(uint32_t *) next_in) & HASH_MAP_HASH_MASK;
+		hash = compute_hash(*(uint32_t *) next_in) & hash_mask;
 		hash_table[hash] = (uint64_t) (next_in - file_start);
 
 		next_in++;
@@ -96,7 +97,7 @@ uint64_t gen_icf_map_h1_base(struct isal_zstream *stream,
 	}
 
 	while (next_in < end_in - ISAL_LOOK_AHEAD) {
-		hash = compute_hash(*(uint32_t *) next_in) & HASH_MAP_HASH_MASK;
+		hash = compute_hash(*(uint32_t *) next_in) & hash_mask;
 		dist = (next_in - file_start - hash_table[hash]);
 		dist = ((dist - 1) & hist_size) + 1;
 		hash_table[hash] = (uint64_t) (next_in - file_start);

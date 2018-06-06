@@ -175,13 +175,13 @@ func(gen_icf_map_lh1_06)
 
 ;; Prep for main loop
 	vpbroadcastd zdist_mask, dword [stream + _internal_state_dist_mask]
+	vpbroadcastd zhash_mask, dword [stream + _internal_state_hash_mask]
 	mov	tmp, stream
 	mov	level_buf, [stream + _level_buf]
 	sub	f_i_end, LA
 	vmovdqu64 zdatas_perm, [datas_perm]
 	vbroadcasti32x8 zdatas_shuf, [datas_shuf]
 	vpbroadcastd zhash_prod, [hash_prod]
-	vpbroadcastd zhash_mask, [hash_mask]
 	vmovdqu64 zincrement, [increment]
 	vmovdqu64 zqword_shuf, [qword_shuf]
 	vbroadcasti64x2 zdatas_perm2, [datas_perm2]
@@ -569,8 +569,6 @@ thirty:
 	dd 0x1e
 twofiftyfour:
 	dd 0xfe
-hash_mask:
-	dd HASH_MAP_HASH_MASK
 lit_len_mask:
 	dd LIT_LEN_MASK
 shortest_matches:

@@ -315,9 +315,10 @@ struct isal_zstate {
 	uint32_t block_next;	//!< Start of current deflate block in the input
 	uint32_t block_end;	//!< End of current deflate block in the input
 	uint32_t dist_mask;	//!< Distance mask used.
+	uint32_t hash_mask;
+	enum isal_zstate_state state;	//!< Current state in processing the data stream
 	struct BitBuf2 bitbuf;	//!< Bit Buffer
 	uint32_t crc;		//!< Current crc
-	enum isal_zstate_state state;	//!< Current state in processing the data stream
 	uint8_t has_wrap_hdr;	//!< keeps track of wrapper header
 	uint8_t has_eob_hdr;	//!< keeps track of eob hdr (with BFINAL set)
 	uint8_t has_eob;	//!< keeps track of eob on the last deflate block

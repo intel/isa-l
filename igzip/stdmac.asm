@@ -386,4 +386,16 @@ ssc:
 	pxor	%%dest, %%src2
 %endif
 %endm
+
+%macro PSHUFD	3
+%define	%%dest	%1
+%define %%src1	%2
+%define	%%imm8	%3
+%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
+	vpshufd	%%dest, %%src1, %%imm8
+%else
+	pshufd	%%dest, %%src1, %%imm8
+%endif
+%endm
+
 %endif 	;; ifndef STDMAC_ASM

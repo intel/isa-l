@@ -60,12 +60,14 @@
 %define f_i		rdi
 
 %define code_len2	rbp
+%define hmask1		rbp
 
 %define m_out_buf	r8
 
 %define m_bits		r9
 
 %define dist		r10
+%define hmask2		r10
 
 %define m_bit_count	r11
 
@@ -131,9 +133,9 @@ skip_SLOP:
 
 	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
 	ja	end_loop_2
-
+	mov	hmask1 %+ d, dword [stream + _internal_state_hash_mask]
 	compute_hash	hash, curr_data
-	and	hash %+ d, LVL0_HASH_MASK
+	and	hash %+ d, hmask1 %+ d
 	mov	[stream + _internal_state_head + 2 * hash], f_i %+ w
 	mov	byte [stream + _internal_state_has_hist], IGZIP_HIST
 	jmp	encode_literal
@@ -142,15 +144,15 @@ skip_write_first_byte:
 
 loop2:
 	mov     tmp3 %+ d, dword [stream + _internal_state_dist_mask]
-
+	mov	hmask1 %+ d,  dword [stream + _internal_state_hash_mask]
 	; if (state->bitbuf.is_full()) {
 	cmp	m_out_buf, [stream + _internal_state_bitbuf_m_out_end]
 	ja	end_loop_2
 
-	; hash = compute_hash(state->file_start + f_i) & LVL0_HASH_MASK;
+	; hash = compute_hash(state->file_start + f_i) & hash_mask;
 	mov	curr_data %+ d, [file_start + f_i]
 	compute_hash	hash, curr_data
-	and	hash %+ d, LVL0_HASH_MASK
+	and	hash %+ d, hmask1 %+ d
 
 	; f_index = state->head[hash];
 	movzx	f_index %+ d, word [stream + _internal_state_head + 2 * hash]
@@ -198,6 +200,7 @@ loop2:
 	; get_len_code(len, &code, &code_len);
 	get_len_code	len, code, rcx, hufftables	;; rcx is code_len
 
+	mov	hmask2 %+ d,  dword [stream + _internal_state_hash_mask]
 	; code2 <<= code_len
 	; code2 |= code
 	; code_len2 += code_len
@@ -213,24 +216,24 @@ loop2:
 
 	; only update hash twice
 
-	; hash = compute_hash(state->file_start + k) & LVL0_HASH_MASK;
+	; hash = compute_hash(state->file_start + k) & hash_mask;
 	mov	tmp6 %+ d, dword [file_start + tmp3]
 	compute_hash	hash, tmp6
-	and	hash %+ d, LVL0_HASH_MASK
+	and	hash %+ d, hmask2 %+ d
 	; state->head[hash] = k;
 	mov	[stream + _internal_state_head + 2 * hash], tmp3 %+ w
 
 	add	tmp3, 1
 
-	; hash = compute_hash(state->file_start + k) & LVL0_HASH_MASK;
+	; hash = compute_hash(state->file_start + k) & hash_mask;
 	mov	tmp6 %+ d, dword [file_start + tmp3]
 	compute_hash	hash, tmp6
-	and	hash %+ d, LVL0_HASH_MASK
+	and	hash %+ d, hmask2 %+ d
 	; state->head[hash] = k;
 	mov	[stream + _internal_state_head + 2 * hash], tmp3 %+ w
 
 skip_hash_update:
-	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf, tmp5
+	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf
 
 	; continue
 	cmp	f_i, [rsp + f_end_i_mem_offset]
@@ -242,7 +245,7 @@ encode_literal:
 	movzx	tmp5, byte [file_start + f_i]
 	get_lit_code	tmp5, code2, code_len2, hufftables
 
-	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf, tmp5
+	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf
 
 	; continue
 	add	f_i, 1
@@ -263,7 +266,7 @@ final_bytes:
 	ja	not_end
 	movzx	tmp5, byte [file_start + f_i]
 	get_lit_code	tmp5, code2, code_len2, hufftables
-	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf, tmp3
+	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf
 
 	inc	f_i
 	cmp	f_i, [rsp + f_end_i_mem_offset]
@@ -276,7 +279,7 @@ write_eob:
 	;	get_lit_code(256, &code2, &code_len2);
 	get_lit_code	256, code2, code_len2, hufftables
 
-	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf, tmp1
+	write_bits	m_bits, m_bit_count, code2, code_len2, m_out_buf
 
 	mov	byte [stream + _internal_state_has_eob], 1
 	cmp	word [stream + _end_of_stream], 1

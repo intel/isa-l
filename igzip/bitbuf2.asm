@@ -32,14 +32,13 @@
 ; Assumes m_out_buf is a register
 ; Clobbers RCX
 ; code is clobbered
-; write_bits_always	m_bits, m_bit_count, code, count, m_out_buf, tmp1
-%macro write_bits 6
+; write_bits_always	m_bits, m_bit_count, code, count, m_out_buf
+%macro write_bits 5
 %define %%m_bits	%1
 %define %%m_bit_count	%2
 %define %%code		%3
 %define %%count		%4
 %define %%m_out_buf	%5
-%define %%tmp1		%6
 
 %ifdef USE_HSWNI
 	shlx	%%code, %%code, %%m_bit_count

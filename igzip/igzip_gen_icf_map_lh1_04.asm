@@ -100,8 +100,8 @@
 %define ydist_mask ymm15
 
 %ifidn __OUTPUT_FORMAT__, win64
-%define stack_size  10*16 + 6 * 8 + 8
-%define local_storage_offset (stack_size - 8)
+%define stack_size  10*16 + 6 * 8 + 3 * 8
+%define local_storage_offset (stack_size - 16)
 %define func(x) proc_frame x
 
 %macro FUNC_SAVE 0
@@ -144,7 +144,7 @@
 	add	rsp, stack_size
 %endm
 %else
-%define stack_size  8
+%define stack_size  16
 %define local_storage_offset 0
 
 %define func(x) x:
@@ -164,6 +164,7 @@
 %endif
 
 %define dist_mask_offset local_storage_offset
+%define hash_mask_offset local_storage_offset + 8
 
 %define VECT_SIZE 8
 %define HASH_BYTES 2
@@ -184,6 +185,8 @@ func(gen_icf_map_lh1_04)
 ;; Prep for main loop
 	mov	tmp %+ d, dword [stream + _internal_state_dist_mask]
 	mov	[rsp + dist_mask_offset], tmp
+	mov	tmp %+ d, dword [stream + _internal_state_hash_mask]
+	mov	[rsp + hash_mask_offset], tmp
 	mov	tmp, stream
 	mov	level_buf, [stream + _level_buf]
 	sub	f_i_end, LA
@@ -193,7 +196,7 @@ func(gen_icf_map_lh1_04)
 
 ;; Process first byte
 	vpbroadcastd	yhash_prod, [hash_prod]
-	vpbroadcastd	yhash_mask, [hash_mask]
+	vpbroadcastd	yhash_mask, [rsp + hash_mask_offset]
 	vmovd	yhashes %+ x, dword [f_i + file_start]
 	vpmaddwd yhashes, yhashes, yhash_prod
 	vpmaddwd yhashes, yhashes, yhash_prod
@@ -299,7 +302,7 @@ func(gen_icf_map_lh1_04)
 
 ;; Compute hash for next loop
 	vpbroadcastd	yhash_prod, [hash_prod]
-	vpbroadcastd	yhash_mask, [hash_mask]
+	vpbroadcastd	yhash_mask, [rsp + hash_mask_offset]
 	vmovdqu datas, [f_i + file_start + VECT_SIZE]
 	vpermq	yhashes, datas, 0x44
 	vpshufb	yhashes, yhashes, [datas_shuf]
@@ -362,7 +365,7 @@ loop1:
 
 ;; Compute hash for next loop
 	vpbroadcastd	yhash_prod, [hash_prod]
-	vpbroadcastd	yhash_mask, [hash_mask]
+	vpbroadcastd	yhash_mask, [rsp + hash_mask_offset]
 	vpermq	yhashes, datas_lookup, 0x44
 	vpshufb	yhashes, yhashes, [datas_shuf]
 	vpmaddwd yhashes, yhashes, yhash_prod
@@ -532,7 +535,7 @@ loop1_end:
 	add	tmp %+ d, f_i %+ d
 
 	vpbroadcastd	yhash_prod %+ x, [hash_prod]
-	vpbroadcastd	yhash_mask %+ x, [hash_mask]
+	vpbroadcastd	yhash_mask %+ x, [rsp + hash_mask_offset]
 
 	vmovd	yhashes %+ x, dword [f_i + file_start + VECT_SIZE - 1]
 	vpmaddwd yhashes %+ x, yhashes %+ x, yhash_prod %+ x
@@ -722,8 +725,6 @@ hash_prod:
 	dw PROD1, PROD2
 null_dist_syms:
 	dd LIT
-hash_mask:
-	dd HASH_MAP_HASH_MASK
 twofiftyfour:
 	dd 0xfe
 shortest_matches:

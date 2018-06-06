@@ -923,6 +923,25 @@ static void inline set_dist_mask(struct isal_zstream *stream)
 
 }
 
+static void inline set_hash_mask(struct isal_zstream *stream)
+{
+	struct isal_zstate *state = &stream->internal_state;
+
+	switch (stream->level) {
+	case 3:
+		state->hash_mask = LVL3_HASH_MASK;
+		break;
+	case 2:
+		state->hash_mask = LVL2_HASH_MASK;
+		break;
+	case 1:
+		state->hash_mask = LVL1_HASH_MASK;
+		break;
+	case 0:
+		state->hash_mask = LVL0_HASH_MASK;
+	}
+}
+
 void isal_deflate_init(struct isal_zstream *stream)
 {
 	struct isal_zstate *state = &stream->internal_state;
@@ -1036,26 +1055,28 @@ void isal_deflate_hash(struct isal_zstream *stream, uint8_t * dict, uint32_t dic
 	/* Reset history to prevent out of bounds matches this works because
 	 * dictionary must set at least 1 element in the history */
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
+	uint32_t hash_mask = stream->internal_state.hash_mask;
+
 	switch (stream->level) {
 	case 3:
 		memset(level_buf->lvl3.hash_table, -1, sizeof(level_buf->lvl3.hash_table));
-		isal_deflate_hash_lvl3(level_buf->lvl3.hash_table, LVL3_HASH_MASK,
+		isal_deflate_hash_lvl3(level_buf->lvl3.hash_table, hash_mask,
 				       stream->total_in, dict, dict_len);
 		break;
 
 	case 2:
 		memset(level_buf->lvl2.hash_table, -1, sizeof(level_buf->lvl2.hash_table));
-		isal_deflate_hash_lvl2(level_buf->lvl2.hash_table, LVL2_HASH_MASK,
+		isal_deflate_hash_lvl2(level_buf->lvl2.hash_table, hash_mask,
 				       stream->total_in, dict, dict_len);
 		break;
 	case 1:
 		memset(level_buf->lvl1.hash_table, -1, sizeof(level_buf->lvl1.hash_table));
-		isal_deflate_hash_lvl1(level_buf->lvl1.hash_table, LVL1_HASH_MASK,
+		isal_deflate_hash_lvl1(level_buf->lvl1.hash_table, hash_mask,
 				       stream->total_in, dict, dict_len);
 		break;
 	default:
 		memset(stream->internal_state.head, -1, sizeof(stream->internal_state.head));
-		isal_deflate_hash_lvl0(stream->internal_state.head, LVL0_HASH_MASK,
+		isal_deflate_hash_lvl0(stream->internal_state.head, hash_mask,
 				       stream->total_in, dict, dict_len);
 	}
 
@@ -1127,6 +1148,8 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 		} else
 			return level_check;
 	}
+
+	set_hash_mask(stream);
 
 	if (avail_in == 0)
 		stored_len = TYPE0_BLK_HDR_LEN;
@@ -1263,6 +1286,7 @@ int isal_deflate(struct isal_zstream *stream)
 
 	if (state->has_hist == IGZIP_NO_HIST) {
 		set_dist_mask(stream);
+		set_hash_mask(stream);
 		stream->total_in -= buffered_size;
 		reset_match_history(stream);
 		stream->total_in += buffered_size;
@@ -1270,6 +1294,7 @@ int isal_deflate(struct isal_zstream *stream)
 
 	} else if (state->has_hist == IGZIP_DICT_HIST) {
 		set_dist_mask(stream);
+		set_hash_mask(stream);
 		isal_deflate_hash(stream, state->buffer, state->b_bytes_processed);
 	}
 
