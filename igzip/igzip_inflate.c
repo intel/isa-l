@@ -662,6 +662,7 @@ static void inline make_inflate_huff_code_dist(struct inflate_huff_code_small *r
 	uint32_t last_length;
 	uint32_t copy_size;
 	uint16_t *short_code_lookup = result->short_code_lookup;
+	uint32_t sym;
 
 	count_total[0] = 0;
 	count_total[1] = 0;
@@ -701,8 +702,14 @@ static void inline make_inflate_huff_code_dist(struct inflate_huff_code_small *r
 		for (k = count_total[last_length]; k < count_total[last_length + 1]; k++) {
 			i = code_list[k];
 
-			if (i >= max_symbol)
+			if (i >= max_symbol) {
+				/* If the symbol is invalid, set code to be the
+				 * length of the symbol and the code_length to 0
+				 * to determine if there was enough input */
+				short_code_lookup[huff_code_table[i].code] =
+				    huff_code_table[i].length;
 				continue;
+			}
 
 			/* Set lookup table to return the current symbol concatenated
 			 * with the code length when the first DECODE_LENGTH bits of the
@@ -746,19 +753,27 @@ static void inline make_inflate_huff_code_dist(struct inflate_huff_code_small *r
 		       2 * (1 << (max_length - ISAL_DECODE_SHORT_BITS)));
 
 		for (j = 0; j < temp_code_length; j++) {
-			code_length = huff_code_table[temp_code_list[j]].length;
-			long_bits =
-			    huff_code_table[temp_code_list[j]].code >> ISAL_DECODE_SHORT_BITS;
+			sym = temp_code_list[j];
+			code_length = huff_code_table[sym].length;
+			long_bits = huff_code_table[sym].code >> ISAL_DECODE_SHORT_BITS;
 			min_increment = 1 << (code_length - ISAL_DECODE_SHORT_BITS);
 			for (; long_bits < (1 << (max_length - ISAL_DECODE_SHORT_BITS));
 			     long_bits += min_increment) {
+				if (sym >= max_symbol) {
+					/* If the symbol is invalid, set code to be the
+					 * length of the symbol and the code_length to 0
+					 * to determine if there was enough input */
+					result->long_code_lookup[long_code_lookup_length +
+								 long_bits] = code_length;
+					continue;
+				}
 				result->long_code_lookup[long_code_lookup_length + long_bits] =
-				    temp_code_list[j] |
-				    rfc_lookup_table.dist_extra_bit_count[temp_code_list[j]] <<
+				    sym |
+				    rfc_lookup_table.dist_extra_bit_count[sym] <<
 				    DIST_SYM_EXTRA_OFFSET |
 				    (code_length << SMALL_LONG_CODE_LEN_OFFSET);
 			}
-			huff_code_table[temp_code_list[j]].code = 0xFFFF;
+			huff_code_table[sym].code = 0xFFFF;
 		}
 		result->short_code_lookup[first_bits] = long_code_lookup_length |
 		    (max_length << SMALL_SHORT_CODE_LEN_OFFSET) | SMALL_FLAG_BIT;
@@ -905,7 +920,7 @@ static int inline setup_static_header(struct inflate_state *state)
 	int i;
 	struct huff_code lit_code[LIT_LEN_ELEMS];
 	struct huff_code dist_code[DIST_LEN + 2];
-	uint32_t multisym = SINGLE_SYM_FLAG;
+	uint32_t multisym = SINGLE_SYM_FLAG, max_dist = DIST_LEN;
 	/* These tables are based on the static huffman tree described in RFC
 	 * 1951 */
 	uint16_t lit_count[MAX_LIT_LEN_COUNT] = {
@@ -943,8 +958,12 @@ static int inline setup_static_header(struct inflate_state *state)
 
 	make_inflate_huff_code_lit_len(&state->lit_huff_code, lit_code, LIT_LEN_ELEMS,
 				       lit_count, code_list, multisym);
+
+	if (state->hist_bits && state->hist_bits < 15)
+		max_dist = 2 * state->hist_bits;
+
 	make_inflate_huff_code_dist(&state->dist_huff_code, dist_code, DIST_LEN + 2,
-				    dist_count, DIST_LEN);
+				    dist_count, max_dist);
 
 	state->block_state = ISAL_BLOCK_CODED;
 
@@ -1037,8 +1056,10 @@ static uint16_t inline decode_next_dist(struct inflate_state *state,
 		state->read_in >>= bit_count;
 		state->read_in_length -= bit_count;
 
-		if (bit_count == 0)
+		if (bit_count == 0) {
+			state->read_in_length -= next_sym;
 			next_sym = INVALID_SYMBOL;
+		}
 
 		return next_sym & DIST_SYM_MASK;
 
@@ -1054,8 +1075,13 @@ static uint16_t inline decode_next_dist(struct inflate_state *state,
 		bit_count = next_sym >> SMALL_LONG_CODE_LEN_OFFSET;
 		state->read_in >>= bit_count;
 		state->read_in_length -= bit_count;
-		return next_sym & DIST_SYM_MASK;
 
+		if (bit_count == 0) {
+			state->read_in_length -= next_sym;
+			next_sym = INVALID_SYMBOL;
+		}
+
+		return next_sym & DIST_SYM_MASK;
 	}
 }
 
@@ -1123,7 +1149,7 @@ static int inline setup_dynamic_header(struct inflate_state *state)
 	    lit_expand_count[MAX_LIT_LEN_COUNT], dist_count[16];
 	uint16_t *count;
 	uint16_t symbol;
-	uint32_t multisym = DEFAULT_SYM_FLAG, length;
+	uint32_t multisym = DEFAULT_SYM_FLAG, length, max_dist = DIST_LEN;
 	struct huff_code *code;
 	uint64_t flag = 0;
 
@@ -1314,8 +1340,11 @@ static int inline setup_dynamic_header(struct inflate_state *state)
 	if (set_codes(&lit_and_dist_huff[LIT_LEN], DIST_LEN, dist_count))
 		return ISAL_INVALID_BLOCK;
 
+	if (state->hist_bits && state->hist_bits < 15)
+		max_dist = 2 * state->hist_bits;
+
 	make_inflate_huff_code_dist(&state->dist_huff_code, &lit_and_dist_huff[LIT_LEN],
-				    DIST_LEN, dist_count, DIST_LEN);
+				    DIST_LEN, dist_count, max_dist);
 
 	if (set_and_expand_lit_len_huffcode
 	    (lit_and_dist_huff, LIT_LEN, lit_count, lit_expand_count, code_list))
@@ -1513,6 +1542,7 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state, uint8_
 	uint8_t *next_in_tmp, *next_out_tmp;
 	uint32_t avail_in_tmp, avail_out_tmp, total_out_tmp;
 	uint32_t next_lits, sym_count;
+	struct rfc1951_tables *rfc = &rfc_lookup_table;
 
 	state->copy_overflow_length = 0;
 	state->copy_overflow_distance = 0;
@@ -1590,13 +1620,15 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state, uint8_
 				repeat_length = next_lit - 254;
 				next_dist = decode_next_dist(state, &state->dist_huff_code);
 
-				if (next_dist >= DIST_LEN)
-					return ISAL_INVALID_SYMBOL;
+				if (state->read_in_length >= 0) {
+					if (next_dist >= DIST_LEN)
+						return ISAL_INVALID_SYMBOL;
 
-				look_back_dist = rfc_lookup_table.dist_start[next_dist] +
-				    inflate_in_read_bits(state,
-							 rfc_lookup_table.dist_extra_bit_count
-							 [next_dist]);
+					look_back_dist = rfc->dist_start[next_dist] +
+					    inflate_in_read_bits(state,
+								 rfc->dist_extra_bit_count
+								 [next_dist]);
+				}
 
 				if (state->read_in_length < 0) {
 					state->read_in = read_in_tmp;
@@ -1663,6 +1695,7 @@ void isal_inflate_init(struct inflate_state *state)
 	state->bfinal = 0;
 	state->crc_flag = 0;
 	state->crc = 0;
+	state->hist_bits = 0;
 	state->type0_block_len = 0;
 	state->write_overflow_lits = 0;
 	state->write_overflow_len = 0;
@@ -1724,6 +1757,7 @@ int isal_inflate_stateless(struct inflate_state *state)
 	state->bfinal = 0;
 	state->crc = 0;
 	state->total_out = 0;
+	state->hist_bits = 0;
 
 	while (state->block_state != ISAL_BLOCK_FINISH) {
 		if (state->block_state == ISAL_BLOCK_NEW_HDR) {

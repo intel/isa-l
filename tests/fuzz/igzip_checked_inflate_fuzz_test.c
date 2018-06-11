@@ -52,10 +52,13 @@ int LLVMFuzzerTestOneInput(const uint8_t * data, size_t size)
 	} else if (zret < 0) {
 		if (zret != Z_BUF_ERROR)
 			/* If zlib errors, assert isal errors, excluding a few
-			 * cases where zlib is overzealous */
+			 * cases where zlib is overzealous and when zlib notices
+			 * an error faster than isal */
 			assert(iret < 0 || strcmp(zstate.msg, z_msg_invalid_code_set) == 0
 			       || strcmp(zstate.msg, z_msg_invalid_dist_set) == 0
-			       || strcmp(zstate.msg, z_msg_invalid_lit_len_set) == 0);
+			       || strcmp(zstate.msg, z_msg_invalid_lit_len_set) == 0
+			       || (iret == ISAL_END_INPUT && zstate.avail_in < 3));
+
 	} else
 		/* If zlib did not finish or error, assert isal did not finish
 		 *  or that isal found an invalid header since isal notices the

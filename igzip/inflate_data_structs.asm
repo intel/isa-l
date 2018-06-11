@@ -118,6 +118,7 @@ FIELD	_dict_length,	4,	4
 FIELD	_bfinal,	4,	4
 FIELD	_crc_flag,	4,	4
 FIELD	_crc,		4,	4
+FIELD	_hist_bits,	4,	4
 FIELD	_type0_block_len,	4, 	4
 FIELD	_write_overflow_lits,	4,	4
 FIELD	_write_overflow_len,	4,	4

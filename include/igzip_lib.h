@@ -472,6 +472,7 @@ struct inflate_state {
 	uint32_t bfinal;	//!< Flag identifying final block
 	uint32_t crc_flag;	//!< Flag identifying whether to track of crc
 	uint32_t crc;		//!< Contains crc of output if crc_flag is set
+	uint32_t hist_bits; //!< Log base 2 of maximum lookback distance
 	int32_t type0_block_len;	//!< Length left to read of type 0 block when outbuffer overflow occured
 	int32_t write_overflow_lits;
 	int32_t write_overflow_len;
@@ -731,7 +732,9 @@ int isal_inflate_set_dict(struct inflate_state *state, uint8_t *dict, uint32_t d
  * state of the decompression on exit can be read from state->block-state. If
  * the crc_flag is set to ISAL_GZIP_NO_HDR the gzip crc of the output is stored
  * in state->crc. Alternatively, if the crc_flag is set to ISAL_ZLIB_NO_HDR the
- * adler32 of the output is stored in state->crc.
+ * adler32 of the output is stored in state->crc. The element state->hist_bits
+ * has values from 0 to 15, where values of 1 to 15 are the log base 2 size of the
+ * matching window and 0 is the default with maximum history size.
  *
  * If a dictionary is required, a call to isal_inflate_set_dict will set the
  * dictionary.

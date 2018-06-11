@@ -405,7 +405,7 @@ stack_size		equ	4 * 8 + 8 * 8
 
 	mov	rcx, %%next_sym
 	shr	rcx, SMALL_SHORT_CODE_LEN_OFFSET
-	jz	invalid_symbol
+	jz	invalid_dist_symbol_ %+ %%next_sym
 
 	;; Check if symbol or hint was looked up
 	and	%%next_sym, SMALL_FLAG_BIT | SMALL_SHORT_SYM_MASK
@@ -427,7 +427,7 @@ stack_size		equ	4 * 8 + 8 * 8
 	;; Save length associated with symbol
 	mov	rcx, %%next_sym
 	shr	rcx, SMALL_LONG_CODE_LEN_OFFSET
-	jz	invalid_symbol
+	jz	invalid_dist_symbol_ %+ %%next_sym
 	and	%%next_sym, SMALL_SHORT_SYM_MASK
 
 %%end:
@@ -741,6 +741,13 @@ invalid_look_back_distance:
 	mov	rax, INVALID_LOOKBACK
 	jmp	end
 
+invalid_dist_symbol_ %+ next_sym:
+	cmp	read_in_length, next_sym
+	jl	end_of_input
+	jmp	invalid_symbol
+invalid_dist_symbol_ %+ next_sym3:
+	cmp	read_in_length, next_sym3
+	jl	end_of_input
 invalid_symbol:
 	mov	rax, INVALID_SYMBOL
 	jmp	end
