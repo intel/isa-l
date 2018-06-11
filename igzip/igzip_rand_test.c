@@ -560,7 +560,7 @@ int isal_inflate_with_checks(struct inflate_state *state, uint32_t compress_len,
 
 int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 		       uint8_t * uncompress_buf, uint32_t * uncompress_len, uint32_t gzip_flag,
-		       uint8_t * dict, uint32_t dict_len)
+		       uint8_t * dict, uint32_t dict_len, uint32_t hist_bits)
 {
 	struct inflate_state *state = NULL;
 	int ret = 0;
@@ -590,6 +590,7 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 	state->avail_in = 0;
 	state->avail_out = 0;
 	state->crc_flag = gzip_flag;
+	state->hist_bits = hist_bits;
 
 	if (reset_test_flag)
 		isal_inflate_reset(state);
@@ -665,7 +666,7 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 #ifdef VERBOSE
 		printf("Pre inflate\n");
 		printf
-		    ("compressed_size = 0x%05x, in_processed = 0x%05x, in_size = 0x%05x, avail_in = 0x%05x\n",
+		    ("compressed_size = 0x%05lx, in_processed = 0x%05x, in_size = 0x%05x, avail_in = 0x%05x\n",
 		     compress_len, comp_processed, comp_tmp_size, state->avail_in);
 		printf
 		    ("data_size       = 0x%05x, out_processed  = 0x%05x, out_size  = 0x%05x, avail_out  = 0x%05x, total_out  = 0x%05x\n",
@@ -680,7 +681,7 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 #ifdef VERBOSE
 		printf("Post inflate\n");
 		printf
-		    ("compressed_size = 0x%05x, in_processed = 0x%05x, in_size = 0x%05x, avail_in = 0x%05x\n",
+		    ("compressed_size = 0x%05lx, in_processed = 0x%05x, in_size = 0x%05x, avail_in = 0x%05x\n",
 		     compress_len, comp_processed, comp_tmp_size, state->avail_in);
 		printf
 		    ("data_size       = 0x%05x, out_processed  = 0x%05x, out_size  = 0x%05x, avail_out  = 0x%05x, total_out  = 0x%05x\n",
@@ -765,7 +766,7 @@ int inflate_ret_to_code(int ret)
 
 /* Inflate the  compressed data and check that the decompressed data agrees with the input data */
 int inflate_check(uint8_t * z_buf, uint32_t z_size, uint8_t * in_buf, uint32_t in_size,
-		  uint32_t gzip_flag, uint8_t * dict, uint32_t dict_len)
+		  uint32_t gzip_flag, uint8_t * dict, uint32_t dict_len, uint32_t hist_bits)
 {
 	/* Test inflate with reference inflate */
 
@@ -801,7 +802,7 @@ int inflate_check(uint8_t * z_buf, uint32_t z_size, uint8_t * in_buf, uint32_t i
 	} else {
 		ret =
 		    inflate_multi_pass(z_buf, z_size, test_buf, &test_size, gzip_flag, dict,
-				       dict_len);
+				       dict_len, hist_bits);
 		inflate_type = 0;
 	}
 
@@ -985,7 +986,7 @@ void set_random_hufftable(struct isal_zstream *stream)
  * compression*/
 int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed_buf,
 			uint32_t * compressed_size, uint32_t flush_type, uint32_t gzip_flag,
-			uint32_t level, uint8_t * dict, uint32_t dict_len)
+			uint32_t level, uint8_t * dict, uint32_t dict_len, uint32_t hist_bits)
 {
 	int ret = IGZIP_COMP_OK;
 	uint8_t *in_buf = NULL, *out_buf = NULL;
@@ -1038,6 +1039,7 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	stream->avail_out = 0;
 	stream->gzip_flag = gzip_flag;
 	stream->level = level;
+	stream->hist_bits = hist_bits;
 
 	if (level >= 1) {
 		level_buf_size = get_rand_level_buf_size(stream->level);
@@ -1179,7 +1181,7 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 /* Compress the input data into the outbuffer in one call to isal_deflate */
 int compress_single_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed_buf,
 			 uint32_t * compressed_size, uint32_t flush_type, uint32_t gzip_flag,
-			 uint32_t level, uint8_t * dict, uint32_t dict_len)
+			 uint32_t level, uint8_t * dict, uint32_t dict_len, uint32_t hist_bits)
 {
 	int ret = IGZIP_COMP_OK;
 	struct isal_zstream stream;
@@ -1224,6 +1226,7 @@ int compress_single_pass(uint8_t * data, uint32_t data_size, uint8_t * compresse
 	stream.end_of_stream = 1;
 	stream.gzip_flag = gzip_flag;
 	stream.level = level;
+	stream.hist_bits = hist_bits;
 
 	if (level >= 1) {
 		level_buf_size = get_rand_level_buf_size(stream.level);
@@ -1238,6 +1241,7 @@ int compress_single_pass(uint8_t * data, uint32_t data_size, uint8_t * compresse
 
 	if (dict != NULL)
 		isal_deflate_set_dict(&stream, dict, dict_len);
+
 	ret =
 	    isal_deflate_with_checks(&stream, data_size, *compressed_size, data, data_size,
 				     data_size, compressed_buf, *compressed_size, 0);
@@ -1383,7 +1387,7 @@ int compress_ver_rep_buf(uint8_t * data, uint32_t data_size, uint64_t data_rep_s
 /* Statelessly compress the input buffer into the output buffer */
 int compress_stateless(uint8_t * data, uint32_t data_size, uint8_t * compressed_buf,
 		       uint32_t * compressed_size, uint32_t flush_type, uint32_t gzip_flag,
-		       uint32_t level)
+		       uint32_t level, uint32_t hist_bits)
 {
 	int ret = IGZIP_COMP_OK;
 	struct isal_zstream stream;
@@ -1421,6 +1425,7 @@ int compress_stateless(uint8_t * data, uint32_t data_size, uint8_t * compressed_
 	stream.next_out = compressed_buf;
 	stream.gzip_flag = gzip_flag;
 	stream.level = level;
+	stream.hist_bits = hist_bits;
 
 	if (level == 1) {
 		/* This is to test case where level buf uses already existing
@@ -1486,7 +1491,8 @@ int compress_stateless(uint8_t * data, uint32_t data_size, uint8_t * compressed_
 
 /* Statelessly compress the input buffer into the output buffer */
 int compress_stateless_full_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed_buf,
-				  uint32_t * compressed_size, uint32_t level)
+				  uint32_t * compressed_size, uint32_t level,
+				  uint32_t hist_bits)
 {
 	int ret = IGZIP_COMP_OK;
 	uint8_t *in_buf = NULL, *level_buf = NULL, *out_buf = compressed_buf;
@@ -1525,6 +1531,7 @@ int compress_stateless_full_flush(uint8_t * data, uint32_t data_size, uint8_t * 
 	stream.avail_out = *compressed_size;
 	stream.next_out = compressed_buf;
 	stream.level = level;
+	stream.hist_bits = hist_bits;
 
 	if (level == 1) {
 		/* This is to test case where level_buf uses already existing
@@ -1595,7 +1602,7 @@ int compress_stateless_full_flush(uint8_t * data, uint32_t data_size, uint8_t * 
 		/* Verify that blocks are independent */
 		ret =
 		    inflate_check(out_buf, stream.next_out - out_buf, in_buf, in_size, 0, NULL,
-				  0);
+				  0, hist_bits);
 
 		if (ret == INFLATE_INVALID_LOOK_BACK_DISTANCE) {
 			break;
@@ -1662,6 +1669,7 @@ int compress_full_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 		stream.level = 0;
 		stream.level_buf = NULL;
 		stream.level_buf_size = 0;
+		stream.hist_bits = 0;
 	}
 
 	stream.flush = FULL_FLUSH;
@@ -1733,7 +1741,7 @@ int compress_full_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 		if (state->state == ZSTATE_NEW_HDR || state->state == ZSTATE_END) {
 			ret =
 			    inflate_check(out_buf, stream.next_out - out_buf, in_buf, in_size,
-					  0, NULL, 0);
+					  0, NULL, 0, 0);
 
 			if (ret == INFLATE_INVALID_LOOK_BACK_DISTANCE)
 				break;
@@ -1846,11 +1854,12 @@ int compress_swap_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_type)
 {
 	int ret = IGZIP_COMP_OK;
-	uint32_t z_size, overflow, gzip_flag, level;
+	uint32_t z_size, overflow, gzip_flag, level, hist_bits;
 	uint8_t *z_buf = NULL;
 	uint8_t *in_buf = NULL;
 
 	gzip_flag = rand() % 5;
+	hist_bits = rand() % 16;
 	level = get_rand_level();
 
 	if (in_size != 0) {
@@ -1884,7 +1893,7 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 	if (flush_type != NO_FLUSH && flush_type != FULL_FLUSH) {
 		ret =
 		    compress_stateless(in_buf, in_size, z_buf, &z_size, flush_type, gzip_flag,
-				       level);
+				       level, hist_bits);
 
 		if (ret != INVALID_FLUSH_ERROR)
 			print_error(ret);
@@ -1901,17 +1910,19 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 	}
 
 	/* Else test valid flush type */
-	ret =
-	    compress_stateless(in_buf, in_size, z_buf, &z_size, flush_type, gzip_flag, level);
+	ret = compress_stateless(in_buf, in_size, z_buf, &z_size, flush_type, gzip_flag, level,
+				 hist_bits);
 
 	if (!ret)
-		ret = inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag, NULL, 0);
+		ret =
+		    inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag, NULL, 0,
+				  hist_bits);
 
 #ifdef VERBOSE
 	if (ret) {
 		printf
-		    ("Compressed array at level %d with gzip flag %d and flush type %d: ",
-		     level, gzip_flag, flush_type);
+		    ("Compressed array at level %d with gzip flag %d, flush type %d, and window bits %d: ",
+		     level, gzip_flag, flush_type, hist_bits);
 		print_uint8_t(z_buf, z_size);
 		printf("\n");
 		printf("Data: ");
@@ -1952,15 +1963,17 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 
 	create_rand_repeat_data(z_buf, z_size);
 
-	ret =
-	    compress_stateless(in_buf, in_size, z_buf, &z_size, flush_type, gzip_flag, level);
+	ret = compress_stateless(in_buf, in_size, z_buf, &z_size, flush_type, gzip_flag, level,
+				 hist_bits);
 	if (!ret)
-		ret = inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag, NULL, 0);
+		ret =
+		    inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag, NULL, 0,
+				  hist_bits);
 #ifdef VERBOSE
 	if (ret) {
 		printf
-		    ("Compressed array at level %d with gzip flag %d and flush type %d: ",
-		     level, gzip_flag, flush_type);
+		    ("Compressed array at level %d with gzip flag %d, flush type %d, and hist_bits %d: ",
+		     level, gzip_flag, flush_type, hist_bits);
 		print_uint8_t(z_buf, z_size);
 		printf("\n");
 		printf("Data: ");
@@ -1985,15 +1998,14 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 				return MALLOC_FAILED;
 		}
 
-		overflow =
-		    compress_stateless(in_buf, in_size, z_buf, &z_size, flush_type, gzip_flag,
-				       level);
+		overflow = compress_stateless(in_buf, in_size, z_buf, &z_size, flush_type,
+					      gzip_flag, level, hist_bits);
 
 		if (overflow != COMPRESS_OUT_BUFFER_OVERFLOW) {
 			if (overflow == 0)
 				ret =
 				    inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag,
-						  NULL, 0);
+						  NULL, 0, hist_bits);
 
 			if (overflow != 0 || ret != 0) {
 #ifdef VERBOSE
@@ -2003,8 +2015,8 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 				print_error(overflow);
 
 				printf
-				    ("Compressed array at level %d with gzip flag %d and flush type %d: ",
-				     level, gzip_flag, flush_type);
+				    ("Compressed array at level %d with gzip flag %d, flush type %d, and hist_bits %d: ",
+				     level, gzip_flag, flush_type, hist_bits);
 
 				print_uint8_t(z_buf, z_size);
 				printf("\n");
@@ -2043,10 +2055,13 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 		create_rand_repeat_data(z_buf, z_size);
 
 		/* Else test valid flush type */
-		ret = compress_stateless_full_flush(in_buf, in_size, z_buf, &z_size, level);
+		ret = compress_stateless_full_flush(in_buf, in_size, z_buf, &z_size,
+						    level, hist_bits);
 
 		if (!ret)
-			ret = inflate_check(z_buf, z_size, in_buf, in_size, 0, NULL, 0);
+			ret =
+			    inflate_check(z_buf, z_size, in_buf, in_size, 0, NULL, 0,
+					  hist_bits);
 		else if (ret == COMPRESS_LOOP_COUNT_OVERFLOW)
 			ret = 0;
 
@@ -2054,8 +2069,8 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 #ifdef VERBOSE
 		if (ret) {
 			printf
-			    ("Compressed array at level %d with gzip flag %d and flush type %d: ",
-			     level, gzip_flag, FULL_FLUSH);
+			    ("Compressed array at level %d with gzip flag %d, flush type %d, and hist_bits %d: ",
+			     level, gzip_flag, FULL_FLUSH, hist_bits);
 			print_uint8_t(z_buf, z_size);
 			printf("\n");
 			printf("Data: ");
@@ -2076,7 +2091,7 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 {
 	int ret = IGZIP_COMP_OK, fin_ret = IGZIP_COMP_OK;
-	uint32_t overflow = 0, gzip_flag, level;
+	uint32_t overflow = 0, gzip_flag, level, hist_bits;
 	uint32_t z_size = 0, z_size_max = 0, z_compressed_size, dict_len = 0;
 	uint8_t *z_buf = NULL, *dict = NULL;
 
@@ -2091,6 +2106,7 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 	}
 
 	gzip_flag = rand() % 5;
+	hist_bits = rand() % 16;
 	level = get_rand_level();
 
 	z_size = z_size_max;
@@ -2122,16 +2138,18 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 	}
 
 	ret = compress_single_pass(in_buf, in_size, z_buf, &z_size, flush_type,
-				   gzip_flag, level, dict, dict_len);
+				   gzip_flag, level, dict, dict_len, hist_bits);
 
 	if (!ret)
-		ret = inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag, dict, dict_len);
+		ret =
+		    inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag, dict, dict_len,
+				  hist_bits);
 
 	if (ret) {
 #ifdef VERBOSE
 		printf
-		    ("Compressed array at level %d with gzip flag %d and flush type %d: ",
-		     level, gzip_flag, flush_type);
+		    ("Compressed array at level %d with gzip flag %d, flush type %d, and hist_bits %d: ",
+		     level, gzip_flag, flush_type, hist_bits);
 		print_uint8_t(z_buf, z_size);
 		printf("\n");
 		if (dict != NULL) {
@@ -2172,16 +2190,18 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 
 	ret =
 	    compress_multi_pass(in_buf, in_size, z_buf, &z_size, flush_type, gzip_flag, level,
-				dict, dict_len);
+				dict, dict_len, hist_bits);
 
 	if (!ret)
-		ret = inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag, dict, dict_len);
+		ret =
+		    inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag, dict, dict_len,
+				  hist_bits);
 
 	if (ret) {
 #ifdef VERBOSE
 		printf
-		    ("Compressed array at level %d with gzip flag %d and flush type %d: ",
-		     level, gzip_flag, flush_type);
+		    ("Compressed array at level %d with gzip flag %d, flush type %d and hist_bits %d: ",
+		     level, gzip_flag, flush_type, hist_bits);
 		print_uint8_t(z_buf, z_size);
 		printf("\n");
 		if (dict != NULL) {
@@ -2216,13 +2236,13 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 	create_rand_repeat_data(z_buf, z_size);
 
 	overflow = compress_single_pass(in_buf, in_size, z_buf, &z_size, flush_type,
-					gzip_flag, level, dict, dict_len);
+					gzip_flag, level, dict, dict_len, hist_bits);
 
 	if (overflow != COMPRESS_OUT_BUFFER_OVERFLOW) {
 		if (overflow == 0)
 			ret =
 			    inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag, dict,
-					  dict_len);
+					  dict_len, hist_bits);
 
 		/* Rarely single pass overflow will compresses data
 		 * better than the initial run. This is to stop that
@@ -2235,8 +2255,8 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 			print_error(ret);
 
 			printf
-			    ("Compressed array at level %d with gzip flag %d and flush type %d: ",
-			     level, gzip_flag, flush_type);
+			    ("Compressed array at level %d with gzip flag %d, flush type %d, and hist_bits %d: ",
+			     level, gzip_flag, flush_type, hist_bits);
 			print_uint8_t(z_buf, z_size);
 			printf("\n");
 			printf("Data: ");
@@ -2257,13 +2277,13 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 
 		overflow =
 		    compress_multi_pass(in_buf, in_size, z_buf, &z_size, flush_type,
-					gzip_flag, level, dict, dict_len);
+					gzip_flag, level, dict, dict_len, hist_bits);
 
 		if (overflow != COMPRESS_OUT_BUFFER_OVERFLOW) {
 			if (overflow == 0)
 				ret =
 				    inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag,
-						  dict, dict_len);
+						  dict, dict_len, hist_bits);
 
 			/* Rarely multi pass overflow will compresses data
 			 * better than the initial run. This is to stop that
@@ -2275,8 +2295,8 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 				printf("inflate ret = %d\n", ret);
 				print_error(ret);
 				printf
-				    ("Compressed array at level %d with gzip flag %d and flush type %d: ",
-				     level, gzip_flag, flush_type);
+				    ("Compressed array at level %d with gzip flag %d, flush type %d, and hist_bits %d: ",
+				     level, gzip_flag, flush_type, hist_bits);
 				print_uint8_t(z_buf, z_size);
 				printf("\n");
 				printf("Data: ");
@@ -2328,7 +2348,7 @@ int test_flush(uint8_t * in_buf, uint32_t in_size)
 
 	/* Test invalid flush */
 	ret = compress_single_pass(in_buf, in_size, z_buf, &z_size, flush_type,
-				   gzip_flag, level, NULL, 0);
+				   gzip_flag, level, NULL, 0, 0);
 
 	if (ret == COMPRESS_GENERAL_ERROR)
 		ret = 0;
@@ -2346,7 +2366,7 @@ int test_flush(uint8_t * in_buf, uint32_t in_size)
 	ret = compress_swap_flush(in_buf, in_size, z_buf, &z_size, rand() % 3, gzip_flag);
 
 	if (!ret)
-		ret = inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag, NULL, 0);
+		ret = inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag, NULL, 0, 0);
 
 	if (ret) {
 #ifdef VERBOSE
@@ -2397,7 +2417,7 @@ int test_full_flush(uint8_t * in_buf, uint32_t in_size)
 	ret = compress_full_flush(in_buf, in_size, z_buf, &z_size, gzip_flag, level);
 
 	if (!ret)
-		ret = inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag, NULL, 0);
+		ret = inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag, NULL, 0, 0);
 
 	if (ret) {
 #ifdef VERBOSE
@@ -2443,7 +2463,7 @@ int test_inflate(struct vect_result *in_vector)
 
 	if (!ret) {
 		ret = inflate_multi_pass(compress_buf, compress_len, out_buf, &out_size,
-					 0, NULL, 0);
+					 0, NULL, 0, 0);
 
 		if (ret == INFLATE_LEFTOVER_INPUT)
 			ret = ISAL_DECOMP_OK;
