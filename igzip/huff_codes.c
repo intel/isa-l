@@ -714,23 +714,10 @@ void isal_update_histogram_base(uint8_t * start_stream, int length,
 		}
 		lit_len_histogram[literal & 0xFF] += 1;
 	}
-	literal = literal >> 8;
-	hash = compute_hash(literal) & LVL0_HASH_MASK;
-	seen = last_seen[hash];
-	last_seen[hash] = (current - start_stream) & 0xFFFF;
-	dist = (current - start_stream - seen) & 0xFFFF;
-	if (dist < D) {
-		match_length = compare258(current - dist, current, end_stream - current);
-		if (match_length >= SHORTEST_MATCH) {
-			dist_histogram[convert_dist_to_dist_sym(dist)] += 1;
-			lit_len_histogram[convert_length_to_len_sym(match_length)] += 1;
-			lit_len_histogram[256] += 1;
-			return;
-		}
-	} else
-		lit_len_histogram[literal & 0xFF] += 1;
-	lit_len_histogram[(literal >> 8) & 0xFF] += 1;
-	lit_len_histogram[(literal >> 16) & 0xFF] += 1;
+
+	for (; current < end_stream; current++)
+		lit_len_histogram[*current] += 1;
+
 	lit_len_histogram[256] += 1;
 	return;
 }
