@@ -104,7 +104,8 @@ int usage(void)
 		"  -h        help\n"
 		"  -X        use compression level X with 0 <= X <= 2\n"
 		"  -i <iter> number of iterations (at least 1)\n"
-		"  -o <file> output file for compresed data\n");
+		"  -o <file> output file for compresed data\n"
+		"  -w <size> log base 2 size of history window, between 8 and 15\n");
 	exit(0);
 }
 
@@ -118,8 +119,9 @@ int main(int argc, char *argv[])
 	struct isal_hufftables hufftables_custom;
 	int level = 0, level_size = 0;
 	char *in_file_name = NULL, *out_file_name = NULL;
+	uint32_t hist_bits = 0;
 
-	while ((c = getopt(argc, argv, "h0123456789i:o:")) != -1) {
+	while ((c = getopt(argc, argv, "h0123456789i:o:w:")) != -1) {
 		if (c >= '0' && c <= '9') {
 			if (c > '0' + ISAL_DEF_MAX_LEVEL)
 				usage();
@@ -137,6 +139,11 @@ int main(int argc, char *argv[])
 		case 'i':
 			iterations = atoi(optarg);
 			if (iterations < 1)
+				usage();
+			break;
+		case 'w':
+			hist_bits = atoi(optarg);
+			if (hist_bits > 15 || hist_bits < 8)
 				usage();
 			break;
 		case 'h':
@@ -165,7 +172,14 @@ int main(int argc, char *argv[])
 		printf("outfile=%s\n", out_file_name);
 	}
 
-	printf("Window Size: %d K\n", IGZIP_HIST_SIZE / 1024);
+	if (hist_bits == 0)
+		printf("Window Size: %d K\n", IGZIP_HIST_SIZE / 1024);
+
+	else if (hist_bits < 10)
+		printf("Window Size: %.2f K\n", 1.0 * (1 << hist_bits) / 1024);
+	else
+		printf("Window Size: %d K\n", (1 << hist_bits) / 1024);
+
 	printf("igzip_file_perf: \n");
 	fflush(0);
 	/* Allocate space for entire input file and output
@@ -222,6 +236,7 @@ int main(int argc, char *argv[])
 		stream.level = level;
 		stream.level_buf = level_buf;
 		stream.level_buf_size = level_size;
+		stream.hist_bits = hist_bits;
 		isal_deflate_stateless(&stream);
 		if (stream.avail_in != 0)
 			break;
@@ -253,6 +268,7 @@ int main(int argc, char *argv[])
 		stream.level_buf = level_buf;
 		stream.level_buf_size = level_size;
 		stream.hufftables = &hufftables_custom;
+		stream.hist_bits = hist_bits;
 		isal_deflate_stateless(&stream);
 
 		printf(" ratio_custom=%3.1f%%", 100.0 * stream.total_out / infile_size);

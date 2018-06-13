@@ -106,7 +106,8 @@ int usage(void)
 		"  -b <size> input buffer size, 0 buffers all the input\n"
 		"  -i <iter> number of iterations (at least 1)\n"
 		"  -o <file> output file for compresed data\n"
-		"  -d <file> dictionary file used by compression\n");
+		"  -d <file> dictionary file used by compression\n"
+		"  -w <size> log base 2 size of history window, between 8 and 15\n");
 
 	exit(0);
 }
@@ -121,8 +122,9 @@ int main(int argc, char *argv[])
 	struct isal_hufftables hufftables_custom;
 	int level = 0, level_size = 0, avail_in;
 	char *in_file_name = NULL, *out_file_name = NULL, *dict_file_name = NULL;
+	uint32_t hist_bits = 0;
 
-	while ((c = getopt(argc, argv, "h0123456789i:b:o:d:")) != -1) {
+	while ((c = getopt(argc, argv, "h0123456789i:b:o:d:w:")) != -1) {
 		if (c >= '0' && c <= '9') {
 			if (c > '0' + ISAL_DEF_MAX_LEVEL)
 				usage();
@@ -147,6 +149,11 @@ int main(int argc, char *argv[])
 			break;
 		case 'b':
 			inbuf_size = atoi(optarg);
+			break;
+		case 'w':
+			hist_bits = atoi(optarg);
+			if (hist_bits > 15 || hist_bits < 8)
+				usage();
 			break;
 		case 'h':
 		default:
@@ -183,7 +190,14 @@ int main(int argc, char *argv[])
 		printf("outfile=%s\n", dict_file_name);
 	}
 
-	printf("Window Size: %d K\n", IGZIP_HIST_SIZE / 1024);
+	if (hist_bits == 0)
+		printf("Window Size: %d K\n", IGZIP_HIST_SIZE / 1024);
+
+	else if (hist_bits < 10)
+		printf("Window Size: %.2f K\n", 1.0 * (1 << hist_bits) / 1024);
+	else
+		printf("Window Size: %d K\n", (1 << hist_bits) / 1024);
+
 	printf("igzip_file_perf: \n");
 	fflush(0);
 
@@ -261,6 +275,7 @@ int main(int argc, char *argv[])
 		stream.next_out = outbuf;
 		stream.avail_out = outbuf_size;
 		stream.next_in = inbuf;
+		stream.hist_bits = hist_bits;
 		avail_in = infile_size;
 
 		while (avail_in > 0) {
@@ -304,6 +319,7 @@ int main(int argc, char *argv[])
 		stream.avail_out = outbuf_size;
 		stream.next_in = inbuf;
 		stream.hufftables = &hufftables_custom;
+		stream.hist_bits = hist_bits;
 		avail_in = infile_size;
 
 		while (avail_in > 0) {
