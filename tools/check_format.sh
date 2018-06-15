@@ -41,7 +41,7 @@ fi
 
 if hash grep; then
     echo "Checking for dos and whitespace violations..."
-    for f in `git ls-files '*.c' '*.h' '*.asm' '*.inc' '*.am' '*.txt' '*.md' `; do
+    for f in `git ls-files '*.c' '*.h' '*.asm' '*.inc' '*.am' '*.txt' '*.md' '*.def' '*.ac' '*.sh' '*.in' 'Makefile*' `; do
 	[ "$verbose" -gt 0 ] 2> /dev/null && echo "checking $f"
 	if grep -q '[[:space:]]$' $f ; then
 	    echo "  File found with trailing whitespace: $f"
@@ -52,6 +52,12 @@ if hash grep; then
 	    rc=1
 	fi
     done
+fi
+
+echo "Checking for signoff in commit message..."
+if ! git log -n 1 --format=%B | grep -q "^Signed-off-by:" ; then
+    echo "  Commit not signed off. Please read src/CONTRIBUTING.md"
+    rc=1
 fi
 
 [ "$rc" -gt 0 ] && echo Format Fail || echo Format Pass
