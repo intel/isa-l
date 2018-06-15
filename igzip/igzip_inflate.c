@@ -324,7 +324,7 @@ static int inline set_and_expand_lit_len_huffcode(struct huff_code *lit_len_huff
 	uint32_t max;
 	uint32_t next_code[MAX_HUFF_TREE_DEPTH + 1];
 	int i;
-	struct huff_code *table_end = lit_len_huff + table_length;
+	struct huff_code *table_end;
 	struct huff_code *huff_code_table = lit_len_huff;
 	uint32_t insert_index;
 
