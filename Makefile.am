@@ -3,7 +3,7 @@ CLEANFILES =
 LDADD =
 AM_MAKEFLAGS = --no-print-directory
 noinst_HEADERS =
-pkginclude_HEADERS = include/test.h
+pkginclude_HEADERS = include/test.h include/types.h
 noinst_LTLIBRARIES =
 INCLUDE = -I $(srcdir)/include/
 

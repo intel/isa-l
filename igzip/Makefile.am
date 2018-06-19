@@ -65,8 +65,6 @@ lsrc_x86_64 +=	igzip/igzip_body.asm \
 src_include += -I $(srcdir)/igzip
 extern_hdrs +=	include/igzip_lib.h
 
-pkginclude_HEADERS += include/types.h
-
 check_tests +=  igzip/igzip_rand_test
 unit_tests  +=  igzip/checksum32_funcs_test
 
