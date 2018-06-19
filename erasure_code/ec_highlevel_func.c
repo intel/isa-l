@@ -28,7 +28,6 @@
 **********************************************************************/
 #include <limits.h>
 #include "erasure_code.h"
-#include "types.h"
 
 #if __x86_64__  || __i386__ || _M_X64 || _M_IX86
 void ec_encode_data_sse(int len, int k, int rows, unsigned char *g_tbls, unsigned char **data,

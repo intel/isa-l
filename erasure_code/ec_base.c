@@ -31,7 +31,6 @@
 #include <string.h>		// for memset
 #include "erasure_code.h"
 #include "ec_base.h"		// for GF tables
-#include "types.h"
 
 void ec_init_tables(int k, int rows, unsigned char *a, unsigned char *g_tbls)
 {
