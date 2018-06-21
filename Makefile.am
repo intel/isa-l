@@ -36,7 +36,7 @@ include examples/ec/Makefile.am
 
 # LIB version info not necessarily the same as package version
 LIBISAL_CURRENT=2
-LIBISAL_REVISION=22
+LIBISAL_REVISION=23
 LIBISAL_AGE=0
 
 lib_LTLIBRARIES = libisal.la
