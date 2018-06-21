@@ -7,13 +7,15 @@ TAB_SIZE               = 8
 ALIASES                = "requires=\xrefitem requires \"Requires\" \"Instruction Set Requirements for arch-specific functions (non-multibinary)\""
 OPTIMIZE_OUTPUT_FOR_C  = YES
 HIDE_UNDOC_MEMBERS     = YES
+USE_MDFILE_AS_MAINPAGE = README.md
 
 INPUT                  = isa-l.h \
 			 include \
 			 README.md \
+			 CONTRIBUTING.md \
 			 Release_notes.txt
 
-EXCLUDE                = include/test.h
+EXCLUDE                = include/test.h include/types.h
 EXAMPLE_PATH           = . crc raid erasure_code igzip
 PAPER_TYPE             = letter
 LATEX_SOURCE_CODE      = YES
