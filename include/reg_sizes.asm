@@ -209,6 +209,7 @@ section .text
 
 %ifidn __OUTPUT_FORMAT__, macho64
 %define elf64 macho64
+mac_equ equ 1
 %endif
 
 %macro slversion 4
