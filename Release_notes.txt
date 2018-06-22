@@ -1,4 +1,4 @@
-v2.22 Intel Intelligent Storage Acceleration Library Release Notes
+v2.23 Intel Intelligent Storage Acceleration Library Release Notes
 ==================================================================
 
 RELEASE NOTE CONTENTS
@@ -15,6 +15,12 @@ RELEASE NOTE CONTENTS
 
 2. FIXED ISSUES
 ---------------
+v2.23
+
+* Fix for histogram generation base function.
+* Fix library build warnings on macOS.
+* Fix igzip to use bsf instruction when tzcnt is not available.
+
 v2.22
 
 * Fix ISA-L builds for other architectures.  Base function and examples
@@ -73,6 +79,13 @@ v2.10
 
 3. CHANGE LOG & FEATURES ADDED
 ------------------------------
+v2.23
+
+* Igzip inflate (decompression) performance improvements.
+  - Implemented multi-byte decode for inflate.  Decode can pack up to three
+    symbols into the decode table making some compressed streams decompress much
+    faster depending on the prevalence of short codes.
+
 v2.22
 
 * Igzip: AVX2 version of level 3 compression added.
