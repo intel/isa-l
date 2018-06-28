@@ -217,25 +217,22 @@ void isal_inflate_stateful_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * 
 
 	for (i = 0; i < iterations; i++) {
 		isal_inflate_init(&state);
+		state.next_in = inbuf;
 		state.next_out = outbuf;
 		state.avail_out = outbuf_size;
 		inbuf_remaining = inbuf_size;
 
-		while (inbuf_remaining > 0) {
-
-			state.avail_in = (inbuf_remaining <= in_block_size) ?
-			    in_block_size : inbuf_remaining;
-			inbuf_remaining -= state.avail_in;
-
+		while (ISAL_DECOMP_OK == check && inbuf_remaining >= in_block_size) {
+			state.avail_in = in_block_size;
+			inbuf_remaining -= in_block_size;
 			check = isal_inflate(&state);
-
-			if (check < 0) {
-				printf("Error in decompression with error %d\n", check);
-				return;
-			}
+		}
+		if (ISAL_DECOMP_OK == check && inbuf_remaining > 0) {
+			state.avail_in = inbuf_remaining;
+			check = isal_inflate(&state);
 		}
 
-		if (check != ISAL_DECOMP_OK) {
+		if (ISAL_DECOMP_OK != check || state.avail_in > 0) {
 			printf("Error decompression finished with return value %d\n", check);
 			return;
 		}
@@ -327,8 +324,12 @@ int main(int argc, char *argv[])
 	 */
 	in_file_name = argv[optind];
 	in = fopen(in_file_name, "rb");
-	infile_size = get_filesize(in);
+	if (NULL == in) {
+		printf("Error: Can not find file %s\n", in_file_name);
+		exit(0);
+	}
 
+	infile_size = get_filesize(in);
 	if (infile_size == 0) {
 		printf("Error: input file has 0 size\n");
 		exit(0);
