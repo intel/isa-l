@@ -31,6 +31,7 @@
 #include "igzip_lib.h"
 #include "huff_codes.h"
 #include "igzip_checksums.h"
+#include "igzip_wrapper.h"
 
 #ifdef __FreeBSD__
 #include <sys/types.h>
@@ -94,25 +95,6 @@ extern int decode_huffman_code_block_stateless(struct inflate_state *, uint8_t *
 #define SINGLE_SYM_THRESH (2 * 1024)
 #define DOUBLE_SYM_THRESH (4 * 1024)
 
-#define DEFLATE_METHOD 8
-#define ZLIB_DICT_FLAG (1 << 5)
-#define TEXT_FLAG (1 << 0)
-#define HCRC_FLAG (1 << 1)
-#define EXTRA_FLAG (1 << 2)
-#define NAME_FLAG (1 << 3)
-#define COMMENT_FLAG (1 << 4)
-#define UNDEFINED_FLAG (-1)
-
-#define GZIP_HDR_BASE 10
-#define GZIP_EXTRA_LEN 2
-#define GZIP_HCRC_LEN 2
-#define GZIP_TRAILER_LEN 8
-
-#define ZLIB_HDR_BASE 2
-#define ZLIB_DICT_LEN 4
-#define ZLIB_INFO_OFFSET 4
-#define ZLIB_LEVEL_OFFSET 6
-#define ZLIB_TRAILER_LEN 4
 /* structure contain lookup data based on RFC 1951 */
 struct rfc1951_tables {
 	uint8_t dist_extra_bit_count[32];
@@ -1824,7 +1806,7 @@ static inline uint32_t string_header_copy(struct inflate_state *state,
 {
 	uint32_t len, max_len = str_len;
 
-	if (max_len > state->avail_in)
+	if (max_len > state->avail_in || str_buf == NULL)
 		max_len = state->avail_in;
 
 	len = strnlen((char *)state->next_in, max_len);
@@ -1836,7 +1818,7 @@ static inline uint32_t string_header_copy(struct inflate_state *state,
 	state->avail_in -= len;
 	state->count += len;
 
-	if (len == str_len)
+	if (str_buf != NULL && len == str_len)
 		return str_error;
 	else if (state->avail_in <= 0)
 		return ISAL_END_INPUT;
@@ -1858,27 +1840,40 @@ static int check_gzip_checksum(struct inflate_state *state)
 	uint32_t byte_count, offset, tmp_in_size = state->tmp_in_size;
 	int ret;
 
-	if (state->read_in_length >= 8) {
-		byte_count = state->read_in_length / 8;
-		offset = state->read_in_length % 8;
+	if (state->read_in_length >= 8 * GZIP_TRAILER_LEN) {
+		/* The following is unecessary as state->read_in_length == 64 */
+		/* bit_count = state->read_in_length % 8; */
+		/* state->read_in >>= bit_count; */
+		/* state->read_in_length -= bit_count; */
 
-		*(uint64_t *) (state->tmp_in_buffer + tmp_in_size) = state->read_in >> offset;
-		state->read_in = 0;
+		trailer = state->read_in;
 		state->read_in_length = 0;
+		state->read_in = 0;
+	} else {
+		if (state->read_in_length >= 8) {
+			byte_count = state->read_in_length / 8;
+			offset = state->read_in_length % 8;
 
-		tmp_in_size += byte_count;
-		state->tmp_in_size = tmp_in_size;
-	}
+			*(uint64_t *) (state->tmp_in_buffer + tmp_in_size) =
+			    state->read_in >> offset;
+			state->read_in = 0;
+			state->read_in_length = 0;
 
-	ret = fixed_size_read(state, &next_in, GZIP_TRAILER_LEN);
-	if (ret) {
-		state->block_state = ISAL_CHECKSUM_CHECK;
-		return ret;
+			tmp_in_size += byte_count;
+			state->tmp_in_size = tmp_in_size;
+		}
+
+		ret = fixed_size_read(state, &next_in, GZIP_TRAILER_LEN);
+		if (ret) {
+			state->block_state = ISAL_CHECKSUM_CHECK;
+			return ret;
+		}
+
+		trailer = *(uint64_t *) next_in;
 	}
 
 	state->block_state = ISAL_BLOCK_FINISH;
 
-	trailer = *(uint64_t *) next_in;
 	crc = state->crc;
 	total_out = state->total_out;
 
@@ -1894,29 +1889,41 @@ static int check_zlib_checksum(struct inflate_state *state)
 	uint32_t trailer;
 	uint8_t *next_in;
 	uint32_t byte_count, offset, tmp_in_size = state->tmp_in_size;
-	int ret;
+	int ret, bit_count;
 
-	if (state->read_in_length >= 8) {
-		byte_count = state->read_in_length / 8;
-		offset = state->read_in_length % 8;
+	if (state->read_in_length >= 8 * ZLIB_TRAILER_LEN) {
+		bit_count = state->read_in_length % 8;
+		state->read_in >>= bit_count;
+		state->read_in_length -= bit_count;
 
-		*(uint64_t *) (state->tmp_in_buffer + tmp_in_size) = state->read_in >> offset;
-		state->read_in = 0;
-		state->read_in_length = 0;
+		trailer = state->read_in;
 
-		tmp_in_size += byte_count;
-		state->tmp_in_size = tmp_in_size;
-	}
+		state->read_in_length -= 8 * ZLIB_TRAILER_LEN;
+		state->read_in >>= 8 * ZLIB_TRAILER_LEN;
+	} else {
+		if (state->read_in_length >= 8) {
+			byte_count = state->read_in_length / 8;
+			offset = state->read_in_length % 8;
 
-	ret = fixed_size_read(state, &next_in, ZLIB_TRAILER_LEN);
-	if (ret) {
-		state->block_state = ISAL_CHECKSUM_CHECK;
-		return ret;
+			*(uint64_t *) (state->tmp_in_buffer + tmp_in_size) =
+			    state->read_in >> offset;
+			state->read_in = 0;
+			state->read_in_length = 0;
+
+			tmp_in_size += byte_count;
+			state->tmp_in_size = tmp_in_size;
+		}
+
+		ret = fixed_size_read(state, &next_in, ZLIB_TRAILER_LEN);
+		if (ret) {
+			state->block_state = ISAL_CHECKSUM_CHECK;
+			return ret;
+		}
+
+		trailer = *(uint32_t *) next_in;
 	}
 
 	state->block_state = ISAL_BLOCK_FINISH;
-
-	trailer = *(uint32_t *) next_in;
 
 	if (bswap_32(trailer) != state->crc)
 		return ISAL_INCORRECT_CHECKSUM;

@@ -107,3 +107,5 @@ isal_inflate_reset              @103
 crc16_t10dif_copy               @104
 isal_read_gzip_header   @105
 isal_read_zlib_header   @106
+isal_write_gzip_header   @107
+isal_write_zlib_header   @108

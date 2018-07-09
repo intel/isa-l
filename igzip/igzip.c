@@ -49,6 +49,7 @@
 #include "encode_df.h"
 #include "igzip_level_buf_structs.h"
 #include "igzip_checksums.h"
+#include "igzip_wrapper.h"
 
 #ifdef __FreeBSD__
 #include <sys/types.h>
@@ -1007,6 +1008,127 @@ void isal_deflate_reset(struct isal_zstream *stream)
 
 	state->crc = 0;
 
+}
+
+void isal_gzip_header_init(struct isal_gzip_header *gz_hdr)
+{
+	gz_hdr->text = 0;
+	gz_hdr->time = 0;
+	gz_hdr->xflags = 0;
+	gz_hdr->os = 0xff;
+	gz_hdr->extra = NULL;
+	gz_hdr->extra_buf_len = 0;
+	gz_hdr->extra_len = 0;
+	gz_hdr->name = NULL;
+	gz_hdr->name_buf_len = 0;
+	gz_hdr->comment = NULL;
+	gz_hdr->comment_buf_len = 0;
+	gz_hdr->hcrc = 0;
+};
+
+uint32_t isal_write_gzip_header(struct isal_zstream *stream, struct isal_gzip_header *gz_hdr)
+{
+	uint32_t flags = 0, hcrc, hdr_size = GZIP_HDR_BASE;
+	uint8_t *out_buf = stream->next_out, *out_buf_start = stream->next_out;
+	uint32_t name_len = 0, comment_len = 0;
+
+	if (gz_hdr->text)
+		flags |= TEXT_FLAG;
+	if (gz_hdr->extra) {
+		flags |= EXTRA_FLAG;
+		hdr_size += GZIP_EXTRA_LEN + gz_hdr->extra_len;
+	}
+	if (gz_hdr->name) {
+		flags |= NAME_FLAG;
+		name_len = strnlen(gz_hdr->name, gz_hdr->name_buf_len);
+		if (name_len < gz_hdr->name_buf_len)
+			name_len++;
+		hdr_size += name_len;
+	}
+	if (gz_hdr->comment) {
+		flags |= COMMENT_FLAG;
+		comment_len = strnlen(gz_hdr->comment, gz_hdr->comment_buf_len);
+		if (comment_len < gz_hdr->comment_buf_len)
+			comment_len++;
+		hdr_size += comment_len;
+	}
+	if (gz_hdr->hcrc) {
+		flags |= HCRC_FLAG;
+		hdr_size += GZIP_HCRC_LEN;
+	}
+
+	if (stream->avail_out < hdr_size)
+		return hdr_size;
+
+	out_buf[0] = 0x1f;
+	out_buf[1] = 0x8b;
+	out_buf[2] = DEFLATE_METHOD;
+	out_buf[3] = flags;
+	*(uint32_t *) (out_buf + 4) = gz_hdr->time;
+	out_buf[8] = gz_hdr->xflags;
+	out_buf[9] = gz_hdr->os;
+
+	out_buf += GZIP_HDR_BASE;
+	if (flags & EXTRA_FLAG) {
+		*(uint16_t *) out_buf = gz_hdr->extra_len;
+		out_buf += GZIP_EXTRA_LEN;
+
+		memcpy(out_buf, gz_hdr->extra, gz_hdr->extra_len);
+		out_buf += gz_hdr->extra_len;
+	}
+
+	if (flags & NAME_FLAG) {
+		memcpy(out_buf, gz_hdr->name, name_len);
+		out_buf += name_len;
+	}
+
+	if (flags & COMMENT_FLAG) {
+		memcpy(out_buf, gz_hdr->comment, comment_len);
+		out_buf += comment_len;
+	}
+
+	if (flags & HCRC_FLAG) {
+		hcrc = crc32_gzip(0, out_buf_start, out_buf - out_buf_start);
+		*(uint16_t *) out_buf = hcrc;
+		out_buf += GZIP_HCRC_LEN;
+	}
+
+	stream->next_out += hdr_size;
+	stream->total_out += hdr_size;
+	stream->avail_out -= hdr_size;
+
+	return ISAL_DECOMP_OK;
+}
+
+uint32_t isal_write_zlib_header(struct isal_zstream * stream, struct isal_zlib_header * z_hdr)
+{
+	uint32_t cmf, flg, dict_flag = 0, hdr_size = ZLIB_HDR_BASE;
+	uint8_t *out_buf = stream->next_out;
+
+	if (z_hdr->dict_flag) {
+		dict_flag = ZLIB_DICT_FLAG;
+		hdr_size = ZLIB_HDR_BASE + ZLIB_DICT_LEN;
+	}
+
+	if (stream->avail_out < hdr_size)
+		return hdr_size;
+
+	cmf = DEFLATE_METHOD | (z_hdr->info << 4);
+	flg = (z_hdr->level << 6) | dict_flag;
+
+	flg += 31 - ((256 * cmf + flg) % 31);
+
+	out_buf[0] = cmf;
+	out_buf[1] = flg;
+
+	if (dict_flag)
+		*(uint32_t *) (out_buf + 2) = z_hdr->dict_id;
+
+	stream->next_out += hdr_size;
+	stream->total_out += hdr_size;
+	stream->avail_out -= hdr_size;
+
+	return ISAL_DECOMP_OK;
 }
 
 int isal_deflate_set_hufftables(struct isal_zstream *stream,

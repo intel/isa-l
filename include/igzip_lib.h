@@ -591,6 +591,48 @@ void isal_deflate_init(struct isal_zstream *stream);
  */
 void isal_deflate_reset(struct isal_zstream *stream);
 
+
+/**
+ * @brief Set gzip header default values
+ *
+ * @param gz_hdr: Gzip header to initialize.
+ */
+void isal_gzip_header_init(struct isal_gzip_header *gz_hdr);
+
+/**
+ * @brief Write gzip header to output stream
+ *
+ * Writes the gzip header to the output stream. On entry this function assumes
+ * that the output buffer has been initialized, so stream->next_out,
+ * stream->avail_out and stream->total_out have been set. If the output buffer
+ * contains insufficient space, stream is not modified.
+ *
+ * @param stream: Structure holding state information on the compression stream.
+ * @param gz_hdr: Structure holding the gzip header information to encode.
+ *
+ * @returns Returns 0 if the header is sucessfully written, otherwise returns
+ * the minimum size required to sucessfully write the gzip header to the output
+ * buffer.
+ */
+uint32_t isal_write_gzip_header(struct isal_zstream * stream, struct isal_gzip_header *gz_hdr);
+
+/**
+ * @brief Write zlib header to output stream
+ *
+ * Writes the zlib header to the output stream. On entry this function assumes
+ * that the output buffer has been initialized, so stream->next_out,
+ * stream->avail_out and stream->total_out have been set. If the output buffer
+ * contains insufficient space, stream is not modified.
+ *
+ * @param stream: Structure holding state information on the compression stream.
+ * @param z_hdr: Structure holding the zlib header information to encode.
+ *
+ * @returns Returns 0 if the header is sucessfully written, otherwise returns
+ * the minimum size required to sucessfully write the zlib header to the output
+ * buffer.
+ */
+uint32_t isal_write_zlib_header(struct isal_zstream * stream, struct isal_zlib_header *z_hdr);
+
 /**
  * @brief Set stream to use a new Huffman code
  *

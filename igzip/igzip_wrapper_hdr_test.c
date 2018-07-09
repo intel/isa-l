@@ -4,6 +4,7 @@
 #include <assert.h>
 #include "checksum_test_ref.h"
 #include "igzip_lib.h"
+#include "igzip_wrapper.h"
 
 #define TEST_SEED 0x1234
 #define RANDOMS 0x4000
@@ -15,13 +16,6 @@
 #define EXTRA_SIZE 10
 #define NAME_SIZE 25
 #define COMMENT_SIZE 192
-
-#define TEXT_FLAG (1 << 0)
-#define HCRC_FLAG (1 << 1)
-#define EXTRA_FLAG (1 << 2)
-#define NAME_FLAG (1 << 3)
-#define COMMENT_FLAG (1 << 4)
-#define DICT_FLAG (1 << 5)
 
 enum {
 	INVALID_WRAPPER = ISAL_INVALID_WRAPPER,
@@ -44,6 +38,9 @@ enum {
 	INCORRECT_LEVEL,
 	INCORRECT_DICT_FLAG,
 	INCORRECT_DICT_ID,
+	INCORRECT_HDR_LEN,
+	INSUFFICIENT_BUFFER_SIZE,
+	INCORRECT_WRITE_RETURN,
 	MALLOC_FAILED
 };
 
@@ -106,6 +103,15 @@ void print_error(int32_t error)
 		break;
 	case INCORRECT_DICT_ID:
 		printf("Incorrect dictionary id found\n");
+		break;
+	case INCORRECT_HDR_LEN:
+		printf("Incorrect header length found\n");
+		break;
+	case INSUFFICIENT_BUFFER_SIZE:
+		printf("Insufficient buffer size to write header\n");
+		break;
+	case INCORRECT_WRITE_RETURN:
+		printf("Header write returned an incorrect value\n");
 		break;
 	case MALLOC_FAILED:
 		printf("Failed to allocate buffers\n");
@@ -384,74 +390,78 @@ void gen_rand_zlib_header(struct isal_zlib_header *z_hdr)
 	z_hdr->dict_id = rand();
 }
 
-void write_gzip_header(uint8_t * out_buf, struct isal_gzip_header *gz_hdr)
+int write_gzip_header(uint8_t * hdr_buf, uint32_t hdr_buf_len, struct isal_gzip_header *gz_hdr)
 {
-	uint32_t flags = 0, len, hcrc;
-	uint8_t *out_buf_start = out_buf;
 
-	if (gz_hdr->text)
-		flags |= TEXT_FLAG;
-	if (gz_hdr->extra)
-		flags |= EXTRA_FLAG;
-	if (gz_hdr->name)
-		flags |= NAME_FLAG;
-	if (gz_hdr->comment)
-		flags |= COMMENT_FLAG;
-	if (gz_hdr->hcrc)
-		flags |= HCRC_FLAG;
+	struct isal_zstream stream;
+	uint32_t hdr_len = gzip_header_size(gz_hdr);
+	uint32_t len;
 
-	out_buf[0] = 0x1f;
-	out_buf[1] = 0x8b;
-	out_buf[2] = 8;
-	out_buf[3] = flags;
-	*(uint32_t *) (out_buf + 4) = gz_hdr->time;
-	out_buf[8] = gz_hdr->xflags;
-	out_buf[9] = gz_hdr->os;
+	isal_deflate_init(&stream);
+	stream.next_out = hdr_buf;
+	stream.avail_out = rand() % hdr_len;
+	len = isal_write_gzip_header(&stream, gz_hdr);
 
-	out_buf += 10;
-	if (flags & EXTRA_FLAG) {
-		*(uint16_t *) out_buf = gz_hdr->extra_len;
-		out_buf += 2;
-
-		memcpy(out_buf, gz_hdr->extra, gz_hdr->extra_len);
-		out_buf += gz_hdr->extra_len;
+	if (len != hdr_len) {
+		printf("len = %d, hdr_buf_len = %d\n", len, hdr_len);
+		print_gzip_final_verbose(hdr_buf, hdr_buf_len, gz_hdr, NULL);
+		print_error(INCORRECT_HDR_LEN);
+		return INCORRECT_HDR_LEN;
 	}
 
-	if (flags & NAME_FLAG) {
-		len = strnlen(gz_hdr->name, gz_hdr->name_buf_len) + 1;
-		memcpy(out_buf, gz_hdr->name, len);
-		out_buf += len;
+	if (hdr_buf_len < hdr_len) {
+		print_gzip_final_verbose(NULL, 0, gz_hdr, NULL);
+		print_error(INSUFFICIENT_BUFFER_SIZE);
+		return INSUFFICIENT_BUFFER_SIZE;
 	}
 
-	if (flags & COMMENT_FLAG) {
-		len = strnlen(gz_hdr->comment, gz_hdr->comment_buf_len) + 1;
-		memcpy(out_buf, gz_hdr->comment, len);
-		out_buf += len;
+	stream.avail_out = hdr_buf_len;
+
+	len = isal_write_gzip_header(&stream, gz_hdr);
+
+	if (len) {
+		print_gzip_final_verbose(hdr_buf, hdr_buf_len, gz_hdr, NULL);
+		print_error(INCORRECT_WRITE_RETURN);
+		return INCORRECT_WRITE_RETURN;;
 	}
 
-	if (flags & HCRC_FLAG) {
-		hcrc = crc32_gzip_refl_ref(0, out_buf_start, out_buf - out_buf_start);
-		*(uint16_t *) out_buf = hcrc;
-		out_buf += 2;
-	}
+	return 0;
 }
 
-void write_zlib_header(uint8_t * out_buf, struct isal_zlib_header *z_hdr)
+int write_zlib_header(uint8_t * hdr_buf, uint32_t hdr_buf_len, struct isal_zlib_header *z_hdr)
 {
-	uint32_t cmf, flg, dict_flag;
+	struct isal_zstream stream;
+	uint32_t hdr_len = zlib_header_size(z_hdr);
+	uint32_t len;
 
-	dict_flag = (z_hdr->dict_flag) ? DICT_FLAG : 0;
+	isal_deflate_init(&stream);
+	stream.next_out = hdr_buf;
+	stream.avail_out = rand() % hdr_len;
+	len = isal_write_zlib_header(&stream, z_hdr);
 
-	cmf = 8 | (z_hdr->info << 4);
-	flg = (z_hdr->level << 6) | dict_flag;
+	if (len != hdr_len) {
+		print_zlib_final_verbose(hdr_buf, hdr_buf_len, z_hdr, NULL);
+		print_error(INCORRECT_HDR_LEN);
+		return INCORRECT_HDR_LEN;
+	}
 
-	flg += 31 - ((256 * cmf + flg) % 31);
+	if (hdr_buf_len < hdr_len) {
+		print_zlib_final_verbose(NULL, 0, z_hdr, NULL);
+		print_error(INSUFFICIENT_BUFFER_SIZE);
+		return INSUFFICIENT_BUFFER_SIZE;
+	}
 
-	out_buf[0] = cmf;
-	out_buf[1] = flg;
+	stream.avail_out = hdr_buf_len;
 
-	if (dict_flag)
-		*(uint32_t *) (out_buf + 2) = z_hdr->dict_id;
+	len = isal_write_zlib_header(&stream, z_hdr);
+
+	if (len) {
+		print_zlib_final_verbose(hdr_buf, hdr_buf_len, z_hdr, NULL);
+		print_error(INCORRECT_WRITE_RETURN);
+		return INCORRECT_WRITE_RETURN;;
+	}
+
+	return 0;
 }
 
 int compare_gzip_headers(struct isal_gzip_header *gz_hdr1, struct isal_gzip_header *gz_hdr2)
@@ -806,7 +816,11 @@ int main(int argc, char *argv[])
 		hdr_buf_len = gzip_header_size(&gz_hdr_orig);
 		hdr_buf = malloc(hdr_buf_len);
 
-		write_gzip_header(hdr_buf, &gz_hdr_orig);
+		ret = write_gzip_header(hdr_buf, hdr_buf_len, &gz_hdr_orig);
+
+		fin_ret |= ret;
+		if (ret)
+			return (ret == 0);
 
 		ret = read_gzip_header_simple(hdr_buf, hdr_buf_len, &gz_hdr_orig);
 
@@ -838,7 +852,11 @@ int main(int argc, char *argv[])
 		hdr_buf_len = zlib_header_size(&z_hdr_orig);
 		hdr_buf = malloc(hdr_buf_len);
 
-		write_zlib_header(hdr_buf, &z_hdr_orig);
+		ret = write_zlib_header(hdr_buf, hdr_buf_len, &z_hdr_orig);
+
+		fin_ret |= ret;
+		if (ret)
+			return (ret == 0);
 
 		ret = read_zlib_header_simple(hdr_buf, hdr_buf_len, &z_hdr_orig);
 
