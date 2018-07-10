@@ -5,6 +5,7 @@ AM_MAKEFLAGS = --no-print-directory
 noinst_HEADERS =
 pkginclude_HEADERS = include/test.h include/types.h
 noinst_LTLIBRARIES =
+bin_PROGRAMS =
 INCLUDE = -I $(srcdir)/include/
 
 lsrc=
@@ -24,6 +25,7 @@ lsrc_base_aliases=
 lsrc32=
 unit_tests32=
 perf_tests32=
+progs=
 
 # Include units
 
@@ -33,6 +35,7 @@ include crc/Makefile.am
 include igzip/Makefile.am
 include tests/fuzz/Makefile.am
 include examples/ec/Makefile.am
+include programs/Makefile.am
 
 # LIB version info not necessarily the same as package version
 LIBISAL_CURRENT=2
@@ -75,6 +78,7 @@ EXTRA_PROGRAMS += ${other_tests}
 EXTRA_PROGRAMS += ${examples}
 CLEANFILES += ${EXTRA_PROGRAMS}
 
+programs:${progs}
 perfs: ${perf_tests}
 tests: ${unit_tests}
 checks: ${check_tests}

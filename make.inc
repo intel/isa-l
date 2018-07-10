@@ -106,7 +106,7 @@ objs  = $(addprefix $(O)/,$(notdir $(lobj)))
 
 
 lib_name ?= isa-l.a
-default: lib slib
+default: lib slib progs
 
 # Defaults for windows build
 ifeq ($(arch),win64)
@@ -120,6 +120,7 @@ lsrcwin64 = $(lsrc)
 unit_testswin64 = $(unit_tests)
 exampleswin64 = $(examples)
 perf_testswin64 = $(perf_tests)
+
 
 # Build and run unit tests, performance tests, etc.
 all_tests = $(notdir $(sort $(perf_tests) $(check_tests) $(unit_tests) $(examples) $(other_tests)))
@@ -140,6 +141,8 @@ $(all_llvm_fuzz_tests): % : %.o $(lib_name)
 	$(CXX) $(CXXFLAGS)  $^ $(LDLIBS) $(FUZZLINK) -o $@
 
 
+progs: $(bin_PROGRAMS)
+$(bin_PROGRAMS): CFLAGS += -DVERSION=\"$(version)\"
 sim test trace: $(addsuffix .run,$(all_unit_tests))
 perf: $(addsuffix .run,$(all_perf_tests))
 check: $(addsuffix .run,$(all_check_tests))
@@ -176,6 +179,10 @@ $(O)/%.o %.o: %.c
 
 $(all_tests):
 	@echo "  ---> Building Test $@ $(msg)"
+	@$(LINK.o) $(CFLAGS)  $^ $(LDLIBS) -o $@
+
+$(bin_PROGRAMS): % : %_cli.c $(lib_name)
+	@echo "  ---> Building Programs $@ $(msg)"
 	@$(LINK.o) $(CFLAGS)  $^ $(LDLIBS) -o $@
 
 
@@ -265,6 +272,7 @@ else
 	which libtool && libtool --mode=finish $(prefix)/lib || \
 	echo 'Lib installed at $(prefix)/lib. Run system-dependent programs to add shared lib path.'
 endif
+	install -m 774 $(bin_PROGRAMS) $(prefix)/bin/.
 
 uninstall:
 	$(RM) $(prefix)/lib/libisal.a
@@ -274,6 +282,7 @@ uninstall:
 	$(RM) -r $(prefix)/include/isa-l
 	$(RM) $(prefix)/include/isa-l.h
 	$(RM) $(prefix)/lib/$(basename $(so_lib_inst)).dylib
+	$(RM) $(prefix)/bin/$(notdir $(bin_PROGRAMS))
 
 # Collect performance data
 rpt_name = perf_report_$(shell uname -n)_$(shell date +%y%m%d).perf
@@ -287,7 +296,7 @@ perf_report:
 
 clean:
 	@echo Cleaning up
-	@$(RM) -r $(O) *.o *.a $(all_tests) $(lib_name) $(so_lib_name) $(all_llvm_fuzz_tests)
+	@$(RM) -r $(O) *.o *.a $(all_tests) $(bin_PROGRAMS) $(lib_name) $(so_lib_name) $(all_llvm_fuzz_tests)
 
 
 doc: isa-l.h
