@@ -42,19 +42,25 @@
 # define RUN_MEM_SIZE 1000000000
 #endif
 
-#define OPTARGS "hl:z:i:sb:"
+#define OPTARGS "hl:z:i:stub:"
 
 #define LEVEL_QUEUE_LIMIT 16
 
-#define STATELESS_PERF 0
-#define STATEFUL_PERF 1
+enum {
+	STATELESS_PERF,
+	STATEFUL_PERF,
+	ZLIB_PERF,
+	PERF_MAX
+};
+#define PERF_START STATELESS_PERF
 
-char stateless_perf_line[] = "isal_inflate_stateless_perf - iter: %d\n";
-char stateful_perf_line[] = "isal_inflate_stateful_perf - iter: %d in_block_size: %d\n";
+const char stateless_perf_line[] = "isal_inflate_stateless_perf - iter: %d\n";
+const char stateful_perf_line[] = "isal_inflate_stateful_perf - iter: %d in_block_size: %d\n";
+const char zlib_perf_line[] = "zlib_inflate_perf - iter: %d\n";
 
-char stateless_file_perf_line[] =
+const char stateless_file_perf_line[] =
     "  inflate_file-> name: %s size: %lu compress_size: %lu strategy: %s %d\n";
-char stateful_file_perf_line[] =
+const char stateful_file_perf_line[] =
     "  inflate_file-> name: %s size: %lu compress_size: %lu strategy: %s %d\n";
 #define perf_perf_line "  inflate_perf-> "
 
@@ -119,9 +125,10 @@ int usage(void)
 		"  -l <level>  isa-l compression level to test, may be specified upto %d times\n"
 		"  -z <level>  zlib  compression level to test, may be specified upto %d times\n"
 		"  -i <iter>   number of iterations (at least 1)\n"
-		"  -s          use stateful inflate instead of stateless\n"
-		"  -b <size>   input buffer size, implies -s, 0 buffers all the input\n",
-		LEVEL_QUEUE_LIMIT, LEVEL_QUEUE_LIMIT);
+		"  -b <size>   input buffer size, implies only -s, 0 buffers all the input\n"
+		"  -s          test stateful inflate\n"
+		"  -t          test stateless inflate, (default when no -s -t -u or -b supplied)\n"
+		"  -u          test zlib inflate\n", LEVEL_QUEUE_LIMIT, LEVEL_QUEUE_LIMIT);
 	exit(0);
 }
 
@@ -150,7 +157,7 @@ void isal_compress(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t * inbuf,
 
 	*outbuf_size = stream.total_out;
 
-	if (stream.avail_in != 0) {
+	if (stream.avail_in != 0 || stream.internal_state.state != ZSTATE_END) {
 		printf("Compression of input file failed\n");
 		exit(0);
 	}
@@ -243,6 +250,51 @@ void isal_inflate_stateful_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * 
 
 }
 
+void isal_zlib_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * outbuf,
+		    uint64_t outbuf_size, int iterations)
+{
+	struct perf start, stop;
+	int i, check;
+	z_stream gstream;
+
+	gstream.next_in = inbuf;
+	gstream.avail_in = inbuf_size;
+	gstream.zalloc = Z_NULL;
+	gstream.zfree = Z_NULL;
+	gstream.opaque = Z_NULL;
+	if (0 != inflateInit2(&gstream, -15)) {
+		printf("Fail zlib init\n");
+		return;
+	}
+	gstream.next_out = outbuf;
+	gstream.avail_out = outbuf_size;
+	check = inflate(&gstream, Z_FINISH);
+	if (check != 1) {
+		printf("Error in decompression with error %d and message %s\n", check,
+		       gstream.msg);
+		return;
+	}
+
+	perf_start(&start);
+	for (i = 0; i < iterations; i++) {
+		gstream.next_in = inbuf;
+		gstream.avail_in = inbuf_size;
+		gstream.zalloc = Z_NULL;
+		gstream.zfree = Z_NULL;
+		gstream.opaque = Z_NULL;
+		if (0 != inflateInit2(&gstream, -15)) {
+			printf("Fail zlib init\n");
+			return;
+		}
+		gstream.next_out = outbuf;
+		gstream.avail_out = outbuf_size;
+		inflate(&gstream, Z_FINISH);
+	}
+	perf_stop(&stop);
+
+	perf_print(stop, start, (long long)outbuf_size * i);
+}
+
 int main(int argc, char *argv[])
 {
 	FILE *in = NULL;
@@ -261,7 +313,8 @@ int main(int argc, char *argv[])
 	int zlib_queue_size = 0;
 	int perf_type = STATELESS_PERF;
 	uint64_t in_block_size = 0;
-	char *perf_line = stateless_perf_line;
+	const char *perf_line = stateless_perf_line;
+	int test_cases[PERF_MAX] = { 0 };
 
 	while ((c = getopt(argc, argv, OPTARGS)) != -1) {
 		switch (c) {
@@ -287,7 +340,7 @@ int main(int argc, char *argv[])
 			}
 
 			level = atoi(optarg);
-			if (level > Z_BEST_COMPRESSION) {
+			if (level > Z_BEST_COMPRESSION || level <= 0) {
 				printf("Unsupported zlib compression level\n");
 				exit(0);
 			}
@@ -301,12 +354,16 @@ int main(int argc, char *argv[])
 				usage();
 			break;
 		case 's':
-			perf_type = STATEFUL_PERF;
-			perf_line = stateful_perf_line;
+			test_cases[STATEFUL_PERF] = 1;
+			break;
+		case 't':
+			test_cases[STATELESS_PERF] = 1;
+			break;
+		case 'u':
+			test_cases[ZLIB_PERF] = 1;
 			break;
 		case 'b':
-			perf_type = STATEFUL_PERF;
-			perf_line = stateful_perf_line;
+			test_cases[STATEFUL_PERF] = 1;
 			in_block_size = atoi(optarg);
 			break;
 		case 'h':
@@ -318,6 +375,14 @@ int main(int argc, char *argv[])
 
 	if (optind >= argc)
 		usage();
+
+	if (test_cases[STATEFUL_PERF] == 0 && test_cases[ZLIB_PERF] == 0)
+		test_cases[STATELESS_PERF] = 1;
+
+	if (in_block_size && (test_cases[STATELESS_PERF] || test_cases[ZLIB_PERF])) {
+		printf("Option -b not supported with -t or -u\n");
+		usage();
+	}
 
 	/* Allocate space for entire input file and output
 	 * (assuming some possible expansion on output size)
@@ -351,7 +416,7 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
-	compressbuf_size = 2 * infile_size;
+	compressbuf_size = 2 * infile_size + BUF_SIZE;
 	compressbuf = malloc(compressbuf_size);
 	if (compressbuf == NULL) {
 		fprintf(stderr, "Can't allocate input buffer memory\n");
@@ -369,54 +434,85 @@ int main(int argc, char *argv[])
 	}
 	fclose(in);
 
-	for (i = 0; i < level_queue_size; i++) {
-		printf(perf_line, iterations, in_block_size);
+	for (perf_type = PERF_START; perf_type < PERF_MAX; perf_type++) {
+		if (test_cases[perf_type] == 0)
+			continue;
 
-		compress_size = compressbuf_size;
-		isal_compress(compressbuf, &compress_size, filebuf, infile_size,
-			      level_queue[i]);
+		if (perf_type == STATELESS_PERF)
+			perf_line = stateless_perf_line;
+		else if (perf_type == STATEFUL_PERF)
+			perf_line = stateful_perf_line;
+		else if (perf_type == ZLIB_PERF)
+			perf_line = zlib_perf_line;
 
-		if (perf_type == STATEFUL_PERF) {
-			printf(stateful_file_perf_line, in_file_name, infile_size,
-			       compress_size, "isal", level_queue[i]);
-			printf(perf_perf_line);
+		for (i = 0; i < level_queue_size; i++) {
+			printf(perf_line, iterations, in_block_size);
 
-			isal_inflate_stateful_perf(compressbuf, compress_size, decompbuf,
-						   decompbuf_size, in_block_size, iterations);
+			compress_size = compressbuf_size;
+			isal_compress(compressbuf, &compress_size, filebuf, infile_size,
+				      level_queue[i]);
 
-		} else {
-			printf(stateless_file_perf_line, in_file_name, infile_size,
-			       compress_size, "isal", level_queue[i]);
-			printf(perf_perf_line);
+			if (perf_type == STATEFUL_PERF) {
+				printf(stateful_file_perf_line, in_file_name, infile_size,
+				       compress_size, "isal", level_queue[i]);
+				printf(perf_perf_line);
 
-			isal_inflate_perf(compressbuf, compress_size, decompbuf,
-					  decompbuf_size, iterations);
+				isal_inflate_stateful_perf(compressbuf, compress_size,
+							   decompbuf, decompbuf_size,
+							   in_block_size, iterations);
+
+			} else if (perf_type == STATELESS_PERF) {
+				printf(stateless_file_perf_line, in_file_name, infile_size,
+				       compress_size, "isal", level_queue[i]);
+				printf(perf_perf_line);
+
+				isal_inflate_perf(compressbuf, compress_size, decompbuf,
+						  decompbuf_size, iterations);
+
+			} else if (perf_type == ZLIB_PERF) {
+				printf(stateless_file_perf_line, in_file_name, infile_size,
+				       compress_size, "isal", level_queue[i]);
+				printf(perf_perf_line);
+
+				isal_zlib_perf(compressbuf, compress_size, decompbuf,
+					       decompbuf_size, iterations);
+			}
 		}
-	}
 
-	for (i = 0; i < zlib_queue_size; i++) {
-		printf(perf_line, iterations, in_block_size);
+		for (i = 0; i < zlib_queue_size; i++) {
+			printf(perf_line, iterations, in_block_size);
 
-		compress_size = compressbuf_size;
-		compress2(compressbuf, &compress_size, filebuf, infile_size, zlib_queue[i]);
+			compress_size = compressbuf_size;
+			compress2(compressbuf, &compress_size, filebuf, infile_size,
+				  zlib_queue[i]);
 
-		if (perf_type == STATEFUL_PERF) {
-			printf(stateful_file_perf_line, in_file_name, infile_size,
-			       compress_size, "zlib", zlib_queue[i]);
-			printf(perf_perf_line);
+			if (perf_type == STATEFUL_PERF) {
+				printf(stateful_file_perf_line, in_file_name, infile_size,
+				       compress_size, "zlib", zlib_queue[i]);
+				printf(perf_perf_line);
 
-			isal_inflate_stateful_perf(compressbuf + 2, compress_size - 2,
-						   decompbuf, decompbuf_size, in_block_size,
-						   iterations);
+				isal_inflate_stateful_perf(compressbuf + 2, compress_size - 2,
+							   decompbuf, decompbuf_size,
+							   in_block_size, iterations);
 
-		} else {
-			printf(stateless_file_perf_line, in_file_name, infile_size,
-			       compress_size, "zlib", zlib_queue[i]);
-			printf(perf_perf_line);
+			} else if (perf_type == STATELESS_PERF) {
+				printf(stateless_file_perf_line, in_file_name, infile_size,
+				       compress_size, "zlib", zlib_queue[i]);
+				printf(perf_perf_line);
 
-			isal_inflate_perf(compressbuf + 2, compress_size - 2, decompbuf,
-					  decompbuf_size, iterations);
+				isal_inflate_perf(compressbuf + 2, compress_size - 2,
+						  decompbuf, decompbuf_size, iterations);
+
+			} else if (perf_type == ZLIB_PERF) {
+				printf(stateless_file_perf_line, in_file_name, infile_size,
+				       compress_size, "zlib", zlib_queue[i]);
+				printf(perf_perf_line);
+
+				isal_zlib_perf(compressbuf + 2, compress_size - 2, decompbuf,
+					       decompbuf_size, iterations);
+			}
 		}
+		printf("\n");
 	}
 
 	free(compressbuf);
