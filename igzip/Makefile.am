@@ -70,6 +70,7 @@ check_tests +=  igzip/igzip_wrapper_hdr_test
 unit_tests  +=  igzip/checksum32_funcs_test
 
 other_tests +=  igzip/igzip_file_perf igzip/igzip_stateless_file_perf igzip/igzip_hist_perf
+other_tests +=  igzip/igzip_perf
 other_tests +=  igzip/igzip_semi_dyn_file_perf
 other_tests +=  igzip/igzip_build_hash_table_perf
 
@@ -116,6 +117,9 @@ other_src   += igzip/checksum_test_ref.h
 igzip_inflate_perf: LDLIBS += -lz
 igzip_igzip_inflate_perf_LDADD = libisal.la
 igzip_igzip_inflate_perf_LDFLAGS = -lz
+igzip_perf: LDLIBS += -lz
+igzip_igzip_perf_LDADD = libisal.la
+igzip_igzip_perf_LDFLAGS = -lz
 igzip_inflate_test: LDLIBS += -lz
 igzip_igzip_inflate_test_LDADD = libisal.la
 igzip_igzip_inflate_test_LDFLAGS = -lz

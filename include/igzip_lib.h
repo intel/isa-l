@@ -860,11 +860,13 @@ int isal_read_zlib_header (struct inflate_state *state, struct isal_zlib_header 
  * adler32 of the output is stored in state->crc. When the crc_flag is set to
  * ISAL_GZIP_NO_HDR_VER or ISAL_ZLIB_NO_HDR_VER, the behaviour is the same,
  * except the checksum is verified with the checksum after immediately followin
- * the deflate data. Finally, if the crc_flag is set to ISAL_GZIP or ISAL_ZLIB,
- * the gzip/zlib header is parsed, state->crc is set to the appropriate
- * checksum, and the checksum is verfied. The element state->hist_bits has
- * values from 0 to 15, where values of 1 to 15 are the log base 2 size of the
- * matching window and 0 is the default with maximum history size.
+ * the deflate data. If the crc_flag is set to ISAL_GZIP or ISAL_ZLIB, the
+ * gzip/zlib header is parsed, state->crc is set to the appropriate checksum,
+ * and the checksum is verfied. If the crc_flag is set to ISAL_DEFLATE
+ * (default), then the data is treated as a raw deflate block. The element
+ * state->hist_bits has values from 0 to 15, where values of 1 to 15 are the log
+ * base 2 size of the matching window and 0 is the default with maximum history
+ * size.
  *
  * If a dictionary is required, a call to isal_inflate_set_dict will set the
  * dictionary.
