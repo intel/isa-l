@@ -69,8 +69,6 @@ check_tests +=  igzip/igzip_rand_test
 check_tests +=  igzip/igzip_wrapper_hdr_test
 unit_tests  +=  igzip/checksum32_funcs_test
 
-perf_tests  +=  igzip/igzip_perf
-
 other_tests +=  igzip/igzip_file_perf igzip/igzip_stateless_file_perf igzip/igzip_hist_perf
 other_tests +=  igzip/igzip_semi_dyn_file_perf
 other_tests +=  igzip/igzip_build_hash_table_perf
