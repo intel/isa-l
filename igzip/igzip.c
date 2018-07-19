@@ -882,23 +882,20 @@ static inline void reset_match_history(struct isal_zstream *stream)
 	uint32_t hash_table_size;
 	int i = 0;
 
+	hash_table_size = 2 * (state->hash_mask + 1);
+
 	switch (stream->level) {
 	case 3:
 		hash_table = level_buf->lvl3.hash_table;
-		hash_table_size = sizeof(level_buf->lvl3.hash_table);
 		break;
-
 	case 2:
 		hash_table = level_buf->lvl2.hash_table;
-		hash_table_size = sizeof(level_buf->lvl2.hash_table);
 		break;
 	case 1:
 		hash_table = level_buf->lvl1.hash_table;
-		hash_table_size = sizeof(level_buf->lvl1.hash_table);
 		break;
 	default:
 		hash_table = state->head;
-		hash_table_size = sizeof(state->head);
 	}
 
 	state->has_hist = IGZIP_NO_HIST;
@@ -1273,6 +1270,9 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 
 	set_hash_mask(stream);
 
+	if (state->hash_mask > 2 * avail_in)
+		state->hash_mask = (1 << bsr(avail_in)) - 1;
+
 	if (avail_in == 0)
 		stored_len = TYPE0_BLK_HDR_LEN;
 	else
@@ -1409,6 +1409,9 @@ int isal_deflate(struct isal_zstream *stream)
 	if (state->has_hist == IGZIP_NO_HIST) {
 		set_dist_mask(stream);
 		set_hash_mask(stream);
+		if (state->hash_mask > 2 * stream->avail_in
+		    && (stream->flush == FULL_FLUSH || stream->end_of_stream))
+			state->hash_mask = (1 << bsr(2 * stream->avail_in)) - 1;
 		stream->total_in -= buffered_size;
 		reset_match_history(stream);
 		stream->total_in += buffered_size;

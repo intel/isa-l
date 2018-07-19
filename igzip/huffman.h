@@ -47,7 +47,7 @@ static inline uint32_t bsr(uint32_t val)
 {
 	uint32_t msb;
 #ifdef __LZCNT__
-	msb = 16 - __lzcnt16(val);
+	msb = 32 - __lzcnt32(val);
 #else
 	for(msb = 0; val > 0; val >>= 1)
 		msb++;
