@@ -33,6 +33,10 @@
 #include "igzip_checksums.h"
 #include "igzip_wrapper.h"
 
+#ifdef USE_STATIC_INFLATE_H
+#include "static_inflate.h"
+#endif
+
 #ifdef __FreeBSD__
 #include <sys/types.h>
 #include <sys/endian.h>
@@ -930,10 +934,10 @@ static void inline make_inflate_huff_code_header(struct inflate_huff_code_small 
  * deflate static header */
 static int inline setup_static_header(struct inflate_state *state)
 {
-	/* This could be turned into a memcpy of this functions output for
-	 * higher speed, but then DECODE_LOOKUP_SIZE couldn't be changed without
-	 * regenerating the table. */
-
+#ifdef ISAL_STATIC_INFLATE_TABLE
+	memcpy(&state->lit_huff_code, &static_lit_huff_code, sizeof(static_lit_huff_code));
+	memcpy(&state->dist_huff_code, &static_dist_huff_code, sizeof(static_dist_huff_code));
+#else
 	int i;
 	struct huff_code lit_code[LIT_LEN_ELEMS];
 	struct huff_code dist_code[DIST_LEN + 2];
@@ -981,7 +985,7 @@ static int inline setup_static_header(struct inflate_state *state)
 
 	make_inflate_huff_code_dist(&state->dist_huff_code, dist_code, DIST_LEN + 2,
 				    dist_count, max_dist);
-
+#endif
 	state->block_state = ISAL_BLOCK_CODED;
 
 	return 0;
