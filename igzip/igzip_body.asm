@@ -125,6 +125,9 @@ stack_size          equ 2*8 + 8*8 + 4*16 + 8
 %endif
 
 %rep 3
+%if ARCH == 04
+%define USE_HSWNI
+%endif
 ; void isal_deflate_body ( isal_zstream *stream )
 ; arg 1: rcx: addr of stream
 global isal_deflate_body_ %+ ARCH
@@ -542,6 +545,10 @@ isal_deflate_body_ %+ ARCH %+ :
 	and	curr_data, 0xff
 	get_lit_code	curr_data, code2, code_len2, hufftables
 	jmp	.write_lit_bits
+
+%ifdef USE_HSWNI
+%undef USE_HSWNI
+%endif
 
 ;; Shift defines over in order to iterate over all versions
 %undef ARCH

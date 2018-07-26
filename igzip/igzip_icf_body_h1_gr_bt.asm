@@ -132,6 +132,10 @@ stack_size          equ 5*8 + 8*8 + 4*16
 %xdefine METHOD1 hash_hist
 
 %rep 2
+%if ARCH == 04
+%define USE_HSWNI
+%endif
+
 ; void isal_deflate_icf_body <hashsize> <arch> ( isal_zstream *stream )
 ; we make 6 different versions of this function
 ; arg 1: rcx: addr of stream
@@ -515,6 +519,10 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	jl	.loop2
 	jmp	.input_end
 
+
+%ifdef USE_HSWNI
+%undef USE_HSWNI
+%endif
 
 ;; Shift defines over in order to iterate over all versions
 %undef HASH_MASK
