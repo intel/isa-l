@@ -47,6 +47,9 @@ global %1
 %endm
 %endif
 
+%define LARGE_MATCH_HASH_REP 1 	; Hash 4 * LARGE_MATCH_HASH_REP elements
+%define LARGE_MATCH_MIN 264 	; Minimum match size to enter large match emit loop
+%define MIN_INBUF_PADDING 16
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -76,6 +79,7 @@ global %1
 %define	len2		r8
 %define	tmp4		r8
 %define hmask1		r8
+%define len_code2	r8
 
 %define	len		rdx
 %define len_code	rdx
@@ -110,9 +114,10 @@ dist_mask_offset    equ 16
 hash_mask_offset    equ 24
 f_end_i_mem_offset  equ 32
 stream_offset       equ 40
-gpr_save_mem_offset equ 48       ; gpr save area (8*8 bytes)
+inbuf_slop_offset   equ 48
+gpr_save_mem_offset equ 64       ; gpr save area (8*8 bytes)
 xmm_save_mem_offset equ gpr_save_mem_offset + 8*8 ; xmm save area (4*16 bytes) (16 byte aligned)
-stack_size          equ 7*8 + 8*8 + 4*16
+stack_size          equ 9*8 + 8*8 + 4*16
 
 ;;; 8 because stack address is odd multiple of 8 after a function call and
 ;;; we want it aligned to 16 bytes
@@ -208,8 +213,16 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	mov	file_length %+ d, [stream + _avail_in]
 	add	file_length, f_i
 
-	; file_length -= LA;
-	sub	file_length, LA
+	mov	qword [rsp + inbuf_slop_offset], MIN_INBUF_PADDING
+	cmp	byte [stream + _end_of_stream], 0
+	jnz	.default_inbuf_padding
+	cmp	byte [stream + _flush], 0
+	jnz	.default_inbuf_padding
+	mov	qword [rsp + inbuf_slop_offset], LA
+.default_inbuf_padding:
+
+	; file_length -= INBUF_PADDING;
+	sub	file_length, [rsp + inbuf_slop_offset]
 	; if (file_length <= 0) continue;
 	mov	hmask1 %+ d, [rsp + hash_mask_offset]
 
@@ -220,7 +233,6 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	MOVDQU	xdata, [file_start + f_i]
 	mov	curr_data, [file_start + f_i]
 	mov	tmp1, curr_data
-	mov	tmp2, curr_data
 
 	compute_hash	hash, curr_data
 
@@ -295,6 +307,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	test    len %+ d, 0xFFFFFFFF
 	jz      .len_dist_huffman_pre
 
+	PSRLDQ	xdata, 1
 	inc	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code]
 	movzx	lit_code2, curr_data %+ b
 	;; Check for len/dist match for second literal
@@ -318,9 +331,15 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	;; Setup for updating hash
 	lea	tmp3, [f_i + 1]	; tmp3 <= k
 
+	mov	tmp2, f_i
 	add	file_start, f_i
+	add	f_i, len2
+	cmp	f_i, file_length
+	jg	.len_dist_lit_huffman_finish
+
 	MOVDQU	xdata, [file_start + len2]
 	mov	tmp1, [file_start + len2]
+	sub	file_start, tmp2
 
 	shr	curr_data, 24
 	compute_hash	hash3, curr_data
@@ -328,9 +347,6 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 
 	mov	curr_data, tmp1
 	shr	tmp1, 8
-
-	sub	file_start, f_i
-	add	f_i, len2
 
 	mov	[hash_table + 2 * hash], tmp3 %+ w
 
@@ -361,10 +377,28 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	and	hash2 %+ d, hmask3 %+ d
 
 	; continue
-	cmp	f_i, file_length
-	jl	.loop2
+	jmp	.loop2
+
+.len_dist_lit_huffman_finish:
+	sub	file_start, tmp2
+
+	mov	[hash_table + 2 * hash], tmp3 %+ w
+	add	tmp3,1
+	mov	[hash_table + 2 * hash2], tmp3 %+ w
+
+	add	dist_code2, 254
+	add	dist_code2, len2
+
+	inc	dword [lit_len_hist + HIST_ELEM_SIZE*(len2 + 254)]
+
+	movnti	dword [m_out_buf + 4], dist_code2 %+ d
+	add	m_out_buf, 8
+
+	shr	dist_code2, DIST_OFFSET
+	and	dist_code2, 0x1F
+	inc	dword [dist_hist + HIST_ELEM_SIZE*dist_code2]
+
 	jmp	.input_end
-	;; encode as dist/len
 
 .len_dist_huffman_pre:
 	bsf	len, len
@@ -380,14 +414,21 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	; get_dist_code(dist, &code2, &code_len2);
 	get_dist_icf_code   dist, dist_code, tmp1
 
+.len_dist_huffman_skip:
+
 	mov	hmask2 %+ d, [rsp + hash_mask_offset]
 
+	mov	tmp1, f_i
 	add	file_start, f_i
+
+	add	f_i, len
+	cmp	f_i, file_length
+	jg	.len_dist_huffman_finish
+
 	MOVDQU	xdata, [file_start + len]
 	mov	curr_data2, [file_start + len]
 	mov	curr_data, curr_data2
-	sub	file_start, f_i
-	add	f_i, len
+	sub	file_start, tmp1
 	; get_len_code(len, &code, &code_len);
 	lea	len_code, [len + 254]
 	or	dist_code, len_code
@@ -415,14 +456,38 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	and	hash2 %+ d, hmask2 %+ d
 
 	; continue
-	cmp	f_i, file_length
-	jl	.loop2
+	jmp	.loop2
+
+.len_dist_huffman_finish:
+	sub	file_start, tmp1
+
+	; get_len_code(len, &code, &code_len);
+	lea	len_code, [len + 254]
+	or	dist_code, len_code
+
+	mov	[hash_table + 2 * hash], tmp3 %+ w
+	add	tmp3,1
+	mov	[hash_table + 2 * hash2], tmp3 %+ w
+
+	inc	dword [lit_len_hist + HIST_ELEM_SIZE*len_code]
+
+	movnti	dword [m_out_buf], dist_code %+ d
+	add	m_out_buf, 4
+
+	shr     dist_code, DIST_OFFSET
+	and     dist_code, 0x1F
+	inc     dword [dist_hist + HIST_ELEM_SIZE*dist_code]
+
 	jmp	.input_end
 
 .write_lit_bits:
-	MOVDQU	xdata, [file_start + f_i + 1]
-	add	f_i, 1
 	MOVQ	curr_data, xdata
+
+	add	f_i, 1
+	cmp	f_i, file_length
+	jg	.write_lit_bits_finish
+
+	MOVDQU	xdata, [file_start + f_i]
 
 	inc	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code2]
 
@@ -432,9 +497,16 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	movnti	dword [m_out_buf], lit_code %+ d
 	add	m_out_buf, 4
 
-	; continue
-	cmp	f_i, file_length
-	jl	.loop2
+	jmp	.loop2
+
+.write_lit_bits_finish:
+	inc	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code2]
+
+	shl	lit_code2, DIST_OFFSET
+	lea	lit_code, [lit_code + lit_code2 + (31 << DIST_OFFSET)]
+
+	movnti	dword [m_out_buf], lit_code %+ d
+	add	m_out_buf, 4
 
 .input_end:
 	mov	stream, [rsp + stream_offset]
@@ -454,7 +526,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 
 .end:
 	;; update input buffer
-	add	file_length, LA
+	add	file_length, [rsp + inbuf_slop_offset]
 	mov	[stream + _total_in], f_i %+ d
 	mov	[stream + _internal_state_block_end], f_i %+ d
 	add	file_start, f_i
@@ -487,20 +559,142 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 .compare_loop:
 	lea	tmp2, [tmp1 + dist - 1]
 
-	compare250	tmp1, tmp2, len, tmp3, ytmp0, ytmp1
+	mov	len2, file_length
+	sub	len2, f_i
+	add	len2, [rsp + inbuf_slop_offset]
+	add	len2, 1
 
+	mov	len, 8
+	compare_large	tmp1, tmp2, len, len2, tmp3, ytmp0, ytmp1
+
+	cmp	len, 258
+	jle	.len_dist_huffman
+	cmp	len, LARGE_MATCH_MIN
+	jge	.do_emit
+	mov	len, 258
 	jmp	.len_dist_huffman
 
 .compare_loop2:
 	lea	tmp2, [tmp1 + dist2]
 	add	tmp1, 1
 
-	compare250	tmp1, tmp2, len2, tmp3, ytmp0, ytmp1
+	mov	len, file_length
+	sub	len, f_i
+	add	len, [rsp + inbuf_slop_offset]
+	mov	len2, 8
+	compare_large	tmp1, tmp2, len2, len, tmp3, ytmp0, ytmp1
 
 	movzx	lit_code, curr_data %+ b
 	shr	curr_data, 8
 	inc	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code]
+	cmp	len2, 258
+	jle	.len_dist_lit_huffman
+	cmp	len2, LARGE_MATCH_MIN
+	jge	.do_emit2
+	mov	len2, 258
 	jmp	.len_dist_lit_huffman
+
+.do_emit2:
+	or	lit_code, LIT
+	movnti	dword [m_out_buf], lit_code %+ d
+	add	m_out_buf, 4
+
+	inc	f_i
+	mov	dist, dist2
+	mov	len, len2
+
+.do_emit:
+	neg	dist
+	get_dist_icf_code   dist, dist_code, tmp1
+
+	mov	len_code2, 258 + 254
+	or	len_code2, dist_code
+	mov	tmp1, dist_code
+	shr     tmp1, DIST_OFFSET
+	and     tmp1, 0x1F
+	lea	tmp3, [f_i + 1]
+	dec	f_i
+
+	mov	[hash_table + 2 * hash], tmp3 %+ w
+	add	tmp3,1
+	mov	[hash_table + 2 * hash2], tmp3 %+ w
+.emit:
+	sub	len, 258
+	add	f_i, 258
+
+	inc	dword [lit_len_hist + HIST_ELEM_SIZE*(258 + 254)]
+	inc     dword [dist_hist + HIST_ELEM_SIZE*tmp1]
+	movnti	dword [m_out_buf], len_code2 %+ d
+	add	m_out_buf, 4
+
+	cmp	m_out_buf, [rsp + m_out_end]
+	ja	.output_end
+
+	cmp	len, LARGE_MATCH_MIN
+	jge	.emit
+
+	mov	len2, 258
+	cmp	len, len2
+	cmovg	len, len2
+
+		; get_len_code(len, &code, &code_len);
+	add	f_i, len
+	lea	len_code, [len + 254]
+	or	dist_code, len_code
+
+	inc	dword [lit_len_hist + HIST_ELEM_SIZE*len_code]
+	inc     dword [dist_hist + HIST_ELEM_SIZE*tmp1]
+
+	movnti	dword [m_out_buf], dist_code %+ d
+	add	m_out_buf, 4
+
+	cmp	file_length, f_i
+	jle	.input_end
+
+	lea	tmp2, [f_i - 4 * LARGE_MATCH_HASH_REP]
+	mov	hmask2 %+ d, [rsp + hash_mask_offset]
+
+%rep LARGE_MATCH_HASH_REP
+	mov	curr_data %+ d, dword [file_start + tmp2]
+	mov	curr_data2 %+ d, dword [file_start + tmp2 + 1]
+	mov	tmp3 %+ d, dword [file_start + tmp2 + 2]
+	mov	tmp1 %+ d, dword [file_start + tmp2 + 3]
+
+	compute_hash	hash, curr_data
+	compute_hash	hash2, curr_data2
+	compute_hash	hash3, tmp3
+	compute_hash	hmask3, tmp1
+
+	and	hash %+ d, hmask2 %+ d
+	and	hash2 %+ d, hmask2 %+ d
+	and	hash3 %+ d, hmask2 %+ d
+	and	hmask3 %+ d, hmask2 %+ d
+
+	mov	[hash_table + 2 * hash], tmp2 %+ w
+	add	tmp2, 1
+	mov	[hash_table + 2 * hash2], tmp2 %+ w
+	add	tmp2, 1
+	mov	[hash_table + 2 * hash3], tmp2 %+ w
+	add	tmp2, 1
+	mov	[hash_table + 2 * hmask3], tmp2 %+ w
+%if (LARGE_MATCH_HASH_REP > 1)
+	add	tmp2, 1
+%endif
+%endrep
+	; for (f_i = f_start_i; f_i < file_length; f_i++) {
+	MOVDQU	xdata, [file_start + f_i]
+	mov	curr_data, [file_start + f_i]
+	mov	tmp1, curr_data
+
+	compute_hash	hash, curr_data
+
+	shr	tmp1, 8
+	compute_hash	hash2, tmp1
+
+	and	hash, hmask2
+	and	hash2, hmask2
+
+	jmp	.loop2
 
 .write_first_byte:
 	mov	hmask1 %+ d, [rsp + hash_mask_offset]

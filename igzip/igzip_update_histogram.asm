@@ -545,7 +545,9 @@ compare_loop:
 	and	hash2 %+ d, LVL0_HASH_MASK
 	lea	tmp2, [tmp1 + dist - 1]
 
-	compare250	tmp1, tmp2, len, tmp3, ytmp0, ytmp1
+	mov	len2, 250
+	mov	len, 8
+	compare250	tmp1, tmp2, len, len2, tmp3, ytmp0, ytmp1
 
 	lea	tmp3, [f_i + 1]
 	jmp	len_dist_huffman
@@ -554,7 +556,9 @@ compare_loop2:
 	add	tmp1, 1
 	lea	tmp2, [tmp1 + dist2 - 1]
 
-	compare250	tmp1, tmp2, len2, tmp3, ytmp0, ytmp1
+	mov	len, 250
+	mov	len2, 8
+	compare250	tmp1, tmp2, len2, len, tmp3, ytmp0, ytmp1
 
 	and	curr_data, 0xff
 	inc	qword [histogram + _lit_len_offset + 8 * curr_data]

@@ -37,118 +37,90 @@
 ;; sttni2 is faster, but it can't be debugged
 ;; so following code is based on "mine5"
 
-;; compare 258 bytes = 8 * 32 + 2
-;; tmp16 is a 16-bit version of tmp
-;; compare258 src1, src2, result, tmp
-%macro compare258 4
+;; compares 8 bytes at a time, using xor
+;; assumes the input buffer has size at least 8
+;; compare_r src1, src2, result, result_max, tmp
+%macro compare_r 5
 %define %%src1		%1
 %define %%src2		%2
 %define %%result	%3
-%define %%tmp		%4
-%define %%tmp16		%4w	; tmp as a 16-bit register
+%define %%result_max	%4
+%define %%tmp		%5
+%define %%tmp16		%5w	; tmp as a 16-bit register
 
-	xor	%%result, %%result
+	sub	%%result_max, 16
+	cmp	%%result, %%result_max
+	jg	%%_by_8
+
 %%loop1:
 	mov	%%tmp, [%%src1 + %%result]
 	xor	%%tmp, [%%src2 + %%result]
-	jnz	%%miscompare
+	jnz	%%miscompare_reg
 	add	%%result, 8
 
 	mov	%%tmp, [%%src1 + %%result]
 	xor	%%tmp, [%%src2 + %%result]
-	jnz	%%miscompare
+	jnz	%%miscompare_reg
 	add	%%result, 8
+	cmp	%%result, %%result_max
+	jle	%%loop1
 
-	cmp	%%result, 256
-	jb	%%loop1
+%%_by_8:
+	add	%%result_max, 8
+	cmp	%%result, %%result_max
+	jg	%%_cmp_last
 
 	; compare last two bytes
-	mov	%%tmp16, [%%src1 + %%result]
-	xor	%%tmp16, [%%src2 + %%result]
-	jnz	%%miscompare16
+	mov	%%tmp, [%%src1 + %%result]
+	xor	%%tmp, [%%src2 + %%result]
+	jnz	%%miscompare_reg
+	add	%%result, 8
 
-	; no miscompares, return 258
-	add	%%result, 2
+%%_cmp_last:
+	add	%%result_max, 8
+	cmp	%%result, %%result_max
+	je	%%end
+
+	lea	%%result, [%%result_max - 8]
+
+	mov	%%tmp, [%%src1 + %%result]
+	xor	%%tmp, [%%src2 + %%result]
+	jnz	%%miscompare_reg
+	add	%%result, 8
 	jmp	%%end
 
-%%miscompare16:
-	and	%%tmp, 0xFFFF
-%%miscompare:
+%%miscompare_reg:
 	bsf	%%tmp, %%tmp
 	shr	%%tmp, 3
 	add	%%result, %%tmp
 %%end:
 %endm
 
-;; compare 258 bytes = 8 * 32 + 2
-;; tmp16 is a 16-bit version of tmp
-;; compare258 src1, src2, result, tmp
-%macro compare250_r 4
-%define %%src1		%1
-%define %%src2		%2
-%define %%result	%3
-%define %%tmp		%4
-%define %%tmp16		%4w	; tmp as a 16-bit register
-
-	mov	%%result, 8
-	mov	%%tmp, [%%src1 + 8]
-	xor	%%tmp, [%%src2 + 8]
-	jnz	%%miscompare
-	add	%%result, 8
-
-%%loop1:
-	mov	%%tmp, [%%src1 + %%result]
-	xor	%%tmp, [%%src2 + %%result]
-	jnz	%%miscompare
-	add	%%result, 8
-
-	mov	%%tmp, [%%src1 + %%result]
-	xor	%%tmp, [%%src2 + %%result]
-	jnz	%%miscompare
-	add	%%result, 8
-
-	cmp	%%result, 256
-	jb	%%loop1
-
-	; compare last two bytes
-	mov	%%tmp16, [%%src1 + %%result]
-	xor	%%tmp16, [%%src2 + %%result]
-	jnz	%%miscompare16
-
-	; no miscompares, return 258
-	add	%%result, 2
-	jmp	%%end
-
-%%miscompare16:
-	and	%%tmp, 0xFFFF
-%%miscompare:
-	bsf	%%tmp, %%tmp
-	shr	%%tmp, 3
-	add	%%result, %%tmp
-%%end:
-%endm
-
-;; compare 258 bytes = 8 * 32 + 2
 ;; compares 16 bytes at a time, using pcmpeqb/pmovmskb
-;; compare258_x src1, src2, result, tmp, xtmp1, xtmp2
-%macro compare258_x 6
+;; assumes the input buffer has size at least 8
+;; compare_x src1, src2, result, result_max, tmp, xtmp1, xtmp2
+%macro compare_x 7
 %define %%src1		%1
 %define %%src2		%2
-%define %%result	%3
-%define %%tmp		%4
-%define %%tmp32		%4d
-%define %%tmp16		%4w	; tmp as a 16-bit register
-%define %%xtmp		%5
-%define %%xtmp2		%6
+%define %%result	%3	; Accumulator for match_length
+%define %%result_max	%4
+%define %%tmp		%5
+%define %%tmp16		%5w	; tmp as a 16-bit register
+%define %%tmp32		%5d	; tmp as a 32-bit register
+%define %%xtmp		%6
+%define %%xtmp2		%7
 
-	xor	%%result, %%result
+	sub	%%result_max, 32
+	cmp	%%result, %%result_max
+	jg	%%_by_16
+
 %%loop1:
 	MOVDQU		%%xtmp, [%%src1 + %%result]
 	MOVDQU		%%xtmp2, [%%src2 + %%result]
 	PCMPEQB		%%xtmp, %%xtmp, %%xtmp2
 	PMOVMSKB	%%tmp32, %%xtmp
 	xor		%%tmp, 0xFFFF
-	jnz		%%miscompare
+	jnz		%%miscompare_vect
 	add		%%result, 16
 
 	MOVDQU		%%xtmp, [%%src1 + %%result]
@@ -156,120 +128,86 @@
 	PCMPEQB		%%xtmp, %%xtmp, %%xtmp2
 	PMOVMSKB	%%tmp32, %%xtmp
 	xor		%%tmp, 0xFFFF
-	jnz		%%miscompare
+	jnz		%%miscompare_vect
 	add		%%result, 16
 
-	cmp	%%result, 256
-	jb	%%loop1
+	cmp	%%result, %%result_max
+	jle	%%loop1
+
+%%_by_16:
+	add	%%result_max, 16
+	cmp	%%result, %%result_max
+	jg	%%_by_8
+
+	MOVDQU		%%xtmp, [%%src1 + %%result]
+	MOVDQU		%%xtmp2, [%%src2 + %%result]
+	PCMPEQB		%%xtmp, %%xtmp, %%xtmp2
+	PMOVMSKB	%%tmp32, %%xtmp
+	xor		%%tmp, 0xFFFF
+	jnz		%%miscompare_vect
+	add		%%result, 16
+
+%%_by_8:
+	add	%%result_max, 8
+	cmp	%%result, %%result_max
+	jg	%%_cmp_last
 
 	; compare last two bytes
-	mov	%%tmp16, [%%src1 + %%result]
-	xor	%%tmp16, [%%src2 + %%result]
-	jnz	%%miscompare16
+	mov	%%tmp, [%%src1 + %%result]
+	xor	%%tmp, [%%src2 + %%result]
+	jnz	%%miscompare_reg
+	add	%%result, 8
 
-	; no miscompares, return 258
-	add	%%result, 2
+%%_cmp_last:
+	add	%%result_max, 8
+	cmp	%%result, %%result_max
+	je	%%end
+
+	lea	%%result, [%%result_max - 8]
+
+	mov	%%tmp, [%%src1 + %%result]
+	xor	%%tmp, [%%src2 + %%result]
+	jnz	%%miscompare_reg
+	add	%%result, 8
 	jmp	%%end
 
-%%miscompare16:
-	and	%%tmp, 0xFFFF
+%%miscompare_reg:
 	bsf	%%tmp, %%tmp
 	shr	%%tmp, 3
 	add	%%result, %%tmp
 	jmp	%%end
-%%miscompare:
+
+%%miscompare_vect:
 	bsf	%%tmp, %%tmp
 	add	%%result, %%tmp
 %%end:
 %endm
 
-;; compare 258 bytes = 8 * 32 + 2, assuming first 8 bytes
-;; were already checked
-;; compares 16 bytes at a time, using pcmpeqb/pmovmskb
-;; compare250_x src1, src2, result, tmp, xtmp1, xtmp2
-%macro compare250_x 6
-%define %%src1		%1
-%define %%src2		%2
-%define %%result	%3
-%define %%tmp		%4
-%define %%tmp32		%4d	; tmp as a 16-bit register
-%define %%xtmp		%5
-%define %%xtmp2		%6
-
-	mov	%%result, 8
-	MOVDQU		%%xtmp, [%%src1 + 8]
-	MOVDQU		%%xtmp2, [%%src2 + 8]
-	PCMPEQB		%%xtmp, %%xtmp, %%xtmp2
-	PMOVMSKB	%%tmp32, %%xtmp
-	xor		%%tmp, 0xFFFF
-	jnz		%%miscompare
-	add		%%result, 16
-%%loop1:
-	MOVDQU		%%xtmp, [%%src1 + %%result]
-	MOVDQU		%%xtmp2, [%%src2 + %%result]
-	PCMPEQB		%%xtmp, %%xtmp, %%xtmp2
-	PMOVMSKB	%%tmp32, %%xtmp
-	xor		%%tmp, 0xFFFF
-	jnz		%%miscompare
-	add		%%result, 16
-
-	MOVDQU		%%xtmp, [%%src1 + %%result]
-	MOVDQU		%%xtmp2, [%%src2 + %%result]
-	PCMPEQB		%%xtmp, %%xtmp, %%xtmp2
-	PMOVMSKB	%%tmp32, %%xtmp
-	xor		%%tmp, 0xFFFF
-	jnz		%%miscompare
-	add		%%result, 16
-
-	cmp	%%result, 258 - 16
-	jb	%%loop1
-
-	MOVDQU		%%xtmp, [%%src1 + %%result]
-	MOVDQU		%%xtmp2, [%%src2 + %%result]
-	PCMPEQB		%%xtmp, %%xtmp, %%xtmp2
-	PMOVMSKB	%%tmp32, %%xtmp
-	xor		%%tmp, 0xFFFF
-	jnz		%%miscompare_last
-	; no miscompares, return 258
-	mov		%%result, 258
-	jmp	%%end
-
-%%miscompare_last:
-	bsf	%%tmp, %%tmp
-	add	%%result, %%tmp
-
-	;; Guarantee the result has length at most 258.
-	mov	%%tmp, 258
-	cmp	%%result, 258
-	cmova	%%result, %%tmp
-	jmp	%%end
-%%miscompare:
-	bsf	%%tmp, %%tmp
-	add	%%result, %%tmp
-%%end:
-%endm
-
-;; compare 258 bytes = 8 * 32 + 2
 ;; compares 32 bytes at a time, using pcmpeqb/pmovmskb
-;; compare258_y src1, src2, result, tmp, xtmp1, xtmp2
-%macro compare258_y 6
+;; assumes the input buffer has size at least 8
+;; compare_y src1, src2, result, result_max, tmp, xtmp1, xtmp2
+%macro compare_y 7
 %define %%src1		%1
 %define %%src2		%2
-%define %%result	%3
-%define %%tmp		%4
-%define %%tmp16		%4w	; tmp as a 16-bit register
-%define %%tmp32		%4d	; tmp as a 32-bit register
-%define %%ytmp		%5
-%define %%ytmp2		%6
+%define %%result	%3	; Accumulator for match_length
+%define %%result_max	%4
+%define %%tmp		%5
+%define %%tmp16		%5w	; tmp as a 16-bit register
+%define %%tmp32		%5d	; tmp as a 32-bit register
+%define %%ytmp		%6
+%define %%ytmp2		%7
 
-	xor	%%result, %%result
+	sub	%%result_max, 64
+	cmp	%%result, %%result_max
+	jg	%%_by_32
+
 %%loop1:
 	vmovdqu		%%ytmp, [%%src1 + %%result]
 	vmovdqu		%%ytmp2, [%%src2 + %%result]
 	vpcmpeqb	%%ytmp, %%ytmp, %%ytmp2
 	vpmovmskb	%%tmp, %%ytmp
 	xor		%%tmp32, 0xFFFFFFFF
-	jnz		%%miscompare
+	jnz		%%miscompare_vect
 	add		%%result, 32
 
 	vmovdqu		%%ytmp, [%%src1 + %%result]
@@ -277,123 +215,125 @@
 	vpcmpeqb	%%ytmp, %%ytmp, %%ytmp2
 	vpmovmskb	%%tmp, %%ytmp
 	xor		%%tmp32, 0xFFFFFFFF
-	jnz		%%miscompare
+	jnz		%%miscompare_vect
 	add		%%result, 32
 
-	cmp	%%result, 256
-	jb	%%loop1
+	cmp	%%result, %%result_max
+	jle	%%loop1
+
+%%_by_32:
+	add	%%result_max, 32
+	cmp	%%result, %%result_max
+	jg	%%_by_16
+
+	vmovdqu		%%ytmp, [%%src1 + %%result]
+	vmovdqu		%%ytmp2, [%%src2 + %%result]
+	vpcmpeqb	%%ytmp, %%ytmp, %%ytmp2
+	vpmovmskb	%%tmp, %%ytmp
+	xor		%%tmp32, 0xFFFFFFFF
+	jnz		%%miscompare_vect
+	add		%%result, 32
+
+%%_by_16:
+	add	%%result_max, 16
+	cmp	%%result, %%result_max
+	jg	%%_by_8
+
+	vmovdqu		%%ytmp %+ x, [%%src1 + %%result]
+	vmovdqu		%%ytmp2 %+ x, [%%src2 + %%result]
+	vpcmpeqb	%%ytmp %+ x, %%ytmp %+ x, %%ytmp2 %+ x
+	vpmovmskb	%%tmp, %%ytmp %+ x
+	xor		%%tmp32, 0xFFFF
+	jnz		%%miscompare_vect
+	add		%%result, 16
+
+%%_by_8:
+	add	%%result_max, 8
+	cmp	%%result, %%result_max
+	jg	%%_cmp_last
+
+	mov	%%tmp, [%%src1 + %%result]
+	xor	%%tmp, [%%src2 + %%result]
+	jnz	%%miscompare_reg
+	add	%%result, 8
+
+%%_cmp_last:
+	add	%%result_max, 8
+	cmp	%%result, %%result_max
+	je	%%end
+
+	lea	%%result, [%%result_max - 8]
 
 	; compare last two bytes
-	mov	%%tmp16, [%%src1 + %%result]
-	xor	%%tmp16, [%%src2 + %%result]
-	jnz	%%miscompare16
-
-	; no miscompares, return 258
-	add	%%result, 2
+	mov	%%tmp, [%%src1 + %%result]
+	xor	%%tmp, [%%src2 + %%result]
+	jnz	%%miscompare_reg
+	add	%%result, 8
 	jmp	%%end
 
-%%miscompare16:
-	and	%%tmp, 0xFFFF
+%%miscompare_reg:
 	bsf	%%tmp, %%tmp
 	shr	%%tmp, 3
 	add	%%result, %%tmp
 	jmp	%%end
-%%miscompare:
+
+%%miscompare_vect:
 	bsf	%%tmp, %%tmp
 	add	%%result, %%tmp
 %%end:
 %endm
 
-
-;; compare 258 bytes = 8 * 32 + 2, assuming first 8 bytes
-;; were already checked
-;; compares 32 bytes at a time, using pcmpeqb/pmovmskb
-;; compare258_y src1, src2, result, tmp, xtmp1, xtmp2
-%macro compare250_y 6
+%macro compare250 7
 %define %%src1		%1
 %define %%src2		%2
 %define %%result	%3
-%define %%tmp		%4
-%define %%tmp16		%4w	; tmp as a 16-bit register
-%define %%tmp32		%4d	; tmp as a 32-bit register
-%define %%ytmp		%5
-%define %%ytmp2		%6
+%define %%result_max	%4
+%define %%tmp		%5
+%define %%xtmp0		%6x
+%define %%xtmp1		%7x
+%define %%ytmp0		%6
+%define %%ytmp1		%7
 
-	mov	%%result, 8
-	vmovdqu		%%ytmp, [%%src1 + 8]
-	vmovdqu		%%ytmp2, [%%src2 + 8]
-	vpcmpeqb	%%ytmp, %%ytmp, %%ytmp2
-	vpmovmskb	%%tmp, %%ytmp
-	xor		%%tmp32, 0xFFFFFFFF
-	jnz		%%miscompare
-	add		%%result, 32
-%%loop1:
-	vmovdqu		%%ytmp, [%%src1 + %%result]
-	vmovdqu		%%ytmp2, [%%src2 + %%result]
-	vpcmpeqb	%%ytmp, %%ytmp, %%ytmp2
-	vpmovmskb	%%tmp, %%ytmp
-	xor		%%tmp32, 0xFFFFFFFF
-	jnz		%%miscompare
-	add		%%result, 32
-
-	vmovdqu		%%ytmp, [%%src1 + %%result]
-	vmovdqu		%%ytmp2, [%%src2 + %%result]
-	vpcmpeqb	%%ytmp, %%ytmp, %%ytmp2
-	vpmovmskb	%%tmp, %%ytmp
-	xor		%%tmp32, 0xFFFFFFFF
-	jnz		%%miscompare
-	add		%%result, 32
-
-	cmp	%%result, 258 - 32
-	jb	%%loop1
-
-	vmovdqu		%%ytmp, [%%src1 + %%result]
-	vmovdqu		%%ytmp2, [%%src2 + %%result]
-	vpcmpeqb	%%ytmp, %%ytmp, %%ytmp2
-	vpmovmskb	%%tmp, %%ytmp
-	xor		%%tmp32, 0xFFFFFFFF
-	jnz		%%miscompare_last
-	mov	%%result, 258
-	jmp	%%end
-
-%%miscompare_last:
-	bsf	%%tmp, %%tmp
-	add	%%result, %%tmp
-
-	;; Guarantee the result has length at most 258.
-	mov	%%tmp, 258
-	cmp	%%result, 258
-	cmova	%%result, %%tmp
-	jmp	%%end
-
-%%miscompare:
-	bsf	%%tmp, %%tmp
-	add	%%result, %%tmp
-%%end:
-%endm
-
-%macro compare250 6
-%define %%src1		%1
-%define %%src2		%2
-%define %%result	%3
-%define %%tmp		%4
-%define %%xtmp0		%5x
-%define %%xtmp1		%6x
-%define %%ytmp0		%5
-%define %%ytmp1		%6
+	mov	%%tmp, 250
+	cmp	%%result_max, 250
+	cmovg	%%result_max, %%tmp
 
 %if (COMPARE_TYPE == 1)
-	compare250_r	%%src1, %%src2, %%result, %%tmp
+	compare_r	%%src1, %%src2, %%result, %%result_max, %%tmp
 %elif (COMPARE_TYPE == 2)
-	compare250_x	%%src1, %%src2, %%result, %%tmp, %%xtmp0, %%xtmp1
+	compare_x	%%src1, %%src2, %%result, %%result_max, %%tmp, %%xtmp0, %%xtmp1
 %elif (COMPARE_TYPE == 3)
-	compare250_y	%%src1, %%src2, %%result, %%tmp, %%ytmp0, %%ytmp1
+	compare_y	%%src1, %%src2, %%result, %%result_max, %%tmp, %%ytmp0, %%ytmp1
 %else
 %error Unknown Compare type COMPARE_TYPE
  % error
 %endif
 %endmacro
 
+; Assumes the buffer has at least 8 bytes
+; Accumulates match length onto result
+%macro compare_large 7
+%define %%src1		%1
+%define %%src2		%2
+%define %%result	%3
+%define %%result_max	%4
+%define %%tmp		%5
+%define %%xtmp0		%6x
+%define %%xtmp1		%7x
+%define %%ytmp0		%6
+%define %%ytmp1		%7
+
+%if (COMPARE_TYPE == 1)
+	compare_r	%%src1, %%src2, %%result, %%result_max, %%tmp
+%elif (COMPARE_TYPE == 2)
+	compare_x	%%src1, %%src2, %%result, %%result_max, %%tmp, %%xtmp0, %%xtmp1
+%elif (COMPARE_TYPE == 3)
+	compare_y	%%src1, %%src2, %%result, %%result_max, %%tmp, %%ytmp0, %%ytmp1
+%else
+%error Unknown Compare type COMPARE_TYPE
+ % error
+%endif
+%endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
