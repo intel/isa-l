@@ -49,7 +49,7 @@
 	or	%%m_bits, %%code
 	add	%%m_bit_count, %%count
 
-	movnti	[%%m_out_buf], %%m_bits
+	mov	[%%m_out_buf], %%m_bits
 	mov	rcx, %%m_bit_count
 	shr	rcx, 3			; rcx = bytes
 	add	%%m_out_buf, rcx
@@ -65,6 +65,6 @@
 %macro write_dword 2
 %define %%data %1d
 %define %%addr %2
-	movnti	[%%addr], %%data
+	mov	[%%addr], %%data
 	add	%%addr, 4
 %endm

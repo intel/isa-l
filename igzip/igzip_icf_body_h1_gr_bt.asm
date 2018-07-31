@@ -320,7 +320,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 
 .len_dist_lit_huffman:
 	or	lit_code, LIT
-	movnti	dword [m_out_buf], lit_code %+ d
+	mov	dword [m_out_buf], lit_code %+ d
 
 	neg	dist2
 
@@ -365,7 +365,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 
 	inc	dword [lit_len_hist + HIST_ELEM_SIZE*(len2 + 254)]
 
-	movnti	dword [m_out_buf + 4], dist_code2 %+ d
+	mov	dword [m_out_buf + 4], dist_code2 %+ d
 	add	m_out_buf, 8
 
 	shr	dist_code2, DIST_OFFSET
@@ -391,7 +391,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 
 	inc	dword [lit_len_hist + HIST_ELEM_SIZE*(len2 + 254)]
 
-	movnti	dword [m_out_buf + 4], dist_code2 %+ d
+	mov	dword [m_out_buf + 4], dist_code2 %+ d
 	add	m_out_buf, 8
 
 	shr	dist_code2, DIST_OFFSET
@@ -444,7 +444,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 
 	inc	dword [lit_len_hist + HIST_ELEM_SIZE*len_code]
 
-	movnti	dword [m_out_buf], dist_code %+ d
+	mov	dword [m_out_buf], dist_code %+ d
 	add	m_out_buf, 4
 
 	shr     dist_code, DIST_OFFSET
@@ -471,7 +471,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 
 	inc	dword [lit_len_hist + HIST_ELEM_SIZE*len_code]
 
-	movnti	dword [m_out_buf], dist_code %+ d
+	mov	dword [m_out_buf], dist_code %+ d
 	add	m_out_buf, 4
 
 	shr     dist_code, DIST_OFFSET
@@ -494,7 +494,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	shl	lit_code2, DIST_OFFSET
 	lea	lit_code, [lit_code + lit_code2 + (31 << DIST_OFFSET)]
 
-	movnti	dword [m_out_buf], lit_code %+ d
+	mov	dword [m_out_buf], lit_code %+ d
 	add	m_out_buf, 4
 
 	jmp	.loop2
@@ -505,7 +505,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	shl	lit_code2, DIST_OFFSET
 	lea	lit_code, [lit_code + lit_code2 + (31 << DIST_OFFSET)]
 
-	movnti	dword [m_out_buf], lit_code %+ d
+	mov	dword [m_out_buf], lit_code %+ d
 	add	m_out_buf, 4
 
 .input_end:
@@ -596,7 +596,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 
 .do_emit2:
 	or	lit_code, LIT
-	movnti	dword [m_out_buf], lit_code %+ d
+	mov	dword [m_out_buf], lit_code %+ d
 	add	m_out_buf, 4
 
 	inc	f_i
@@ -624,7 +624,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 
 	inc	dword [lit_len_hist + HIST_ELEM_SIZE*(258 + 254)]
 	inc     dword [dist_hist + HIST_ELEM_SIZE*tmp1]
-	movnti	dword [m_out_buf], len_code2 %+ d
+	mov	dword [m_out_buf], len_code2 %+ d
 	add	m_out_buf, 4
 
 	cmp	m_out_buf, [rsp + m_out_end]
@@ -645,7 +645,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	inc	dword [lit_len_hist + HIST_ELEM_SIZE*len_code]
 	inc     dword [dist_hist + HIST_ELEM_SIZE*tmp1]
 
-	movnti	dword [m_out_buf], dist_code %+ d
+	mov	dword [m_out_buf], dist_code %+ d
 	add	m_out_buf, 4
 
 	cmp	file_length, f_i
@@ -713,7 +713,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	inc	dword [lit_len_hist + HIST_ELEM_SIZE*curr_data]
 	or	curr_data, LIT
 
-	movnti	dword [m_out_buf], curr_data %+ d
+	mov	dword [m_out_buf], curr_data %+ d
 	add	m_out_buf, 4
 
 	MOVDQU	xdata, [file_start + f_i + 1]
