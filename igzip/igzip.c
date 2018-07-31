@@ -1316,10 +1316,10 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 
 	stream->next_in = next_in + avail_in;
 	stream->avail_in = 0;
-	stream->total_in = total_in + avail_in;
+	stream->total_in = avail_in;
 
-	state->block_next = 0;
-	state->block_end = avail_in;
+	state->block_next = stream->total_in - avail_in;
+	state->block_end = stream->total_in;
 
 	stream->next_out = next_out;
 	stream->avail_out = avail_out;
@@ -1337,12 +1337,16 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 
 	write_stored_block(stream);
 
+	stream->total_in = total_in + avail_in;
+
 	if (stream->gzip_flag) {
 		stream->internal_state.crc = 0;
 		update_checksum(stream, next_in, avail_in);
 	}
 
-	write_trailer(stream);
+	if (stream->end_of_stream)
+		write_trailer(stream);
+
 	return COMP_OK;
 
 }
