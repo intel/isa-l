@@ -1240,7 +1240,7 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 	const uint32_t has_wrap_hdr = state->has_wrap_hdr;
 
 	int level_check;
-	uint32_t stored_len;
+	uint64_t stored_len;
 
 	/* Final block has already been written */
 	state->block_next = stream->total_in;
@@ -1275,10 +1275,11 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 
 	if (avail_in == 0)
 		stored_len = TYPE0_BLK_HDR_LEN;
-	else
-		stored_len =
-		    TYPE0_BLK_HDR_LEN * ((avail_in + TYPE0_MAX_BLK_LEN - 1) /
-					 TYPE0_MAX_BLK_LEN) + avail_in;
+	else {
+		stored_len = TYPE0_BLK_HDR_LEN * ((avail_in + TYPE0_MAX_BLK_LEN - 1) /
+						  TYPE0_MAX_BLK_LEN);
+		stored_len += avail_in;
+	}
 
 	/*
 	   at least 1 byte compressed data in the case of empty dynamic block which only
@@ -1295,16 +1296,16 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 	else if (stream->gzip_flag == IGZIP_ZLIB_NO_HDR)
 		stored_len += zlib_trl_bytes;
 
-	/*
-	   the output buffer should be no less than 8 bytes
-	   while empty stored deflate block is 5 bytes only
-	 */
-	if (stream->avail_out < 8)
-		return STATELESS_OVERFLOW;
+	if (avail_out >= stored_len)
+		stream->avail_out = stored_len;
 
-	if (isal_deflate_int_stateless(stream) == COMP_OK)
+	if (isal_deflate_int_stateless(stream) == COMP_OK) {
+		if (avail_out >= stored_len)
+			stream->avail_out += avail_out - stored_len;
 		return COMP_OK;
-	else {
+	} else {
+		if (avail_out >= stored_len)
+			stream->avail_out += avail_out - stored_len;
 		if (stream->flush == FULL_FLUSH) {
 			reset_match_history(stream);
 		}
