@@ -149,6 +149,7 @@ stack_size		equ	4 * 8 + 8 * 8
 
 %ifidn __OUTPUT_FORMAT__, elf64
 %define arg0	rdi
+%define arg1	rsi
 
 %macro FUNC_SAVE 0
 %ifdef ALIGN_STACK
@@ -187,6 +188,8 @@ stack_size		equ	4 * 8 + 8 * 8
 
 %ifidn __OUTPUT_FORMAT__, win64
 %define arg0	rcx
+%define arg1	rdx
+
 %macro FUNC_SAVE 0
 %ifdef ALIGN_STACK
 	push	rbp
@@ -462,6 +465,7 @@ decode_huffman_code_block_stateless_ %+ ARCH %+ :
 	FUNC_SAVE
 
 	mov	state, arg0
+	mov	[rsp + start_out_mem_offset], arg1
 	lea	rfc_lookup, [rfc1951_lookup_table]
 
 	mov	read_in,[state + _read_in]
@@ -475,13 +479,6 @@ decode_huffman_code_block_stateless_ %+ ARCH %+ :
 
 	mov	dword [state + _copy_overflow_len], 0
 	mov	dword [state + _copy_overflow_dist], 0
-
-	mov	tmp3 %+ d, dword [state + _total_out]
-	add	tmp3 %+ d, dword [state + _dict_length]
-	sub	tmp3, next_out
-	neg	tmp3
-
-	mov	[rsp + start_out_mem_offset], tmp3
 
 	sub	end_out, OUT_BUFFER_SLOP
 	sub	end_in, IN_BUFFER_SLOP
@@ -766,13 +763,23 @@ end:
 	;; Save current buffer states
 	mov	[state + _read_in], read_in
 	mov	[state + _read_in_length], read_in_length %+ d
-	mov	[state + _next_out], next_out
+
+	;; Set avail_out
 	sub	end_out, next_out
 	mov	dword [state + _avail_out], end_out %+ d
-	sub	next_out, [rsp + start_out_mem_offset]
-	sub	next_out %+ d, [state + _dict_length]
-	mov	[state + _total_out], next_out %+ d
+
+	;; Set total_out
+	mov	tmp1, next_out
+	sub	tmp1, [state + _next_out]
+	add	[state + _total_out], tmp1 %+ d
+
+	;; Set next_out
+	mov	[state + _next_out], next_out
+
+	;; Set next_in
 	mov	[state + _next_in], next_in
+
+	;; Set avail_in
 	sub	end_in, next_in
 	mov	[state + _avail_in], end_in %+ d
 

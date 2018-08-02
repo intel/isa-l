@@ -32,7 +32,7 @@
 #include "huff_codes.h"
 #include "igzip_checksums.h"
 
-extern int decode_huffman_code_block_stateless(struct inflate_state *);
+extern int decode_huffman_code_block_stateless(struct inflate_state *, uint8_t * start_out);
 
 #define LARGE_SHORT_SYM_LEN 25
 #define LARGE_SHORT_SYM_MASK ((1 << LARGE_SHORT_SYM_LEN) - 1)
@@ -1502,7 +1502,7 @@ static int inline decode_literal_block(struct inflate_state *state)
 }
 
 /* Decodes the next block if it was encoded using a huffman code */
-int decode_huffman_code_block_stateless_base(struct inflate_state *state)
+int decode_huffman_code_block_stateless_base(struct inflate_state *state, uint8_t * start_out)
 {
 	uint16_t next_lit;
 	uint8_t next_dist;
@@ -1611,7 +1611,7 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state)
 					return ISAL_END_INPUT;
 				}
 
-				if (look_back_dist > state->total_out + state->dict_length)
+				if (state->next_out - look_back_dist < start_out)
 					return ISAL_INVALID_LOOKBACK;
 
 				if (state->avail_out < repeat_length) {
@@ -1736,7 +1736,7 @@ int isal_inflate_stateless(struct inflate_state *state)
 		if (state->block_state == ISAL_BLOCK_TYPE0)
 			ret = decode_literal_block(state);
 		else
-			ret = decode_huffman_code_block_stateless(state);
+			ret = decode_huffman_code_block_stateless(state, start_out);
 
 		if (ret)
 			break;
@@ -1790,8 +1790,10 @@ int isal_inflate(struct inflate_state *state)
 
 				if (state->block_state == ISAL_BLOCK_TYPE0) {
 					ret = decode_literal_block(state);
-				} else
-					ret = decode_huffman_code_block_stateless(state);
+				} else {
+					uint8_t *tmp = state->tmp_out_buffer;
+					ret = decode_huffman_code_block_stateless(state, tmp);
+				}
 
 				if (ret)
 					break;
@@ -1858,7 +1860,9 @@ int isal_inflate(struct inflate_state *state)
 				if (state->block_state == ISAL_BLOCK_TYPE0)
 					ret = decode_literal_block(state);
 				else
-					ret = decode_huffman_code_block_stateless(state);
+					ret =
+					    decode_huffman_code_block_stateless(state,
+										start_out);
 				if (ret)
 					break;
 			}

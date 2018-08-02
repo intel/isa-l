@@ -50,6 +50,8 @@
 
 #define IBUF_SIZE  (1024*1024)
 
+#define MAX_LARGE_COMP_BUF_SIZE (1024*1024)
+
 #define PAGE_SIZE 4*1024
 
 #define MAX_FILE_SIZE 0x7fff8fff
@@ -741,6 +743,26 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 	return ret;
 }
 
+int inflate_ret_to_code(int ret)
+{
+	switch (ret) {
+	case ISAL_DECOMP_OK:
+		return 0;
+	case ISAL_END_INPUT:
+		return INFLATE_END_OF_INPUT;
+	case ISAL_OUT_OVERFLOW:
+		return INFLATE_OUT_BUFFER_OVERFLOW;
+	case ISAL_INVALID_BLOCK:
+		return INFLATE_INVALID_BLOCK_HEADER;
+	case ISAL_INVALID_SYMBOL:
+		return INFLATE_INVALID_SYMBOL;
+	case ISAL_INVALID_LOOKBACK:
+		return INFLATE_INVALID_LOOK_BACK_DISTANCE;
+	default:
+		return INFLATE_GENERAL_ERROR;
+	}
+}
+
 /* Inflate the  compressed data and check that the decompressed data agrees with the input data */
 int inflate_check(uint8_t * z_buf, uint32_t z_size, uint8_t * in_buf, uint32_t in_size,
 		  uint32_t gzip_flag, uint8_t * dict, uint32_t dict_len)
@@ -1221,6 +1243,131 @@ int compress_single_pass(uint8_t * data, uint32_t data_size, uint8_t * compresse
 		*compressed_size = stream.total_out;
 	else if (flush_type == SYNC_FLUSH && stream.avail_out < 16)
 		ret = COMPRESS_OUT_BUFFER_OVERFLOW;
+
+	return ret;
+
+}
+
+/* Compress the input data repeatedly into the outbuffer
+ * Compresses and verifies in place to decrease memory usage
+ */
+int compress_ver_rep_buf(uint8_t * data, uint32_t data_size, uint64_t data_rep_size,
+			 uint8_t * compressed_buf, uint32_t compressed_size,
+			 uint8_t * decomp_buf, uint32_t decomp_buf_size, uint32_t flush_type,
+			 uint32_t gzip_flag, uint32_t level)
+{
+	int ret = IGZIP_COMP_OK;
+	struct isal_zstream stream;
+	struct inflate_state state;
+	uint32_t level_buf_size;
+	uint8_t *level_buf = NULL;
+	uint64_t data_remaining = data_rep_size;
+	uint64_t data_verified = 0;
+	uint32_t index;
+	uint32_t out_size, cmp_size;
+	uint32_t avail_out_start;
+
+#ifdef VERBOSE
+	printf("Starting Compress and Verify Repeated Buffer\n");
+#endif
+	gzip_flag = 0;
+
+	create_rand_repeat_data((uint8_t *) & stream, sizeof(stream));
+
+	/* Setup compression stream */
+	isal_deflate_init(&stream);
+	stream.avail_in = 0;
+	stream.next_in = NULL;
+	stream.avail_out = 0;
+	stream.next_out = NULL;
+
+	set_random_hufftable(&stream);
+	stream.flush = flush_type;
+	stream.end_of_stream = 0;
+	stream.gzip_flag = gzip_flag;
+	stream.level = level;
+
+	if (level >= 1) {
+		level_buf_size = get_rand_level_buf_size(stream.level);
+		level_buf = malloc(level_buf_size);
+		create_rand_repeat_data(level_buf, level_buf_size);
+		stream.level_buf = level_buf;
+		stream.level_buf_size = level_buf_size;
+	}
+
+	/* Setup decompression stream */
+	create_rand_repeat_data((uint8_t *) & state, sizeof(state));
+	isal_inflate_init(&state);
+	state.crc_flag = gzip_flag;
+
+	while (data_remaining || stream.avail_in) {
+		/* Compress the input buffer */
+		if (stream.next_out == NULL) {
+			stream.avail_out = compressed_size;
+			stream.next_out = compressed_buf;
+		}
+
+		while (stream.avail_out > 0 && (data_remaining || stream.avail_in)) {
+			if (stream.avail_in == 0) {
+				stream.avail_in = data_size;
+				if (data_size >= data_remaining) {
+					stream.avail_in = data_remaining;
+					stream.end_of_stream = 1;
+				}
+
+				stream.next_in = data;
+				data_remaining -= stream.avail_in;
+			}
+
+			ret = isal_deflate(&stream);
+
+			if (ret)
+				return COMPRESS_GENERAL_ERROR;
+		}
+
+		/* Verfiy the compressed buffer */
+		state.next_in = compressed_buf;
+		state.avail_in = compressed_size;
+		state.next_out = NULL;
+		state.avail_out = 0;
+		create_rand_repeat_data(decomp_buf, decomp_buf_size);
+
+		while (state.avail_out == 0) {
+			state.next_out = decomp_buf;
+			state.avail_out = decomp_buf_size;
+
+			/* Force decoding to stop when avail_out rolls over */
+			if ((1ULL << 32) - state.total_out < decomp_buf_size)
+				state.avail_out = (1ULL << 32) - state.total_out;
+
+			avail_out_start = state.avail_out;
+
+			ret = isal_inflate(&state);
+			if (ret)
+				return inflate_ret_to_code(ret);
+
+			/* Check data accuracy */
+			index = data_verified % data_size;
+			out_size = avail_out_start - state.avail_out;
+			cmp_size =
+			    (out_size > data_size - index) ? data_size - index : out_size;
+			ret |= memcmp(decomp_buf, data + index, cmp_size);
+			out_size -= cmp_size;
+			cmp_size = (out_size > index) ? index : out_size;
+			ret |= memcmp(decomp_buf + data_size - index, data, cmp_size);
+			out_size -= cmp_size;
+			cmp_size = out_size;
+			ret |= memcmp(decomp_buf, decomp_buf + data_size, out_size);
+			if (ret)
+				return RESULT_ERROR;
+
+			data_verified += avail_out_start - state.avail_out;
+		}
+		stream.next_out = NULL;
+	}
+
+	if (level_buf != NULL)
+		free(level_buf);
 
 	return ret;
 
@@ -2298,6 +2445,56 @@ int test_inflate(struct vect_result *in_vector)
 
 }
 
+int test_large(uint8_t * in_buf, uint32_t in_size, uint64_t large_size)
+{
+
+	int ret = IGZIP_COMP_OK;
+	uint32_t gzip_flag, level;
+	uint32_t z_size = 0, z_size_max = 0, tmp_buf_size;
+	uint8_t *z_buf = NULL, *tmp_buf = NULL;
+	int flush_type = NO_FLUSH;
+
+	/* Test a non overflow case */
+	z_size_max = MAX_LARGE_COMP_BUF_SIZE;
+
+	gzip_flag = rand() % 5;
+	level = get_rand_level();
+
+	z_size = z_size_max;
+	z_buf = malloc(z_size);
+	if (z_buf == NULL) {
+		print_error(MALLOC_FAILED);
+		return MALLOC_FAILED;
+	}
+	create_rand_repeat_data(z_buf, z_size);
+
+	tmp_buf_size = IBUF_SIZE;
+	tmp_buf = malloc(tmp_buf_size);
+	if (tmp_buf == NULL) {
+		print_error(MALLOC_FAILED);
+		return MALLOC_FAILED;
+	}
+
+	ret =
+	    compress_ver_rep_buf(in_buf, in_size, large_size, z_buf, z_size, tmp_buf,
+				 tmp_buf_size, flush_type, gzip_flag, level);
+
+	if (ret)
+		print_error(ret);
+
+	if (z_buf != NULL) {
+		free(z_buf);
+		z_buf = NULL;
+	}
+
+	if (tmp_buf != NULL) {
+		free(tmp_buf);
+		tmp_buf = NULL;
+	}
+
+	return ret;
+}
+
 /* Run multiple compression tests on data stored in a file */
 int test_compress_file(char *file_name)
 {
@@ -2400,10 +2597,11 @@ int create_custom_hufftables(struct isal_hufftables *hufftables_custom, int argc
 
 int main(int argc, char *argv[])
 {
-	int i = 0, ret = 0, fin_ret = 0;
+	int i = 0, j = 0, ret = 0, fin_ret = 0;
 	uint32_t in_size = 0, offset = 0;
 	uint8_t *in_buf;
 	struct isal_hufftables hufftables_custom;
+	uint64_t iterations, large_buf_size;
 
 #ifndef VERBOSE
 	setbuf(stdout, NULL);
@@ -2684,6 +2882,41 @@ int main(int argc, char *argv[])
 	}
 
 	fin_ret |= ret;
+
+	printf("%s\n", ret ? "Fail" : "Pass");
+
+	printf("igzip_rand_test large input             ");
+
+	iterations = RANDOMS / 256 + 1;
+	for (i = 0; i < iterations; i++) {
+		in_size = rand() % (32 * 1024) + 16 * 1024;
+		offset = rand() % (IBUF_SIZE + 1 - in_size);
+		in_buf += offset;
+
+		large_buf_size = 1;
+		large_buf_size <<= 32;
+		large_buf_size += rand() % (1024 * 1024) + 1;
+		create_rand_repeat_data(in_buf, in_size);
+
+		ret |= test_large(in_buf, in_size, large_buf_size);
+
+		if (ret)
+			return ret;
+
+		in_buf -= offset;
+
+		if (iterations < 16) {
+			for (j = 0; j < 16 / iterations; j++)
+				printf(".");
+		} else if (i % (iterations / 16) == 0)
+			printf(".");
+
+	}
+
+	if (iterations < 16) {
+		for (j = (16 / iterations) * iterations; j < 16; j++)
+			printf(".");
+	}
 
 	printf("%s\n", ret ? "Fail" : "Pass");
 
