@@ -1277,8 +1277,6 @@ int compress_ver_rep_buf(uint8_t * data, uint32_t data_size, uint64_t data_rep_s
 #ifdef VERBOSE
 	printf("Starting Compress and Verify Repeated Buffer\n");
 #endif
-	gzip_flag = 0;
-
 	create_rand_repeat_data((uint8_t *) & stream, sizeof(stream));
 
 	/* Setup compression stream */
