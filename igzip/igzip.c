@@ -1273,7 +1273,7 @@ int isal_deflate(struct isal_zstream *stream)
 
 		stream->flush = flush_type;
 		stream->end_of_stream = end_of_stream;
-	} while (stream->total_in < total_start + hist_size && avail_in > 0
+	} while (stream->total_in - total_start < hist_size && avail_in > 0
 		 && stream->avail_out > 0);
 
 	stream->total_in += state->b_bytes_valid - state->b_bytes_processed;
@@ -1282,7 +1282,7 @@ int isal_deflate(struct isal_zstream *stream)
 
 	if (stream->avail_in > 0 && stream->avail_out > 0) {
 		/* Due to exiting conditions for the while loop, we know that
-		 * stream->total_in < total_start + hist_size */
+		 * stream->total_in - total_start < hist_size */
 		stream->next_in -= state->b_bytes_valid - state->b_bytes_processed;
 		stream->avail_in += state->b_bytes_valid - state->b_bytes_processed;
 		stream->total_in -= state->b_bytes_valid - state->b_bytes_processed;
