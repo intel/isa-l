@@ -114,6 +114,7 @@ static const int zlib_extra_bytes = 6;	/* zlib_hdr_bytes + zlib_trl_bytes */
 int inflate_type = 0;
 
 struct isal_hufftables *hufftables = NULL;
+struct isal_hufftables *hufftables_subset = NULL;
 
 #define HISTORY_SIZE 32*1024
 #define MIN_LENGTH 3
@@ -972,9 +973,21 @@ int isal_deflate_with_checks(struct isal_zstream *stream, uint32_t data_size,
 
 }
 
-void set_random_hufftable(struct isal_zstream *stream)
+void set_random_hufftable(struct isal_zstream *stream, int level, uint8_t * data,
+			  uint32_t data_size)
 {
-	isal_deflate_set_hufftables(stream, hufftables, rand() % 4);
+	struct isal_hufftables *huff = hufftables;
+	struct isal_huff_histogram hist;
+	if (level == 0 || rand() % 16 == 0) {
+		if (rand() % 8 == 0) {
+			huff = hufftables_subset;
+			memset(&hist, 0, sizeof(hist));
+			isal_update_histogram(data, data_size, &hist);
+			isal_create_hufftables_subset(huff, &hist);
+		}
+
+		isal_deflate_set_hufftables(stream, huff, rand() % 4);
+	}
 }
 
 /* Compress the input data into the output buffer where the input buffer and
@@ -996,6 +1009,7 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	struct isal_hufftables *huff_tmp;
 	uint32_t reset_test_flag = 0;
 	uint8_t tmp_symbol;
+	int no_mod = 0;
 
 #ifdef VERBOSE
 	printf("Starting Compress Multi Pass\n");
@@ -1086,7 +1100,7 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 			}
 		} else {
 			/* Randomly modify data after next in */
-			if (rand() % 4 == 0) {
+			if (rand() % 4 == 0 && !no_mod) {
 
 				tmp_symbol = rand();
 #ifdef VERBOSE
@@ -1133,8 +1147,13 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 			}
 		}
 
-		if (state->state == ZSTATE_NEW_HDR)
-			set_random_hufftable(stream);
+		if (state->state == ZSTATE_NEW_HDR) {
+			set_random_hufftable(stream, level, data, data_size);
+			if (stream->hufftables == hufftables_subset)
+				no_mod = 1;
+			else
+				no_mod = 0;
+		}
 
 		ret =
 		    isal_deflate_with_checks(stream, data_size, *compressed_size, in_buf,
@@ -1195,7 +1214,7 @@ int compress_single_pass(uint8_t * data, uint32_t data_size, uint8_t * compresse
 
 	isal_deflate_init(&stream);
 
-	set_random_hufftable(&stream);
+	set_random_hufftable(&stream, level, data, data_size);
 
 	if (state->state != ZSTATE_NEW_HDR)
 		return COMPRESS_INCORRECT_STATE;
@@ -1286,7 +1305,7 @@ int compress_ver_rep_buf(uint8_t * data, uint32_t data_size, uint64_t data_rep_s
 	stream.avail_out = 0;
 	stream.next_out = NULL;
 
-	set_random_hufftable(&stream);
+	set_random_hufftable(&stream, level, data, data_size);
 	stream.flush = flush_type;
 	stream.end_of_stream = 0;
 	stream.gzip_flag = gzip_flag;
@@ -1394,7 +1413,7 @@ int compress_stateless(uint8_t * data, uint32_t data_size, uint8_t * compressed_
 
 	isal_deflate_stateless_init(&stream);
 
-	set_random_hufftable(&stream);
+	set_random_hufftable(&stream, level, data, data_size);
 
 	if (rand() % 4 == 0) {
 		/* Test reset */
@@ -1583,7 +1602,7 @@ int compress_stateless_full_flush(uint8_t * data, uint32_t data_size, uint8_t * 
 		out_buf = stream.next_out;
 
 		if (stream.internal_state.state == ZSTATE_NEW_HDR)
-			set_random_hufftable(&stream);
+			set_random_hufftable(&stream, level, data, data_size);
 
 		ret = isal_deflate_stateless(&stream);
 
@@ -1724,7 +1743,7 @@ int compress_full_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 		}
 
 		if (state->state == ZSTATE_NEW_HDR)
-			set_random_hufftable(&stream);
+			set_random_hufftable(&stream, level, data, data_size);
 
 		ret = isal_deflate(&stream);
 
@@ -1782,7 +1801,7 @@ int compress_swap_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 
 	isal_deflate_init(&stream);
 
-	set_random_hufftable(&stream);
+	set_random_hufftable(&stream, 0, data, data_size);
 
 	if (state->state != ZSTATE_NEW_HDR)
 		return COMPRESS_INCORRECT_STATE;
@@ -1822,7 +1841,7 @@ int compress_swap_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 		return ret;
 
 	if (state->state == ZSTATE_NEW_HDR)
-		set_random_hufftable(&stream);
+		set_random_hufftable(&stream, 0, data, data_size);
 
 	flush_type = rand() % 3;
 
@@ -2634,7 +2653,7 @@ int main(int argc, char *argv[])
 	int i = 0, j = 0, ret = 0, fin_ret = 0;
 	uint32_t in_size = 0, offset = 0;
 	uint8_t *in_buf;
-	struct isal_hufftables hufftables_custom;
+	struct isal_hufftables hufftables_custom, hufftables_sub;
 	uint64_t iterations, large_buf_size;
 
 #ifndef VERBOSE
@@ -2646,6 +2665,7 @@ int main(int argc, char *argv[])
 	printf("Randoms    : %d\n", RANDOMS);
 	srand(TEST_SEED);
 
+	hufftables_subset = &hufftables_sub;
 	if (argc > 1) {
 		ret = create_custom_hufftables(&hufftables_custom, argc, argv);
 		if (ret == 0)
