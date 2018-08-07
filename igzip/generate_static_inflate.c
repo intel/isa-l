@@ -34,7 +34,7 @@
 #include <stdlib.h>
 #include "igzip_lib.h"
 
-#define STATIC_INFLATE_FILE "igzip/static_inflate.h"
+#define STATIC_INFLATE_FILE "static_inflate.h"
 
 /**
  * @brief Prints a table of uint16_t elements to a file.
@@ -107,7 +107,7 @@ void fprint_header(FILE * output_file)
 		"#if (LONG_BITS_CHECK == ISAL_DECODE_LONG_BITS) && (SHORT_BITS_CHECK == ISAL_DECODE_SHORT_BITS)\n"
 		"# define ISAL_STATIC_INFLATE_TABLE\n"
 		"#else\n"
-		"# error \"Incompatible compile time defines for static inflate table.\"\n"
+		"# warning \"Incompatible compile time defines for optimized static inflate table.\"\n"
 		"#endif\n\n");
 }
 

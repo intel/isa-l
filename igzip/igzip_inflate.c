@@ -33,7 +33,7 @@
 #include "igzip_checksums.h"
 #include "igzip_wrapper.h"
 
-#ifdef USE_STATIC_INFLATE_H
+#ifndef NO_STATIC_INFLATE_H
 #include "static_inflate.h"
 #endif
 
@@ -938,6 +938,11 @@ static int inline setup_static_header(struct inflate_state *state)
 	memcpy(&state->lit_huff_code, &static_lit_huff_code, sizeof(static_lit_huff_code));
 	memcpy(&state->dist_huff_code, &static_dist_huff_code, sizeof(static_dist_huff_code));
 #else
+
+#ifndef NO_STATIC_INFLATE_H
+# warning "Defaulting to static inflate table fallback."
+# warning "For best performance, run generate_static_inflate, replace static_inflate.h, and recompile"
+#endif
 	int i;
 	struct huff_code lit_code[LIT_LEN_ELEMS];
 	struct huff_code dist_code[DIST_LEN + 2];

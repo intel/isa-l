@@ -163,10 +163,14 @@ msg+=$'Examples run: Pass\n'
 # Test custom hufftables
 test_start "generate_custom_hufftables"
 ./generate_custom_hufftables $in_file
-$MAKE -f Makefile.unx -j $cpus checks
+$MAKE -f Makefile.unx -j $cpus D="NO_STATIC_INFLATE_H" checks
 ./igzip_rand_test $in_file
-test_end "generate_custom_hufftables"
+./generate_static_inflate
+diff -q static_inflate.h igzip/static_inflate.h
+rm -rf static_inflate.h
 rm -rf hufftables_c.c
+test_end "generate_custom_hufftables"
+
 msg+=$'Custom hufftable build: Pass\n'
 
 $MAKE -f Makefile.unx clean
