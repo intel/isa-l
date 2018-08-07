@@ -91,7 +91,6 @@ objs =  \
 	bin\crc16_t10dif_01.obj \
 	bin\crc16_t10dif_by4.obj \
 	bin\crc16_t10dif_copy_by4.obj \
-	bin\crc32_gzip.obj \
 	bin\crc32_ieee_01.obj \
 	bin\crc32_ieee_by4.obj \
 	bin\crc32_iscsi_00.obj \
@@ -105,7 +104,7 @@ objs =  \
 	bin\crc64_jones_refl_by8.obj \
 	bin\crc64_multibinary.obj \
 	bin\crc_base.obj \
-	bin\crc32_gzip_base.obj \
+	bin\adler32_base.obj \
 	bin\crc_multibinary.obj \
 	bin\huff_codes.obj \
 	bin\hufftables_c.obj \

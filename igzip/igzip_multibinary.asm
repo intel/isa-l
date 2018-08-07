@@ -67,9 +67,6 @@ extern set_long_icf_fg_06
 extern gen_icf_map_lh1_06
 %endif
 
-extern crc32_gzip_base
-extern crc32_gzip_01
-
 extern adler32_base
 extern adler32_avx2_4
 extern adler32_sse
@@ -131,9 +128,6 @@ mbin_dispatch_init5	set_long_icf_fg, set_long_icf_fg_base, set_long_icf_fg_base,
 mbin_interface		gen_icf_map_lh1
 mbin_dispatch_init5	gen_icf_map_lh1, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_lh1_04
 %endif
-
-mbin_interface		crc32_gzip
-mbin_dispatch_init_clmul	crc32_gzip, crc32_gzip_base, crc32_gzip_01
 
 mbin_interface		isal_adler32
 mbin_dispatch_init5	isal_adler32, adler32_base, adler32_sse, adler32_sse, adler32_avx2_4

@@ -44,6 +44,7 @@
 #include "huffman.h"
 #include "bitbuf2.h"
 #include "igzip_lib.h"
+#include "crc.h"
 #include "repeated_char_result.h"
 #include "huff_codes.h"
 #include "encode_df.h"
@@ -158,7 +159,7 @@ static void update_checksum(struct isal_zstream *stream, uint8_t * start_in, uin
 	switch (stream->gzip_flag) {
 	case IGZIP_GZIP:
 	case IGZIP_GZIP_NO_HDR:
-		state->crc = crc32_gzip(state->crc, start_in, length);
+		state->crc = crc32_gzip_refl(state->crc, start_in, length);
 		break;
 	case IGZIP_ZLIB:
 	case IGZIP_ZLIB_NO_HDR:
@@ -1085,7 +1086,7 @@ uint32_t isal_write_gzip_header(struct isal_zstream *stream, struct isal_gzip_he
 	}
 
 	if (flags & HCRC_FLAG) {
-		hcrc = crc32_gzip(0, out_buf_start, out_buf - out_buf_start);
+		hcrc = crc32_gzip_refl(0, out_buf_start, out_buf - out_buf_start);
 		*(uint16_t *) out_buf = hcrc;
 		out_buf += GZIP_HCRC_LEN;
 	}

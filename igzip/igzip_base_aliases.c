@@ -43,7 +43,6 @@ void isal_update_histogram_base(uint8_t * start_stream, int length,
 struct deflate_icf *encode_deflate_icf_base(struct deflate_icf *next_in,
 					    struct deflate_icf *end_in, struct BitBuf2 *bb,
 					    struct hufftables_icf *hufftables);
-uint32_t crc32_gzip_base(uint32_t init_crc, const unsigned char *buf, uint64_t len);
 uint32_t adler32_base(uint32_t init, const unsigned char *buf, uint64_t len);
 int decode_huffman_code_block_stateless_base(struct inflate_state *s);
 
@@ -105,11 +104,6 @@ struct deflate_icf *encode_deflate_icf(struct deflate_icf *next_in,
 				       struct hufftables_icf *hufftables)
 {
 	return encode_deflate_icf_base(next_in, end_in, bb, hufftables);
-}
-
-uint32_t crc32_gzip(uint32_t init_crc, const unsigned char *buf, uint64_t len)
-{
-	return crc32_gzip_base(init_crc, buf, len);
 }
 
 uint32_t isal_adler32(uint32_t init, const unsigned char *buf, uint64_t len)

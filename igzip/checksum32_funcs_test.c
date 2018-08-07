@@ -51,7 +51,6 @@ typedef struct func_case {
 
 func_case_t test_funcs[] = {
 	{"checksum32_adler", isal_adler32, adler_ref},
-	{"crc32_gzip_refl", crc32_gzip, crc32_gzip_refl_ref}
 };
 
 // Generates pseudo-random data

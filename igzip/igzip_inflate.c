@@ -29,6 +29,7 @@
 
 #include <stdint.h>
 #include "igzip_lib.h"
+#include "crc.h"
 #include "huff_codes.h"
 #include "igzip_checksums.h"
 #include "igzip_wrapper.h"
@@ -175,7 +176,7 @@ static void update_checksum(struct inflate_state *state, uint8_t * start_in, uin
 	case ISAL_GZIP:
 	case ISAL_GZIP_NO_HDR:
 	case ISAL_GZIP_NO_HDR_VER:
-		state->crc = crc32_gzip(state->crc, start_in, length);
+		state->crc = crc32_gzip_refl(state->crc, start_in, length);
 		break;
 	case ISAL_ZLIB:
 	case ISAL_ZLIB_NO_HDR:
@@ -2037,7 +2038,7 @@ int isal_read_gzip_header(struct inflate_state *state, struct isal_gzip_header *
 		}
 
 		if (flags & HCRC_FLAG) {
-			hcrc = crc32_gzip(hcrc, start_in, state->next_in - start_in);
+			hcrc = crc32_gzip_refl(hcrc, start_in, state->next_in - start_in);
 			gz_hdr->hcrc = hcrc;
 
 	case ISAL_GZIP_HCRC:
@@ -2057,7 +2058,7 @@ int isal_read_gzip_header(struct inflate_state *state, struct isal_gzip_header *
 	}
 
 	if (flags & HCRC_FLAG)
-		gz_hdr->hcrc = crc32_gzip(hcrc, start_in, state->next_in - start_in);
+		gz_hdr->hcrc = crc32_gzip_refl(hcrc, start_in, state->next_in - start_in);
 
 	return ret;
 }

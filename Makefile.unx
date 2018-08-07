@@ -31,6 +31,12 @@ units     = erasure_code raid crc igzip programs
 
 default: lib
 
+ifeq (,$(findstring crc,$(units)))
+ ifneq (,$(findstring igzip,$(units)))
+  override  units += crc
+ endif
+endif
+
 include $(foreach unit,$(units), $(unit)/Makefile.am)
 
 ifneq (,$(findstring igzip,$(units)))
