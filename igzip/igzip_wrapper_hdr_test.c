@@ -6,8 +6,12 @@
 #include "igzip_lib.h"
 #include "igzip_wrapper.h"
 
-#define TEST_SEED 0x1234
-#define RANDOMS 0x4000
+#ifndef TEST_SEED
+# define TEST_SEED 0x1234
+#endif
+#ifndef RANDOMS
+# define RANDOMS 0x4000
+#endif
 
 #define EXTRA_SIZE_MAX 256
 #define NAME_SIZE_MAX 256
