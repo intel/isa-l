@@ -2748,11 +2748,13 @@ int main(int argc, char *argv[])
 
 	printf("igzip_rand_test stateful  NO_FLUSH:     ");
 
-	ret = test_compress((uint8_t *) str1, sizeof(str1), NO_FLUSH);
+	memcpy(in_buf, str1, sizeof(str1));
+	ret = test_compress(in_buf, sizeof(str1), NO_FLUSH);
 	if (ret)
 		return ret;
 
-	ret |= test_compress((uint8_t *) str2, sizeof(str2), NO_FLUSH);
+	memcpy(in_buf, str2, sizeof(str2));
+	ret |= test_compress(in_buf, sizeof(str2), NO_FLUSH);
 	if (ret)
 		return ret;
 
@@ -2779,11 +2781,13 @@ int main(int argc, char *argv[])
 
 	printf("igzip_rand_test stateful  SYNC_FLUSH:   ");
 
-	ret = test_compress((uint8_t *) str1, sizeof(str1), SYNC_FLUSH);
+	memcpy(in_buf, str1, sizeof(str1));
+	ret = test_compress(in_buf, sizeof(str1), SYNC_FLUSH);
 	if (ret)
 		return ret;
 
-	ret |= test_compress((uint8_t *) str2, sizeof(str2), SYNC_FLUSH);
+	memcpy(in_buf, str2, sizeof(str2));
+	ret |= test_compress(in_buf, sizeof(str2), SYNC_FLUSH);
 	if (ret)
 		return ret;
 
@@ -2810,11 +2814,13 @@ int main(int argc, char *argv[])
 
 	printf("igzip_rand_test stateful  FULL_FLUSH:   ");
 
-	ret = test_compress((uint8_t *) str1, sizeof(str1), FULL_FLUSH);
+	memcpy(in_buf, str1, sizeof(str1));
+	ret = test_compress(in_buf, sizeof(str1), FULL_FLUSH);
 	if (ret)
 		return ret;
 
-	ret |= test_compress((uint8_t *) str2, sizeof(str2), FULL_FLUSH);
+	memcpy(in_buf, str2, sizeof(str2));
+	ret |= test_compress(in_buf, sizeof(str2), FULL_FLUSH);
 	if (ret)
 		return ret;
 
