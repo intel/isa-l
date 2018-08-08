@@ -150,8 +150,8 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	jne	.skip1
 
 	;; Set stream's next state
-	mov	rdx, ZSTATE_FLUSH_READ_BUFFER
-	mov	rax, ZSTATE_CREATE_HDR
+	mov	rdx, ZSTATE_CREATE_HDR
+	mov	eax, [rcx + _internal_state_state]
 	cmp	word [rcx + _end_of_stream], 0
 	cmovne	rax, rdx
 	cmp	word [rcx + _flush], _NO_FLUSH

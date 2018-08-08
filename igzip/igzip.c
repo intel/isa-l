@@ -1188,24 +1188,34 @@ int isal_deflate_stateless(struct isal_zstream *stream)
 
 }
 
-static inline uint32_t hist_add(struct isal_zstream *stream, uint32_t history_size,
-				uint32_t add_size)
+static inline uint32_t get_hist_size(struct isal_zstream *stream, uint8_t * start_in,
+				     int32_t buf_hist_start)
 {
 	struct isal_zstate *state = &stream->internal_state;
+	uint32_t history_size;
+	uint32_t buffered_history;
+	uint32_t buffered_size = state->b_bytes_valid - state->b_bytes_processed;
+	uint32_t input_history;
 
-	/* Calculate requried match History */
-	history_size += add_size;
+	buffered_history = (state->has_hist) ? state->b_bytes_processed - buf_hist_start : 0;
+	input_history = stream->next_in - start_in;
+
+	/* Calculate history required for deflate window */
+	history_size = (buffered_history >= input_history) ? buffered_history : input_history;
 	if (history_size > IGZIP_HIST_SIZE)
 		history_size = IGZIP_HIST_SIZE;
 
-	/* Calculate required block history */
+	/* Calculate history required based on internal state */
 	if (state->state == ZSTATE_TYPE0_HDR
 	    || state->state == ZSTATE_TYPE0_BODY
 	    || state->state == ZSTATE_TMP_TYPE0_HDR || state->state == ZSTATE_TMP_TYPE0_BODY) {
-		if (stream->total_in - state->block_next > history_size)
+		if (stream->total_in - state->block_next > history_size) {
 			history_size = (stream->total_in - state->block_next);
+		}
+	} else if (stream->avail_in + buffered_size == 0
+		   && (stream->end_of_stream || stream->flush == FULL_FLUSH)) {
+		history_size = 0;
 	}
-
 	return history_size;
 }
 
@@ -1213,13 +1223,17 @@ int isal_deflate(struct isal_zstream *stream)
 {
 	struct isal_zstate *state = &stream->internal_state;
 	int ret = COMP_OK;
-	uint8_t *next_in, *start_in;
-	uint32_t avail_in, avail_in_start, total_start, hist_size, future_size;
+	uint8_t *next_in, *start_in, *buf_start_in, *next_in_pre;
+	uint32_t avail_in, total_start, hist_size, future_size;
+	uint32_t in_size, in_size_initial, out_size, out_size_initial;
+	uint32_t processed, buffered_size = state->b_bytes_valid - state->b_bytes_processed;
 	uint32_t flush_type = stream->flush;
 	uint32_t end_of_stream = stream->end_of_stream;
 	uint32_t size = 0;
+	int32_t buf_hist_start = 0;
 	uint8_t *copy_down_src = NULL;
 	uint64_t copy_down_size = 0, copy_start_offset;
+	int internal;
 
 	if (stream->flush >= 3)
 		return INVALID_FLUSH;
@@ -1229,43 +1243,35 @@ int isal_deflate(struct isal_zstream *stream)
 		return ret;
 
 	start_in = stream->next_in;
-	next_in = stream->next_in;
-	avail_in = stream->avail_in;
 	total_start = stream->total_in;
-	stream->total_in -= state->b_bytes_valid - state->b_bytes_processed;
 
-	hist_size = hist_add(stream, state->b_bytes_processed, 0);
+	hist_size = get_hist_size(stream, start_in, buf_hist_start);
+
 	if (state->has_hist == IGZIP_NO_HIST) {
+		stream->total_in -= buffered_size;
 		reset_match_history(stream);
-		hist_size = 0;
+		stream->total_in += buffered_size;
+		buf_hist_start = state->b_bytes_processed;
+
 	} else if (state->has_hist == IGZIP_DICT_HIST)
 		isal_deflate_hash(stream, state->buffer, state->b_bytes_processed);
 
+	in_size = stream->avail_in + buffered_size;
+	out_size = stream->total_out;
 	do {
-		size = avail_in;
-		if (size > sizeof(state->buffer) - state->b_bytes_valid) {
-			size = sizeof(state->buffer) - state->b_bytes_valid;
-			stream->flush = NO_FLUSH;
-			stream->end_of_stream = 0;
-		}
-		memcpy(&state->buffer[state->b_bytes_valid], next_in, size);
+		in_size_initial = in_size;
+		out_size_initial = out_size;
+		buf_start_in = start_in;
+		internal = 0;
 
-		next_in += size;
-		avail_in -= size;
-		state->b_bytes_valid += size;
+		/* Setup to compress from internal buffer if insufficient history */
+		if (stream->total_in - total_start < hist_size + buffered_size) {
+			/* On entry there should always be sufficient history bufferd */
+			/* assert(state->b_bytes_processed >= hist_size); */
 
-		stream->next_in = &state->buffer[state->b_bytes_processed];
-		stream->avail_in = state->b_bytes_valid - state->b_bytes_processed;
-
-		if (stream->avail_in > IGZIP_HIST_SIZE
-		    || stream->total_in - state->block_next > IGZIP_HIST_SIZE
-		    || stream->end_of_stream || stream->flush != NO_FLUSH) {
-			avail_in_start = stream->avail_in;
-			isal_deflate_int(stream, state->buffer);
-			state->b_bytes_processed += avail_in_start - stream->avail_in;
-			hist_size =
-			    hist_add(stream, hist_size, avail_in_start - stream->avail_in);
-
+			internal = 1;
+			/* Shift down internal buffer if it contains more data
+			 * than required */
 			if (state->b_bytes_processed > hist_size) {
 				copy_start_offset = state->b_bytes_processed - hist_size;
 
@@ -1275,39 +1281,124 @@ int isal_deflate(struct isal_zstream *stream)
 
 				state->b_bytes_valid -= copy_down_src - state->buffer;
 				state->b_bytes_processed -= copy_down_src - state->buffer;
+				buf_hist_start -= copy_down_src - state->buffer;
+				if (buf_hist_start < 0)
+					buf_hist_start = 0;
 			}
+
+			size = stream->avail_in;
+			if (size > sizeof(state->buffer) - state->b_bytes_valid)
+				size = sizeof(state->buffer) - state->b_bytes_valid;
+
+			memcpy(&state->buffer[state->b_bytes_valid], stream->next_in, size);
+
+			stream->next_in += size;
+			stream->avail_in -= size;
+			stream->total_in += size;
+			state->b_bytes_valid += size;
+			buffered_size += size;
+
+			/* Save off next_in and avail_in if compression is
+			 * performed in internal buffer, total_in can be
+			 * recovered from knowledge of the size of the buffered
+			 * input */
+			next_in = stream->next_in;
+			avail_in = stream->avail_in;
+
+			/* If not much data is buffered and there is no need to
+			 * flush the buffer, just continue rather than attempt
+			 * to compress */
+			if (avail_in == 0 && buffered_size <= IGZIP_HIST_SIZE
+			    && stream->total_in - buffered_size - state->block_next <=
+			    IGZIP_HIST_SIZE && !stream->end_of_stream
+			    && stream->flush == NO_FLUSH)
+				continue;
+
+			if (avail_in) {
+				stream->flush = NO_FLUSH;
+				stream->end_of_stream = 0;
+			}
+
+			stream->next_in = &state->buffer[state->b_bytes_processed];
+			stream->avail_in = buffered_size;
+			stream->total_in -= buffered_size;
+
+			buf_start_in = state->buffer;
+
+		} else if (buffered_size) {
+			/* The user provided buffer has sufficient data, reset
+			 * the user supplied buffer to included any data already
+			 * buffered */
+			stream->next_in -= buffered_size;
+			stream->avail_in += buffered_size;
+			stream->total_in -= buffered_size;
+			state->b_bytes_valid = 0;
+			state->b_bytes_processed = 0;
+			buffered_size = 0;
 		}
 
-		stream->flush = flush_type;
-		stream->end_of_stream = end_of_stream;
-	} while ((int32_t) (stream->total_in - total_start) < (int32_t) hist_size
-		 && avail_in > 0 && stream->avail_out > 0);
+		next_in_pre = stream->next_in;
+		isal_deflate_int(stream, buf_start_in);
+		processed = stream->next_in - next_in_pre;
+		hist_size = get_hist_size(stream, buf_start_in, buf_hist_start);
 
-	stream->total_in += state->b_bytes_valid - state->b_bytes_processed;
-	stream->next_in = next_in;
-	stream->avail_in = avail_in;
+		/* Restore compression to unbuffered input when compressing to internal buffer */
+		if (internal) {
+			state->b_bytes_processed += processed;
+			buffered_size -= processed;
 
-	if (stream->avail_in > 0 && stream->avail_out > 0) {
-		/* Due to exiting conditions for the while loop, we know that
-		 * stream->total_in - total_start < hist_size */
-		stream->next_in -= state->b_bytes_valid - state->b_bytes_processed;
-		stream->avail_in += state->b_bytes_valid - state->b_bytes_processed;
-		stream->total_in -= state->b_bytes_valid - state->b_bytes_processed;
+			stream->flush = flush_type;
+			stream->end_of_stream = end_of_stream;
+			stream->total_in += buffered_size;
 
-		avail_in_start = stream->avail_in;
-		isal_deflate_int(stream, start_in);
+			stream->next_in = next_in;
+			stream->avail_in = avail_in;
+		}
 
-		hist_size = hist_add(stream, hist_size, avail_in_start - stream->avail_in);
-		future_size = stream->avail_in;
-		if (future_size > ISAL_LOOK_AHEAD)
+		in_size = stream->avail_in + buffered_size;
+		out_size = stream->total_out;
+
+	} while (internal && stream->avail_in > 0 && stream->avail_out > 0
+		 && (in_size_initial != in_size || out_size_initial != out_size));
+
+	/* Buffer history if data was pulled from the external buffer and future
+	 * calls to deflate will be required */
+	if (!internal && (state->state != ZSTATE_END || state->state != ZSTATE_TRL)) {
+		/* If the external buffer was used, sufficient history must
+		 * exist in the user input buffer */
+		/* assert(stream->total_in - total_start >= */
+		/*        hist_size + buffered_size); */
+
+		stream->next_in -= buffered_size;
+		stream->avail_in += buffered_size;
+		stream->total_in -= buffered_size;
+
+		memmove(state->buffer, stream->next_in - hist_size, hist_size);
+		state->b_bytes_processed = hist_size;
+		state->b_bytes_valid = hist_size;
+		buffered_size = 0;
+	}
+
+	/* Buffer input data if it is necessary for continued execution */
+	if (stream->avail_in > 0 && (stream->avail_out > 0 || stream->level == 3)) {
+		/* Determine how much data to buffer */
+		future_size = sizeof(state->buffer) - state->b_bytes_valid;
+		if (stream->avail_in < future_size)
+			/* Buffer all data if it fits as it will need to be buffered
+			 * on the next call anyways*/
+			future_size = stream->avail_in;
+		else if (ISAL_LOOK_AHEAD < future_size)
+			/* Buffer a minimum look ahead required for level 3 */
 			future_size = ISAL_LOOK_AHEAD;
 
-		memmove(state->buffer, stream->next_in - hist_size, hist_size + future_size);
-		state->b_bytes_processed = hist_size;
-		state->b_bytes_valid = hist_size + future_size;
+		memcpy(&state->buffer[state->b_bytes_valid], stream->next_in, future_size);
+
+		state->b_bytes_valid += future_size;
+		buffered_size += future_size;
 		stream->next_in += future_size;
 		stream->total_in += future_size;
 		stream->avail_in -= future_size;
+
 	}
 
 	return ret;
