@@ -311,7 +311,7 @@ struct BitBuf2 {
 
 /** @brief Holds the internal state information for input and output compression streams*/
 struct isal_zstate {
-	uint32_t total_in_start; //!< Start of total_in (inlcuding buffered data) on function call
+	uint32_t total_in_start; //!< Not used, may be replaced with something else
 	uint32_t block_next;	//!< Start of current deflate block in the input
 	uint32_t block_end;	//!< End of current deflate block in the input
 	struct BitBuf2 bitbuf;	//!< Bit Buffer
