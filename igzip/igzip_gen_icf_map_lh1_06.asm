@@ -166,7 +166,7 @@ func(gen_icf_map_lh1_06)
 	mov	level_buf, [stream + _level_buf]
 	sub	f_i_end, LA
 	vmovdqu64 zdatas_perm, [datas_perm]
-	vbroadcasti32x4 zdatas_shuf, [datas_shuf]
+	vbroadcasti32x8 zdatas_shuf, [datas_shuf]
 	vpbroadcastd zhash_prod, [hash_prod]
 	vpbroadcastd zhash_mask, [hash_mask]
 	vmovdqu64 zincrement, [increment]
