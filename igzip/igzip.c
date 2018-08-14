@@ -370,7 +370,7 @@ static void create_icf_block_hdr(struct isal_zstream *stream, uint8_t * start_in
 	struct BitBuf2 *write_buf = &state->bitbuf;
 	struct BitBuf2 write_buf_tmp;
 	uint32_t out_size = stream->avail_out;
-	uint32_t avail_output;
+	uint32_t avail_output, block_start_offset;
 	uint8_t *end_out = stream->next_out + out_size, *block_start;
 	uint64_t bit_count;
 	uint64_t block_in_size = state->block_end - state->block_next;
@@ -410,7 +410,8 @@ static void create_icf_block_hdr(struct isal_zstream *stream, uint8_t * start_in
 					  &level_buf->hist, state->has_eob_hdr);
 
 	/* Assumes that type 0 block has size less than 4G */
-	block_start = stream->next_in - (stream->total_in - state->block_next);
+	block_start_offset = (stream->total_in - state->block_next);
+	block_start = stream->next_in - block_start_offset;
 	avail_output = stream->avail_out + sizeof(state->buffer) -
 	    (stream->total_in - state->block_end);
 	if (bit_count / 8 >= block_size && block_start >= start_in
@@ -774,6 +775,7 @@ static void write_type0_header(struct isal_zstream *stream)
 	uint32_t copy_size;
 	uint32_t memcpy_len, avail_in;
 	uint32_t block_in_size = state->block_end - state->block_next;
+	uint32_t block_next_offset;
 	struct BitBuf2 *bitbuf = &stream->internal_state.bitbuf;
 
 	if (block_in_size > TYPE0_MAX_BLK_LEN) {
@@ -786,7 +788,8 @@ static void write_type0_header(struct isal_zstream *stream)
 		copy_size = block_in_size;
 
 		/* Handle BFINAL bit */
-		avail_in = stream->total_in + stream->avail_in - state->block_next;
+		block_next_offset = stream->total_in - state->block_next;
+		avail_in = stream->avail_in + block_next_offset;
 		if (stream->end_of_stream && avail_in == block_in_size)
 			stream->internal_state.has_eob_hdr = 1;
 	}
@@ -819,7 +822,7 @@ static void write_type0_header(struct isal_zstream *stream)
 
 static uint32_t write_stored_block(struct isal_zstream *stream)
 {
-	uint32_t copy_size, avail_in;
+	uint32_t copy_size, avail_in, block_next_offset;
 	uint8_t *next_in;
 	struct isal_zstate *state = &stream->internal_state;
 
@@ -833,8 +836,10 @@ static uint32_t write_stored_block(struct isal_zstream *stream)
 		assert(state->count <= state->block_end - state->block_next);
 		copy_size = state->count;
 
-		next_in = stream->next_in - stream->total_in + state->block_next;
-		avail_in = stream->total_in + stream->avail_in - state->block_next;
+		block_next_offset = stream->total_in - state->block_next;
+		next_in = stream->next_in - block_next_offset;
+		avail_in = stream->avail_in + block_next_offset;
+
 		if (copy_size > stream->avail_out || copy_size > avail_in) {
 			state->count = copy_size;
 			copy_size = (stream->avail_out <= avail_in) ?
