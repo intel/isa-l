@@ -2146,6 +2146,8 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 	}
 
 	fin_ret |= ret;
+	if (ret)
+		goto test_compress_cleanup;
 
 	z_compressed_size = z_size;
 	z_size = z_size_max;
@@ -2194,6 +2196,8 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 	}
 
 	fin_ret |= ret;
+	if (ret)
+		goto test_compress_cleanup;
 
 	ret = 0;
 
@@ -2238,6 +2242,8 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 	}
 
 	fin_ret |= ret;
+	if (ret)
+		goto test_compress_cleanup;
 
 	if (flush_type == NO_FLUSH) {
 		create_rand_repeat_data(z_buf, z_size);
@@ -2277,6 +2283,7 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 		fin_ret |= ret;
 	}
 
+      test_compress_cleanup:
 	free(z_buf);
 
 	return fin_ret;
@@ -2523,12 +2530,18 @@ int test_compress_file(char *file_name)
 	}
 
 	ret |= test_compress_stateless(in_buf, in_size, NO_FLUSH);
-	ret |= test_compress_stateless(in_buf, in_size, SYNC_FLUSH);
-	ret |= test_compress_stateless(in_buf, in_size, FULL_FLUSH);
-	ret |= test_compress(in_buf, in_size, NO_FLUSH);
-	ret |= test_compress(in_buf, in_size, SYNC_FLUSH);
-	ret |= test_compress(in_buf, in_size, FULL_FLUSH);
-	ret |= test_flush(in_buf, in_size);
+	if (!ret)
+		ret |= test_compress_stateless(in_buf, in_size, SYNC_FLUSH);
+	if (!ret)
+		ret |= test_compress_stateless(in_buf, in_size, FULL_FLUSH);
+	if (!ret)
+		ret |= test_compress(in_buf, in_size, NO_FLUSH);
+	if (!ret)
+		ret |= test_compress(in_buf, in_size, SYNC_FLUSH);
+	if (!ret)
+		ret |= test_compress(in_buf, in_size, FULL_FLUSH);
+	if (!ret)
+		ret |= test_flush(in_buf, in_size);
 
 	if (ret)
 		printf("Failed on file %s\n", file_name);
