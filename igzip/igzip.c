@@ -1273,8 +1273,8 @@ int isal_deflate(struct isal_zstream *stream)
 
 		stream->flush = flush_type;
 		stream->end_of_stream = end_of_stream;
-	} while (stream->total_in - total_start < hist_size && avail_in > 0
-		 && stream->avail_out > 0);
+	} while ((int32_t) (stream->total_in - total_start) < (int32_t) hist_size
+		 && avail_in > 0 && stream->avail_out > 0);
 
 	stream->total_in += state->b_bytes_valid - state->b_bytes_processed;
 	stream->next_in = next_in;
