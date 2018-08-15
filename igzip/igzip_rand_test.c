@@ -991,8 +991,8 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	uint8_t *in_buf = NULL, *out_buf = NULL;
 	uint32_t in_size = 0, out_size = 0;
 	uint32_t in_processed = 0, out_processed = 0;
-	struct isal_zstream stream;
-	struct isal_zstate *state = &stream.internal_state;
+	struct isal_zstream *stream;
+	struct isal_zstate *state;
 	uint32_t loop_count = 0;
 	uint32_t level_buf_size;
 	uint8_t *level_buf = NULL;
@@ -1004,9 +1004,14 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	printf("Starting Compress Multi Pass\n");
 #endif
 
-	create_rand_repeat_data((uint8_t *) & stream, sizeof(stream));
+	stream = malloc(sizeof(*stream));
+	if (stream == NULL)
+		return MALLOC_FAILED;
+	state = &stream->internal_state;
 
-	isal_deflate_init(&stream);
+	create_rand_repeat_data((uint8_t *) stream, sizeof(*stream));
+
+	isal_deflate_init(stream);
 
 	if (state->state != ZSTATE_NEW_HDR)
 		return COMPRESS_INCORRECT_STATE;
@@ -1014,45 +1019,45 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	if (rand() % 4 == 0) {
 		/* Test reset */
 		reset_test_flag = 1;
-		huff_tmp = stream.hufftables;
-		create_rand_repeat_data((uint8_t *) & stream, sizeof(stream));
+		huff_tmp = stream->hufftables;
+		create_rand_repeat_data((uint8_t *) stream, sizeof(*stream));
 
 		/* Restore variables not necessarily set by user */
-		stream.hufftables = huff_tmp;
-		stream.end_of_stream = 0;
-		stream.level = 0;
-		stream.level_buf = NULL;
-		stream.level_buf_size = 0;
+		stream->hufftables = huff_tmp;
+		stream->end_of_stream = 0;
+		stream->level = 0;
+		stream->level_buf = NULL;
+		stream->level_buf_size = 0;
 	}
 
-	stream.flush = flush_type;
-	stream.end_of_stream = 0;
+	stream->flush = flush_type;
+	stream->end_of_stream = 0;
 
 	/* These are set here to allow the loop to run correctly */
-	stream.avail_in = 0;
-	stream.avail_out = 0;
-	stream.gzip_flag = gzip_flag;
-	stream.level = level;
+	stream->avail_in = 0;
+	stream->avail_out = 0;
+	stream->gzip_flag = gzip_flag;
+	stream->level = level;
 
 	if (level >= 1) {
-		level_buf_size = get_rand_level_buf_size(stream.level);
+		level_buf_size = get_rand_level_buf_size(stream->level);
 		level_buf = malloc(level_buf_size);
 		create_rand_repeat_data(level_buf, level_buf_size);
-		stream.level_buf = level_buf;
-		stream.level_buf_size = level_buf_size;
+		stream->level_buf = level_buf;
+		stream->level_buf_size = level_buf_size;
 	}
 
 	if (reset_test_flag)
-		isal_deflate_reset(&stream);
+		isal_deflate_reset(stream);
 
 	if (dict != NULL)
-		isal_deflate_set_dict(&stream, dict, dict_len);
+		isal_deflate_set_dict(stream, dict, dict_len);
 
 	while (1) {
 		loop_count++;
 
 		/* Setup in buffer for next round of compression */
-		if (stream.avail_in == 0) {
+		if (stream->avail_in == 0) {
 			if (flush_type == NO_FLUSH || state->state == ZSTATE_NEW_HDR) {
 				/* Randomly choose size of the next out buffer */
 				in_size = rand() % (data_size + 1);
@@ -1060,7 +1065,7 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 				/* Limit size of buffer to be smaller than maximum */
 				if (in_size >= data_size - in_processed) {
 					in_size = data_size - in_processed;
-					stream.end_of_stream = 1;
+					stream->end_of_stream = 1;
 				}
 
 				if (in_size != 0) {
@@ -1077,8 +1082,8 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 					memcpy(in_buf, data + in_processed, in_size);
 					in_processed += in_size;
 
-					stream.avail_in = in_size;
-					stream.next_in = in_buf;
+					stream->avail_in = in_size;
+					stream->next_in = in_buf;
 				}
 			}
 		} else {
@@ -1089,21 +1094,21 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 #ifdef VERBOSE
 				printf
 				    ("Modifying data at index 0x%x from 0x%x to 0x%x before recalling isal_deflate\n",
-				     in_processed - stream.avail_in,
-				     data[in_processed - stream.avail_in], tmp_symbol);
+				     in_processed - stream->avail_in,
+				     data[in_processed - stream->avail_in], tmp_symbol);
 #endif
-				*stream.next_in = tmp_symbol;
-				data[in_processed - stream.avail_in] = tmp_symbol;
+				*stream->next_in = tmp_symbol;
+				data[in_processed - stream->avail_in] = tmp_symbol;
 			}
 		}
 
 		/* Setup out buffer for next round of compression */
-		if (stream.avail_out == 0) {
+		if (stream->avail_out == 0) {
 			/* Save compressed data inot compressed_buf */
 			if (out_buf != NULL) {
 				memcpy(compressed_buf + out_processed, out_buf,
-				       out_size - stream.avail_out);
-				out_processed += out_size - stream.avail_out;
+				       out_size - stream->avail_out);
+				out_processed += out_size - stream->avail_out;
 			}
 
 			/* Randomly choose size of the next out buffer */
@@ -1125,16 +1130,16 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 					break;
 				}
 
-				stream.avail_out = out_size;
-				stream.next_out = out_buf;
+				stream->avail_out = out_size;
+				stream->next_out = out_buf;
 			}
 		}
 
 		if (state->state == ZSTATE_NEW_HDR)
-			set_random_hufftable(&stream);
+			set_random_hufftable(stream);
 
 		ret =
-		    isal_deflate_with_checks(&stream, data_size, *compressed_size, in_buf,
+		    isal_deflate_with_checks(stream, data_size, *compressed_size, in_buf,
 					     in_size, in_processed, out_buf, out_size,
 					     out_processed);
 
@@ -1148,12 +1153,14 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 		/* Check if the compression is completed */
 		if (state->state == ZSTATE_END) {
 			memcpy(compressed_buf + out_processed, out_buf, out_size);
-			*compressed_size = stream.total_out;
+			*compressed_size = stream->total_out;
 			break;
 		}
 
 	}
 
+	if (stream != NULL)
+		free(stream);
 	if (level_buf != NULL)
 		free(level_buf);
 	if (in_buf != NULL)
