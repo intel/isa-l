@@ -39,7 +39,7 @@
 #endif
 
 #define MAX_BUF   512
-#define TEST_SIZE  20
+#define TEST_SIZE  32
 
 typedef uint32_t(*crc32_func_t) (uint32_t, const uint8_t *, uint64_t);
 typedef uint32_t(*crc32_func_t_base) (uint32_t, uint8_t *, uint64_t);
@@ -248,9 +248,15 @@ int eob_test(func_case_t * test_func)
 	int i;
 	unsigned char *buf = NULL;
 
+	// Null test
+	if (0 != test_func->crc32_func_call(0, NULL, 0)) {
+		fail++;
+		printf("crc null test fail\n");
+	}
+
 	buf = (unsigned char *)buf_alloc;	//reset buf
 	buf = buf + ((MAX_BUF - 1) * TEST_SIZE);	//Line up TEST_SIZE from end
-	for (i = 0; i < TEST_SIZE; i++) {
+	for (i = 0; i <= TEST_SIZE; i++) {
 		crc = test_func->crc32_func_call(TEST_SEED, buf + i, TEST_SIZE - i);
 		crc_ref = test_func->crc32_ref_call(TEST_SEED, buf + i, TEST_SIZE - i);
 		if (crc != crc_ref)

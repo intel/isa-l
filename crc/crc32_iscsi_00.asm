@@ -194,6 +194,9 @@ crc32_iscsi_00:
 
 	mov     rax, crc_init           ;; rax = crc_init;
 
+	cmp     len, 8
+	jb      less_than_8
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 1) ALIGN: ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -202,9 +205,6 @@ crc32_iscsi_00:
 	and     bufp, 7                 ;; calculate the unalignment
 					;; amount of the address
 	je      proc_block              ;; Skip if aligned
-
-	cmp     len, 8
-	jb      less_than_8
 
 	;;;; Calculate CRC of unaligned bytes of the buffer (if any) ;;;;
 	mov     rbx, [bufptmp]          ;; load a quadword from the buffer
@@ -312,19 +312,19 @@ do_return:
 less_than_8:
 	test    len,4
 	jz      less_than_4
-	crc32   eax, dword[bufptmp]
-	add     bufptmp,4
+	crc32   eax, dword[bufp]
+	add     bufp,4
 less_than_4:
 	test    len,2
 	jz      less_than_2
-	crc32   eax, word[bufptmp]
-	add     bufptmp,2
+	crc32   eax, word[bufp]
+	add     bufp,2
 less_than_2:
 	test    len,1
 	jz      do_return
-	crc32   rax, byte[bufptmp]
+	crc32   rax, byte[bufp]
 	pop     rbx
-	pop     bufptmp
+	pop     bufp
 	ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
