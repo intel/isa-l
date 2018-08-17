@@ -30,6 +30,11 @@
 %include "reg_sizes.asm"
 %include "lz0a_const.asm"
 %include "data_struct2.asm"
+%include "huffman.asm"
+
+
+%define USE_HSWNI
+%define ARCH 04
 
 %ifidn __OUTPUT_FORMAT__, win64
 %define arg1 rcx
@@ -53,7 +58,7 @@
 %define f_i rax
 %define file_start rbp
 %define tmp r9
-%define encode_size r10
+%define tmp2 r10
 %define prev_len r11
 %define prev_dist r12
 %define f_i_orig r13
@@ -169,14 +174,12 @@ func(gen_icf_map_lh1_04)
 	jge	end_main
 
 ;; Prep for main loop
+	mov	tmp, stream
 	mov	level_buf, [stream + _level_buf]
 	sub	f_i_end, LA
 	vmovdqu yincrement, [increment]
 	vpbroadcastd yones, [ones]
 	vmovdqu ydatas_perm2, [datas_perm2]
-
-	xor	prev_len, prev_len
-	xor	prev_dist, prev_dist
 
 ;; Process first byte
 	vpbroadcastd	yhash_prod, [hash_prod]
@@ -186,6 +189,52 @@ func(gen_icf_map_lh1_04)
 	vpmaddwd yhashes, yhashes, yhash_prod
 	vpand	yhashes, yhashes, yhash_mask
 	vmovd	hash %+ d, yhashes %+ x
+	cmp	byte [tmp + _internal_state_has_hist], IGZIP_NO_HIST
+	jne	.has_hist
+	;; No history, the byte is a literal
+	xor	prev_len, prev_len
+	xor	prev_dist, prev_dist
+	mov	byte [tmp + _internal_state_has_hist], IGZIP_HIST
+	jmp .byte_processed
+
+.has_hist:
+	;; History exists, need to set prev_len and prev_dist accordingly
+	lea	next_in, [f_i + file_start]
+
+	;; Determine match lookback distance
+	xor	tmp, tmp
+	mov	tmp %+ w, f_i %+ w
+	dec	tmp
+	sub	tmp %+ w, word [hash_table + HASH_BYTES * hash]
+
+	and	tmp %+ d, [dist_mask]
+	neg	tmp
+
+	;; Check first 8 bytes of match
+	mov	prev_len, [next_in]
+	xor	prev_len, [next_in + tmp - 1]
+	neg	tmp
+
+	;; Set prev_dist
+%ifidn arg1, rcx
+	mov	tmp2, rcx
+%endif
+	;; The third register is unused on Haswell and later,
+	;; This line will not work on previous architectures
+	get_dist_icf_code tmp, prev_dist, tmp
+
+%ifidn arg1, rcx
+	mov	rcx, tmp2
+%endif
+
+	;; Set prev_len
+	xor	tmp2, tmp2
+	tzcnt	prev_len, prev_len
+	shr	prev_len, 3
+	cmp	prev_len, MIN_DEF_MATCH
+	cmovl	prev_len, tmp2
+
+.byte_processed:
 	mov	word [hash_table + HASH_BYTES * hash], f_i %+ w
 
 	add	f_i, 1
@@ -472,13 +521,14 @@ loop1_end:
 	vpextrd	tmp %+ d, ydists2 %+ x, 3
 	add	tmp %+ d, f_i %+ d
 
-	vpbroadcastd	yhash_prod, [hash_prod]
-	vpbroadcastd	yhash_mask, [hash_mask]
+	vpbroadcastd	yhash_prod %+ x, [hash_prod]
+	vpbroadcastd	yhash_mask %+ x, [hash_mask]
 
 	vmovd	yhashes %+ x, dword [f_i + file_start + VECT_SIZE - 1]
-	vpmaddwd yhashes, yhashes, yhash_prod
-	vpmaddwd yhashes, yhashes, yhash_prod
-	vpand	yhashes, yhashes, yhash_mask
+	vpmaddwd yhashes %+ x, yhashes %+ x, yhash_prod %+ x
+	vpmaddwd yhashes %+ x, yhashes %+ x, yhash_prod %+ x
+	vpand	yhashes %+ x, yhashes %+ x, yhash_mask %+ x
+	vmovd	hash %+ d, yhashes %+ x
 
 	mov	word [hash_table + HASH_BYTES * hash], tmp %+ w
 

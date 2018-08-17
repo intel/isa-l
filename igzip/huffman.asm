@@ -29,6 +29,7 @@
 
 %include "options.asm"
 %include "lz0a_const.asm"
+%include "stdmac.asm"
 
 ; Macros for doing Huffman Encoding
 

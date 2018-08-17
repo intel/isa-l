@@ -81,15 +81,18 @@ uint64_t gen_icf_map_h1_base(struct isal_zstream *stream,
 	if (input_size < ISAL_LOOK_AHEAD)
 		return 0;
 
-	matches_icf_lookup->lit_len = *next_in;
-	matches_icf_lookup->lit_dist = 0x1e;
-	matches_icf_lookup->dist_extra = 0;
+	if (stream->internal_state.has_hist == IGZIP_NO_HIST) {
+		matches_icf_lookup->lit_len = *next_in;
+		matches_icf_lookup->lit_dist = 0x1e;
+		matches_icf_lookup->dist_extra = 0;
 
-	hash = compute_hash(*(uint32_t *) next_in) & HASH_MAP_HASH_MASK;
-	hash_table[hash] = (uint64_t) (next_in - file_start);
+		hash = compute_hash(*(uint32_t *) next_in) & HASH_MAP_HASH_MASK;
+		hash_table[hash] = (uint64_t) (next_in - file_start);
 
-	next_in++;
-	matches_icf_lookup++;
+		next_in++;
+		matches_icf_lookup++;
+		stream->internal_state.has_hist = IGZIP_HIST;
+	}
 
 	while (next_in < end_in - ISAL_LOOK_AHEAD) {
 		hash = compute_hash(*(uint32_t *) next_in) & HASH_MAP_HASH_MASK;

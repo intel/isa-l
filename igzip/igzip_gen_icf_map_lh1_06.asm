@@ -30,6 +30,11 @@
 %include "reg_sizes.asm"
 %include "lz0a_const.asm"
 %include "data_struct2.asm"
+%include "huffman.asm"
+
+
+%define USE_HSWNI
+%define ARCH 06
 
 %ifdef HAVE_AS_KNOWS_AVX512
 %ifidn __OUTPUT_FORMAT__, win64
@@ -54,7 +59,7 @@
 %define f_i rax
 %define file_start rbp
 %define tmp r9
-%define encode_size r10
+%define tmp2 r10
 %define prev_len r11
 %define prev_dist r12
 %define f_i_orig r13
@@ -169,6 +174,7 @@ func(gen_icf_map_lh1_06)
 	jge	end_main
 
 ;; Prep for main loop
+	mov	tmp, stream
 	mov	level_buf, [stream + _level_buf]
 	sub	f_i_end, LA
 	vmovdqu64 zdatas_perm, [datas_perm]
@@ -191,15 +197,60 @@ func(gen_icf_map_lh1_06)
 	kmovq	k1, [k_mask_1]
 	kmovq	k2, [k_mask_2]
 
-	xor	prev_len, prev_len
-	xor	prev_dist, prev_dist
-
 ;; Process first byte
 	vmovd	zhashes %+ x, dword [f_i + file_start]
 	vpmaddwd zhashes, zhashes, zhash_prod
 	vpmaddwd zhashes, zhashes, zhash_prod
 	vpandd	zhashes, zhashes, zhash_mask
 	vmovd	hash %+ d, zhashes %+ x
+
+	cmp	byte [tmp + _internal_state_has_hist], IGZIP_NO_HIST
+	jne	.has_hist
+	;; No history, the byte is a literal
+	xor	prev_len, prev_len
+	xor	prev_dist, prev_dist
+	mov	byte [tmp + _internal_state_has_hist], IGZIP_HIST
+	jmp .byte_processed
+
+.has_hist:
+	;; History exists, need to set prev_len and prev_dist accordingly
+	lea	next_in, [f_i + file_start]
+
+	;; Determine match lookback distance
+	xor	tmp, tmp
+	mov	tmp %+ w, f_i %+ w
+	dec	tmp
+	sub	tmp %+ w, word [hash_table + HASH_BYTES * hash]
+
+	vmovd	tmp2 %+ d, zdist_mask %+ x
+	and	tmp %+ d, tmp2 %+ d
+	neg	tmp
+
+	;; Check first 8 bytes of match
+	mov	prev_len, [next_in]
+	xor	prev_len, [next_in + tmp - 1]
+	neg	tmp
+
+	;; Set prev_dist
+%ifidn arg1, rcx
+	mov	tmp2, rcx
+%endif
+	;; The third register is unused on Haswell and later,
+	;; This line will not work on previous architectures
+	get_dist_icf_code tmp, prev_dist, tmp
+
+%ifidn arg1, rcx
+	mov	rcx, tmp2
+%endif
+
+	;; Set prev_len
+	xor	tmp2, tmp2
+	tzcnt	prev_len, prev_len
+	shr	prev_len, 3
+	cmp	prev_len, MIN_DEF_MATCH
+	cmovl	prev_len, tmp2
+
+.byte_processed:
 	mov	word [hash_table + HASH_BYTES * hash], f_i %+ w
 
 	add	f_i, 1
@@ -383,6 +434,7 @@ loop1_end:
 	vpmaddwd zhashes %+ x, zhashes %+ x, zhash_prod %+ x
 	vpmaddwd zhashes %+ x, zhashes %+ x, zhash_prod %+ x
 	vpandd	zhashes %+ x, zhashes %+ x, zhash_mask %+ x
+	vmovd	hash %+ d, zhashes %+ x
 
 	mov	word [hash_table + HASH_BYTES * hash], tmp %+ w
 
