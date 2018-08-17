@@ -3,7 +3,7 @@
 #include "encode_df.h"
 #include "igzip_level_buf_structs.h"
 
-extern void gen_icf_map_lh1(struct isal_zstream *, struct deflate_icf *, uint32_t);
+extern uint64_t gen_icf_map_lh1(struct isal_zstream *, struct deflate_icf *, uint32_t);
 extern void set_long_icf_fg(uint8_t *, uint8_t *, struct deflate_icf *, struct level_buf *);
 extern void isal_deflate_icf_body_lvl1(struct isal_zstream *);
 extern void isal_deflate_icf_body_lvl2(struct isal_zstream *);
@@ -65,8 +65,8 @@ void set_long_icf_fg_base(uint8_t * next_in, uint8_t * end_in,
  * Methods for generating one pass match lookup table
  ************************************************************
 */
-void gen_icf_map_h1_base(struct isal_zstream *stream,
-			 struct deflate_icf *matches_icf_lookup, uint64_t input_size)
+uint64_t gen_icf_map_h1_base(struct isal_zstream *stream,
+			     struct deflate_icf *matches_icf_lookup, uint64_t input_size)
 {
 
 	uint32_t dist, len, extra_bits;
@@ -79,7 +79,7 @@ void gen_icf_map_h1_base(struct isal_zstream *stream,
 	uint16_t *hash_table = level_buf->hash_map.hash_table;
 
 	if (input_size < ISAL_LOOK_AHEAD)
-		return;
+		return 0;
 
 	matches_icf_lookup->lit_len = *next_in;
 	matches_icf_lookup->lit_dist = 0x1e;
@@ -114,6 +114,7 @@ void gen_icf_map_h1_base(struct isal_zstream *stream,
 		next_in++;
 		matches_icf_lookup++;
 	}
+	return next_in - stream->next_in;
 }
 
 /*
@@ -225,7 +226,7 @@ void icf_body_hash1_fillgreedy_lazy(struct isal_zstream *stream)
 	struct deflate_icf *matches_icf, *matches_next_icf, *matches_end_icf;
 	struct deflate_icf *matches_icf_lookup;
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
-	uint32_t input_size;
+	uint32_t input_size, processed;
 
 	matches_icf = level_buf->hash_map.matches;
 	matches_icf_lookup = matches_icf;
@@ -241,16 +242,16 @@ void icf_body_hash1_fillgreedy_lazy(struct isal_zstream *stream)
 		if (input_size <= ISAL_LOOK_AHEAD)
 			break;
 
-		gen_icf_map_h1_base(stream, matches_icf_lookup, input_size);
+		processed = gen_icf_map_h1_base(stream, matches_icf_lookup, input_size);
 
-		set_long_icf_fg(stream->next_in, stream->next_in + input_size,
+		set_long_icf_fg(stream->next_in, stream->next_in + processed,
 				matches_icf_lookup, level_buf);
 
-		stream->next_in += input_size - ISAL_LOOK_AHEAD;
-		stream->avail_in -= input_size - ISAL_LOOK_AHEAD;
-		stream->total_in += input_size - ISAL_LOOK_AHEAD;
+		stream->next_in += processed;
+		stream->avail_in -= processed;
+		stream->total_in += processed;
 
-		matches_end_icf = matches_icf + input_size - ISAL_LOOK_AHEAD;
+		matches_end_icf = matches_icf + processed;
 		matches_next_icf = compress_icf_map_g(stream, matches_icf, matches_end_icf);
 	}
 
@@ -265,7 +266,7 @@ void icf_body_lazyhash1_fillgreedy_greedy(struct isal_zstream *stream)
 	struct deflate_icf *matches_icf, *matches_next_icf, *matches_end_icf;
 	struct deflate_icf *matches_icf_lookup;
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
-	uint32_t input_size;
+	uint32_t input_size, processed;
 
 	matches_icf = level_buf->hash_map.matches;
 	matches_icf_lookup = matches_icf;
@@ -281,16 +282,16 @@ void icf_body_lazyhash1_fillgreedy_greedy(struct isal_zstream *stream)
 		if (input_size <= ISAL_LOOK_AHEAD)
 			break;
 
-		gen_icf_map_lh1(stream, matches_icf_lookup, input_size);
+		processed = gen_icf_map_lh1(stream, matches_icf_lookup, input_size);
 
-		set_long_icf_fg(stream->next_in, stream->next_in + input_size,
+		set_long_icf_fg(stream->next_in, stream->next_in + processed,
 				matches_icf_lookup, level_buf);
 
-		stream->next_in += input_size - ISAL_LOOK_AHEAD;
-		stream->avail_in -= input_size - ISAL_LOOK_AHEAD;
-		stream->total_in += input_size - ISAL_LOOK_AHEAD;
+		stream->next_in += processed;
+		stream->avail_in -= processed;
+		stream->total_in += processed;
 
-		matches_end_icf = matches_icf + input_size - ISAL_LOOK_AHEAD;
+		matches_end_icf = matches_icf + processed;
 		matches_next_icf = compress_icf_map_g(stream, matches_icf, matches_end_icf);
 	}
 

@@ -58,6 +58,7 @@ default rel
 %define dist r9
 %define match_offset r10
 %define tmp1 r11
+%define end_in_orig r12
 
 %define ymatch_lookup ymm0
 %define ymatch_lookup2 ymm1
@@ -77,7 +78,7 @@ default rel
 %define ylens_mask ymm15
 
 %ifidn __OUTPUT_FORMAT__, win64
-%define stack_size  10*16 + 2 * 8 + 8
+%define stack_size  10*16 + 4 * 8 + 8
 %define func(x) proc_frame x
 %macro FUNC_SAVE 0
 	alloc_stack	stack_size
@@ -93,6 +94,7 @@ default rel
 	vmovdqa [rsp + 9*16], xmm15
 	save_reg	rsi, 10*16 + 0*8
 	save_reg	rdi, 10*16 + 1*8
+	save_reg	r12, 10*16 + 2*8
 	end_prolog
 %endm
 
@@ -110,14 +112,17 @@ default rel
 
 	mov	rsi, [rsp + 10*16 + 0*8]
 	mov	rdi, [rsp + 10*16 + 1*8]
+	mov	r12, [rsp + 10*16 + 2*8]
 	add	rsp, stack_size
 %endm
 %else
 %define func(x) x:
 %macro FUNC_SAVE 0
+	push r12
 %endm
 
 %macro FUNC_RESTORE 0
+	pop r12
 %endm
 %endif
 %define VECT_SIZE 8
@@ -126,7 +131,8 @@ global set_long_icf_fg_04
 func(set_long_icf_fg_04)
 	FUNC_SAVE
 
-	sub	end_in, LA + 15
+	mov	end_in_orig, end_in
+	sub	end_in, VECT_SIZE - 1
 	vmovdqu ylong_lens, [long_len]
 	vmovdqu ylens_mask, [len_mask]
 	vmovdqu ydists_mask, [dists_mask]
@@ -136,12 +142,14 @@ func(set_long_icf_fg_04)
 	vmovdqu ytwofiftysix, [twofiftysix]
 	vmovdqu ymatch_lookup, [match_lookup]
 
-fill_loop: ; Tahiti is a magical place
+.fill_loop: ; Tahiti is a magical place
 	vmovdqu ymatch_lookup2, ymatch_lookup
 	vmovdqu ymatch_lookup, [match_lookup + ICF_CODE_BYTES * VECT_SIZE]
 
 	cmp	next_in, end_in
-	jae	end_fill
+	jae	.end_fill
+
+.finish_entry:
 	vpand	ylens, ymatch_lookup2, ylens_mask
 	vpcmpgtd ycmp, ylens, ylong_lens
 	vpmovmskb tmp1, ycmp
@@ -151,7 +159,7 @@ fill_loop: ; Tahiti is a magical place
 	add	match_lookup, ICF_CODE_BYTES * VECT_SIZE
 
 	test	tmp1, tmp1
-	jz	fill_loop
+	jz	.fill_loop
 
 	tzcnt	match_offset, tmp1
 	shr	match_offset, 2
@@ -179,7 +187,7 @@ fill_loop: ; Tahiti is a magical place
 	vpcmpeqb ycmp, ytmp1, [match_in + len]
 	vpmovmskb tmp1, ycmp
 	cmp	tmp1 %+ d, 0xffffffff
-	jne	miscompare
+	jne	.miscompare
 
 	add	len, 32
 %endrep
@@ -189,7 +197,7 @@ fill_loop: ; Tahiti is a magical place
 	vpcmpeqb ycmp, ytmp1, [match_in + len]
 	vpmovmskb tmp1, ycmp
 
-miscompare:
+.miscompare:
 	not	tmp1 %+ d
 	tzcnt	tmp1 %+ d, tmp1 %+ d
 	add	len, tmp1
@@ -206,7 +214,7 @@ miscompare:
 	vpaddd	ylens1, ylens1, ytwofiftyfour
 	neg	len
 
-update_match_lookup:
+.update_match_lookup:
 	vpand	ylens2, ylens_mask, [match_lookup + ICF_CODE_BYTES * len]
 
 	vpcmpgtd ycmp, ylens1, ylens2
@@ -220,14 +228,27 @@ update_match_lookup:
 	vpmaskmovd [match_lookup + ICF_CODE_BYTES * len], ycmp, ylens2
 
 	test	tmp1 %+ d, tmp1 %+ d
-	jz	fill_loop
+	jz	.fill_loop
 
 	add	len, VECT_SIZE
 	vpsubd	ylens1, ylens1, yvect_size
 
-	jmp	update_match_lookup
-end_fill:
+	jmp	.update_match_lookup
 
+.end_fill:
+	mov	end_in, end_in_orig
+	cmp	next_in, end_in
+	jge	.finish
+
+	mov	tmp1, end_in
+	sub	tmp1, next_in
+	vmovd	ytmp1 %+ x, tmp1 %+ d
+	vpbroadcastd ytmp1, ytmp1 %+ x
+	vpcmpgtd ytmp1, ytmp1, [increment]
+	vpand	ymatch_lookup2, ymatch_lookup2, ytmp1
+	jmp	.finish_entry
+
+.finish:
 	FUNC_RESTORE
 	ret
 

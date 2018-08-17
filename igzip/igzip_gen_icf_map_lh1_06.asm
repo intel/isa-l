@@ -53,10 +53,11 @@
 
 %define f_i rax
 %define file_start rbp
-%define next_byte r9
+%define tmp r9
 %define encode_size r10
 %define prev_len r11
 %define prev_dist r12
+%define f_i_orig r13
 
 %define hash_table level_buf + _hash_map_hash_table
 
@@ -94,7 +95,7 @@
 %define zbswap zmm31
 
 %ifidn __OUTPUT_FORMAT__, win64
-%define stack_size  10*16 + 4 * 8 + 8
+%define stack_size  10*16 + 6 * 8 + 8
 %define func(x) proc_frame x
 
 %macro FUNC_SAVE 0
@@ -113,6 +114,7 @@
 	save_reg	rdi, 10*16 + 1*8
 	save_reg	rbp, 10*16 + 2*8
 	save_reg	r12, 10*16 + 3*8
+	save_reg	r13, 10*16 + 4*8
 	end_prolog
 %endm
 
@@ -132,6 +134,7 @@
 	mov	rdi, [rsp + 10*16 + 1*8]
 	mov	rbp, [rsp + 10*16 + 2*8]
 	mov	r12, [rsp + 10*16 + 3*8]
+	mov	r13, [rsp + 10*16 + 4*8]
 	add	rsp, stack_size
 %endm
 %else
@@ -139,9 +142,11 @@
 %macro FUNC_SAVE 0
 	push	rbp
 	push	r12
+	push	r13
 %endm
 
 %macro FUNC_RESTORE 0
+	pop	r13
 	pop	r12
 	pop	rbp
 %endm
@@ -156,6 +161,7 @@ func(gen_icf_map_lh1_06)
 
 	mov	file_start, [stream + _next_in]
 	mov	f_i %+ d, dword [stream + _total_in]
+	mov	f_i_orig, f_i
 
 	sub	file_start, f_i
 	add	f_i_end, f_i
@@ -368,6 +374,18 @@ loop1_end:
 	vpgatherdq zlens1 {k6}, [next_in + zdists %+ y]
 	vpgatherdq zlens2 {k7}, [next_in + zdists2 %+ y]
 
+;; Restore last update hash value
+	vextracti32x4 zdists2 %+ x, zdists, 3
+	vpextrd tmp %+ d, zdists2 %+ x, 3
+	add	tmp %+ d, f_i %+ d
+
+	vmovd	zhashes %+ x, dword [f_i + file_start + VECT_SIZE - 1]
+	vpmaddwd zhashes %+ x, zhashes %+ x, zhash_prod %+ x
+	vpmaddwd zhashes %+ x, zhashes %+ x, zhash_prod %+ x
+	vpandd	zhashes %+ x, zhashes %+ x, zhash_mask %+ x
+
+	mov	word [hash_table + HASH_BYTES * hash], tmp %+ w
+
 ;; Calculate dist_icf_code
 	vpaddd	zdists, zdists, zones
 	vpsubd	zdists, zincrement, zdists
@@ -429,8 +447,14 @@ loop1_end:
 
 ;;Store zdists
 	vmovdqu64 [matches_next], zdists
+	add	f_i, VECT_SIZE
 
 end_main:
+	sub	f_i, f_i_orig
+	sub	f_i, 1
+%ifnidn f_i, rax
+	mov	rax, f_i
+%endif
 	FUNC_RESTORE
 	ret
 
