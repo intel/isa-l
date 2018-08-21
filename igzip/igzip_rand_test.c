@@ -1786,7 +1786,8 @@ int compress_full_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 /*Compress the input buffer into the output buffer, but switch the flush type in
  * the middle of the compression to test what happens*/
 int compress_swap_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed_buf,
-			uint32_t * compressed_size, uint32_t flush_type, uint32_t gzip_flag)
+			uint32_t * compressed_size, uint32_t flush_type, int level,
+			uint32_t gzip_flag)
 {
 	int ret = IGZIP_COMP_OK;
 	struct isal_zstream stream;
@@ -1794,6 +1795,8 @@ int compress_swap_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	uint32_t partial_size;
 	struct isal_hufftables *huff_tmp;
 	uint32_t reset_test_flag = 0;
+	uint32_t level_buf_size;
+	uint8_t *level_buf = NULL;
 
 #ifdef VERBOSE
 	printf("Starting Compress Swap Flush\n");
@@ -1829,6 +1832,14 @@ int compress_swap_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	stream.next_out = compressed_buf;
 	stream.end_of_stream = 0;
 	stream.gzip_flag = gzip_flag;
+	if (level) {
+		stream.level = level;
+		level_buf_size = get_rand_level_buf_size(stream.level);
+		level_buf = malloc(level_buf_size);
+		create_rand_repeat_data(level_buf, level_buf_size);
+		stream.level_buf = level_buf;
+		stream.level_buf_size = level_buf_size;
+	}
 
 	if (reset_test_flag)
 		isal_deflate_reset(&stream);
@@ -1859,6 +1870,9 @@ int compress_swap_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 		return INVALID_FLUSH_ERROR;
 
 	*compressed_size = stream.total_out;
+
+	if (stream.level_buf != NULL)
+		free(stream.level_buf);
 
 	return ret;
 }
@@ -2376,7 +2390,8 @@ int test_flush(uint8_t * in_buf, uint32_t in_size)
 	create_rand_repeat_data(z_buf, z_size);
 
 	/* Test swapping flush type */
-	ret = compress_swap_flush(in_buf, in_size, z_buf, &z_size, rand() % 3, gzip_flag);
+	ret =
+	    compress_swap_flush(in_buf, in_size, z_buf, &z_size, rand() % 3, level, gzip_flag);
 
 	if (!ret)
 		ret = inflate_check(z_buf, z_size, in_buf, in_size, gzip_flag, NULL, 0, 0);
