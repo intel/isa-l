@@ -41,6 +41,7 @@
 %define LARGE_MATCH_HASH_REP 1  ; Hash 4 * LARGE_MATCH_HASH_REP elements
 %define LARGE_MATCH_MIN 264 	; Minimum match size to enter large match emit loop
 %define MIN_INBUF_PADDING 16
+%define MAX_EMIT_SIZE 258 * 16
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -561,6 +562,9 @@ align	16
 	sub	len2, f_i
 	add	len2, [rsp + inbuf_slop_offset]
 	add	len2, 1
+	mov	tmp3,  MAX_EMIT_SIZE
+	cmp	len2, tmp3
+	cmovg	len2, tmp3
 
 	mov	len, 8
 	compare_large	tmp1, tmp2, len, len2, tmp3, ytmp0, ytmp1
@@ -580,6 +584,9 @@ align	16
 	mov	len, [rsp + f_end_i_mem_offset]
 	sub	len, f_i
 	add	len, [rsp + inbuf_slop_offset]
+	mov	tmp3,  MAX_EMIT_SIZE
+	cmp	len, tmp3
+	cmovg	len, tmp3
 
 	mov	len2, 8
 	compare_large	tmp1, tmp2, len2, len, tmp3, ytmp0, ytmp1
