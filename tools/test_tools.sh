@@ -7,5 +7,5 @@ function test_start()
 
 function test_end()
 {
-        echo "leaving test: $1 status: $?"
+        echo "leaving test: $1 status: $2"
 }
