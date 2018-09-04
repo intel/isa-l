@@ -207,72 +207,6 @@ ssc:
 	ret
 %endm
 
-;; Implement BZHI instruction on older architectures
-;; Clobbers rcx, unless rcx is %%index
-%macro	BZHI	4
-%define	%%dest		%1
-%define	%%src		%2
-%define	%%index		%3
-%define	%%tmp1		%4
-
-%ifdef USE_HSWNI
-	bzhi	%%dest, %%src, %%index
-%else
-%ifnidn	%%index, rcx
-	mov	rcx, %%index
-%endif
-	mov	%%tmp1, 1
-	shl	%%tmp1, cl
-	sub	%%tmp1, 1
-
-%ifnidn	%%src, %%dest
-	mov	%%dest, %%src
-%endif
-
-	and	%%dest, %%tmp1
-%endif
-%endm
-
-;; Implement shrx instruction on older architectures
-;; Clobbers rcx, unless rcx is %%index
-%macro	SHRX	3
-%define	%%dest		%1
-%define	%%src		%2
-%define	%%index		%3
-
-%ifdef USE_HSWNI
-	shrx	%%dest, %%src, %%index
-%else
-%ifnidn	%%index, rcx
-	mov	rcx, %%index
-%endif
-%ifnidn	%%src, %%dest
-	mov	%%dest, %%src
-%endif
-	shr	%%dest, cl
-%endif
-%endm
-
-;; Implement shlx instruction on older architectures
-;; Clobbers rcx, unless rcx is %%index
-%macro	SHLX	3
-%define	%%dest		%1
-%define	%%src		%2
-%define	%%index		%3
-
-%ifdef USE_HSWNI
-	shlx	%%dest, %%src, %%index
-%else
-%ifnidn	%%src, %%dest
-	mov	%%dest, %%src
-%endif
-%ifnidn	%%index, rcx
-	mov	rcx, %%index
-%endif
-	shl	%%dest, cl
-%endif
-%endm
-
 %macro	MOVDQU	2
 %define	%%dest	%1
 %define	%%src	%2
@@ -280,6 +214,16 @@ ssc:
 	vmovdqu	%%dest, %%src
 %else
 	movdqu	%%dest, %%src
+%endif
+%endm
+
+%macro	MOVDQA	2
+%define	%%dest	%1
+%define	%%src	%2
+%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
+	vmovdqa	%%dest, %%src
+%else
+	movdqa	%%dest, %%src
 %endif
 %endm
 
@@ -300,6 +244,111 @@ ssc:
 	vmovq	%%dest, %%src
 %else
 	movq	%%dest, %%src
+%endif
+%endm
+
+;; Move register if the src and dest are not equal
+%macro MOVNIDN 2
+%define dest %1
+%define src %2
+%ifnidn dest, src
+	mov	dest, src
+%endif
+%endm
+
+%macro MOVDQANIDN 2
+%define dest %1
+%define src %2
+%ifnidn dest, src
+	MOVDQA	dest, src
+%endif
+%endm
+
+%macro PSHUFD	3
+%define	%%dest	%1
+%define %%src1	%2
+%define	%%imm8	%3
+%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
+	vpshufd	%%dest, %%src1, %%imm8
+%else
+	pshufd	%%dest, %%src1, %%imm8
+%endif
+%endm
+
+%macro PSHUFB	3
+%define	%%dest	%1
+%define %%src1	%2
+%define	%%shuf	%3
+%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
+	vpshufb	%%dest, %%src1, %%shuf
+%else
+	MOVDQANIDN %%dest, %%src1
+	pshufb	%%dest, %%shuf
+%endif
+%endm
+
+%macro PBROADCASTD 2
+%define %%dest %1
+%define %%src %2
+%if (ARCH == 04)
+	vpbroadcastd %%dest, %%src
+%else
+	MOVD %%dest, %%src
+	PSHUFD %%dest, %%dest, 0
+%endif
+%endm
+
+;; Implement BZHI instruction on older architectures
+;; Clobbers rcx, unless rcx is %%index
+%macro	BZHI	4
+%define	%%dest		%1
+%define	%%src		%2
+%define	%%index		%3
+%define	%%tmp1		%4
+
+%ifdef USE_HSWNI
+	bzhi	%%dest, %%src, %%index
+%else
+	MOVNIDN	rcx, %%index
+	mov	%%tmp1, 1
+	shl	%%tmp1, cl
+	sub	%%tmp1, 1
+
+	MOVNIDN	%%dest, %%src
+
+	and	%%dest, %%tmp1
+%endif
+%endm
+
+;; Implement shrx instruction on older architectures
+;; Clobbers rcx, unless rcx is %%index
+%macro	SHRX	3
+%define	%%dest		%1
+%define	%%src		%2
+%define	%%index		%3
+
+%ifdef USE_HSWNI
+	shrx	%%dest, %%src, %%index
+%else
+	MOVNIDN	rcx, %%index
+	MOVNIDN	%%dest, %%src
+	shr	%%dest, cl
+%endif
+%endm
+
+;; Implement shlx instruction on older architectures
+;; Clobbers rcx, unless rcx is %%index
+%macro	SHLX	3
+%define	%%dest		%1
+%define	%%src		%2
+%define	%%index		%3
+
+%ifdef USE_HSWNI
+	shlx	%%dest, %%src, %%index
+%else
+	MOVNIDN	%%dest, %%src
+	MOVNIDN	rcx, %%index
+	shl	%%dest, cl
 %endif
 %endm
 
@@ -335,6 +384,18 @@ ssc:
 %endif
 %endm
 
+%macro	PSLLD	3
+%define	%%dest	%1
+%define %%src	%2
+%define	%%offset	%3
+%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
+	vpslld	%%dest, %%src, %%offset
+%else
+	MOVDQANIDN %%dest, %%src
+	pslld	%%dest, %%offset
+%endif
+%endm
+
 %macro	PAND	3
 %define	%%dest	%1
 %define	%%src1	%2
@@ -342,10 +403,44 @@ ssc:
 %if (ARCH == 02 || ARCH == 03 || ARCH == 04)
 	vpand	%%dest, %%src1, %%src2
 %else
-%ifnidn	%%dest, %%src1
-	movdqa	%%dest, %%src1
-%endif
+	MOVDQANIDN %%dest, %%src1
 	pand	%%dest, %%src2
+%endif
+%endm
+
+%macro	POR	3
+%define	%%dest	%1
+%define	%%src1	%2
+%define	%%src2	%3
+%if (ARCH == 02 || ARCH == 03 || ARCH == 04)
+	vpor	%%dest, %%src1, %%src2
+%else
+	MOVDQANIDN %%dest, %%src1
+	por	%%dest, %%src2
+%endif
+%endm
+
+%macro PXOR	3
+%define	%%dest	%1
+%define %%src1	%2
+%define	%%src2	%3
+%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
+	vpxor	%%dest, %%src1, %%src2
+%else
+	MOVDQANIDN %%dest, %%src1
+	pxor	%%dest, %%src2
+%endif
+%endm
+
+%macro PADDD 3
+%define %%dest %1
+%define %%src1 %2
+%define %%src2 %3
+%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
+	vpaddd	%%dest, %%src1, %%src2
+%else
+	MOVDQANIDN %%dest, %%src1
+	paddd	%%dest, %%src2
 %endif
 %endm
 
@@ -356,9 +451,7 @@ ssc:
 %if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
 	vpcmpeqb	%%dest, %%src1, %%src2
 %else
-%ifnidn	%%dest, %%src1
-	movdqa	%%dest, %%src1
-%endif
+	MOVDQANIDN %%dest, %%src1
 	pcmpeqb	%%dest, %%src2
 %endif
 %endm
@@ -370,31 +463,6 @@ ssc:
 	vpmovmskb	%%dest, %%src
 %else
 	pmovmskb	%%dest, %%src
-%endif
-%endm
-
-%macro PXOR	3
-%define	%%dest	%1
-%define %%src1	%2
-%define	%%src2	%3
-%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
-	vpxor	%%dest, %%src1, %%src2
-%else
-%ifnidn	%%dest, %%src1
-	movdqa	%%dest, %%src1
-%endif
-	pxor	%%dest, %%src2
-%endif
-%endm
-
-%macro PSHUFD	3
-%define	%%dest	%1
-%define %%src1	%2
-%define	%%imm8	%3
-%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
-	vpshufd	%%dest, %%src1, %%imm8
-%else
-	pshufd	%%dest, %%src1, %%imm8
 %endif
 %endm
 

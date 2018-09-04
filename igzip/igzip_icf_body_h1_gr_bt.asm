@@ -36,7 +36,6 @@
 %include "reg_sizes.asm"
 
 %include "stdmac.asm"
-
 %ifdef DEBUG
 %macro MARK 1
 global %1
@@ -51,6 +50,13 @@ global %1
 %define LARGE_MATCH_MIN 264 	; Minimum match size to enter large match emit loop
 %define MIN_INBUF_PADDING 16
 %define MAX_EMIT_SIZE 258 * 16
+
+%define SKIP_SIZE_BASE (2 << 10)      ; No match length before starting skipping
+%define SKIP_BASE 32		      ; Initial skip size
+%define SKIP_START 512                ; Start increasing skip size once level is beyond SKIP_START
+%define SKIP_RATE 2		      ; Rate skip size increases after SKIP_START
+%define MAX_SKIP_SIZE 128             ; Maximum skip size
+%define MAX_SKIP_LEVEL (((MAX_SKIP_SIZE - SKIP_BASE) / SKIP_RATE) + SKIP_START) ; Maximum skip level
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -63,6 +69,7 @@ global %1
 %define	curr_data	rax
 
 %define	tmp2		rcx
+%define skip_count	rcx
 
 %define	dist		rbx
 %define dist_code2	rbx
@@ -96,7 +103,10 @@ global %1
 
 %define xtmp0		xmm0	; tmp
 %define xtmp1		xmm1	; tmp
+%define xlow_lit_shuf	xmm2
+%define xup_lit_shuf	xmm3
 %define	xdata		xmm4
+%define xlit		xmm5
 
 %define ytmp0		ymm0	; tmp
 %define ytmp1		ymm1	; tmp
@@ -116,9 +126,11 @@ hash_mask_offset    equ 24
 f_end_i_mem_offset  equ 32
 stream_offset       equ 40
 inbuf_slop_offset   equ 48
-gpr_save_mem_offset equ 64       ; gpr save area (8*8 bytes)
+skip_match_offset   equ 56
+skip_level_offset    equ 64
+gpr_save_mem_offset equ 80       ; gpr save area (8*8 bytes)
 xmm_save_mem_offset equ gpr_save_mem_offset + 8*8 ; xmm save area (4*16 bytes) (16 byte aligned)
-stack_size          equ 9*8 + 8*8 + 4*16
+stack_size          equ 11*8 + 8*8 + 4*16
 
 ;;; 8 because stack address is odd multiple of 8 after a function call and
 ;;; we want it aligned to 16 bytes
@@ -213,6 +225,14 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 
 	mov	file_length %+ d, [stream + _avail_in]
 	add	file_length, f_i
+
+	mov	[rsp + skip_match_offset], f_i
+	add	qword [rsp + skip_match_offset], SKIP_SIZE_BASE
+	mov	qword [rsp + skip_level_offset], 0
+
+	PBROADCASTD xlit, dword [min_lit_dist_syms]
+	MOVDQU	xlow_lit_shuf, [low_lit_shuf]
+	MOVDQU	xup_lit_shuf, [up_lit_shuf]
 
 	mov	qword [rsp + inbuf_slop_offset], MIN_INBUF_PADDING
 	cmp	byte [stream + _end_of_stream], 0
@@ -338,6 +358,10 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	cmp	f_i, file_length
 	jg	.len_dist_lit_huffman_finish
 
+	lea	tmp1, [f_i + SKIP_SIZE_BASE]
+	mov	qword [rsp + skip_match_offset], tmp1
+	sub	qword [rsp + skip_level_offset], len2
+
 	MOVDQU	xdata, [file_start + len2]
 	mov	tmp1, [file_start + len2]
 	sub	file_start, tmp2
@@ -426,6 +450,10 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	cmp	f_i, file_length
 	jg	.len_dist_huffman_finish
 
+	lea	tmp2, [f_i + SKIP_SIZE_BASE]
+	mov	qword [rsp + skip_match_offset], tmp2
+	sub	qword [rsp + skip_level_offset], len
+
 	MOVDQU	xdata, [file_start + len]
 	mov	curr_data2, [file_start + len]
 	mov	curr_data, curr_data2
@@ -498,7 +526,116 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	mov	dword [m_out_buf], lit_code %+ d
 	add	m_out_buf, 4
 
+	cmp	f_i, [rsp + skip_match_offset]
+	jle	.loop2
+
+	xor	tmp3, tmp3
+	mov	rcx, [rsp + skip_level_offset]
+	add	rcx, 1
+	cmovl	rcx, tmp3
+	mov	tmp1, MAX_SKIP_LEVEL
+	cmp	rcx, MAX_SKIP_LEVEL
+	cmovg	rcx, tmp1
+
+	mov	tmp1, SKIP_SIZE_BASE
+	shr	tmp1, cl
+
+%if MAX_SKIP_LEVEL > 63
+	cmp	rcx, 63
+	cmovg	tmp1, tmp3
+%endif
+	mov	[rsp + skip_match_offset], tmp1
+	mov	[rsp + skip_level_offset], rcx
+
+	sub	rcx, SKIP_START
+	cmovl	rcx, tmp3
+
+	lea	skip_count, [SKIP_RATE * rcx + SKIP_BASE]
+	and	skip_count, -SKIP_BASE
+
+	mov	tmp1, [rsp + m_out_end]
+	lea	tmp1, [tmp1 + 4]
+	sub	tmp1, m_out_buf
+	shr	tmp1, 1
+	cmp	tmp1, skip_count
+	jl	.skip_forward_short
+
+	mov	tmp1, [rsp + inbuf_slop_offset]
+	add	tmp1, file_length
+	sub	tmp1, f_i
+	cmp	tmp1, skip_count
+	jl	.skip_forward_short
+
+.skip_forward_long:
+	MOVQ	xdata, [file_start + f_i]
+
+	movzx	lit_code, byte [file_start + f_i]
+	movzx	lit_code2, byte [file_start + f_i + 1]
+
+	add	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code], 1
+	add	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code2], 1
+
+	movzx	lit_code, byte [file_start + f_i + 2]
+	movzx	lit_code2, byte [file_start + f_i + 3]
+
+	add	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code], 1
+	add	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code2], 1
+
+	movzx	lit_code, byte [file_start + f_i + 4]
+	movzx	lit_code2, byte [file_start + f_i + 5]
+
+	add	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code], 1
+	add	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code2], 1
+
+	movzx	lit_code, byte [file_start + f_i + 6]
+	movzx	lit_code2, byte [file_start + f_i + 7]
+
+	add	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code], 1
+	add	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code2], 1
+
+	PSHUFB	xtmp0, xdata, xlow_lit_shuf
+	PSHUFB	xtmp1, xdata, xup_lit_shuf
+	PSLLD	xtmp1, xtmp1, DIST_OFFSET
+	POR	xtmp0, xtmp0, xtmp1
+	PADDD	xtmp0, xtmp0, xlit
+	MOVDQU	[m_out_buf], xtmp0
+
+	add	m_out_buf, 16
+	add	f_i, 8
+
+	sub	skip_count, 8
+	jg	.skip_forward_long
+
+	cmp	file_length, f_i
+	jle	.input_end
+
+	mov	curr_data, [file_start + f_i]
+	MOVDQU	xdata, [file_start + f_i]
+	add	[rsp + skip_match_offset], f_i
+
 	jmp	.loop2
+
+.skip_forward_short:
+	movzx	lit_code, byte [file_start + f_i]
+	movzx	lit_code2, byte [file_start + f_i + 1]
+
+	inc	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code]
+	inc	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code2]
+
+	shl	lit_code2, DIST_OFFSET
+	lea	lit_code, [lit_code + lit_code2 + (31 << DIST_OFFSET)]
+
+	mov	dword [m_out_buf], lit_code %+ d
+	add	m_out_buf, 4
+	add	f_i, 2
+
+	cmp	m_out_buf, [rsp + m_out_end]
+	ja	.output_end
+
+	cmp	file_length, f_i
+	jle	.input_end
+
+	jmp	.skip_forward_short
 
 .write_lit_bits_finish:
 	inc	dword [lit_len_hist + HIST_ELEM_SIZE*lit_code2]
@@ -557,6 +694,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 %endif
 	ret
 
+align 16
 .compare_loop:
 	lea	tmp2, [tmp1 + dist - 1]
 
@@ -578,6 +716,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	mov	len, 258
 	jmp	.len_dist_huffman
 
+align 16
 .compare_loop2:
 	lea	tmp2, [tmp1 + dist2]
 	add	tmp1, 1
@@ -751,3 +890,12 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 %xdefine COMPARE_TYPE1 COMPARE_TYPE2
 %endif
 %endrep
+min_lit_dist_syms:
+	dd LIT + (1 << DIST_OFFSET)
+
+low_lit_shuf:
+	db 0x00, 0xff, 0xff, 0xff, 0x02, 0xff, 0xff, 0xff
+	db 0x04, 0xff, 0xff, 0xff, 0x06, 0xff, 0xff, 0xff
+up_lit_shuf:
+	db 0x01, 0xff, 0xff, 0xff, 0x03, 0xff, 0xff, 0xff
+	db 0x05, 0xff, 0xff, 0xff, 0x07, 0xff, 0xff, 0xff
