@@ -96,6 +96,8 @@ other_src   += 	igzip/bitbuf2.asm  \
 		igzip/flatten_ll.h \
 		igzip/encode_df.h \
 		igzip/heap_macros.asm \
+		igzip/igzip_wrapper.h \
+		igzip/static_inflate.h \
 		igzip/igzip_checksums.h
 
 examples    += 	igzip/igzip_example igzip/igzip_sync_flush_example
