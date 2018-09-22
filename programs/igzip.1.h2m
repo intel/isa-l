@@ -1,0 +1,28 @@
+[Description]
+
+Compress or decompress files similar to gzip using the ISA-L fast deflate library.
+
+Output .gz files are compatible with gzip and [RFC-1952].
+
+Options are similar to gzip except --keep is default.
+
+[Examples]
+
+Make compressed file1.gz and file2.gz and keep file1 and file2.
+.RS
+.B igzip file1 file2
+.RE
+
+Piped compression and decompression.
+.RS
+.B igzip -c file.txt | igzip -d -c -
+.RE
+
+Streaming compression from output of tar, compress level 2.
+.RS
+.B tar cf - dir1 | igzip -2 > dir1.tar.gz
+.RE
+
+[Reporting Bugs]
+
+Report bugs to https://github.com/01org/isa-l/issues

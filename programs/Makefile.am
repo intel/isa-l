@@ -31,3 +31,8 @@
 bin_PROGRAMS += programs/igzip
 programs_igzip_SOURCES = programs/igzip_cli.c
 programs_igzip_LDADD = libisal.la
+dist_man_MANS = programs/igzip.1
+other_src    += programs/igzip.1.h2m
+
+programs/igzip.1: % : %.h2m programs/igzip_cli.c
+	-help2man -o $@ -i $< -N ./programs/igzip

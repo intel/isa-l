@@ -256,9 +256,10 @@ isa-l.h:
 
 # Target for install
 prefix = /usr/local
-install_dirs = $(prefix)/lib $(prefix)/include/isa-l
+man1dir ?= $(prefix)/share/man/man1
+install_dirs = $(prefix)/lib $(prefix)/include/isa-l $(prefix)/bin $(man1dir)
 $(install_dirs): ; mkdir -p $@
-install: $(sort $(extern_hdrs)) | $(install_dirs) $(lib_name) $(so_lib_name) isa-l.h
+install: $(sort $(extern_hdrs)) | $(install_dirs) $(lib_name) $(so_lib_name) isa-l.h $(bin_PROGRAMS)
 	install -m 644 $(lib_name) $(prefix)/lib/libisal.a
 	install -m 644 $^ $(prefix)/include/isa-l/.
 	install -m 664 isa-l.h $(prefix)/include/.
@@ -273,6 +274,7 @@ else
 	echo 'Lib installed at $(prefix)/lib. Run system-dependent programs to add shared lib path.'
 endif
 	install -m 774 $(bin_PROGRAMS) $(prefix)/bin/.
+	install -m 664 $(dist_man_MANS) $(man1dir)/.
 
 uninstall:
 	$(RM) $(prefix)/lib/libisal.a
@@ -283,6 +285,7 @@ uninstall:
 	$(RM) $(prefix)/include/isa-l.h
 	$(RM) $(prefix)/lib/$(basename $(so_lib_inst)).dylib
 	$(RM) $(prefix)/bin/$(notdir $(bin_PROGRAMS))
+	$(RM) $(man1dir)/$(notdir $(dist_man_MANS))
 
 # Collect performance data
 rpt_name = perf_report_$(shell uname -n)_$(shell date +%y%m%d).perf
