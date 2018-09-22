@@ -244,17 +244,22 @@ int usage(int exit_code)
 {
 	int log_type = exit_code ? WARN : INFORM;
 	log_print(log_type,
-		  "Usage: igzip [options] <infile>\n"
+		  "Usage: igzip [options] [infiles]\n\n"
+		  "Options:\n"
 		  " -h, --help           help, print this message\n"
 		  " -#                   use compression level # with 0 <= # <= %d\n"
 		  " -o  <file>           output file\n"
 		  " -c, --stdout         write to stdout\n"
 		  " -d, --decompress     decompress file\n"
 		  " -z, --compress       compress file (default)\n"
-		  " -f, --force          overwrite ouput without prompting\n"
+		  " -f, --force          overwrite output without prompting\n"
 		  "     --rm             remove source files after successful (de)compression\n"
 		  " -k, --keep           keep source files (default)\n"
-		  " -S, --suffix <.suf>  suffix to use while (de)compressing\n",
+		  " -S, --suffix <.suf>  suffix to use while (de)compressing\n"
+		  " -V, --version        show version number\n"
+		  " -v, --verbose        verbose mode\n"
+		  " -q, --quiet          suppress warnings\n\n"
+		  "with no infile, or when infile is - , read standard input\n\n",
 		  ISAL_DEF_MAX_LEVEL);
 
 	exit(exit_code);
