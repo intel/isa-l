@@ -1,5 +1,5 @@
 ########################################################################
-#  Copyright(c) 2011-2015 Intel Corporation All rights reserved.
+#  Copyright(c) 2011-2018 Intel Corporation All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions
@@ -39,7 +39,7 @@
 #	trace - get simulator trace
 #	clean - remove object files
 
-version ?= 2.23.0
+version ?= 2.24.0
 host_cpu ?= $(shell uname -m | sed -e 's/amd/x86_/')
 arch ?= $(shell uname | grep -v -e Linux -e BSD )
 
