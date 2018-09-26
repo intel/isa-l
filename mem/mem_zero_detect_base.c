@@ -33,15 +33,11 @@
 int mem_zero_detect_base(void *buf, size_t n)
 {
 	unsigned char *c;
-#if __WORDSIZE == 64
-	unsigned long long a = 0, *p = buf;
-#else
-	unsigned int a = 0, *p = buf;
-#endif
+	uintmax_t a = 0, *p = buf;
 
 	// Check buffer in native machine width comparisons
-	while (n >= sizeof(p)) {
-		n -= sizeof(p);
+	while (n >= sizeof(*p)) {
+		n -= sizeof(*p);
 		if (*p++ != 0)
 			return -1;
 	}
