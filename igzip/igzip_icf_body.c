@@ -42,13 +42,15 @@ void set_long_icf_fg_base(uint8_t * next_in, uint8_t * end_in,
 		dist = dist_start[dist_code] + dist_extra;
 		len = match_lookup->lit_len;
 		if (len >= 8 + LEN_OFFSET) {
-			match_len =
-			    compare258(next_in - dist + 8, next_in + 8, 250) + LEN_OFFSET + 8;
+			match_len = compare(next_in - dist + 8, next_in + 8,
+					    end_in - next_in + ISAL_DEF_MAX_MATCH) +
+			    LEN_OFFSET + 8;
 
 			while (match_len > match_lookup->lit_len
 			       && match_len >= LEN_OFFSET + SHORTEST_MATCH) {
-				write_deflate_icf(match_lookup, match_len, dist_code,
-						  dist_extra);
+				write_deflate_icf(match_lookup,
+						  match_len > LEN_MAX ? LEN_MAX : match_len,
+						  dist_code, dist_extra);
 				match_lookup++;
 				next_in++;
 				match_len--;

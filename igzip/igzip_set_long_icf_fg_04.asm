@@ -40,6 +40,7 @@ default rel
 %define arg2 rdx
 %define arg3 r8
 %define dist_code rsi
+%define tmp3 rsi
 %define len rdi
 %define tmp2 rdi
 %else
@@ -47,6 +48,7 @@ default rel
 %define arg2 rsi
 %define arg3 rdx
 %define dist_code rcx
+%define tmp3 rcx
 %define len r8
 %define tmp2 r8
 %endif
@@ -63,14 +65,14 @@ default rel
 %define ymatch_lookup ymm0
 %define ymatch_lookup2 ymm1
 %define ylens ymm2
-%define ydists ymm3
+%define ycmp2 ymm3
 %define ylens1 ymm4
 %define ylens2 ymm5
 %define ycmp ymm6
 %define ytmp1 ymm7
 %define ytmp2 ymm8
 %define yvect_size ymm9
-%define ytwofiftyfour ymm10
+%define ymax_len ymm10
 %define ytwofiftysix ymm11
 %define ynlen_mask ymm12
 %define ydists_mask ymm13
@@ -138,7 +140,7 @@ func(set_long_icf_fg_04)
 	vmovdqu ydists_mask, [dists_mask]
 	vmovdqu ynlen_mask, [nlen_mask]
 	vmovdqu yvect_size, [vect_size]
-	vmovdqu ytwofiftyfour, [twofiftyfour]
+	vmovdqu ymax_len, [max_len]
 	vmovdqu ytwofiftysix, [twofiftysix]
 	vmovdqu ymatch_lookup, [match_lookup]
 
@@ -180,27 +182,23 @@ func(set_long_icf_fg_04)
 	mov	match_in, next_in
 	sub	match_in, dist
 
-	mov	len, 2
-%rep 7
-	vmovdqu ytmp1, [next_in + len]
-	vmovdqu ytmp2, [match_in + len]
-	vpcmpeqb ycmp, ytmp1, [match_in + len]
-	vpmovmskb tmp1, ycmp
-	cmp	tmp1 %+ d, 0xffffffff
-	jne	.miscompare
+	mov	len, 8
+	mov	tmp3, end_in
+	sub	tmp3, next_in
+	add	tmp3, 258
 
-	add	len, 32
-%endrep
+	compare_y next_in, match_in, len, tmp3, tmp1, ytmp1, ytmp2
 
-	vmovdqu ytmp1, [next_in + len]
-	vmovdqu ytmp2, [match_in + len]
-	vpcmpeqb ycmp, ytmp1, [match_in + len]
-	vpmovmskb tmp1, ycmp
+	vmovd	ylens1 %+ x, len %+ d
+	vpbroadcastd ylens1, ylens1 %+ x
+	vpsubd	ylens1, ylens1, [increment]
+	vpaddd	ylens1, ylens1, [twofiftyfour]
 
-.miscompare:
-	not	tmp1 %+ d
-	tzcnt	tmp1 %+ d, tmp1 %+ d
-	add	len, tmp1
+	mov	tmp3, end_in
+	sub	tmp3, next_in
+	cmp	len, tmp3
+	cmovg	len, tmp3
+
 	add	next_in, len
 	lea	match_lookup, [match_lookup + ICF_CODE_BYTES * len]
 	vmovdqu ymatch_lookup, [match_lookup]
@@ -208,10 +206,6 @@ func(set_long_icf_fg_04)
 	vpbroadcastd ymatch_lookup2, ymatch_lookup2 %+ x
 	vpand	ymatch_lookup2, ymatch_lookup2, ynlen_mask
 
-	vmovd	ylens1 %+ x, len %+ d
-	vpbroadcastd ylens1, ylens1 %+ x
-	vpsubd	ylens1, ylens1, [increment]
-	vpaddd	ylens1, ylens1, ytwofiftyfour
 	neg	len
 
 .update_match_lookup:
@@ -222,7 +216,12 @@ func(set_long_icf_fg_04)
 	vpand	ycmp, ycmp, ytmp1
 	vpmovmskb tmp1, ycmp
 
-	vpaddd	ylens2, ylens1, ymatch_lookup2
+	vpcmpgtd ycmp2, ylens1, ymax_len
+	vpandn ylens, ycmp2, ylens1
+	vpand ycmp2, ymax_len, ycmp2
+	vpor ylens, ycmp2
+
+	vpaddd	ylens2, ylens, ymatch_lookup2
 	vpand	ylens2, ylens2, ycmp
 
 	vpmaskmovd [match_lookup + ICF_CODE_BYTES * len], ycmp, ylens2
@@ -281,3 +280,6 @@ twofiftysix:
 nlen_mask:
 	dd 0xfffffc00, 0xfffffc00, 0xfffffc00, 0xfffffc00
 	dd 0xfffffc00, 0xfffffc00, 0xfffffc00, 0xfffffc00
+max_len:
+	dd 0xfe + 0x102, 0xfe + 0x102, 0xfe + 0x102, 0xfe + 0x102
+	dd 0xfe + 0x102, 0xfe + 0x102, 0xfe + 0x102, 0xfe + 0x102

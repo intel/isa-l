@@ -39,12 +39,14 @@
 %define arg2 rdx
 %define arg3 r8
 %define dist_code rsi
+%define tmp2 rsi
 %define len rdi
 %else
 %define arg1 rdi
 %define arg2 rsi
 %define arg3 rdx
 %define dist_code rcx
+%define tmp2 rcx
 %define len r8
 %endif
 
@@ -71,7 +73,8 @@
 %define datas zmm11
 %define ztmp1 zmm12
 %define ztmp2 zmm13
-%define zvect_size zmm17
+%define zvect_size zmm16
+%define zmax_len zmm17
 %define ztwofiftyfour zmm18
 %define ztwofiftysix zmm19
 %define ztwosixtytwo zmm20
@@ -151,6 +154,7 @@ func(set_long_icf_fg_06)
 	vbroadcasti64x2 zbswap, [bswap_shuf]
 	vpbroadcastd znlen_mask, [nlen_mask]
 	vpbroadcastd zvect_size, [vect_size]
+	vpbroadcastd zmax_len, [max_len]
 	vpbroadcastd ztwofiftyfour, [twofiftyfour]
 	vpbroadcastd ztwofiftysix, [twofiftysix]
 	vpbroadcastd ztwosixtytwo, [twosixtytwo]
@@ -230,25 +234,22 @@ func(set_long_icf_fg_06)
 	mov	match_in, next_in
 	sub	match_in, dist
 
-	mov	len, 2
-%rep 3
-	vmovdqu8 ztmp1, [next_in + len]
-	vmovdqu8 ztmp2, [match_in + len]
-	vpcmpb	k3, ztmp1, [match_in + len], NEQ
-	ktestq	k3, k3
-	jnz	.miscompare
+	mov	len, 16
+	mov	tmp2, end_in
+	sub	tmp2, next_in
+	add	tmp2, 258
 
-	add	len, 64
-%endrep
+	compare_z next_in, match_in, len, tmp2, tmp1, k3, ztmp1, ztmp2
 
-	vmovdqu8 ztmp1, [next_in + len]
-	vmovdqu8 ztmp2, [match_in + len]
-	vpcmpb	k3, ztmp1, ztmp2, 4
+	vpbroadcastd zlens1, len %+ d
+	vpsubd	zlens1, zlens1, zincrement
+	vpaddd	zlens1, zlens1, ztwofiftyfour
 
-.miscompare:
-	kmovq	tmp1, k3
-	tzcnt	tmp1, tmp1
-	add	len, tmp1
+	mov	tmp2, end_in
+	sub	tmp2, next_in
+	cmp	len, tmp2
+	cmovg	len, tmp2
+
 	add	next_in, len
 	lea	match_lookup, [match_lookup + ICF_CODE_BYTES * len]
 	vmovdqu32 zmatch_lookup, [match_lookup]
@@ -256,9 +257,6 @@ func(set_long_icf_fg_06)
 	vpbroadcastd zmatch_lookup2, zmatch_lookup2 %+ x
 	vpandd	zmatch_lookup2, zmatch_lookup2, znlen_mask
 
-	vpbroadcastd zlens1, len %+ d
-	vpsubd	zlens1, zlens1, zincrement
-	vpaddd	zlens1, zlens1, ztwofiftyfour
 	neg	len
 
 .update_match_lookup:
@@ -267,7 +265,11 @@ func(set_long_icf_fg_06)
 	vpcmpgtd k4, zlens1, ztwofiftysix
 	kandw	k3, k3, k4
 
-	vpaddd	zlens2 {k3}{z}, zlens1, zmatch_lookup2
+	vpcmpgtd k4, zlens1, zmax_len
+	vmovdqu32 zlens, zlens1
+	vmovdqu32 zlens {k4}, zmax_len
+
+	vpaddd	zlens2 {k3}{z}, zlens, zmatch_lookup2
 
 	vmovdqu32 [match_lookup + ICF_CODE_BYTES * len] {k3}, zlens2
 
@@ -340,6 +342,8 @@ long_len:
 	dd 0x105
 long_len2:
 	dd 0x7
+max_len:
+	dd 0xfe + 0x102
 vect_size:
 	dd VECT_SIZE
 twofiftyfour:

@@ -2,6 +2,7 @@
 #define ENCODE_DF_H
 
 #include <stdint.h>
+#include "igzip_lib.h"
 #include "huff_codes.h"
 
 /* Deflate Intermediate Compression Format */
@@ -12,8 +13,9 @@
 #define ICF_DIST_OFFSET LIT_LEN_BIT_COUNT
 #define NULL_DIST_SYM 30
 
-#define LEN_START 257
-#define LEN_OFFSET (LEN_START - 3)
+#define LEN_START ISAL_DEF_LIT_SYMBOLS
+#define LEN_OFFSET (LEN_START - ISAL_DEF_MIN_MATCH)
+#define LEN_MAX (LEN_OFFSET + ISAL_DEF_MAX_MATCH)
 #define LIT_START (NULL_DIST_SYM + 1)
 #define ICF_CODE_LEN 32
 

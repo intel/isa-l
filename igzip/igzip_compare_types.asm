@@ -278,7 +278,78 @@
 	jmp	%%end
 
 %%miscompare_vect:
-	bsf	%%tmp, %%tmp
+	tzcnt	%%tmp, %%tmp
+	add	%%result, %%tmp
+%%end:
+%endm
+
+;; compares 64 bytes at a time
+;; compare_z src1, src2, result, result_max, tmp, ktmp, ztmp1, ztmp2
+;; Clobbers result_max
+%macro compare_z 8
+%define %%src1		%1
+%define %%src2		%2
+%define %%result	%3	; Accumulator for match_length
+%define %%result_max	%4
+%define %%tmp		%5	; tmp as a 16-bit register
+%define %%ktmp		%6
+%define %%ztmp		%7
+%define %%ztmp2		%8
+
+	sub	%%result_max, 128
+	cmp	%%result, %%result_max
+	jg	%%_by_64
+
+%%loop1:
+	vmovdqu8	%%ztmp, [%%src1 + %%result]
+	vmovdqu8	%%ztmp2, [%%src2 + %%result]
+	vpcmpb		%%ktmp, %%ztmp, %%ztmp2, NEQ
+	ktestq		%%ktmp, %%ktmp
+	jnz		%%miscompare
+	add		%%result, 64
+
+	vmovdqu8	%%ztmp, [%%src1 + %%result]
+	vmovdqu8	%%ztmp2, [%%src2 + %%result]
+	vpcmpb		%%ktmp, %%ztmp, %%ztmp2, NEQ
+	ktestq		%%ktmp, %%ktmp
+	jnz		%%miscompare
+	add		%%result, 64
+
+	cmp	%%result, %%result_max
+	jle	%%loop1
+
+%%_by_64:
+	add	%%result_max, 64
+	cmp	%%result, %%result_max
+	jg	%%_less_than_64
+
+	vmovdqu8	%%ztmp, [%%src1 + %%result]
+	vmovdqu8	%%ztmp2, [%%src2 + %%result]
+	vpcmpb		%%ktmp, %%ztmp, %%ztmp2, NEQ
+	ktestq		%%ktmp, %%ktmp
+	jnz		%%miscompare
+	add		%%result, 64
+
+%%_less_than_64:
+	add	%%result_max, 64
+	sub	%%result_max, %%result
+	jle	%%end
+
+	mov	%%tmp, -1
+	bzhi	%%tmp, %%tmp, %%result_max
+	kmovq	%%ktmp, %%tmp
+
+	vmovdqu8	%%ztmp {%%ktmp}{z}, [%%src1 + %%result]
+	vmovdqu8	%%ztmp2 {%%ktmp}{z}, [%%src2 + %%result]
+	vpcmpb		%%ktmp, %%ztmp, %%ztmp2, NEQ
+	ktestq		%%ktmp, %%ktmp
+	jnz		%%miscompare
+	add		%%result, %%result_max
+
+	jmp	%%end
+%%miscompare:
+	kmovq	%%tmp, %%ktmp
+	tzcnt	%%tmp, %%tmp
 	add	%%result, %%tmp
 %%end:
 %endm

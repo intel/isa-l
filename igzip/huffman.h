@@ -282,3 +282,61 @@ static inline int compare258(uint8_t * str1, uint8_t * str2, uint32_t max_length
 
 	return count;
 }
+
+/**
+ * @brief Returns how long str1 and str2 have the same symbols.
+ * @param str1: First input string.
+ * @param str2: Second input string.
+ * @param max_length: length of the smaller string.
+ */
+static inline int compare(uint8_t * str1, uint8_t * str2, uint32_t max_length)
+{
+	uint32_t count;
+	uint64_t test;
+	uint64_t loop_length;
+
+	loop_length = max_length & ~0x7;
+
+	for(count = 0; count < loop_length; count += 8){
+		test = *(uint64_t *) str1;
+		test ^= *(uint64_t *) str2;
+		if(test != 0)
+			return count + tzbytecnt(test);
+		str1 += 8;
+		str2 += 8;
+	}
+
+	switch(max_length % 8){
+
+	case 7:
+		if(*str1++ != *str2++)
+			return count;
+		count++;
+	case 6:
+		if(*str1++ != *str2++)
+			return count;
+		count++;
+	case 5:
+		if(*str1++ != *str2++)
+			return count;
+		count++;
+	case 4:
+		if(*str1++ != *str2++)
+			return count;
+		count++;
+	case 3:
+		if(*str1++ != *str2++)
+			return count;
+		count++;
+	case 2:
+		if(*str1++ != *str2++)
+			return count;
+		count++;
+	case 1:
+		if(*str1 != *str2)
+			return count;
+		count++;
+	}
+
+	return count;
+}

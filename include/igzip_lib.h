@@ -85,13 +85,16 @@ extern "C" {
 #define ISAL_DEF_MAX_CODE_LEN 15
 #define ISAL_DEF_HIST_SIZE (32*IGZIP_K)
 #define ISAL_DEF_MAX_HIST_BITS 15
+#define ISAL_DEF_MAX_MATCH 258
+#define ISAL_DEF_MIN_MATCH 3
 
 #define ISAL_DEF_LIT_SYMBOLS 257
 #define ISAL_DEF_LEN_SYMBOLS 29
 #define ISAL_DEF_DIST_SYMBOLS 30
 #define ISAL_DEF_LIT_LEN_SYMBOLS (ISAL_DEF_LIT_SYMBOLS + ISAL_DEF_LEN_SYMBOLS)
 
-#define ISAL_LOOK_AHEAD (18 * 16)	/* Max repeat length, rounded up to 32 byte boundary */
+/* Max repeat length, rounded up to 32 byte boundary */
+#define ISAL_LOOK_AHEAD ((ISAL_DEF_MAX_MATCH + 31) & ~31)
 
 /******************************************************************************/
 /* Deflate Implementation Specific Defines */
