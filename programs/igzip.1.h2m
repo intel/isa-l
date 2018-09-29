@@ -1,3 +1,6 @@
+[Name]
+igzip \- compress or decompress files similar to gzip
+
 [Description]
 
 Compress or decompress files similar to gzip using the ISA-L fast deflate library.
