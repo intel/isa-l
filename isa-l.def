@@ -110,3 +110,4 @@ isal_read_zlib_header   	@106
 isal_write_gzip_header   	@107
 isal_write_zlib_header   	@108
 isal_zero_detect		@109
+isal_gzip_header_init		@110
