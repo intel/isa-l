@@ -350,28 +350,29 @@ void free_gzip_header(struct isal_gzip_header *gz_hdr)
 int gen_rand_gzip_header(struct isal_gzip_header *gz_hdr)
 {
 	int ret = 0;
-	gz_hdr->text = rand() % 2;
-	gz_hdr->time = rand();
-	gz_hdr->xflags = rand() % 256;
-	gz_hdr->os = rand() % 256;
+	int field_set_space = 8;
 
-	if (rand() % 4 != 0) {
+	isal_gzip_header_init(gz_hdr);
+
+	if (rand() % field_set_space != 0)
+		gz_hdr->text = rand() % 2;
+	if (rand() % field_set_space != 0)
+		gz_hdr->time = rand();
+	if (rand() % field_set_space != 0)
+		gz_hdr->xflags = rand() % 256;
+	if (rand() % field_set_space != 0)
+		gz_hdr->os = rand() % 256;
+
+	if (rand() % field_set_space != 0) {
 		gz_hdr->extra_buf_len = rand() % EXTRA_SIZE_MAX;
 		gz_hdr->extra_len = gz_hdr->extra_buf_len;
-	} else {
-		gz_hdr->extra_buf_len = 0;
-		gz_hdr->extra_len = 0;
 	}
 
-	if (rand() % 4 != 0)
+	if (rand() % field_set_space != 0)
 		gz_hdr->name_buf_len = rand() % NAME_SIZE_MAX;
-	else
-		gz_hdr->name_buf_len = 0;
 
-	if (rand() % 4 != 0)
+	if (rand() % field_set_space != 0)
 		gz_hdr->comment_buf_len = rand() % COMMENT_SIZE_MAX;
-	else
-		gz_hdr->comment_buf_len = 0;
 
 	gz_hdr->hcrc = rand() % 2;
 
@@ -809,7 +810,7 @@ int main(int argc, char *argv[])
 
 	printf("gzip wrapper test: ");
 	for (i = 0; i < RANDOMS; i++) {
-		memset(&gz_hdr_orig, 0, sizeof(gz_hdr_orig));
+		rand_buf((uint8_t *) & gz_hdr_orig, sizeof(gz_hdr_orig));
 
 		ret = gen_rand_gzip_header(&gz_hdr_orig);
 		if (ret) {
