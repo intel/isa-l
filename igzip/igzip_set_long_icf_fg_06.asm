@@ -38,26 +38,28 @@
 %define arg1 rcx
 %define arg2 rdx
 %define arg3 r8
-%define dist_code rsi
-%define tmp2 rsi
+%define arg4 r9
 %define len rdi
+%define dist rsi
 %else
 %define arg1 rdi
 %define arg2 rsi
 %define arg3 rdx
-%define dist_code rcx
-%define tmp2 rcx
+%define arg4 rcx
 %define len r8
+%define dist r9
 %endif
 
 %define next_in arg1
-%define end_in arg2
-%define match_lookup arg3
+%define end_processed arg2
+%define end_in arg3
+%define match_lookup arg4
 %define match_in rax
-%define dist r9
 %define match_offset r10
 %define tmp1 r11
-%define end_in_orig r12
+%define end_processed_orig r12
+%define dist_code r13
+%define tmp2 r13
 
 %define zmatch_lookup zmm0
 %define zmatch_lookup2 zmm1
@@ -106,6 +108,7 @@
 	save_reg	rsi, 8*16 + 0*8
 	save_reg	rdi, 8*16 + 1*8
 	save_reg	r12, 8*16 + 2*8
+	save_reg	r13, 8*16 + 3*8
 	end_prolog
 %endm
 
@@ -122,15 +125,18 @@
 	mov	rsi, [rsp + 8*16 + 0*8]
 	mov	rdi, [rsp + 8*16 + 1*8]
 	mov	r12, [rsp + 8*16 + 2*8]
+	mov	r13, [rsp + 8*16 + 3*8]
 	add	rsp, stack_size
 %endm
 %else
 %define func(x) x:
 %macro FUNC_SAVE 0
 	push	r12
+	push	r13
 %endm
 
 %macro FUNC_RESTORE 0
+	pop	r13
 	pop	r12
 %endm
 %endif
@@ -140,8 +146,13 @@ global set_long_icf_fg_06
 func(set_long_icf_fg_06)
 	FUNC_SAVE
 
-	mov	end_in_orig, end_in
-	sub	end_in, 15
+	lea	end_in, [next_in + arg3]
+	add	end_processed, next_in
+	mov	end_processed_orig, end_processed
+	lea	tmp1, [end_processed + LA_STATELESS]
+	cmp	end_in, tmp1
+	cmovg	end_in, tmp1
+	sub	end_processed, 15
 	vpbroadcastd zlong_lens, [long_len]
 	vpbroadcastd zlong_lens2, [long_len2]
 	vpbroadcastd zlens_mask, [len_mask]
@@ -164,7 +175,7 @@ func(set_long_icf_fg_06)
 	vmovdqu32 zmatch_lookup2, zmatch_lookup
 	vmovdqu32 zmatch_lookup, [match_lookup + ICF_CODE_BYTES * VECT_SIZE]
 
-	cmp	next_in, end_in
+	cmp	next_in, end_processed
 	jae	.end_fill
 
 .finish_entry:
@@ -237,7 +248,6 @@ func(set_long_icf_fg_06)
 	mov	len, 16
 	mov	tmp2, end_in
 	sub	tmp2, next_in
-	add	tmp2, 258
 
 	compare_z next_in, match_in, len, tmp2, tmp1, k3, ztmp1, ztmp2
 
@@ -245,7 +255,7 @@ func(set_long_icf_fg_06)
 	vpsubd	zlens1, zlens1, zincrement
 	vpaddd	zlens1, zlens1, ztwofiftyfour
 
-	mov	tmp2, end_in
+	mov	tmp2, end_processed
 	sub	tmp2, next_in
 	cmp	len, tmp2
 	cmovg	len, tmp2
@@ -283,11 +293,11 @@ func(set_long_icf_fg_06)
 	jmp	.update_match_lookup
 
 .end_fill:
-	mov	end_in, end_in_orig
-	cmp	next_in, end_in
+	mov	end_processed, end_processed_orig
+	cmp	next_in, end_processed
 	jge	.finish
 
-	mov	tmp1, end_in
+	mov	tmp1, end_processed
 	sub	tmp1, next_in
 	vpbroadcastd ztmp1, tmp1 %+ d
 	vpcmpd k3, ztmp1, zincrement, 6

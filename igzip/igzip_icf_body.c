@@ -4,7 +4,7 @@
 #include "igzip_level_buf_structs.h"
 
 extern uint64_t gen_icf_map_lh1(struct isal_zstream *, struct deflate_icf *, uint32_t);
-extern void set_long_icf_fg(uint8_t *, uint8_t *, struct deflate_icf *, struct level_buf *);
+extern void set_long_icf_fg(uint8_t *, uint64_t, uint64_t, struct deflate_icf *);
 extern void isal_deflate_icf_body_lvl1(struct isal_zstream *);
 extern void isal_deflate_icf_body_lvl2(struct isal_zstream *);
 extern void isal_deflate_icf_body_lvl3(struct isal_zstream *);
@@ -24,9 +24,11 @@ static inline void write_deflate_icf(struct deflate_icf *icf, uint32_t lit_len,
 	    | (extra_bits << (LIT_LEN_BIT_COUNT + DIST_LIT_BIT_COUNT));
 }
 
-void set_long_icf_fg_base(uint8_t * next_in, uint8_t * end_in,
-			  struct deflate_icf *match_lookup, struct level_buf *level_buf)
+void set_long_icf_fg_base(uint8_t * next_in, uint64_t processed, uint64_t input_size,
+			  struct deflate_icf *match_lookup)
 {
+	uint8_t *end_processed = next_in + processed;
+	uint8_t *end_in = next_in + input_size;
 	uint32_t dist_code, dist_extra, dist, len;
 	uint32_t match_len;
 	uint32_t dist_start[] = {
@@ -36,15 +38,17 @@ void set_long_icf_fg_base(uint8_t * next_in, uint8_t * end_in,
 		0x1001, 0x1801, 0x2001, 0x3001, 0x4001, 0x6001, 0x0000, 0x0000
 	};
 
-	while (next_in < end_in - ISAL_LOOK_AHEAD) {
+	if (end_in > end_processed + ISAL_LOOK_AHEAD)
+		end_in = end_processed + ISAL_LOOK_AHEAD;
+
+	while (next_in < end_processed) {
 		dist_code = match_lookup->lit_dist;
 		dist_extra = match_lookup->dist_extra;
 		dist = dist_start[dist_code] + dist_extra;
 		len = match_lookup->lit_len;
 		if (len >= 8 + LEN_OFFSET) {
-			match_len = compare(next_in - dist + 8, next_in + 8,
-					    end_in - next_in + ISAL_DEF_MAX_MATCH) +
-			    LEN_OFFSET + 8;
+			match_len = compare((next_in + 8) - dist, next_in + 8,
+					    end_in - (next_in + 8)) + LEN_OFFSET + 8;
 
 			while (match_len > match_lookup->lit_len
 			       && match_len >= LEN_OFFSET + SHORTEST_MATCH) {
@@ -251,8 +255,7 @@ void icf_body_hash1_fillgreedy_lazy(struct isal_zstream *stream)
 
 		processed = gen_icf_map_h1_base(stream, matches_icf_lookup, input_size);
 
-		set_long_icf_fg(stream->next_in, stream->next_in + processed,
-				matches_icf_lookup, level_buf);
+		set_long_icf_fg(stream->next_in, processed, input_size, matches_icf_lookup);
 
 		stream->next_in += processed;
 		stream->avail_in -= processed;
@@ -291,8 +294,7 @@ void icf_body_lazyhash1_fillgreedy_greedy(struct isal_zstream *stream)
 
 		processed = gen_icf_map_lh1(stream, matches_icf_lookup, input_size);
 
-		set_long_icf_fg(stream->next_in, stream->next_in + processed,
-				matches_icf_lookup, level_buf);
+		set_long_icf_fg(stream->next_in, processed, input_size, matches_icf_lookup);
 
 		stream->next_in += processed;
 		stream->avail_in -= processed;
