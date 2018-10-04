@@ -145,7 +145,7 @@ int usage(void)
 		"  -s          performance test isa-l stateful inflate\n"
 		"  -t          performance test isa-l stateless inflate\n"
 		"  -u          performance test zlib inflate\n"
-		"  -b <size>   input buffer size, applies to stateful options (-f,-s)\n"
+		"  -b <size>   input buffer size, applies to stateful options (-f,-z,-s)\n"
 		"  -y <type>   flush type: 0 (default: no flush), 1 (sync flush), 2 (full flush)\n",
 		COMPRESSION_QUEUE_LIMIT);
 	exit(0);
@@ -309,11 +309,19 @@ int isal_deflate_stateful_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t
 }
 
 int zlib_deflate_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t * inbuf,
-		      uint64_t inbuf_size, int level, int iterations, struct perf *start,
+		      uint64_t inbuf_size, int level, int flush_type,
+		      uint64_t in_block_size, int iterations, struct perf *start,
 		      struct perf *stop)
 {
 	int i, check;
 	z_stream gstream;
+	int flush_translator[] = { Z_NO_FLUSH, Z_SYNC_FLUSH, Z_FULL_FLUSH };
+	uint64_t inbuf_remaining;
+
+	if (in_block_size == 0)
+		in_block_size = inbuf_size;
+
+	flush_type = flush_translator[flush_type];
 
 	gstream.next_in = inbuf;
 	gstream.avail_in = inbuf_size;
@@ -326,19 +334,32 @@ int zlib_deflate_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t * inbuf,
 	gstream.next_out = outbuf;
 	gstream.avail_out = *outbuf_size;
 	check = deflate(&gstream, Z_FINISH);
-	if (check != 1)
+	if (check != Z_STREAM_END)
 		return 1;
 
 	perf_start(start);
 	for (i = 0; i < iterations; i++) {
+		inbuf_remaining = inbuf_size;
+		check = Z_OK;
 		if (0 != deflateReset(&gstream))
 			return 1;
 
 		gstream.next_in = inbuf;
-		gstream.avail_in = inbuf_size;
 		gstream.next_out = outbuf;
 		gstream.avail_out = *outbuf_size;
-		deflate(&gstream, Z_FINISH);
+
+		while (Z_OK == check && inbuf_remaining > in_block_size) {
+			gstream.avail_in = in_block_size;
+			inbuf_remaining -= in_block_size;
+			check = deflate(&gstream, flush_type);
+		}
+		if (Z_OK == check) {
+			gstream.avail_in = inbuf_remaining;
+			check = deflate(&gstream, Z_FINISH);
+		}
+
+		if (Z_STREAM_END != check)
+			return 1;
 	}
 	perf_stop(stop);
 	deflateEnd(&gstream);
@@ -670,6 +691,7 @@ int main(int argc, char *argv[])
 		else if (info.strategy.mode == ZLIB)
 			ret = zlib_deflate_perf(compressbuf, &info.deflate_size, filebuf,
 						info.file_size, compression_queue[i].level,
+						info.flush_type, info.inblock_size,
 						info.deflate_iter, &info.start, &info.stop);
 
 		if (ret) {
