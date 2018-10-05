@@ -46,6 +46,7 @@
 #define OPTARGS "hl:f:z:i:d:stub:y:"
 
 #define COMPRESSION_QUEUE_LIMIT 32
+#define UNSET -1
 
 int level_size_buf[10] = {
 #ifdef ISAL_DEF_LVL0_DEFAULT
@@ -121,8 +122,8 @@ struct perf_info {
 	char *file_name;
 	size_t file_size;
 	size_t deflate_size;
-	uint32_t deflate_iter;
-	uint32_t inflate_iter;
+	int32_t deflate_iter;
+	int32_t inflate_iter;
 	uint32_t inblock_size;
 	uint32_t flush_type;
 	struct compress_strategy strategy;
@@ -130,6 +131,13 @@ struct perf_info {
 	struct perf start;
 	struct perf stop;
 };
+
+void init_perf_info(struct perf_info *info)
+{
+	memset(info, 0, sizeof(*info));
+	info->inflate_iter = UNSET;
+	info->deflate_iter = UNSET;
+}
 
 int usage(void)
 {
@@ -502,7 +510,7 @@ int main(int argc, char *argv[])
 	struct compress_strategy compress_strat;
 	struct inflate_modes inflate_strat = { 0 };
 	struct perf_info info;
-	memset(&info, 0, sizeof(info));
+	init_perf_info(&info);
 
 	while ((c = getopt(argc, argv, OPTARGS)) != -1) {
 		switch (c) {
@@ -555,7 +563,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'i':
 			info.inflate_iter = atoi(optarg);
-			if (info.inflate_iter < 1)
+			if (info.inflate_iter < 0)
 				usage();
 			break;
 		case 'd':
@@ -618,7 +626,7 @@ int main(int argc, char *argv[])
 	}
 
 	decompbuf_size = info.file_size;
-	if (info.inflate_iter == 0) {
+	if (info.inflate_iter == UNSET) {
 		info.inflate_iter =
 		    info.file_size ? RUN_MEM_SIZE / info.file_size : MIN_TEST_LOOPS;
 		if (info.inflate_iter < MIN_TEST_LOOPS)
@@ -626,7 +634,7 @@ int main(int argc, char *argv[])
 	}
 
 	decompbuf_size = info.file_size;
-	if (info.deflate_iter == 0) {
+	if (info.deflate_iter == UNSET) {
 		info.deflate_iter =
 		    info.file_size ? RUN_MEM_SIZE / info.file_size : MIN_TEST_LOOPS;
 		if (info.deflate_iter < MIN_TEST_LOOPS)
@@ -703,6 +711,9 @@ int main(int argc, char *argv[])
 		printf("\n");
 		print_deflate_perf_line(&info);
 		printf("\n");
+
+		if (info.inflate_iter == 0)
+			continue;
 
 		if (inflate_strat.stateless) {
 			info.inflate_mode = ISAL_STATELESS;
