@@ -266,21 +266,6 @@ int isal_deflate_stateful_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t
 			return 1;
 	}
 
-	isal_deflate_init(&stream);
-	stream.end_of_stream = 1;	/* Do the entire file at once */
-	stream.flush = flush_type;
-	stream.next_in = inbuf;
-	stream.avail_in = inbuf_size;
-	stream.next_out = outbuf;
-	stream.avail_out = *outbuf_size;
-	stream.level = level;
-	stream.level_buf = level_buf;
-	stream.level_buf_size = level_size_buf[level];
-	check = isal_deflate(&stream);
-
-	if (check || stream.avail_in)
-		return 1;
-
 	perf_start(start);
 
 	for (i = 0; i < iterations; i++) {
@@ -337,12 +322,6 @@ int zlib_deflate_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t * inbuf,
 	gstream.zfree = Z_NULL;
 	gstream.opaque = Z_NULL;
 	if (0 != deflateInit2(&gstream, level, Z_DEFLATED, -15, 9, Z_DEFAULT_STRATEGY))
-		return 1;
-
-	gstream.next_out = outbuf;
-	gstream.avail_out = *outbuf_size;
-	check = deflate(&gstream, Z_FINISH);
-	if (check != Z_STREAM_END)
 		return 1;
 
 	perf_start(start);
