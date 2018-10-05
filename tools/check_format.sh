@@ -27,7 +27,7 @@ fi
 if hash indent && indent --version | grep -q GNU; then
     echo "Checking C files for coding style..."
     for f in `git ls-files '*.c'`; do
-	[ "$verbose" -gt 0 ] 2> /dev/null && echo "checking $f"
+	[ "$verbose" -gt 0 ] && echo "checking style on $f"
 	if ! indent $indent_args -st $f | diff -q $f - >& /dev/null; then
 	    echo "  File found with formatting issues: $f"
 	    [ "$verbose" -gt 0 ] 2> /dev/null && indent $indent_args -st $f | diff -u $f -
@@ -41,8 +41,8 @@ fi
 
 if hash grep; then
     echo "Checking for dos and whitespace violations..."
-    for f in `git ls-files '*.c' '*.h' '*.asm' '*.inc' '*.am' '*.txt' '*.md' '*.def' '*.ac' '*.sh' '*.in' 'Makefile*' `; do
-	[ "$verbose" -gt 0 ] 2> /dev/null && echo "checking $f"
+    for f in $(git ls-files); do
+	[ "$verbose" -gt 0 ] && echo "checking whitespace on $f"
 	if grep -q '[[:space:]]$' $f ; then
 	    echo "  File found with trailing whitespace: $f"
 	    rc=1
@@ -53,6 +53,27 @@ if hash grep; then
 	fi
     done
 fi
+
+echo "Checking source files for permissions..."
+while read -r perm _res0 _res1 f; do
+    [ -z "$f" ] && continue
+    [ "$verbose" -gt 0 ] && echo "checking permissions on $f"
+    if [ "$perm" -ne 100644 ]; then
+	echo "  File found with permissions issue ($perm): $f"
+	rc=1
+    fi
+done <<< $(git ls-files -s -- ':(exclude)*.sh' ':(exclude)*iindent')
+
+echo "Checking script files for permissions..."
+while read -r perm _res0 _res1 f; do
+    [ -z "$f" ] && continue
+    [ "$verbose" -gt 0 ] && echo "checking permissions on $f"
+    if [ "$perm" -ne 100755 ]; then
+	echo "  Script found with permissions issue ($perm): $f"
+	rc=1
+    fi
+done <<< $(git ls-files -s '*.sh')
+
 
 echo "Checking for signoff in commit message..."
 if ! git log -n 1 --format=%B | grep -q "^Signed-off-by:" ; then
