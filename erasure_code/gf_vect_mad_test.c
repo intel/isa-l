@@ -34,20 +34,14 @@
 #include "types.h"
 
 #ifndef ALIGN_SIZE
-# define ALIGN_SIZE 16
+# define ALIGN_SIZE 32
 #endif
 
 #ifndef FUNCTION_UNDER_TEST
-#if __x86_64__  || __i386__ || _M_X64 || _M_IX86
-//By default, test sse version
-# define FUNCTION_UNDER_TEST gf_6vect_mad_sse
-# define REF_FUNCTION gf_6vect_dot_prod_sse
-# define VECT 6
-#else
-# define FUNCTION_UNDER_TEST gf_vect_mad_base
-# define REF_FUNCTION gf_vect_dot_prod_base
+//By default, test multi-binary version
+# define FUNCTION_UNDER_TEST gf_vect_mad
+# define REF_FUNCTION gf_vect_dot_prod
 # define VECT 1
-#endif //__x86_64__  || __i386__ || _M_X64 || _M_IX86
 #endif
 
 #ifndef TEST_MIN_SIZE
