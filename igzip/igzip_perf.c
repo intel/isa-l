@@ -48,6 +48,11 @@
 #define COMPRESSION_QUEUE_LIMIT 32
 #define UNSET -1
 
+/* Limit output buffer size to 2 Gigabytes. Since stream->avail_out is a
+ * uint32_t and there is no logic for handling an overflowed output buffer in
+ * the perf test, this define must be less then 4 Gigabytes */
+#define MAX_COMPRESS_BUF_SIZE (1 << 31)
+
 int level_size_buf[10] = {
 #ifdef ISAL_DEF_LVL0_DEFAULT
 	ISAL_DEF_LVL0_DEFAULT,
@@ -482,6 +487,7 @@ int main(int argc, char *argv[])
 	unsigned char *compressbuf, *decompbuf, *filebuf;
 	int i, c, ret = 0;
 	uint64_t decompbuf_size, compressbuf_size;
+	uint64_t block_count;
 
 	struct compress_strategy compression_queue[COMPRESSION_QUEUE_LIMIT];
 
@@ -635,12 +641,22 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
-	compressbuf_size = 2 * info.file_size;
+	block_count = 1;
+	if (info.flush_type > 0)
+		block_count = (info.file_size + info.inblock_size - 1) / info.inblock_size;
+
+	/* Way overestimate likely compressed size to handle bad type 0 and
+	 * small block_size case */
+	compressbuf_size = block_count * ISAL_DEF_MAX_HDR_SIZE + 2 * info.file_size;
+	if (compressbuf_size >= MAX_COMPRESS_BUF_SIZE)
+		compressbuf_size = MAX_COMPRESS_BUF_SIZE;
+
 	compressbuf = malloc(compressbuf_size);
 	if (compressbuf == NULL) {
 		fprintf(stderr, "Can't allocate input buffer memory\n");
 		exit(0);
 	}
+
 	decompbuf = malloc(decompbuf_size);
 	if (decompbuf == NULL) {
 		fprintf(stderr, "Can't allocate output buffer memory\n");
