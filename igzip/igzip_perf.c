@@ -203,6 +203,188 @@ void print_inflate_perf_line(struct perf_info *info)
 	perf_print(info->stop, info->start, info->file_size * info->inflate_iter);
 }
 
+int isal_deflate_round(struct isal_zstream *stream, uint8_t * outbuf, uint32_t outbuf_size,
+		       uint8_t * inbuf, uint32_t inbuf_size,
+		       uint32_t level, uint8_t * level_buf, uint32_t level_buf_size,
+		       int flush_type)
+{
+	int check;
+
+	/* Setup stream for stateless compression */
+	isal_deflate_init(stream);
+	stream->end_of_stream = 1;	/* Do the entire file at once */
+	stream->flush = flush_type;
+	stream->next_in = inbuf;
+	stream->avail_in = inbuf_size;
+	stream->next_out = outbuf;
+	stream->avail_out = outbuf_size;
+	stream->level = level;
+	stream->level_buf = level_buf;
+	stream->level_buf_size = level_buf_size;
+
+	/* Compress stream */
+	check = isal_deflate_stateless(stream);
+
+	/* Verify compression success */
+	if (check || stream->avail_in)
+		return 1;
+
+	return 0;
+}
+
+int isal_inflate_round(struct inflate_state *state, uint8_t * inbuf, uint32_t inbuf_size,
+		       uint8_t * outbuf, uint32_t outbuf_size)
+{
+	int check = 0;
+
+	/* Setup for stateless inflate */
+	state->next_in = inbuf;
+	state->avail_in = inbuf_size;
+	state->next_out = outbuf;
+	state->avail_out = outbuf_size;
+	state->crc_flag = ISAL_DEFLATE;
+
+	/* Inflate data */
+	check = isal_inflate_stateless(state);
+
+	/* Verify inflate was successful */
+	if (check)
+		return 1;
+
+	return 0;
+}
+
+int isal_deflate_stateful_round(struct isal_zstream *stream, uint8_t * outbuf,
+				uint32_t outbuf_size, uint8_t * inbuf,
+				uint32_t inbuf_size, uint32_t in_block_size, uint32_t level,
+				uint8_t * level_buf, uint32_t level_buf_size, int flush_type)
+{
+	uint64_t inbuf_remaining;
+	int check;
+
+	/* Setup stream for stateful compression */
+	inbuf_remaining = inbuf_size;
+	isal_deflate_init(stream);
+	stream->flush = flush_type;
+	stream->next_in = inbuf;
+	stream->next_out = outbuf;
+	stream->avail_out = outbuf_size;
+	stream->level = level;
+	stream->level_buf = level_buf;
+	stream->level_buf_size = level_buf_size;
+
+	/* Keep compressing so long as more data is available and no error has
+	 * been hit */
+	while (ISAL_DECOMP_OK == check && inbuf_remaining > in_block_size) {
+		/* Setup next in buffer, assumes out buffer is sufficiently
+		 * large */
+		stream->avail_in = in_block_size;
+		inbuf_remaining -= in_block_size;
+
+		/* Compress stream */
+		check = isal_deflate(stream);
+	}
+
+	/* Finish compressing all remaining input */
+	if (ISAL_DECOMP_OK == check) {
+		stream->avail_in = inbuf_remaining;
+		stream->end_of_stream = 1;
+		check = isal_deflate(stream);
+	}
+
+	/* Verify Compression Success */
+	if (ISAL_DECOMP_OK != check || stream->avail_in > 0)
+		return 1;
+
+	return 0;
+}
+
+int isal_inflate_stateful_round(struct inflate_state *state, uint8_t * inbuf,
+				uint32_t inbuf_size, uint32_t in_block_size, uint8_t * outbuf,
+				uint32_t outbuf_size)
+{
+	int check = 0;
+	uint64_t inbuf_remaining;
+
+	isal_inflate_init(state);
+	state->next_in = inbuf;
+	state->next_out = outbuf;
+	state->avail_out = outbuf_size;
+	inbuf_remaining = inbuf_size;
+
+	while (ISAL_DECOMP_OK == check && inbuf_remaining >= in_block_size) {
+		state->avail_in = in_block_size;
+		inbuf_remaining -= in_block_size;
+		check = isal_inflate(state);
+	}
+	if (ISAL_DECOMP_OK == check && inbuf_remaining > 0) {
+		state->avail_in = inbuf_remaining;
+		check = isal_inflate(state);
+	}
+
+	if (ISAL_DECOMP_OK != check || state->avail_in > 0)
+		return 1;
+
+	return 0;
+}
+
+int zlib_deflate_round(z_stream * gstream, uint8_t * outbuf, uInt outbuf_size,
+		       uint8_t * inbuf, uLong inbuf_size,
+		       uLong in_block_size, int level, int flush_type)
+{
+	uLong inbuf_remaining;
+	int check = Z_OK;
+
+	inbuf_remaining = inbuf_size;
+
+	/* Setup stream for stateful compression */
+	if (0 != deflateReset(gstream))
+		return 1;
+
+	gstream->next_in = inbuf;
+	gstream->next_out = outbuf;
+	gstream->avail_out = outbuf_size;
+
+	/* Keep compressing so long as more data is available and no error has
+	 * been hit */
+	while (Z_OK == check && inbuf_remaining > in_block_size) {
+		gstream->avail_in = in_block_size;
+		inbuf_remaining -= in_block_size;
+		check = deflate(gstream, flush_type);
+	}
+
+	/* Finish compressing all remaining input */
+	if (Z_OK == check) {
+		gstream->avail_in = inbuf_remaining;
+		check = deflate(gstream, Z_FINISH);
+	}
+
+	/* Verify Compression Success */
+	if (Z_STREAM_END != check)
+		return 1;
+
+	return 0;
+}
+
+int zlib_inflate_round(z_stream * gstream, uint8_t * inbuf,
+		       uLong inbuf_size, uint8_t * outbuf, uInt outbuf_size)
+{
+	int check = 0;
+
+	if (0 != inflateReset(gstream))
+		return 1;
+
+	gstream->next_in = inbuf;
+	gstream->avail_in = inbuf_size;
+	gstream->next_out = outbuf;
+	gstream->avail_out = outbuf_size;
+	check = inflate(gstream, Z_FINISH);
+	if (check != Z_STREAM_END)
+		return 1;
+
+	return 0;
+}
+
 int isal_deflate_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t * inbuf,
 		      uint64_t inbuf_size, int level, int flush_type, int iterations,
 		      struct perf *start, struct perf *stop)
@@ -217,39 +399,21 @@ int isal_deflate_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t * inbuf,
 			return 1;
 	}
 
-	isal_deflate_init(&stream);
-	stream.end_of_stream = 1;	/* Do the entire file at once */
-	stream.flush = flush_type;
-	stream.next_in = inbuf;
-	stream.avail_in = inbuf_size;
-	stream.next_out = outbuf;
-	stream.avail_out = *outbuf_size;
-	stream.level = level;
-	stream.level_buf = level_buf;
-	stream.level_buf_size = level_size_buf[level];
-	check = isal_deflate_stateless(&stream);
-
-	if (check || stream.avail_in)
-		return 1;
+	check = isal_deflate_round(&stream, outbuf, *outbuf_size, inbuf,
+				   inbuf_size, level, level_buf, level_size_buf[level],
+				   flush_type);
 
 	perf_start(start);
-	for (i = 0; i < iterations; i++) {
-		isal_deflate_init(&stream);
-		stream.end_of_stream = 1;	/* Do the entire file at once */
-		stream.flush = flush_type;
-		stream.next_in = inbuf;
-		stream.avail_in = inbuf_size;
-		stream.next_out = outbuf;
-		stream.avail_out = *outbuf_size;
-		stream.level = level;
-		stream.level_buf = level_buf;
-		stream.level_buf_size = level_size_buf[level];
-		isal_deflate_stateless(&stream);
-	}
+
+	for (i = 0; i < iterations && check == 0; i++)
+		check = isal_deflate_round(&stream, outbuf, *outbuf_size, inbuf,
+					   inbuf_size, level, level_buf,
+					   level_size_buf[level], flush_type);
+
 	perf_stop(stop);
 
 	*outbuf_size = stream.total_out;
-	return 0;
+	return check;
 }
 
 int isal_deflate_stateful_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t * inbuf,
@@ -260,7 +424,6 @@ int isal_deflate_stateful_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t
 	struct isal_zstream stream;
 	uint8_t *level_buf = NULL;
 	int i, check;
-	uint64_t inbuf_remaining;
 
 	if (in_block_size == 0)
 		in_block_size = inbuf_size;
@@ -271,33 +434,16 @@ int isal_deflate_stateful_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t
 			return 1;
 	}
 
+	check = isal_deflate_stateful_round(&stream, outbuf, *outbuf_size, inbuf,
+					    inbuf_size, in_block_size, level, level_buf,
+					    level_size_buf[level], flush_type);
 	perf_start(start);
 
-	for (i = 0; i < iterations; i++) {
-		inbuf_remaining = inbuf_size;
-		isal_deflate_init(&stream);
-		stream.flush = flush_type;
-		stream.next_in = inbuf;
-		stream.next_out = outbuf;
-		stream.avail_out = *outbuf_size;
-		stream.level = level;
-		stream.level_buf = level_buf;
-		stream.level_buf_size = level_size_buf[level];
-
-		while (ISAL_DECOMP_OK == check && inbuf_remaining > in_block_size) {
-			stream.avail_in = in_block_size;
-			inbuf_remaining -= in_block_size;
-			check = isal_deflate(&stream);
-		}
-		if (ISAL_DECOMP_OK == check) {
-			stream.avail_in = inbuf_remaining;
-			stream.end_of_stream = 1;
-			check = isal_deflate(&stream);
-		}
-
-		if (ISAL_DECOMP_OK != check || stream.avail_in > 0)
-			return 1;
-	}
+	for (i = 0; i < iterations && check == 0; i++)
+		check = isal_deflate_stateful_round(&stream, outbuf, *outbuf_size,
+						    inbuf, inbuf_size, in_block_size, level,
+						    level_buf, level_size_buf[level],
+						    flush_type);
 
 	perf_stop(stop);
 
@@ -314,13 +460,13 @@ int zlib_deflate_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t * inbuf,
 	int i, check;
 	z_stream gstream;
 	int flush_translator[] = { Z_NO_FLUSH, Z_SYNC_FLUSH, Z_FULL_FLUSH };
-	uint64_t inbuf_remaining;
 
 	if (in_block_size == 0)
 		in_block_size = inbuf_size;
 
 	flush_type = flush_translator[flush_type];
 
+	/* Initialize the gstream buffer */
 	gstream.next_in = inbuf;
 	gstream.avail_in = inbuf_size;
 	gstream.zalloc = Z_NULL;
@@ -329,35 +475,21 @@ int zlib_deflate_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t * inbuf,
 	if (0 != deflateInit2(&gstream, level, Z_DEFLATED, -15, 9, Z_DEFAULT_STRATEGY))
 		return 1;
 
+	check = zlib_deflate_round(&gstream, outbuf, *outbuf_size, inbuf,
+				   inbuf_size, in_block_size, level, flush_type);
+
 	perf_start(start);
-	for (i = 0; i < iterations; i++) {
-		inbuf_remaining = inbuf_size;
-		check = Z_OK;
-		if (0 != deflateReset(&gstream))
-			return 1;
 
-		gstream.next_in = inbuf;
-		gstream.next_out = outbuf;
-		gstream.avail_out = *outbuf_size;
+	for (i = 0; i < iterations && check == 0; i++)
+		check = zlib_deflate_round(&gstream, outbuf, *outbuf_size, inbuf,
+					   inbuf_size, in_block_size, level, flush_type);
 
-		while (Z_OK == check && inbuf_remaining > in_block_size) {
-			gstream.avail_in = in_block_size;
-			inbuf_remaining -= in_block_size;
-			check = deflate(&gstream, flush_type);
-		}
-		if (Z_OK == check) {
-			gstream.avail_in = inbuf_remaining;
-			check = deflate(&gstream, Z_FINISH);
-		}
-
-		if (Z_STREAM_END != check)
-			return 1;
-	}
 	perf_stop(stop);
-	deflateEnd(&gstream);
 
 	*outbuf_size = gstream.total_out;
-	return 0;
+	deflateEnd(&gstream);
+
+	return check;
 }
 
 int isal_inflate_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * outbuf,
@@ -368,30 +500,18 @@ int isal_inflate_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * outbuf,
 	int i, check;
 
 	/* Check that data decompresses */
-	state.next_in = inbuf;
-	state.avail_in = inbuf_size;
-	state.next_out = outbuf;
-	state.avail_out = outbuf_size;
-	state.crc_flag = ISAL_DEFLATE;
-
-	check = isal_inflate_stateless(&state);
+	check = isal_inflate_round(&state, inbuf, inbuf_size, outbuf, outbuf_size);
 	if (check || state.total_out != file_size || memcmp(outbuf, filebuf, file_size))
 		return 1;
 
 	perf_start(start);
 
-	for (i = 0; i < iterations; i++) {
-		state.next_in = inbuf;
-		state.avail_in = inbuf_size;
-		state.next_out = outbuf;
-		state.avail_out = outbuf_size;
-		state.crc_flag = ISAL_DEFLATE;
+	for (i = 0; i < iterations && check == 0; i++)
+		check = isal_inflate_round(&state, inbuf, inbuf_size, outbuf, outbuf_size);
 
-		isal_inflate_stateless(&state);
-	}
 	perf_stop(stop);
 
-	return 0;
+	return check;
 }
 
 int isal_inflate_stateful_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * outbuf,
@@ -401,43 +521,20 @@ int isal_inflate_stateful_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * o
 {
 	struct inflate_state state;
 	int i, check;
-	uint64_t inbuf_remaining;
 
 	if (in_block_size == 0)
 		in_block_size = inbuf_size;
-	/* Check that data decompresses */
-	isal_inflate_init(&state);
-	state.next_in = inbuf;
-	state.avail_in = inbuf_size;
-	state.next_out = outbuf;
-	state.avail_out = outbuf_size;
 
-	check = isal_inflate(&state);
+	check = isal_inflate_round(&state, inbuf, inbuf_size, outbuf, outbuf_size);
 	if (check || state.total_out != file_size || memcmp(outbuf, filebuf, file_size))
 		return 1;
 
 	perf_start(start);
 
-	for (i = 0; i < iterations; i++) {
-		isal_inflate_init(&state);
-		state.next_in = inbuf;
-		state.next_out = outbuf;
-		state.avail_out = outbuf_size;
-		inbuf_remaining = inbuf_size;
+	for (i = 0; i < iterations && check == 0; i++)
+		check = isal_inflate_stateful_round(&state, inbuf, inbuf_size, in_block_size,
+						    outbuf, outbuf_size);
 
-		while (ISAL_DECOMP_OK == check && inbuf_remaining >= in_block_size) {
-			state.avail_in = in_block_size;
-			inbuf_remaining -= in_block_size;
-			check = isal_inflate(&state);
-		}
-		if (ISAL_DECOMP_OK == check && inbuf_remaining > 0) {
-			state.avail_in = inbuf_remaining;
-			check = isal_inflate(&state);
-		}
-
-		if (ISAL_DECOMP_OK != check || state.avail_in > 0)
-			return 1;
-	}
 	perf_stop(stop);
 
 	return 0;
@@ -459,23 +556,15 @@ int zlib_inflate_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * outbuf,
 	if (0 != inflateInit2(&gstream, -15))
 		return 1;
 
-	gstream.next_out = outbuf;
-	gstream.avail_out = outbuf_size;
-	check = inflate(&gstream, Z_FINISH);
-	if (check != 1 || gstream.total_out != file_size || memcmp(outbuf, filebuf, file_size))
+	check = zlib_inflate_round(&gstream, inbuf, inbuf_size, outbuf, outbuf_size);
+	if (check || gstream.total_out != file_size || memcmp(outbuf, filebuf, file_size))
 		return 1;
 
 	perf_start(start);
-	for (i = 0; i < iterations; i++) {
-		if (0 != inflateReset(&gstream))
-			return 1;
 
-		gstream.next_in = inbuf;
-		gstream.avail_in = inbuf_size;
-		gstream.next_out = outbuf;
-		gstream.avail_out = outbuf_size;
-		inflate(&gstream, Z_FINISH);
-	}
+	for (i = 0; i < iterations && check == 0; i++)
+		check = zlib_inflate_round(&gstream, inbuf, inbuf_size, outbuf, outbuf_size);
+
 	perf_stop(stop);
 	inflateEnd(&gstream);
 	return 0;
