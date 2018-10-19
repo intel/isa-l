@@ -31,6 +31,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <wchar.h>
 #ifdef _WIN32
 # include <intrin.h>
 #endif
@@ -881,7 +882,6 @@ static inline void reset_match_history(struct isal_zstream *stream)
 	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
 	uint16_t *hash_table;
 	uint32_t hash_table_size;
-	int i = 0;
 
 	hash_table_size = 2 * (state->hash_mask + 1);
 
@@ -901,13 +901,33 @@ static inline void reset_match_history(struct isal_zstream *stream)
 
 	state->has_hist = IGZIP_NO_HIST;
 
-	if ((stream->total_in & 0xFFFF) == 0)
-		memset(hash_table, 0, hash_table_size);
-	else {
-		for (i = 0; i < hash_table_size / 2; i++) {
-			hash_table[i] = (uint16_t) (stream->total_in);
+	if (sizeof(wchar_t) >= 2) {
+		wchar_t hash_init_val;
+		int rep_bits;
+
+		/* There is definitely more than 16 bytes in the hash table. Set this
+		 * minimum to avoid a wmemset of size 0 */
+		if (hash_table_size <= sizeof(wchar_t))
+			hash_table_size = sizeof(wchar_t);
+
+		hash_init_val = stream->total_in & 0xffff;
+		for (rep_bits = sizeof(uint16_t) * 8; rep_bits < sizeof(wchar_t) * 8;
+		     rep_bits *= 2)
+			hash_init_val |= hash_init_val << rep_bits;
+
+		wmemset((wchar_t *) hash_table, hash_init_val,
+			hash_table_size / sizeof(wchar_t));
+	} else {
+		if ((stream->total_in & 0xFFFF) == 0)
+			memset(hash_table, 0, hash_table_size);
+		else {
+			int i;
+			for (i = 0; i < hash_table_size / 2; i++) {
+				hash_table[i] = (uint16_t) (stream->total_in);
+			}
 		}
 	}
+
 }
 
 static void inline set_dist_mask(struct isal_zstream *stream)
