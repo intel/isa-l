@@ -44,7 +44,7 @@ struct deflate_icf *encode_deflate_icf_base(struct deflate_icf *next_in,
 					    struct deflate_icf *end_in, struct BitBuf2 *bb,
 					    struct hufftables_icf *hufftables);
 uint32_t adler32_base(uint32_t init, const unsigned char *buf, uint64_t len);
-int decode_huffman_code_block_stateless_base(struct inflate_state *s);
+int decode_huffman_code_block_stateless_base(struct inflate_state *s, uint8_t * start_out);
 
 extern void isal_deflate_hash_base(uint16_t *, uint32_t, uint32_t, uint8_t *, uint32_t);
 
@@ -111,9 +111,9 @@ uint32_t isal_adler32(uint32_t init, const unsigned char *buf, uint64_t len)
 	return adler32_base(init, buf, len);
 }
 
-int decode_huffman_code_block_stateless(struct inflate_state *s)
+int decode_huffman_code_block_stateless(struct inflate_state *s, uint8_t * start_out)
 {
-	return decode_huffman_code_block_stateless_base(s);
+	return decode_huffman_code_block_stateless_base(s, start_out);
 }
 
 void isal_deflate_hash_lvl0(uint16_t * hash_table, uint32_t hash_mask,
