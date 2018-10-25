@@ -933,13 +933,16 @@ static inline void reset_match_history(struct isal_zstream *stream)
 static void inline set_dist_mask(struct isal_zstream *stream)
 {
 	struct isal_zstate *state = &stream->internal_state;
-	uint32_t hist_size = (1 << (stream->hist_bits));
+	uint32_t hist_size;
 
-	if (stream->hist_bits != 0 && hist_size < IGZIP_HIST_SIZE)
-		state->dist_mask = hist_size - 1;
-	else
+	if (stream->hist_bits > ISAL_DEF_MAX_HIST_BITS || stream->hist_bits == 0)
+		stream->hist_bits = ISAL_DEF_MAX_HIST_BITS;
+
+	hist_size = (1 << (stream->hist_bits));
+	state->dist_mask = hist_size - 1;
+
+	if (IGZIP_HIST_SIZE < ISAL_DEF_HIST_SIZE && state->dist_mask > IGZIP_HIST_SIZE - 1)
 		state->dist_mask = IGZIP_HIST_SIZE - 1;
-
 }
 
 static void inline set_hash_mask(struct isal_zstream *stream)
