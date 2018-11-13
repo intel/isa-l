@@ -41,4 +41,6 @@ int main(int argc, char *argv[])
 	printf("igzip_build_hash_table_perf:\n");
 	printf("  in_size=%u iter=%d ", dict_len, i);
 	perf_print(stop, start, (long long)dict_len * i);
+
+	return 0;
 }

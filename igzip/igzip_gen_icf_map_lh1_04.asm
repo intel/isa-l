@@ -314,9 +314,9 @@ func(gen_icf_map_lh1_04)
 
 	sub	f_i_end, VECT_SIZE
 	cmp	f_i, f_i_end
-	jg	loop1_end
+	jg	.loop1_end
 
-loop1:
+.loop1:
 	lea	next_in, [f_i + file_start]
 
 ;; Calculate look back dists
@@ -510,9 +510,9 @@ loop1:
 	add	matches_next, ICF_CODE_BYTES * VECT_SIZE
 
 	cmp	f_i, f_i_end
-	jle	loop1
+	jle	.loop1
 
-loop1_end:
+.loop1_end:
 	lea	next_in, [f_i + file_start]
 
 ;; Calculate look back dists

@@ -35,4 +35,6 @@ int main(int argc, char *argv[])
 		fwrite(buf, len, 1, fout);
 		fclose(fout);
 	}
+
+	return 0;
 }
