@@ -189,5 +189,21 @@ $DIFF $TEST_FILE $file1  &> /dev/null || ret=1
 pass_check $ret "No in place decompression"
 clear_dir
 
+ret=0
+$IGZIP -n $TEST_FILE -o $file1$ds && $IGZIP -Nd $file1$ds && $DIFF $file1 $TEST_FILE || ret=1
+pass_check $ret "Decompress name with no-name info"
+clear_dir
+
+ret=0
+cp -p $TEST_FILE $file1 && sleep 1 &&\
+$IGZIP -N $file1 -o $file1$ds &&  $IGZIP -Nfqd $file1$ds  || ret=1
+TIME_ORIG=$(stat --printf=\("%Y\n"\) $TEST_FILE)
+TIME_NEW=$(stat --printf=\("%Y\n"\) $file1)
+if [ "$TIME_ORIG" != "$TIME_NEW" ] ; then
+    ret=1
+fi
+pass_check $ret "Decompress with name info"
+clear_dir
+
 echo "Passed all cli checks"
 cleanup 0

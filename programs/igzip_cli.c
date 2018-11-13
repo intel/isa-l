@@ -59,7 +59,13 @@
 #define BUF_SIZE 1024
 #define BLOCK_SIZE (1024 * 1024)
 
+#define MAX_FILEPATH_BUF 4096
+
 #define UNIX 3
+
+#define NAME_DEFAULT 0
+#define NO_NAME 1
+#define YES_NAME 2
 
 #define LEVEL_DEFAULT 2
 #define DEFAULT_SUFFIX_LEN 3
@@ -152,6 +158,7 @@ struct cli_options {
 	int force;
 	int quiet_level;
 	int verbose_level;
+	int name;
 };
 
 struct cli_options global_options;
@@ -172,6 +179,7 @@ void init_options(struct cli_options *options)
 	options->quiet_level = 0;
 	options->verbose_level = 0;
 	options->verbose_level = 0;
+	options->name = NAME_DEFAULT;
 };
 
 int is_interactive(void)
@@ -258,6 +266,8 @@ int usage(int exit_code)
 		  " -S, --suffix <.suf>  suffix to use while (de)compressing\n"
 		  " -V, --version        show version number\n"
 		  " -v, --verbose        verbose mode\n"
+		  " -N, --name           save/use file name and timestamp in compress/decompress\n"
+		  " -n, --no-name        do not save/use file name and timestamp in compress/decompress\n"
 		  " -q, --quiet          suppress warnings\n\n"
 		  "with no infile, or when infile is - , read standard input\n\n",
 		  ISAL_DEF_MAX_LEVEL);
@@ -448,9 +458,11 @@ int compress_file(void)
 	level_buf = malloc_safe(level_size);
 
 	isal_gzip_header_init(&gz_hdr);
-	gz_hdr.time = get_posix_filetime(in);
+	if (global_options.name == NAME_DEFAULT || global_options.name == YES_NAME) {
+		gz_hdr.time = get_posix_filetime(in);
+		gz_hdr.name = infile_name;
+	}
 	gz_hdr.os = UNIX;
-	gz_hdr.name = infile_name;
 	gz_hdr.name_buf_len = infile_name_len + 1;
 
 	isal_deflate_init(&stream);
@@ -524,7 +536,8 @@ int decompress_file(void)
 	size_t inbuf_size, outbuf_size;
 	struct inflate_state state;
 	struct isal_gzip_header gz_hdr;
-	int ret = 0, success = 0;
+	const int terminal = 0, implicit = 1, stripped = 2;
+	int ret = 0, success = 0, outfile_type = terminal;
 
 	char *infile_name = global_options.infile_name, *outfile_name =
 	    global_options.outfile_name;
@@ -541,45 +554,44 @@ int decompress_file(void)
 		infile_name_len = 0;
 	}
 
-	if (outfile_name == NULL && infile_name != NULL && !global_options.use_stdout) {
-		while (suffix_index < sizeof(default_suffixes) / sizeof(*default_suffixes)) {
-			if (suffix == NULL) {
-				suffix = default_suffixes[suffix_index];
-				suffix_len = default_suffixes_lens[suffix_index];
-				suffix_index++;
+	if (outfile_name == NULL && !global_options.use_stdout) {
+		if (infile_name != NULL) {
+			outfile_type = stripped;
+			while (suffix_index <
+			       sizeof(default_suffixes) / sizeof(*default_suffixes)) {
+				if (suffix == NULL) {
+					suffix = default_suffixes[suffix_index];
+					suffix_len = default_suffixes_lens[suffix_index];
+					suffix_index++;
+				}
+
+				outfile_name_len = infile_name_len - suffix_len;
+				if (infile_name_len >= suffix_len
+				    && memcmp(infile_name + outfile_name_len, suffix,
+					      suffix_len) == 0)
+					break;
+				suffix = NULL;
+				suffix_len = 0;
 			}
 
-			outfile_name_len = infile_name_len - suffix_len;
-			if (infile_name_len >= suffix_len
-			    && memcmp(infile_name + outfile_name_len, suffix, suffix_len) == 0)
-				break;
-			suffix = NULL;
-			suffix_len = 0;
+			if (suffix == NULL) {
+				log_print(ERROR, "igzip: %s: unknown suffix -- ignored\n",
+					  infile_name);
+				return 1;
+			}
 		}
-
-		if (suffix == NULL) {
-			log_print(ERROR, "igzip: %s: unknown suffix -- ignored\n",
-				  infile_name);
-			return 1;
+		if (global_options.name == YES_NAME) {
+			outfile_name_len = 0;
+			outfile_type = implicit;
 		}
-
-		outfile_name = malloc_safe(outfile_name_len + 1);
-		memcpy(outfile_name, infile_name, outfile_name_len);
-		outfile_name[outfile_name_len] = 0;
+		if (outfile_type != terminal)
+			outfile_name = malloc_safe(outfile_name_len >=
+						   MAX_FILEPATH_BUF ? outfile_name_len +
+						   1 : MAX_FILEPATH_BUF);
 	}
 
 	open_in_file(&in, infile_name);
 	if (in == NULL)
-		goto decompress_file_cleanup;
-
-	if (infile_name_len != 0 && infile_name_len == outfile_name_len
-	    && strncmp(infile_name, outfile_name, infile_name_len) == 0) {
-		log_print(ERROR, "igzip: Error input and output file names must differ\n");
-		goto decompress_file_cleanup;
-	}
-
-	open_out_file(&out, outfile_name);
-	if (out == NULL)
 		goto decompress_file_cleanup;
 
 	file_time = get_posix_filetime(in);
@@ -591,6 +603,11 @@ int decompress_file(void)
 	outbuf = malloc_safe(outbuf_size);
 
 	isal_gzip_header_init(&gz_hdr);
+	if (outfile_type == implicit) {
+		gz_hdr.name = outfile_name;
+		gz_hdr.name_buf_len = MAX_FILEPATH_BUF;
+	}
+
 	isal_inflate_init(&state);
 	state.crc_flag = IGZIP_GZIP_NO_HDR;
 	state.next_in = inbuf;
@@ -602,6 +619,25 @@ int decompress_file(void)
 			  infile_name);
 		goto decompress_file_cleanup;
 	}
+
+	if (outfile_type == implicit)
+		file_time = gz_hdr.time;
+
+	if (outfile_type == stripped || (outfile_type == implicit && outfile_name[0] == 0)) {
+		outfile_name_len = infile_name_len - suffix_len;
+		memcpy(outfile_name, infile_name, outfile_name_len);
+		outfile_name[outfile_name_len] = 0;
+	}
+
+	if (infile_name_len != 0 && infile_name_len == outfile_name_len
+	    && strncmp(infile_name, outfile_name, infile_name_len) == 0) {
+		log_print(ERROR, "igzip: Error input and output file names must differ\n");
+		goto decompress_file_cleanup;
+	}
+
+	open_out_file(&out, outfile_name);
+	if (out == NULL)
+		goto decompress_file_cleanup;
 
 	do {
 		if (state.avail_in == 0) {
@@ -659,7 +695,7 @@ int decompress_file(void)
 int main(int argc, char *argv[])
 {
 	int c;
-	char optstring[] = "hcdz0123456789o:S:kfqVv";
+	char optstring[] = "hcdz0123456789o:S:kfqVvNn";
 	int long_only_flag;
 	int ret = 0;
 	int bad_option = 0;
@@ -682,10 +718,11 @@ int main(int argc, char *argv[])
 		{"quiet", no_argument, NULL, 'q'},
 		{"version", no_argument, NULL, 'V'},
 		{"verbose", no_argument, NULL, 'v'},
+		{"no-name", no_argument, NULL, 'n'},
+		{"name", no_argument, NULL, 'N'},
+
 		/* Possible future extensions
 		   {"test", no_argument, NULL, 't'},
-		   {"no-name", no_argument, NULL, 'n'},
-		   {"name", no_argument, NULL, 'N'},
 		   {"recursive, no_argument, NULL, 'r'},
 		   {"check", no_argument, NULL, 'C'},
 		   {"no-check", no_argument, NULL, 0},
@@ -754,6 +791,12 @@ int main(int argc, char *argv[])
 		case 'V':
 			print_version();
 			return 0;
+		case 'N':
+			global_options.name = YES_NAME;
+			break;
+		case 'n':
+			global_options.name = NO_NAME;
+			break;
 		case 'h':
 			usage(0);
 		default:
