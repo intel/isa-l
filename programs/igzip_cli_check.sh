@@ -174,5 +174,20 @@ $IGZIP -dq $file1 &> /dev/null && ret=1
 pass_check $ret "Quiet will not overwrite"
 clear_dir
 
+# Input file and output file cannot be the same
+ret=0
+cp $TEST_FILE $file1 && $IGZIP $file1 -o $file1 &> /dev/null && ret=1
+$DIFF $TEST_FILE $file1  &> /dev/null || ret=1
+pass_check $ret "No in place compression"
+clear_dir
+
+# Input file and output file cannot be the same
+ret=0
+cp $TEST_FILE $file1 && $IGZIP $file1 -o $file1$ds &> /dev/null || ret=1
+$IGZIP -do $file1 $file1 &> /dev/null && ret=1
+$DIFF $TEST_FILE $file1  &> /dev/null || ret=1
+pass_check $ret "No in place decompression"
+clear_dir
+
 echo "Passed all cli checks"
 cleanup 0

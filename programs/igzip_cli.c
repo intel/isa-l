@@ -364,20 +364,18 @@ size_t fwrite_safe(void *buf, size_t word_size, size_t buf_size, FILE * out, cha
 	return write_size;
 }
 
-void open_files(FILE ** in, FILE ** out, char *infile_name, size_t infile_name_len,
-		char *outfile_name)
+void open_in_file(FILE ** in, char *infile_name)
 {
 	*in = NULL;
-	*out = NULL;
-
 	if (infile_name == NULL)
 		*in = stdin;
 	else
 		*in = fopen_safe(infile_name, "rb");
+}
 
-	if (*in == NULL)
-		return;
-
+void open_out_file(FILE ** out, char *outfile_name)
+{
+	*out = NULL;
 	if (global_options.use_stdout)
 		*out = stdout;
 	else if (outfile_name != NULL)
@@ -404,7 +402,9 @@ int compress_file(void)
 	    global_options.outfile_name;
 	char *suffix = global_options.suffix;
 	size_t infile_name_len = global_options.infile_name_len;
+	size_t outfile_name_len = global_options.outfile_name_len;
 	size_t suffix_len = global_options.suffix_len;
+
 	int level = global_options.level;
 
 	if (suffix == NULL) {
@@ -419,13 +419,24 @@ int compress_file(void)
 	}
 
 	if (outfile_name == NULL && infile_name != NULL && !global_options.use_stdout) {
-		outfile_name = malloc_safe(infile_name_len + suffix_len + 1);
+		outfile_name_len = infile_name_len + suffix_len;
+		outfile_name = malloc_safe(outfile_name_len + 1);
 		strcpy(outfile_name, infile_name);
 		strcat(outfile_name, suffix);
 	}
 
-	open_files(&in, &out, infile_name, infile_name_len, outfile_name);
-	if (in == NULL || out == NULL)
+	open_in_file(&in, infile_name);
+	if (in == NULL)
+		goto compress_file_cleanup;
+
+	if (infile_name_len != 0 && infile_name_len == outfile_name_len
+	    && strncmp(infile_name, outfile_name, infile_name_len) == 0) {
+		log_print(ERROR, "igzip: Error input and output file names must differ\n");
+		goto compress_file_cleanup;
+	}
+
+	open_out_file(&out, outfile_name);
+	if (out == NULL)
 		goto compress_file_cleanup;
 
 	inbuf_size = BLOCK_SIZE;
@@ -557,8 +568,18 @@ int decompress_file(void)
 		outfile_name[outfile_name_len] = 0;
 	}
 
-	open_files(&in, &out, infile_name, infile_name_len, outfile_name);
-	if (in == NULL || out == NULL)
+	open_in_file(&in, infile_name);
+	if (in == NULL)
+		goto decompress_file_cleanup;
+
+	if (infile_name_len != 0 && infile_name_len == outfile_name_len
+	    && strncmp(infile_name, outfile_name, infile_name_len) == 0) {
+		log_print(ERROR, "igzip: Error input and output file names must differ\n");
+		goto decompress_file_cleanup;
+	}
+
+	open_out_file(&out, outfile_name);
+	if (out == NULL)
 		goto decompress_file_cleanup;
 
 	file_time = get_posix_filetime(in);
