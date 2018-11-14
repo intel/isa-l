@@ -71,13 +71,14 @@ ARFLAGS_win64 = -out:$@
 # arch=mingw build options
 ASFLAGS_mingw = -f win64
 ARFLAGS_mingw = cr $@
-LDFLAGS_mingw = -Wl,--force-exe-suffix
 
 LDFLAGS_so = -Wl,-soname,$(soname)
 
 ifeq ($(arch),mingw)
   CC=x86_64-w64-mingw32-gcc
   AR=x86_64-w64-mingw32-ar
+  EXT=.exe
+  CLEANFILES+=*.exe
 endif
 
 # arch=noarch build options
@@ -98,6 +99,7 @@ CFLAGS   = $(CFLAGS_$(arch)) $(CFLAGS_$(CC)) $(DEBUG) -O2 $(DEFINES) $(INCLUDE)
 ASFLAGS  = $(ASFLAGS_$(arch)) $(ASFLAGS_$(CC)) $(DEBUG_$(AS)) $(DEFINES) $(INCLUDE)
 ARFLAGS  = $(ARFLAGS_$(arch))
 DEFINES += $(addprefix -D , $D)
+CLEANFILES += $(O) *.o *.a $(all_tests) $(bin_PROGRAMS) $(lib_name) $(so_lib_name) $(all_llvm_fuzz_tests)
 
 lsrc += $(lsrc_$(host_cpu))
 O = bin
@@ -163,7 +165,7 @@ $(O): ; mkdir -p $(O)
 
 # Build rule to run tests
 $(addsuffix .run,$(all_tests)): %.run : %
-	$(SIM) ./$<
+	$(SIM) ./$<$(EXT)
 	@echo Completed run: $<
 
 # Other build rules
@@ -299,7 +301,7 @@ perf_report:
 
 clean:
 	@echo Cleaning up
-	@$(RM) -r $(O) *.o *.a $(all_tests) $(bin_PROGRAMS) $(lib_name) $(so_lib_name) $(all_llvm_fuzz_tests)
+	@$(RM) -r $(CLEANFILES)
 
 
 doc: isa-l.h
