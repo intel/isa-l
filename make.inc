@@ -45,7 +45,6 @@ arch ?= $(shell uname | grep -v -e Linux -e BSD )
 
 CC  = gcc
 AS  = yasm
-SIM = sde $(SIMFLAGS) --
 AWK = awk
 
 DEBUG      = -g
@@ -77,6 +76,8 @@ LDFLAGS_so = -Wl,-soname,$(soname)
 ifeq ($(arch),mingw)
   CC=x86_64-w64-mingw32-gcc
   AR=x86_64-w64-mingw32-ar
+  LDFLAGS += -Wl,--force-exe-suffix
+  SIM=wine
   EXT=.exe
   CLEANFILES+=*.exe
 endif
@@ -155,8 +156,8 @@ llvm_fuzz_tests: $(all_llvm_fuzz_tests)
 tests: $(all_unit_tests)
 perfs: $(all_perf_tests)
 checks: $(all_check_tests)
-check test perf: SIM=
-trace: SIMFLAGS = -debugtrace
+trace: SIM=sde -debugtrace --
+sim: SIM=sde --
 check test sim:
 	@echo Finished running $@
 
