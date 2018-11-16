@@ -260,7 +260,7 @@ int isal_deflate_stateful_round(struct isal_zstream *stream, uint8_t * outbuf,
 				uint8_t * level_buf, uint32_t level_buf_size, int flush_type)
 {
 	uint64_t inbuf_remaining;
-	int check;
+	int check = COMP_OK;
 
 	/* Setup stream for stateful compression */
 	inbuf_remaining = inbuf_size;
@@ -275,7 +275,7 @@ int isal_deflate_stateful_round(struct isal_zstream *stream, uint8_t * outbuf,
 
 	/* Keep compressing so long as more data is available and no error has
 	 * been hit */
-	while (ISAL_DECOMP_OK == check && inbuf_remaining > in_block_size) {
+	while (COMP_OK == check && inbuf_remaining > in_block_size) {
 		/* Setup next in buffer, assumes out buffer is sufficiently
 		 * large */
 		stream->avail_in = in_block_size;
@@ -286,14 +286,14 @@ int isal_deflate_stateful_round(struct isal_zstream *stream, uint8_t * outbuf,
 	}
 
 	/* Finish compressing all remaining input */
-	if (ISAL_DECOMP_OK == check) {
+	if (COMP_OK == check) {
 		stream->avail_in = inbuf_remaining;
 		stream->end_of_stream = 1;
 		check = isal_deflate(stream);
 	}
 
 	/* Verify Compression Success */
-	if (ISAL_DECOMP_OK != check || stream->avail_in > 0)
+	if (COMP_OK != check || stream->avail_in > 0)
 		return 1;
 
 	return 0;
@@ -303,7 +303,7 @@ int isal_inflate_stateful_round(struct inflate_state *state, uint8_t * inbuf,
 				uint32_t inbuf_size, uint32_t in_block_size, uint8_t * outbuf,
 				uint32_t outbuf_size)
 {
-	int check = 0;
+	int check = ISAL_DECOMP_OK;
 	uint64_t inbuf_remaining;
 
 	isal_inflate_init(state);
