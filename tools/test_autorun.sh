@@ -13,7 +13,7 @@ cd "$src"
 
 # Echo environment info
 if test -d .git; then
-    branch=$(git describe)
+    branch=$(git describe --always)
     commitid=$(git rev-parse HEAD)
     brief=$(git log -1 --format='%s')
     branch_changes=$(git diff --shortstat)
