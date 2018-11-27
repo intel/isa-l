@@ -358,7 +358,7 @@ struct isal_zstate {
 	uint32_t hash_mask;
 	enum isal_zstate_state state;	//!< Current state in processing the data stream
 	struct BitBuf2 bitbuf;	//!< Bit Buffer
-	uint32_t crc;		//!< Current crc
+	uint32_t crc;		//!< Current checksum without finalize step if any (adler)
 	uint8_t has_wrap_hdr;	//!< keeps track of wrapper header
 	uint8_t has_eob_hdr;	//!< keeps track of eob hdr (with BFINAL set)
 	uint8_t has_eob;	//!< keeps track of eob on the last deflate block
@@ -511,7 +511,7 @@ struct inflate_state {
 	uint32_t dict_length;	//!< Length of dictionary used
 	uint32_t bfinal;	//!< Flag identifying final block
 	uint32_t crc_flag;	//!< Flag identifying whether to track of crc
-	uint32_t crc;		//!< Contains crc of output if crc_flag is set
+	uint32_t crc;		//!< Contains crc or adler32 of output if crc_flag is set
 	uint32_t hist_bits; //!< Log base 2 of maximum lookback distance
 	union {
 		int32_t type0_block_len;	//!< Length left to read of type 0 block when outbuffer overflow occured
@@ -727,7 +727,8 @@ int isal_deflate_set_dict(struct isal_zstream *stream, uint8_t *dict, uint32_t d
  *
  * If the gzip_flag is set to IGZIP_GZIP, a generic gzip header and the gzip
  * trailer are written around the deflate compressed data. If gzip_flag is set
- * to IGZIP_GZIP_NO_HDR, then only the gzip trailer is written.
+ * to IGZIP_GZIP_NO_HDR, then only the gzip trailer is written. A full-featured
+ * header is supported by the isal_write_{gzip,zlib}_header() functions.
  *
  * @param  stream Structure holding state information on the compression streams.
  * @return COMP_OK (if everything is ok),
@@ -855,19 +856,22 @@ int isal_read_zlib_header (struct inflate_state *state, struct isal_zlib_header 
  * (updating next_out and avail_out). The function returns when the input buffer
  * is empty, the output buffer is full, invalid data is found, or in the case of
  * zlib formatted data if a dictionary is specified. The current state of the
- * decompression on exit can be read from state->block-state. If the crc_flag is
- * set to ISAL_GZIP_NO_HDR the gzip crc of the output is stored in
- * state->crc. Alternatively, if the crc_flag is set to ISAL_ZLIB_NO_HDR the
- * adler32 of the output is stored in state->crc. When the crc_flag is set to
- * ISAL_GZIP_NO_HDR_VER or ISAL_ZLIB_NO_HDR_VER, the behaviour is the same,
- * except the checksum is verified with the checksum after immediately followin
+ * decompression on exit can be read from state->block-state.
+ *
+ * If the crc_flag is set to ISAL_GZIP_NO_HDR the gzip crc of the output is
+ * stored in state->crc. Alternatively, if the crc_flag is set to
+ * ISAL_ZLIB_NO_HDR the adler32 of the output is stored in state->crc (checksum
+ * may not be updated until decompression is complete). When the crc_flag is set
+ * to ISAL_GZIP_NO_HDR_VER or ISAL_ZLIB_NO_HDR_VER, the behavior is the same,
+ * except the checksum is verified with the checksum after immediately following
  * the deflate data. If the crc_flag is set to ISAL_GZIP or ISAL_ZLIB, the
  * gzip/zlib header is parsed, state->crc is set to the appropriate checksum,
- * and the checksum is verfied. If the crc_flag is set to ISAL_DEFLATE
- * (default), then the data is treated as a raw deflate block. The element
- * state->hist_bits has values from 0 to 15, where values of 1 to 15 are the log
- * base 2 size of the matching window and 0 is the default with maximum history
- * size.
+ * and the checksum is verified. If the crc_flag is set to ISAL_DEFLATE
+ * (default), then the data is treated as a raw deflate block.
+ *
+ * The element state->hist_bits has values from 0 to 15, where values of 1 to 15
+ * are the log base 2 size of the matching window and 0 is the default with
+ * maximum history size.
  *
  * If a dictionary is required, a call to isal_inflate_set_dict will set the
  * dictionary.
