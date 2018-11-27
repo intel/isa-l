@@ -182,7 +182,7 @@ section .text
 %define xp6    xmm7
 
 align 16
-global gf_6vect_dot_prod_avx:function
+global gf_6vect_dot_prod_avx:ISAL_SYM_TYPE_FUNCTION
 func(gf_6vect_dot_prod_avx)
 	FUNC_SAVE
 	sub	len, 16

@@ -184,7 +184,7 @@ section .text
 %define xp5    xmm14
 
 align 16
-global gf_5vect_dot_prod_sse:function
+global gf_5vect_dot_prod_sse:ISAL_SYM_TYPE_FUNCTION
 func(gf_5vect_dot_prod_sse)
 	FUNC_SAVE
 	sub	len, 16

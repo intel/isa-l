@@ -159,7 +159,7 @@ section .text
 %define xtmpl5    zmm23
 
 align 16
-global gf_4vect_mad_avx512:function
+global gf_4vect_mad_avx512:ISAL_SYM_TYPE_FUNCTION
 func(gf_4vect_mad_avx512)
 	FUNC_SAVE
 	sub	len, 64

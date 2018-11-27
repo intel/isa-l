@@ -65,7 +65,7 @@ section .text
 
 
 align 16
-global crc64_iso_refl_by8:function
+global crc64_iso_refl_by8:ISAL_SYM_TYPE_FUNCTION
 crc64_iso_refl_by8:
         ; uint64_t c = crc ^ 0xffffffff,ffffffffL;
 	not arg1

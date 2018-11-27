@@ -104,7 +104,7 @@ default rel
 %define xdata1	xmm3
 %define xsa	xmm4
 
-global adler32_sse:function
+global adler32_sse:ISAL_SYM_TYPE_FUNCTION
 func(adler32_sse)
 	FUNC_SAVE
 

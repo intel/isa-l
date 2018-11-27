@@ -152,7 +152,7 @@ section .text
 %define xmask0f   zmm17
 
 align 16
-global gf_3vect_mad_avx512:function
+global gf_3vect_mad_avx512:ISAL_SYM_TYPE_FUNCTION
 func(gf_3vect_mad_avx512)
 	FUNC_SAVE
 	sub	len, 64

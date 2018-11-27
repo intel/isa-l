@@ -184,7 +184,7 @@ section .text
 
 
 align 16
-global gf_6vect_mad_avx:function
+global gf_6vect_mad_avx:ISAL_SYM_TYPE_FUNCTION
 func(gf_6vect_mad_avx)
 	FUNC_SAVE
 	sub	len, 16

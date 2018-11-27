@@ -100,7 +100,7 @@ default rel
 section .text
 
 align 16
-global xor_gen_avx:function
+global xor_gen_avx:ISAL_SYM_TYPE_FUNCTION
 func(xor_gen_avx)
 
 	FUNC_SAVE

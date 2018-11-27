@@ -139,7 +139,7 @@ section .text
 %define xtmpd  ymm5
 
 align 16
-global gf_vect_mad_avx2:function
+global gf_vect_mad_avx2:ISAL_SYM_TYPE_FUNCTION
 func(gf_vect_mad_avx2)
 	FUNC_SAVE
 	sub	len, 32

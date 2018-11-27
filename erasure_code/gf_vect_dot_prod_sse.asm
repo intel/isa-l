@@ -194,7 +194,7 @@ section .text
 %define xp     xmm2
 
 align 16
-global gf_vect_dot_prod_sse:function
+global gf_vect_dot_prod_sse:ISAL_SYM_TYPE_FUNCTION
 func(gf_vect_dot_prod_sse)
 	FUNC_SAVE
 	SLDR 	len, len_m

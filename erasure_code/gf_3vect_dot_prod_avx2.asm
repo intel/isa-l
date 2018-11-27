@@ -269,7 +269,7 @@ section .text
 %endif
 
 align 16
-global gf_3vect_dot_prod_avx2:function
+global gf_3vect_dot_prod_avx2:ISAL_SYM_TYPE_FUNCTION
 func(gf_3vect_dot_prod_avx2)
 	FUNC_SAVE
 	SLDR	len, len_m

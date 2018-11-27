@@ -86,7 +86,7 @@ section .text
 %endif
 
 align 16
-global  crc32_gzip_refl_by8:function
+global  crc32_gzip_refl_by8:ISAL_SYM_TYPE_FUNCTION
 crc32_gzip_refl_by8:
 
         ; unsigned long c = crc ^ 0xffffffffL;

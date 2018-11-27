@@ -169,7 +169,7 @@ section .text
 %define xd4     xtmpl1
 
 align 16
-global gf_4vect_mad_avx:function
+global gf_4vect_mad_avx:ISAL_SYM_TYPE_FUNCTION
 func(gf_4vect_mad_avx)
 	FUNC_SAVE
 	sub	len, 16

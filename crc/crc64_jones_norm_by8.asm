@@ -61,7 +61,7 @@ section .text
         %define VARIABLE_OFFSET 16*2+8
 %endif
 align 16
-global	crc64_jones_norm_by8:function
+global	crc64_jones_norm_by8:ISAL_SYM_TYPE_FUNCTION
 crc64_jones_norm_by8:
 
 	not	arg1      ;~init_crc

@@ -177,7 +177,7 @@ section .text
 
 
 align 16
-global gf_5vect_mad_sse:function
+global gf_5vect_mad_sse:ISAL_SYM_TYPE_FUNCTION
 func(gf_5vect_mad_sse)
 	FUNC_SAVE
 	sub	len, 16

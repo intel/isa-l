@@ -73,7 +73,7 @@ default rel
 section .text
 
 align 16
-global mem_zero_detect_avx:function
+global mem_zero_detect_avx:ISAL_SYM_TYPE_FUNCTION
 func(mem_zero_detect_avx)
 	FUNC_SAVE
 	mov	pos, 0

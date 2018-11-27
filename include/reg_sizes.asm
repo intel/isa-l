@@ -208,8 +208,18 @@ section .text
 %endif
 
 %ifidn __OUTPUT_FORMAT__, macho64
-%define elf64 macho64
-mac_equ equ 1
+ %define elf64 macho64
+ mac_equ equ 1
+ %ifdef __NASM_VER__
+  %define ISAL_SYM_TYPE_FUNCTION
+  %define ISAL_SYM_TYPE_DATA_INTERNAL
+ %else
+  %define ISAL_SYM_TYPE_FUNCTION function
+  %define ISAL_SYM_TYPE_DATA_INTERNAL data internal
+ %endif
+%else
+ %define ISAL_SYM_TYPE_FUNCTION function
+ %define ISAL_SYM_TYPE_DATA_INTERNAL data internal
 %endif
 
 %macro slversion 4

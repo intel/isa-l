@@ -238,7 +238,7 @@ section .text
 %endif
 
 align 16
-global gf_2vect_dot_prod_sse:function
+global gf_2vect_dot_prod_sse:ISAL_SYM_TYPE_FUNCTION
 
 func(gf_2vect_dot_prod_sse)
 	FUNC_SAVE

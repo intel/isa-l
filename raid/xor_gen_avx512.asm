@@ -103,7 +103,7 @@ default rel
 section .text
 
 align 16
-global xor_gen_avx512:function
+global xor_gen_avx512:ISAL_SYM_TYPE_FUNCTION
 func(xor_gen_avx512)
 	FUNC_SAVE
 	sub	vec, 2			;Keep as offset to last source

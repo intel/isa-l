@@ -294,7 +294,7 @@ section .text
  %define xp4    xmm5
 %endif
 align 16
-global gf_4vect_dot_prod_avx:function
+global gf_4vect_dot_prod_avx:ISAL_SYM_TYPE_FUNCTION
 func(gf_4vect_dot_prod_avx)
 	FUNC_SAVE
 	SLDR	len, len_m

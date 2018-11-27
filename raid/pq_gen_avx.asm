@@ -125,7 +125,7 @@ default rel
 section .text
 
 align 16
-global pq_gen_avx:function
+global pq_gen_avx:ISAL_SYM_TYPE_FUNCTION
 func(pq_gen_avx)
 	FUNC_SAVE
 	sub	vec, 3			;Keep as offset to last source

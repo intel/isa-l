@@ -124,7 +124,7 @@ default rel
 %define yshuf1	ymm7
 
 
-global adler32_avx2_4:function
+global adler32_avx2_4:ISAL_SYM_TYPE_FUNCTION
 func(adler32_avx2_4)
 	FUNC_SAVE
 

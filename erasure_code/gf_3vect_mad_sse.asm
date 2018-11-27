@@ -156,7 +156,7 @@ section .text
 %define xd3     xtmph1
 
 align 16
-global gf_3vect_mad_sse:function
+global gf_3vect_mad_sse:ISAL_SYM_TYPE_FUNCTION
 func(gf_3vect_mad_sse)
 	FUNC_SAVE
 	sub	len, 16

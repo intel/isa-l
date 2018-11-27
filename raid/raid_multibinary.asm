@@ -76,7 +76,7 @@ section .text
 ;;;;
 ; pq_check multibinary function
 ;;;;
-global pq_check:function
+global pq_check:ISAL_SYM_TYPE_FUNCTION
 pq_check_mbinit:
 	call	pq_check_dispatch_init
 pq_check:
@@ -108,7 +108,7 @@ pq_check_dispatch_init:
 ;;;;
 ; xor_check multibinary function
 ;;;;
-global xor_check:function
+global xor_check:ISAL_SYM_TYPE_FUNCTION
 xor_check_mbinit:
 	call    xor_check_dispatch_init
 xor_check:

@@ -137,7 +137,7 @@
 section .text
 
 align 16
-global xor_check_sse:function
+global xor_check_sse:ISAL_SYM_TYPE_FUNCTION
 func(xor_check_sse)
 	FUNC_SAVE
 %ifidn PS,8				;64-bit code

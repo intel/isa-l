@@ -137,7 +137,7 @@
 section .text
 
 align 16
-global xor_gen_sse:function
+global xor_gen_sse:ISAL_SYM_TYPE_FUNCTION
 func(xor_gen_sse)
 	FUNC_SAVE
 %ifidn PS,8				;64-bit code
