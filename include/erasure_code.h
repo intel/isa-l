@@ -264,7 +264,7 @@ void gf_vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
 /**
  * @brief GF(2^8) vector dot product with two outputs.
  *
- * Vector dot product optimized to calculate two ouputs at a time. Does two
+ * Vector dot product optimized to calculate two outputs at a time. Does two
  * GF(2^8) dot products across each byte of the input array and two constant
  * sets of coefficients to produce each byte of the outputs. Can be used for
  * erasure coding encode and decode. Function requires pre-calculation of a
@@ -286,7 +286,7 @@ void gf_2vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
 /**
  * @brief GF(2^8) vector dot product with two outputs.
  *
- * Vector dot product optimized to calculate two ouputs at a time. Does two
+ * Vector dot product optimized to calculate two outputs at a time. Does two
  * GF(2^8) dot products across each byte of the input array and two constant
  * sets of coefficients to produce each byte of the outputs. Can be used for
  * erasure coding encode and decode. Function requires pre-calculation of a
@@ -308,7 +308,7 @@ void gf_2vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
 /**
  * @brief GF(2^8) vector dot product with two outputs.
  *
- * Vector dot product optimized to calculate two ouputs at a time. Does two
+ * Vector dot product optimized to calculate two outputs at a time. Does two
  * GF(2^8) dot products across each byte of the input array and two constant
  * sets of coefficients to produce each byte of the outputs. Can be used for
  * erasure coding encode and decode. Function requires pre-calculation of a
@@ -330,7 +330,7 @@ void gf_2vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
 /**
  * @brief GF(2^8) vector dot product with three outputs.
  *
- * Vector dot product optimized to calculate three ouputs at a time. Does three
+ * Vector dot product optimized to calculate three outputs at a time. Does three
  * GF(2^8) dot products across each byte of the input array and three constant
  * sets of coefficients to produce each byte of the outputs. Can be used for
  * erasure coding encode and decode. Function requires pre-calculation of a
@@ -352,7 +352,7 @@ void gf_3vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
 /**
  * @brief GF(2^8) vector dot product with three outputs.
  *
- * Vector dot product optimized to calculate three ouputs at a time. Does three
+ * Vector dot product optimized to calculate three outputs at a time. Does three
  * GF(2^8) dot products across each byte of the input array and three constant
  * sets of coefficients to produce each byte of the outputs. Can be used for
  * erasure coding encode and decode. Function requires pre-calculation of a
@@ -374,7 +374,7 @@ void gf_3vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
 /**
  * @brief GF(2^8) vector dot product with three outputs.
  *
- * Vector dot product optimized to calculate three ouputs at a time. Does three
+ * Vector dot product optimized to calculate three outputs at a time. Does three
  * GF(2^8) dot products across each byte of the input array and three constant
  * sets of coefficients to produce each byte of the outputs. Can be used for
  * erasure coding encode and decode. Function requires pre-calculation of a
@@ -396,7 +396,7 @@ void gf_3vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
 /**
  * @brief GF(2^8) vector dot product with four outputs.
  *
- * Vector dot product optimized to calculate four ouputs at a time. Does four
+ * Vector dot product optimized to calculate four outputs at a time. Does four
  * GF(2^8) dot products across each byte of the input array and four constant
  * sets of coefficients to produce each byte of the outputs. Can be used for
  * erasure coding encode and decode. Function requires pre-calculation of a
@@ -418,7 +418,7 @@ void gf_4vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
 /**
  * @brief GF(2^8) vector dot product with four outputs.
  *
- * Vector dot product optimized to calculate four ouputs at a time. Does four
+ * Vector dot product optimized to calculate four outputs at a time. Does four
  * GF(2^8) dot products across each byte of the input array and four constant
  * sets of coefficients to produce each byte of the outputs. Can be used for
  * erasure coding encode and decode. Function requires pre-calculation of a
@@ -440,7 +440,7 @@ void gf_4vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
 /**
  * @brief GF(2^8) vector dot product with four outputs.
  *
- * Vector dot product optimized to calculate four ouputs at a time. Does four
+ * Vector dot product optimized to calculate four outputs at a time. Does four
  * GF(2^8) dot products across each byte of the input array and four constant
  * sets of coefficients to produce each byte of the outputs. Can be used for
  * erasure coding encode and decode. Function requires pre-calculation of a
@@ -462,7 +462,7 @@ void gf_4vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
 /**
  * @brief GF(2^8) vector dot product with five outputs.
  *
- * Vector dot product optimized to calculate five ouputs at a time. Does five
+ * Vector dot product optimized to calculate five outputs at a time. Does five
  * GF(2^8) dot products across each byte of the input array and five constant
  * sets of coefficients to produce each byte of the outputs. Can be used for
  * erasure coding encode and decode. Function requires pre-calculation of a
@@ -484,7 +484,7 @@ void gf_5vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
 /**
  * @brief GF(2^8) vector dot product with five outputs.
  *
- * Vector dot product optimized to calculate five ouputs at a time. Does five
+ * Vector dot product optimized to calculate five outputs at a time. Does five
  * GF(2^8) dot products across each byte of the input array and five constant
  * sets of coefficients to produce each byte of the outputs. Can be used for
  * erasure coding encode and decode. Function requires pre-calculation of a
@@ -506,7 +506,7 @@ void gf_5vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
 /**
  * @brief GF(2^8) vector dot product with five outputs.
  *
- * Vector dot product optimized to calculate five ouputs at a time. Does five
+ * Vector dot product optimized to calculate five outputs at a time. Does five
  * GF(2^8) dot products across each byte of the input array and five constant
  * sets of coefficients to produce each byte of the outputs. Can be used for
  * erasure coding encode and decode. Function requires pre-calculation of a
@@ -528,7 +528,7 @@ void gf_5vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
 /**
  * @brief GF(2^8) vector dot product with six outputs.
  *
- * Vector dot product optimized to calculate six ouputs at a time. Does six
+ * Vector dot product optimized to calculate six outputs at a time. Does six
  * GF(2^8) dot products across each byte of the input array and six constant
  * sets of coefficients to produce each byte of the outputs. Can be used for
  * erasure coding encode and decode. Function requires pre-calculation of a
@@ -550,7 +550,7 @@ void gf_6vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
 /**
  * @brief GF(2^8) vector dot product with six outputs.
  *
- * Vector dot product optimized to calculate six ouputs at a time. Does six
+ * Vector dot product optimized to calculate six outputs at a time. Does six
  * GF(2^8) dot products across each byte of the input array and six constant
  * sets of coefficients to produce each byte of the outputs. Can be used for
  * erasure coding encode and decode. Function requires pre-calculation of a
@@ -572,7 +572,7 @@ void gf_6vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
 /**
  * @brief GF(2^8) vector dot product with six outputs.
  *
- * Vector dot product optimized to calculate six ouputs at a time. Does six
+ * Vector dot product optimized to calculate six outputs at a time. Does six
  * GF(2^8) dot products across each byte of the input array and six constant
  * sets of coefficients to produce each byte of the outputs. Can be used for
  * erasure coding encode and decode. Function requires pre-calculation of a

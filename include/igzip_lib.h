@@ -53,8 +53,8 @@
  * Igzip also supports compression levels from ISAL_DEF_MIN_LEVEL to
  * ISAL_DEF_MAX_LEVEL.
  *
- * Igzip contains some behaviour configurable at compile time. These
- * configureable options are:
+ * Igzip contains some behavior configurable at compile time. These
+ * configurable options are:
  *
  * - IGZIP_HIST_SIZE - Defines the window size. The default value is 32K (note K
  *   represents 1024), but 8K is also supported. Powers of 2 which are at most
@@ -62,7 +62,7 @@
  *
  * - LONGER_HUFFTABLES - Defines whether to use a larger hufftables structure
  *   which may increase performance with smaller IGZIP_HIST_SIZE values. By
- *   default this optoin is not defined. This define sets IGZIP_HIST_SIZE to be
+ *   default this option is not defined. This define sets IGZIP_HIST_SIZE to be
  *   8 if IGZIP_HIST_SIZE > 8K.
  *
  *   As an example, to compile gzip with an 8K window size, in a terminal run
@@ -94,7 +94,7 @@ extern "C" {
 #define ISAL_LOOK_AHEAD (18 * 16)	/* Max repeat length, rounded up to 32 byte boundary */
 
 /******************************************************************************/
-/* Deflate Implemenation Specific Defines */
+/* Deflate Implementation Specific Defines */
 /******************************************************************************/
 /* Note IGZIP_HIST_SIZE must be a power of two */
 #ifndef IGZIP_HIST_SIZE
@@ -449,7 +449,7 @@ struct isal_zstream {
  * Since small_code_lookup is a lookup on DECODE_LOOKUP_SIZE bits, it must have
  * size 2^DECODE_LOOKUP_SIZE.
  *
- * To determine the amoutn of memory required for long_code_lookup, note that
+ * To determine the amount of memory required for long_code_lookup, note that
  * any element of long_code_lookup corresponds to a code, a duplicate of an
  * existing code, or a invalid code. Since deflate Huffman are stored such that
  * the code size and the code value form an increasing function, the number of
@@ -458,10 +458,10 @@ struct isal_zstream {
  * (DECODE_LOOKUP_SIZE + 1) duplicate elements. Similarly the number of invalid
  * elements is maximized at 2^(15 - DECODE_LOOKUP_SIZE) - 2^(floor((15 -
  * DECODE_LOOKUP_SIZE)/2) - 2^(ceil((15 - DECODE_LOOKUP_SIZE)/2) + 1. Thus the
- * amount of memory requried is: NUM_CODES + 2^(16 - DECODE_LOOKUP_SIZE) -
+ * amount of memory required is: NUM_CODES + 2^(16 - DECODE_LOOKUP_SIZE) -
  * (DECODE_LOOKUP_SIZE + 1) - 2^(floor((15 - DECODE_LOOKUP_SIZE)/2) -
  * 2^(ceil((15 - DECODE_LOOKUP_SIZE)/2) + 1. The values used below are those
- * valuse rounded up to the nearest 16 byte boundary
+ * values rounded up to the nearest 16 byte boundary
  *
  * Note that DECODE_LOOKUP_SIZE can be any length even though the offset in
  * small_lookup_code is 9 bits long because the increasing relationship between
@@ -514,14 +514,14 @@ struct inflate_state {
 	uint32_t crc;		//!< Contains crc or adler32 of output if crc_flag is set
 	uint32_t hist_bits; //!< Log base 2 of maximum lookback distance
 	union {
-		int32_t type0_block_len;	//!< Length left to read of type 0 block when outbuffer overflow occured
+		int32_t type0_block_len;	//!< Length left to read of type 0 block when outbuffer overflow occurred
 		int32_t count; //!< Count of bytes remaining to be parsed
 		uint32_t dict_id;
 	};
 	int32_t write_overflow_lits;
 	int32_t write_overflow_len;
-	int32_t copy_overflow_length; 	//!< Length left to copy when outbuffer overflow occured
-	int32_t copy_overflow_distance;	//!< Lookback distance when outbuffer overlow occured
+	int32_t copy_overflow_length; 	//!< Length left to copy when outbuffer overflow occurred
+	int32_t copy_overflow_distance;	//!< Lookback distance when outbuffer overflow occurred
 	int16_t wrapper_flag;
 	int16_t tmp_in_size;	//!< Number of bytes in tmp_in_buffer
 	int32_t tmp_out_valid;	//!< Number of bytes in tmp_out_buffer
@@ -611,8 +611,8 @@ void isal_gzip_header_init(struct isal_gzip_header *gz_hdr);
  * @param stream: Structure holding state information on the compression stream.
  * @param gz_hdr: Structure holding the gzip header information to encode.
  *
- * @returns Returns 0 if the header is sucessfully written, otherwise returns
- * the minimum size required to sucessfully write the gzip header to the output
+ * @returns Returns 0 if the header is successfully written, otherwise returns
+ * the minimum size required to successfully write the gzip header to the output
  * buffer.
  */
 uint32_t isal_write_gzip_header(struct isal_zstream * stream, struct isal_gzip_header *gz_hdr);
@@ -628,8 +628,8 @@ uint32_t isal_write_gzip_header(struct isal_zstream * stream, struct isal_gzip_h
  * @param stream: Structure holding state information on the compression stream.
  * @param z_hdr: Structure holding the zlib header information to encode.
  *
- * @returns Returns 0 if the header is sucessfully written, otherwise returns
- * the minimum size required to sucessfully write the zlib header to the output
+ * @returns Returns 0 if the header is successfully written, otherwise returns
+ * the minimum size required to successfully write the zlib header to the output
  * buffer.
  */
 uint32_t isal_write_zlib_header(struct isal_zstream * stream, struct isal_zlib_header *z_hdr);
@@ -638,7 +638,7 @@ uint32_t isal_write_zlib_header(struct isal_zstream * stream, struct isal_zlib_h
  * @brief Set stream to use a new Huffman code
  *
  * Sets the Huffman code to be used in compression before compression start or
- * after the sucessful completion of a SYNC_FLUSH or FULL_FLUSH. If type has
+ * after the successful completion of a SYNC_FLUSH or FULL_FLUSH. If type has
  * value IGZIP_HUFFTABLE_DEFAULT, the stream is set to use the default Huffman
  * code. If type has value IGZIP_HUFFTABLE_STATIC, the stream is set to use the
  * deflate standard static Huffman code, or if type has value
@@ -676,7 +676,7 @@ void isal_deflate_stateless_init(struct isal_zstream *stream);
  *
  * @param stream Structure holding state information on the compression streams.
  * @param dict: Array containing dictionary to use.
- * @param dict_len: Lenth of dict.
+ * @param dict_len: Length of dict.
  * @returns COMP_OK,
  *          ISAL_INVALID_STATE (dictionary could not be set)
  */
@@ -749,7 +749,7 @@ int isal_deflate(struct isal_zstream *stream);
  * block.
  *
  * When the compression level is set to 1, unlike in isal_deflate(), level_buf
- * may be optionally set depending on what what permormance is desired.
+ * may be optionally set depending on what what performance is desired.
  *
  * For stateless the flush types NO_FLUSH and FULL_FLUSH are supported.
  * FULL_FLUSH will byte align the output deflate block so additional blocks can
@@ -797,7 +797,7 @@ void isal_inflate_reset(struct inflate_state *state);
  *
  * @param state: Structure holding state information on the decompression stream.
  * @param dict: Array containing dictionary to use.
- * @param dict_len: Lenth of dict.
+ * @param dict_len: Length of dict.
  * @returns COMP_OK,
  *          ISAL_INVALID_STATE (dictionary could not be set)
  */
