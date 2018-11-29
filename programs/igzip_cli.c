@@ -732,8 +732,6 @@ int main(int argc, char *argv[])
 		{"test", no_argument, NULL, 't'},
 		/* Possible future extensions
 		   {"recursive, no_argument, NULL, 'r'},
-		   {"check", no_argument, NULL, 'C'},
-		   {"no-check", no_argument, NULL, 0},
 		   {"list", no_argument, NULL, 'l'},
 		   {"benchmark", optional_argument, NULL, 'b'},
 		   {"benchmark_end", required_argument, NULL, 'e'},
