@@ -205,5 +205,14 @@ fi
 pass_check $ret "Decompress with name info"
 clear_dir
 
+ret=0
+cp -p $TEST_FILE $file1 && touch $file2\\
+$IGZIP $file1 -o $file1$ds || ret=1
+$IGZIP -t $file1$ds || ret=1
+$IGZIP -t $file2 &> /dev/null && ret=1
+cp $file1$ds $file2 && $IGZIP -t $file1$ds || ret=1
+pass_check $ret "Test test"
+clear_dir
+
 echo "Passed all cli checks"
 cleanup 0

@@ -67,6 +67,9 @@
 #define NO_NAME 1
 #define YES_NAME 2
 
+#define NO_TEST 0
+#define TEST 1
+
 #define LEVEL_DEFAULT 2
 #define DEFAULT_SUFFIX_LEN 3
 char *default_suffixes[] = { ".gz", ".z" };
@@ -159,6 +162,7 @@ struct cli_options {
 	int quiet_level;
 	int verbose_level;
 	int name;
+	int test;
 };
 
 struct cli_options global_options;
@@ -180,6 +184,7 @@ void init_options(struct cli_options *options)
 	options->verbose_level = 0;
 	options->verbose_level = 0;
 	options->name = NAME_DEFAULT;
+	options->test = NO_TEST;
 };
 
 int is_interactive(void)
@@ -268,6 +273,7 @@ int usage(int exit_code)
 		  " -v, --verbose        verbose mode\n"
 		  " -N, --name           save/use file name and timestamp in compress/decompress\n"
 		  " -n, --no-name        do not save/use file name and timestamp in compress/decompress\n"
+		  " -t, --test           test compressed file integrity\n"
 		  " -q, --quiet          suppress warnings\n\n"
 		  "with no infile, or when infile is - , read standard input\n\n",
 		  ISAL_DEF_MAX_LEVEL);
@@ -574,7 +580,7 @@ int decompress_file(void)
 				suffix_len = 0;
 			}
 
-			if (suffix == NULL) {
+			if (suffix == NULL && global_options.test == NO_TEST) {
 				log_print(ERROR, "igzip: %s: unknown suffix -- ignored\n",
 					  infile_name);
 				return 1;
@@ -635,9 +641,11 @@ int decompress_file(void)
 		goto decompress_file_cleanup;
 	}
 
-	open_out_file(&out, outfile_name);
-	if (out == NULL)
-		goto decompress_file_cleanup;
+	if (global_options.test == NO_TEST) {
+		open_out_file(&out, outfile_name);
+		if (out == NULL)
+			goto decompress_file_cleanup;
+	}
 
 	do {
 		if (state.avail_in == 0) {
@@ -657,7 +665,8 @@ int decompress_file(void)
 			goto decompress_file_cleanup;
 		}
 
-		fwrite_safe(outbuf, 1, state.next_out - outbuf, out, outfile_name);
+		if (out != NULL)
+			fwrite_safe(outbuf, 1, state.next_out - outbuf, out, outfile_name);
 
 	} while (!feof(in) || state.avail_out == 0);
 
@@ -695,7 +704,7 @@ int decompress_file(void)
 int main(int argc, char *argv[])
 {
 	int c;
-	char optstring[] = "hcdz0123456789o:S:kfqVvNn";
+	char optstring[] = "hcdz0123456789o:S:kfqVvNnt";
 	int long_only_flag;
 	int ret = 0;
 	int bad_option = 0;
@@ -720,9 +729,8 @@ int main(int argc, char *argv[])
 		{"verbose", no_argument, NULL, 'v'},
 		{"no-name", no_argument, NULL, 'n'},
 		{"name", no_argument, NULL, 'N'},
-
+		{"test", no_argument, NULL, 't'},
 		/* Possible future extensions
-		   {"test", no_argument, NULL, 't'},
 		   {"recursive, no_argument, NULL, 'r'},
 		   {"check", no_argument, NULL, 'C'},
 		   {"no-check", no_argument, NULL, 0},
@@ -796,6 +804,10 @@ int main(int argc, char *argv[])
 			break;
 		case 'n':
 			global_options.name = NO_NAME;
+			break;
+		case 't':
+			global_options.test = TEST;
+			global_options.mode = DECOMPRESS_MODE;
 			break;
 		case 'h':
 			usage(0);
