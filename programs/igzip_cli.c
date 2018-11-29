@@ -472,6 +472,7 @@ int compress_file(void)
 	gz_hdr.name_buf_len = infile_name_len + 1;
 
 	isal_deflate_init(&stream);
+	stream.avail_in = 0;
 	stream.flush = NO_FLUSH;
 	stream.level = level;
 	stream.level_buf = level_buf;
