@@ -211,6 +211,8 @@ $IGZIP $file1 -o $file1$ds || ret=1
 $IGZIP -t $file1$ds || ret=1
 $IGZIP -t $file2 &> /dev/null && ret=1
 cp $file1$ds $file2 && $IGZIP -t $file1$ds || ret=1
+truncate -s -1 $file1$ds
+$IGZIP -t $file1$ds &> /dev/null && ret=1
 pass_check $ret "Test test"
 clear_dir
 

@@ -616,7 +616,7 @@ int decompress_file(void)
 	}
 
 	isal_inflate_init(&state);
-	state.crc_flag = IGZIP_GZIP_NO_HDR;
+	state.crc_flag = ISAL_GZIP_NO_HDR_VER;
 	state.next_in = inbuf;
 	state.avail_in = fread_safe(state.next_in, 1, inbuf_size, in, infile_name);
 
