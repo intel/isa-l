@@ -1,4 +1,4 @@
-v2.24 Intel Intelligent Storage Acceleration Library Release Notes
+v2.25 Intel Intelligent Storage Acceleration Library Release Notes
 ==================================================================
 
 RELEASE NOTE CONTENTS
@@ -15,6 +15,10 @@ RELEASE NOTE CONTENTS
 
 2. FIXED ISSUES
 ---------------
+v2.25
+
+* Fix for nasm on Mac OS X/darwin.
+
 v2.24
 
 * Fix for crc32_iscsi().  Potential read-over for small buffer.  For an input
@@ -92,6 +96,17 @@ v2.10
 
 3. CHANGE LOG & FEATURES ADDED
 ------------------------------
+v2.25
+
+* Igzip performance improvements and features.
+  - Performance improvements for uncompressable files. Random or uncompressable
+    files can be up to 3x faster in level 1 or 2 compression.
+  - Additional small file performance improvments.
+  - New options in igzip cli: use name from header or not, test compressed file.
+
+* Multi-arch autoconf script.
+  - Autoconf should detect architecture and run base functions at minimum.
+
 v2.24
 
 * Igzip small file performance improvements and new features.
