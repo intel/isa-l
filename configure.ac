@@ -33,6 +33,16 @@ AM_CONDITIONAL([CPU_X86_64], [test "$CPU" = "x86_64"])
 AM_CONDITIONAL([CPU_X86_32], [test "$CPU" = "x86_32"])
 AM_CONDITIONAL([CPU_UNDEFINED], [test "x$CPU" = "x"])
 
+if test "$CPU" = "x86_64"; then
+   is_x86=yes
+else
+   if test "$CPU" = "x86_32"; then
+      is_x86=yes
+   else
+      is_x86=no
+   fi
+fi
+
 # Check for programs
 AC_PROG_CC_STDC
 AC_USE_SYSTEM_EXTENSIONS
@@ -50,76 +60,80 @@ AS_IF([test "x$enable_debug" = "xyes"], [
         AC_DEFINE(ENABLE_DEBUG, [1], [Debug messages.])
 ])
 
-# Check for yasm and yasm features
-AC_CHECK_PROG(HAVE_YASM, yasm, yes, no)
-if test "$HAVE_YASM" = "no"; then
-  AC_MSG_RESULT([no yasm])
-else
-  AC_MSG_CHECKING([for modern yasm])
-  AC_LANG_CONFTEST([AC_LANG_SOURCE([[vmovdqa %xmm0, %xmm1;]])])
-  if yasm -f elf64 -p gas conftest.c ; then
-    with_modern_yasm=yes
-    AC_MSG_RESULT([yes])
-    AC_MSG_CHECKING([for optional yasm AVX512 support])
-    AC_LANG_CONFTEST([AC_LANG_SOURCE([[vpshufb %zmm0, %zmm1, %zmm2;]])])
-    if yasm -f elf64 -p gas conftest.c 2> /dev/null; then
-      yasm_knows_avx512=yes
+# If this build is for x86, look for yasm and nasm
+if test x"$is_x86" = x"yes"; then
+  # Check for yasm and yasm features
+  AC_CHECK_PROG(HAVE_YASM, yasm, yes, no)
+  if test "$HAVE_YASM" = "no"; then
+    AC_MSG_RESULT([no yasm])
+  else
+    AC_MSG_CHECKING([for modern yasm])
+    AC_LANG_CONFTEST([AC_LANG_SOURCE([[vmovdqa %xmm0, %xmm1;]])])
+    if yasm -f elf64 -p gas conftest.c ; then
+      with_modern_yasm=yes
       AC_MSG_RESULT([yes])
+      AC_MSG_CHECKING([for optional yasm AVX512 support])
+      AC_LANG_CONFTEST([AC_LANG_SOURCE([[vpshufb %zmm0, %zmm1, %zmm2;]])])
+      if yasm -f elf64 -p gas conftest.c 2> /dev/null; then
+        yasm_knows_avx512=yes
+        AC_MSG_RESULT([yes])
+      else
+        AC_MSG_RESULT([no])
+      fi
+    else
+      AC_MSG_FAILURE([no])
+    fi
+  fi
+
+  # Check for nasm and nasm features
+  AC_CHECK_PROG(HAVE_NASM, nasm, yes, no)
+  if test "$HAVE_NASM" = "no"; then
+    AC_MSG_RESULT([no nasm])
+  else
+    AC_MSG_CHECKING([for modern nasm])
+    AC_LANG_CONFTEST([AC_LANG_SOURCE([[pblendvb xmm2, xmm1;]])])
+    sed -i -e '/pblendvb/!d' conftest.c
+    if nasm -f elf64 conftest.c 2> /dev/null; then
+      with_modern_nasm=yes
+      AC_MSG_RESULT([yes])
+      AC_MSG_CHECKING([for optional nasm AVX512 support])
+      AC_LANG_CONFTEST([AC_LANG_SOURCE([[vinserti32x8 zmm0, ymm1, 1;]])])
+      sed -i -e '/vinsert/!d' conftest.c
+      if nasm -f elf64  conftest.c 2> /dev/null; then
+        nasm_knows_avx512=yes
+        AC_MSG_RESULT([yes])
+      else
+        AC_MSG_RESULT([no])
+      fi
     else
       AC_MSG_RESULT([no])
     fi
-  else
-    AC_MSG_FAILURE([no])
   fi
-fi
 
-# Check for nasm and nasm features
-AC_CHECK_PROG(HAVE_NASM, nasm, yes, no)
-if test "$HAVE_NASM" = "no"; then
-  AC_MSG_RESULT([no nasm])
-else
-  AC_MSG_CHECKING([for modern nasm])
-  AC_LANG_CONFTEST([AC_LANG_SOURCE([[pblendvb xmm2, xmm1;]])])
-  sed -i -e '/pblendvb/!d' conftest.c
-  if nasm -f elf64 conftest.c 2> /dev/null; then
-    with_modern_nasm=yes
-    AC_MSG_RESULT([yes])
-    AC_MSG_CHECKING([for optional nasm AVX512 support])
-    AC_LANG_CONFTEST([AC_LANG_SOURCE([[vinserti32x8 zmm0, ymm1, 1;]])])
-    sed -i -e '/vinsert/!d' conftest.c
-    if nasm -f elf64  conftest.c 2> /dev/null; then
-      nasm_knows_avx512=yes
-      AC_MSG_RESULT([yes])
+  # Pick an assembler yasm or nasm
+  if test x"$AS" = x""; then
+    if test x"$yasm_knows_avx512" = x"yes"; then
+      AS=yasm
+    elif test x"$nasm_knows_avx512" = x"yes"; then
+      AS=nasm
+    elif test x"$with_modern_yasm" = x"yes"; then
+      AS=yasm
+    elif test x"$with_modern_nasm" = x"yes"; then
+      AS=nasm
     else
-      AC_MSG_RESULT([no])
+      AC_MSG_ERROR([No modern yasm or nasm found as required. Yasm should be 1.2.0 or later, and nasm should be v2.11.01 or later (v2.13 for AVX512).])
     fi
+  fi
+  echo "Using assembler $AS"
+
+  if test \( x"$AS" = x"yasm" -a x"$yasm_knows_avx512" = x"yes" \) -o \( x"$AS" = x"nasm" -a x"$nasm_knows_avx512" = x"yes" \); then
+    AC_DEFINE(HAVE_AS_KNOWS_AVX512, [1], [Assembler can do AVX512.])
+    have_as_knows_avx512=yes
   else
-    AC_MSG_RESULT([no])
+    AC_MSG_RESULT([Assembler does not understand AVX512 opcodes.  Consider upgrading for best performance.])
   fi
 fi
 
-# Pick an assembler yasm or nasm
-if test x"$AS" = x""; then
-  if test x"$yasm_knows_avx512" = x"yes"; then
-    AS=yasm
-  elif test x"$nasm_knows_avx512" = x"yes"; then
-    AS=nasm
-  elif test x"$with_modern_yasm" = x"yes"; then
-    AS=yasm
-  elif test x"$with_modern_nasm" = x"yes"; then
-    AS=nasm
-  else
-    AC_MSG_ERROR([No modern yasm or nasm found as required. Yasm should be 1.2.0 or later, and nasm should be v2.11.01 or later (v2.13 for AVX512).])
-  fi
-fi
-echo "Using assembler $AS"
-
-if test \( x"$AS" = x"yasm" -a x"$yasm_knows_avx512" = x"yes" \) -o \( x"$AS" = x"nasm" -a x"$nasm_knows_avx512" = x"yes" \); then
-  AC_DEFINE(HAVE_AS_KNOWS_AVX512, [1], [Assembler can do AVX512.])
-  have_as_knows_avx512=yes
-else
-  AC_MSG_RESULT([Assembler does not understand AVX512 opcodes.  Consider upgrading for best performance.])
-fi
 AM_CONDITIONAL(USE_YASM, test x"$AS" = x"yasm")
 AM_CONDITIONAL(USE_NASM, test x"$AS" = x"nasm")
 AM_CONDITIONAL(WITH_AVX512, test x"$have_as_knows_avx512" = x"yes")

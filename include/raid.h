@@ -120,6 +120,8 @@ int pq_check(int vects, int len, void **array);
 
 
 /* Arch specific versions */
+// x86 only
+#if defined(__i386__) || defined(__x86_64__)
 
 /**
  * @brief Generate XOR parity vector from N sources.
@@ -236,6 +238,7 @@ int pq_gen_avx2(int vects, int len, void **array);
 
 int pq_check_sse(int vects, int len, void **array);
 
+#endif
 
 /**
  * @brief Generate P+Q parity vectors from N sources, runs baseline version.

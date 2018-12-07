@@ -43,6 +43,9 @@
 extern "C" {
 #endif
 
+// x86 only
+#if defined(__i386__) || defined(__x86_64__)
+
  /**
  * @brief GF(2^8) vector multiply by constant.
  *
@@ -84,6 +87,7 @@ int gf_vect_mul_sse(int len, unsigned char *gftbl, void *src, void *dest);
 
 int gf_vect_mul_avx(int len, unsigned char *gftbl, void *src, void *dest);
 
+#endif
 
 /**
  * @brief GF(2^8) vector multiply by constant, runs appropriate version.
