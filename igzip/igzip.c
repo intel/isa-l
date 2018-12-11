@@ -382,9 +382,14 @@ static void create_icf_block_hdr(struct isal_zstream *stream, uint8_t * start_in
 
 	memcpy(&write_buf_tmp, write_buf, sizeof(struct BitBuf2));
 
+	/* Calculate the bytes required to store a type 0 block. Need to account
+	 * for bits stored in the bitbuf. Since 3 bits correspond to the deflate
+	 * type 0 header, we need to add one byte more when the number of bits
+	 * is at least 6 mod 8. */
 	block_size = (TYPE0_BLK_HDR_LEN) * ((block_in_size + TYPE0_MAX_BLK_LEN - 1) /
 					    TYPE0_MAX_BLK_LEN) + block_in_size;
 	block_size = block_size ? block_size : TYPE0_BLK_HDR_LEN;
+	block_size += (write_buf->m_bit_count + 2) / 8;
 
 	/* Write EOB in icf_buf */
 	level_buf->hist.ll_hist[256] = 1;
