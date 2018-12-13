@@ -51,5 +51,10 @@ static inline uint64_t load_u64(uint8_t * buf) {
 	return ret;
 }
 
+static inline uintmax_t load_umax(uint8_t * buf) {
+	uintmax_t ret;
+	memcpy(&ret, buf, sizeof(ret));
+	return ret;
+}
 
 #endif

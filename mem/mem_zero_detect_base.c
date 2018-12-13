@@ -29,22 +29,22 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "unaligned.h"
 
 int mem_zero_detect_base(void *buf, size_t n)
 {
-	unsigned char *c;
-	uintmax_t a = 0, *p = buf;
+	uint8_t *c = buf;
+	uintmax_t a = 0;
 
 	// Check buffer in native machine width comparisons
-	while (n >= sizeof(*p)) {
-		n -= sizeof(*p);
-		if (*p++ != 0)
+	while (n >= sizeof(uintmax_t)) {
+		n -= sizeof(uintmax_t);
+		if (load_umax(c) != 0)
 			return -1;
+		c += sizeof(uintmax_t);
 	}
 
 	// Check remaining bytes
-	c = (unsigned char *)p;
-
 	switch (n) {
 	case 7:
 		a |= *c++;	// fall through to case 6,5,4
@@ -53,12 +53,12 @@ int mem_zero_detect_base(void *buf, size_t n)
 	case 5:
 		a |= *c++;	// fall through to case 4
 	case 4:
-		a |= *((unsigned int *)c);
+		a |= load_u32(c);
 		break;
 	case 3:
 		a |= *c++;	// fall through to case 2
 	case 2:
-		a |= *((unsigned short *)c);
+		a |= load_u16(c);
 		break;
 	case 1:
 		a |= *c;
