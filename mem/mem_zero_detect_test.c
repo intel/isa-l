@@ -48,8 +48,8 @@
 
 int main(int argc, char *argv[])
 {
-	int i, j, l, sign;
-	unsigned long long r;
+	int i, j, sign;
+	long long r, l;
 	void *buf;
 	unsigned char *a;
 	int failures = 0, ret_neg = 1;
@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
 			failures = isal_zero_detect(a, l);
 
 			if (failures) {
-				printf("Fail on detect non-zero with l=%d\n", l);
+				printf("Fail on detect non-zero with l=%lld\n", l);
 				return -1;
 			}
 
@@ -165,11 +165,11 @@ int main(int argc, char *argv[])
 			ret_neg = isal_zero_detect(a, l);
 
 			if ((i < l) && (ret_neg == 0)) {
-				printf("Fail on non-zero buffer l=%d err=%d\n", l, i);
+				printf("Fail on non-zero buffer l=%lld err=%d\n", l, i);
 				return -1;
 			}
 			if ((i >= l) && (ret_neg != 0)) {
-				printf("Fail on bad pass detect l=%d err=%d\n", l, i);
+				printf("Fail on bad pass detect l=%lld err=%d\n", l, i);
 				return -1;
 			}
 			a[i] = 0;
@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
 		a[r] = 1 << (r & (CHAR_BIT - 1));
 		ret_neg = isal_zero_detect(a, l);
 		if (ret_neg == 0) {
-			printf("Fail on not detect rand %d, l=%d, e=%lld\n", i, l, r);
+			printf("Fail on not detect rand %d, l=%lld, e=%lld\n", i, l, r);
 			return -1;
 		}
 		a[r] = 0;
@@ -207,11 +207,11 @@ int main(int argc, char *argv[])
 		ret_neg = isal_zero_detect(a, l);
 
 		if ((r < l) && (ret_neg == 0)) {
-			printf("Fail on non-zero rand buffer %d, l=%d, e=%lld\n", i, l, r);
+			printf("Fail on non-zero rand buffer %d, l=%lld, e=%lld\n", i, l, r);
 			return -1;
 		}
 		if ((r >= l) && (ret_neg != 0)) {
-			printf("Fail on bad pass zero detect rand %d, l=%d, e=%lld\n", i, l,
+			printf("Fail on bad pass zero detect rand %d, l=%lld, e=%lld\n", i, l,
 			       r);
 			return -1;
 		}
