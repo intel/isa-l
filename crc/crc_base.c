@@ -165,7 +165,7 @@ uint32_t crc32_ieee_base(uint32_t seed, uint8_t * buf, uint64_t len)
 	uint32_t poly = 0x04C11DB7;	// IEEE standard
 
 	for (i = 0; i < len; i++) {
-		rem = rem ^ (buf[i] << 24);
+		rem = rem ^ ((uint64_t) buf[i] << 24);
 		for (j = 0; j < MAX_ITER; j++) {
 			rem = rem << 1;
 			rem = (rem & 0x100000000ULL) ? rem ^ poly : rem;
