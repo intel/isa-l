@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "igzip_lib.h"
+#include "unaligned.h"
 
 #if __x86_64__  || __i386__ || _M_X64 || _M_IX86
 #ifdef _MSC_VER
@@ -240,8 +241,8 @@ static inline int compare258(uint8_t * str1, uint8_t * str2, uint32_t max_length
 	loop_length = max_length & ~0x7;
 
 	for(count = 0; count < loop_length; count += 8){
-		test = *(uint64_t *) str1;
-		test ^= *(uint64_t *) str2;
+		test = load_u64(str1);
+		test ^= load_u64(str2);
 		if(test != 0)
 			return count + tzbytecnt(test);
 		str1 += 8;
@@ -298,8 +299,8 @@ static inline int compare(uint8_t * str1, uint8_t * str2, uint32_t max_length)
 	loop_length = max_length & ~0x7;
 
 	for(count = 0; count < loop_length; count += 8){
-		test = *(uint64_t *) str1;
-		test ^= *(uint64_t *) str2;
+		test = load_u64(str1);
+		test ^= load_u64(str2);
 		if(test != 0)
 			return count + tzbytecnt(test);
 		str1 += 8;

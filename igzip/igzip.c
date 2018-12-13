@@ -52,6 +52,7 @@
 #include "igzip_level_buf_structs.h"
 #include "igzip_checksums.h"
 #include "igzip_wrapper.h"
+#include "unaligned.h"
 
 #ifdef __FreeBSD__
 #include <sys/types.h>
@@ -741,8 +742,8 @@ static int isal_deflate_int_stateless(struct isal_zstream *stream)
 			return STATELESS_OVERFLOW;
 
 	if (stream->avail_in >= 8
-	    && (*(uint64_t *) stream->next_in == 0
-		|| *(uint64_t *) stream->next_in == ~(uint64_t) 0)) {
+	    && (load_u64(stream->next_in) == 0
+		|| load_u64(stream->next_in) == ~(uint64_t) 0)) {
 		repeat_length = detect_repeated_char_length(stream->next_in, stream->avail_in);
 
 		if (stream->avail_in == repeat_length || repeat_length >= MIN_REPEAT_LEN)
