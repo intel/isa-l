@@ -43,6 +43,23 @@ if uname | grep -q 'Darwin' 2>&1; then
 fi
 
 # Build and run check tests
+if [ -z "$CFLAGS" ]; then
+    CFLAGS='-g -O2 -fsanitize=undefined -fno-sanitize=nonnull-attribute -fsanitize-undefined-trap-on-error'
+
+    if [ $CC ]; then
+       echo int main\(\)\{\}\; | $CC $CFLAGS -xc -o /dev/null - >& /dev/null && sanitize=1
+    elif ( command -V gcc > /dev/null ); then
+       echo int main\(\)\{\}\; |  gcc $CFLAGS -xc -o /dev/null - >& /dev/null && sanitize=1
+    elif ( command -V clang > /dev/null ); then
+       echo int main\(\)\{\}\; |  clang $CFLAGS -xc -o /dev/null - >& /dev/null && sanitize=1
+    fi
+
+    if [ $sanitize ]; then
+	echo "Sanitizing undefined behaviour"
+	export CFLAGS=$CFLAGS
+    fi
+fi
+
 time ./autogen.sh
 time ./configure --prefix=$tmp_install_dir $opt_config_target
 time $MAKE -j $cpus
