@@ -29,6 +29,7 @@
 
 #include "igzip_lib.h"
 #include "huff_codes.h"
+#include "unaligned.h"
 
 static inline void heapify(uint64_t * heap, uint64_t heap_size, uint64_t index)
 {
@@ -73,12 +74,12 @@ uint32_t build_huff_tree(struct heap_tree *heap_space, uint64_t heap_size, uint6
 
 		heapify(heap, heap_size, 1);
 
-		*(uint16_t *) (&heap[node_ptr]) = h1;
-		*(uint16_t *) (&heap[node_ptr - 1]) = h2;
+		store_u16((uint8_t *) & heap[node_ptr], h1);
+		store_u16((uint8_t *) & heap[node_ptr - 1], h2);
 		node_ptr -= 2;
 
 	}
 	h1 = heap[1];
-	*(uint16_t *) (&heap[node_ptr]) = h1;
+	store_u16((uint8_t *) & heap[node_ptr], h1);
 	return node_ptr;
 }

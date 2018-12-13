@@ -20,8 +20,8 @@ static inline void write_deflate_icf(struct deflate_icf *icf, uint32_t lit_len,
 	/* icf->lit_dist = lit_dist; */
 	/* icf->dist_extra = extra_bits; */
 
-	*(uint32_t *) icf = lit_len | (lit_dist << LIT_LEN_BIT_COUNT)
-	    | (extra_bits << (LIT_LEN_BIT_COUNT + DIST_LIT_BIT_COUNT));
+	store_u32((uint8_t *) icf, lit_len | (lit_dist << LIT_LEN_BIT_COUNT)
+		  | (extra_bits << (LIT_LEN_BIT_COUNT + DIST_LIT_BIT_COUNT)));
 }
 
 void set_long_icf_fg_base(uint8_t * next_in, uint64_t processed, uint64_t input_size,
@@ -153,7 +153,7 @@ static struct deflate_icf *compress_icf_map_g(struct isal_zstream *stream,
 		level_buf->hist.ll_hist[lit_len]++;
 
 		if (lit_len >= LEN_START) {
-			*(uint32_t *) level_buf->icf_buf_next = code;
+			store_u32((uint8_t *) level_buf->icf_buf_next, code);
 			level_buf->icf_buf_next++;
 
 			dist = (code >> ICF_DIST_OFFSET) & DIST_LIT_MASK;
@@ -162,7 +162,7 @@ static struct deflate_icf *compress_icf_map_g(struct isal_zstream *stream,
 			matches_next += lit_len;
 
 		} else if (lit_len2 >= LEN_START) {
-			*(uint64_t *) level_buf->icf_buf_next = code;
+			store_u64((uint8_t *) level_buf->icf_buf_next, code);
 			level_buf->icf_buf_next += 2;
 
 			level_buf->hist.ll_hist[lit_len2]++;
@@ -174,7 +174,7 @@ static struct deflate_icf *compress_icf_map_g(struct isal_zstream *stream,
 
 		} else {
 			code = ((lit_len2 + LIT_START) << ICF_DIST_OFFSET) | lit_len;
-			*(uint32_t *) level_buf->icf_buf_next = code;
+			store_u32((uint8_t *) level_buf->icf_buf_next, code);
 			level_buf->icf_buf_next++;
 
 			level_buf->hist.ll_hist[lit_len2]++;
@@ -186,7 +186,7 @@ static struct deflate_icf *compress_icf_map_g(struct isal_zstream *stream,
 	while (matches_next < matches_end && level_buf->icf_buf_next < icf_buf_end) {
 		code = load_u32((uint8_t *) matches_next);
 		lit_len = code & LIT_LEN_MASK;
-		*(uint32_t *) level_buf->icf_buf_next = code;
+		store_u32((uint8_t *) level_buf->icf_buf_next, code);
 		level_buf->icf_buf_next++;
 
 		level_buf->hist.ll_hist[lit_len]++;

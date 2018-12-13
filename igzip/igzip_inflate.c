@@ -1865,8 +1865,8 @@ static int check_gzip_checksum(struct inflate_state *state)
 			byte_count = state->read_in_length / 8;
 			offset = state->read_in_length % 8;
 
-			*(uint64_t *) (state->tmp_in_buffer + tmp_in_size) =
-			    state->read_in >> offset;
+			store_u64(state->tmp_in_buffer + tmp_in_size,
+				  state->read_in >> offset);
 			state->read_in = 0;
 			state->read_in_length = 0;
 
@@ -1916,8 +1916,8 @@ static int check_zlib_checksum(struct inflate_state *state)
 			byte_count = state->read_in_length / 8;
 			offset = state->read_in_length % 8;
 
-			*(uint64_t *) (state->tmp_in_buffer + tmp_in_size) =
-			    state->read_in >> offset;
+			store_u64(state->tmp_in_buffer + tmp_in_size,
+				  state->read_in >> offset);
 			state->read_in = 0;
 			state->read_in_length = 0;
 
@@ -2287,7 +2287,7 @@ int isal_inflate(struct inflate_state *state)
 
 			/* Copy valid data from internal buffer into out_buffer */
 			if (state->write_overflow_len != 0) {
-				*(uint32_t *) state->next_out = state->write_overflow_lits;
+				store_u32(state->next_out, state->write_overflow_lits);
 				state->next_out += state->write_overflow_len;
 				state->total_out += state->write_overflow_len;
 				state->write_overflow_lits = 0;
@@ -2385,8 +2385,8 @@ int isal_inflate(struct inflate_state *state)
 
 		/* Write overflow data into tmp buffer */
 		if (state->write_overflow_len != 0) {
-			*(uint32_t *) & state->tmp_out_buffer[state->tmp_out_valid] =
-			    state->write_overflow_lits;
+			store_u32(&state->tmp_out_buffer[state->tmp_out_valid],
+				  state->write_overflow_lits);
 			state->tmp_out_valid += state->write_overflow_len;
 			state->total_out += state->write_overflow_len;
 			state->write_overflow_lits = 0;

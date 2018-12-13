@@ -30,16 +30,7 @@
 #define BITBUF2_H
 
 #include "igzip_lib.h"
-
-#if defined (__unix__) || (__APPLE__) || (__MINGW32__)
-#define _mm_stream_si64x(dst, src) *((uint64_t*)dst) = src
-#else
-#include <intrin.h>
-#endif
-
-#ifdef _WIN64
-#pragma warning(disable: 4996)
-#endif
+#include "unaligned.h"
 
 #ifdef _MSC_VER
 #define inline __inline
@@ -87,7 +78,7 @@ static inline uint32_t buffer_bits_used(struct BitBuf2 *me)
 static inline void flush_bits(struct BitBuf2 *me)
 {
 	uint32_t bits;
-	_mm_stream_si64x((int64_t *) me->m_out_buf, me->m_bits);
+	store_u64(me->m_out_buf, me->m_bits);
 	bits = me->m_bit_count & ~7;
 	me->m_bit_count -= bits;
 	me->m_out_buf += bits/8;
@@ -100,7 +91,7 @@ static inline void flush(struct BitBuf2 *me)
 {
 	uint32_t bytes;
 	if (me->m_bit_count) {
-		_mm_stream_si64x((int64_t *) me->m_out_buf, me->m_bits);
+		store_u64(me->m_out_buf, me->m_bits);
 		bytes = (me->m_bit_count + 7) / 8;
 		me->m_out_buf += bytes;
 	}

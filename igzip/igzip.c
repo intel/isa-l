@@ -1091,13 +1091,13 @@ uint32_t isal_write_gzip_header(struct isal_zstream *stream, struct isal_gzip_he
 	out_buf[1] = 0x8b;
 	out_buf[2] = DEFLATE_METHOD;
 	out_buf[3] = flags;
-	*(uint32_t *) (out_buf + 4) = gz_hdr->time;
+	store_u32(out_buf + 4, gz_hdr->time);
 	out_buf[8] = gz_hdr->xflags;
 	out_buf[9] = gz_hdr->os;
 
 	out_buf += GZIP_HDR_BASE;
 	if (flags & EXTRA_FLAG) {
-		*(uint16_t *) out_buf = gz_hdr->extra_len;
+		store_u16(out_buf, gz_hdr->extra_len);
 		out_buf += GZIP_EXTRA_LEN;
 
 		memcpy(out_buf, gz_hdr->extra, gz_hdr->extra_len);
@@ -1116,7 +1116,7 @@ uint32_t isal_write_gzip_header(struct isal_zstream *stream, struct isal_gzip_he
 
 	if (flags & HCRC_FLAG) {
 		hcrc = crc32_gzip_refl(0, out_buf_start, out_buf - out_buf_start);
-		*(uint16_t *) out_buf = hcrc;
+		store_u16(out_buf, hcrc);
 		out_buf += GZIP_HCRC_LEN;
 	}
 
@@ -1149,7 +1149,7 @@ uint32_t isal_write_zlib_header(struct isal_zstream * stream, struct isal_zlib_h
 	out_buf[1] = flg;
 
 	if (dict_flag)
-		*(uint32_t *) (out_buf + 2) = z_hdr->dict_id;
+		store_u32(out_buf + 2, z_hdr->dict_id);
 
 	stream->next_out += hdr_size;
 	stream->total_out += hdr_size;
@@ -1893,8 +1893,7 @@ static void write_trailer(struct isal_zstream *stream)
 	case IGZIP_GZIP:
 	case IGZIP_GZIP_NO_HDR:
 		if (stream->avail_out - bytes >= gzip_trl_bytes) {
-			*(uint64_t *) stream->next_out =
-			    ((uint64_t) stream->total_in << 32) | crc;
+			store_u64(stream->next_out, ((uint64_t) stream->total_in << 32) | crc);
 			stream->next_out += gzip_trl_bytes;
 			bytes += gzip_trl_bytes;
 			state->state = ZSTATE_END;
@@ -1904,8 +1903,9 @@ static void write_trailer(struct isal_zstream *stream)
 	case IGZIP_ZLIB:
 	case IGZIP_ZLIB_NO_HDR:
 		if (stream->avail_out - bytes >= zlib_trl_bytes) {
-			*(uint32_t *) stream->next_out =
-			    to_be32((crc & 0xFFFF0000) | ((crc & 0xFFFF) + 1) % ADLER_MOD);
+			store_u32(stream->next_out,
+				  to_be32((crc & 0xFFFF0000) | ((crc & 0xFFFF) + 1) %
+					  ADLER_MOD));
 			stream->next_out += zlib_trl_bytes;
 			bytes += zlib_trl_bytes;
 			state->state = ZSTATE_END;
