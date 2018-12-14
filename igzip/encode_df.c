@@ -23,7 +23,7 @@ struct deflate_icf *encode_deflate_icf_base(struct deflate_icf *next_in,
 
 	while (next_in < end_in && !is_full(bb)) {
 		lsym = hufftables->lit_len_table[next_in->lit_len];
-		dsym = hufftables->dist_table[next_in->lit_dist];
+		dsym = hufftables->dist_lit_table[next_in->lit_dist];
 
 		// insert ll code, dist_code, and extra_bits
 		write_bits_unsafe(bb, lsym.code_and_extra, lsym.length);
