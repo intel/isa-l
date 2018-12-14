@@ -907,14 +907,21 @@ static inline void reset_match_history(struct isal_zstream *stream)
 
 	state->has_hist = IGZIP_NO_HIST;
 
-	if (sizeof(wchar_t) >= 2) {
-		wchar_t hash_init_val;
-		int rep_bits;
+	/* There is definitely more than 16 bytes in the hash table. Set this
+	 * minimum to avoid a wmemset of size 0 */
+	if (hash_table_size <= sizeof(wchar_t))
+		hash_table_size = sizeof(wchar_t);
 
-		/* There is definitely more than 16 bytes in the hash table. Set this
-		 * minimum to avoid a wmemset of size 0 */
-		if (hash_table_size <= sizeof(wchar_t))
-			hash_table_size = sizeof(wchar_t);
+	if (sizeof(wchar_t) == 2) {
+		uint16_t hash_init_val;
+
+		hash_init_val = stream->total_in & 0xffff;
+		wmemset((wchar_t *) hash_table, hash_init_val,
+			hash_table_size / sizeof(wchar_t));
+
+	} else if (sizeof(wchar_t) == 4) {
+		uint32_t hash_init_val;
+		int rep_bits;
 
 		hash_init_val = stream->total_in & 0xffff;
 		for (rep_bits = sizeof(uint16_t) * 8; rep_bits < sizeof(wchar_t) * 8;
