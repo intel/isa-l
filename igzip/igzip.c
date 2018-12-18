@@ -375,7 +375,8 @@ static void create_icf_block_hdr(struct isal_zstream *stream, uint8_t * start_in
 	struct BitBuf2 write_buf_tmp;
 	uint32_t out_size = stream->avail_out;
 	uint32_t avail_output, block_start_offset;
-	uint8_t *end_out = stream->next_out + out_size, *block_start;
+	uint8_t *end_out = stream->next_out + out_size;
+	uint64_t cur_in_processed;
 	uint64_t bit_count;
 	uint64_t block_in_size = state->block_end - state->block_next;
 	uint64_t block_size;
@@ -420,10 +421,11 @@ static void create_icf_block_hdr(struct isal_zstream *stream, uint8_t * start_in
 
 	/* Assumes that type 0 block has size less than 4G */
 	block_start_offset = (stream->total_in - state->block_next);
-	block_start = stream->next_in - block_start_offset;
+	cur_in_processed = stream->next_in - start_in;
 	avail_output = stream->avail_out + sizeof(state->buffer) -
 	    (stream->total_in - state->block_end);
-	if (bit_count / 8 >= block_size && block_start >= start_in
+
+	if (bit_count / 8 >= block_size && cur_in_processed >= block_start_offset
 	    && block_size <= avail_output) {
 		/* Reset stream for writing out a type0 block */
 		state->has_eob_hdr = 0;
