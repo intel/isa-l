@@ -21,6 +21,7 @@ examples=
 other_tests=
 lsrc_x86_64=
 lsrc_x86_32=
+lsrc_aarch64=
 lsrc_base_aliases=
 lsrc32=
 unit_tests32=
@@ -53,6 +54,10 @@ endif
 
 if CPU_X86_32
 libisal_la_SOURCES += ${lsrc_x86_32}
+endif
+
+if CPU_AARCH64
+libisal_la_SOURCES += ${lsrc_aarch64}
 endif
 
 if CPU_UNDEFINED
@@ -93,19 +98,26 @@ test: $(addsuffix .run,$(unit_tests))
 	$<
 	@echo Completed run: $<
 
-# Support for yasm/nasm
+# Support for yasm/nasm/gas
 if USE_YASM
   as_filter = ${srcdir}/tools/yasm-filter.sh
 endif
 if USE_NASM
   as_filter = ${srcdir}/tools/nasm-filter.sh
 endif
+if CPU_AARCH64
+  as_filter = gcc
+endif
 
 CCAS = $(as_filter)
 EXTRA_DIST += tools/yasm-filter.sh tools/nasm-filter.sh
 
 AM_CFLAGS = ${my_CFLAGS} ${INCLUDE} $(src_include) ${D}
+if CPU_AARCH64
+AM_CCASFLAGS = ${AM_CFLAGS}
+else
 AM_CCASFLAGS = ${yasm_args} ${INCLUDE} ${src_include} ${DEFS} ${D}
+endif
 
 .asm.s:
 	@echo "  MKTMP   " $@;
