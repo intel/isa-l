@@ -104,7 +104,7 @@ CLEANFILES += $(O) *.o *.a $(all_tests) $(bin_PROGRAMS) $(lib_name) $(so_lib_nam
 
 lsrc += $(lsrc_$(host_cpu))
 O = bin
-lobj  += $(patsubst %.c,%.o,$(patsubst %.asm,%.o,$(lsrc) $(lsrc_intrinsic)))
+lobj  += $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.asm,%.o,$(lsrc) $(lsrc_intrinsic))))
 objs  = $(addprefix $(O)/,$(notdir $(lobj)))
 
 
@@ -172,9 +172,15 @@ $(addsuffix .run,$(all_tests)): %.run : %
 # Other build rules
 msg = $(if $(DEBUG),DEBUG) $(patsubst 32,32-bit,$(host_cpu)) $D
 
+# yasm/nasm assembly files
 $(O)/%.o: %.asm
 	@echo "  ---> Building $< $(msg)"
 	@$(AS) $(ASFLAGS) -o $@ $<
+
+# gcc assembly files
+$(O)/%.o: $(host_cpu)/%.S
+	@echo "  ---> Building $< $(msg)"
+	@$(COMPILE.c) $(OUTPUT_OPTION) $<
 
 $(O)/%.o %.o: %.c
 	@echo "  ---> Building $< $(msg)"
@@ -215,6 +221,7 @@ soname      = $(so_lib_inst).$(word 1, $(subst ., ,$(version)))
 
 slib: $(so_lib_name)
 aobjs  += $(addprefix $(O)/,$(patsubst %.asm,%.o,$(filter %.asm,$(notdir $(lsrc) $(lsrc_intrinsic)))))
+aobjs  += $(addprefix $(O)/,$(patsubst %.S,%.o,$(filter %.S,$(notdir $(lsrc) $(lsrc_intrinsic)))))
 shared_objs  += $(addprefix $(O)/shared_ver_,$(patsubst %.c,%.o,$(filter %.c,$(notdir $(lsrc) $(lsrc_intrinsic)))))
 
 $(O)/shared_ver_%.o: %.c
