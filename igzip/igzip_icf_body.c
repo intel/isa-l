@@ -77,7 +77,7 @@ uint64_t gen_icf_map_h1_base(struct isal_zstream *stream,
 
 	uint32_t dist, len, extra_bits;
 	uint8_t *next_in = stream->next_in, *end_in = stream->next_in + input_size;
-	uint8_t *file_start = stream->next_in - stream->total_in;
+	uint8_t *file_start = (uint8_t *) ((uintptr_t) stream->next_in - stream->total_in);
 	uint32_t hash;
 	uint64_t next_bytes, match_bytes;
 	uint64_t match;
