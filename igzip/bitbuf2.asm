@@ -28,6 +28,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %include "options.asm"
+%include "stdmac.asm"
 
 ; Assumes m_out_buf is a register
 ; Clobbers RCX
@@ -40,12 +41,8 @@
 %define %%count		%4
 %define %%m_out_buf	%5
 
-%ifdef USE_HSWNI
-	shlx	%%code, %%code, %%m_bit_count
-%else
-	mov	rcx, %%m_bit_count
-	shl	%%code, cl
-%endif
+	SHLX	%%code, %%code, %%m_bit_count
+
 	or	%%m_bits, %%code
 	add	%%m_bit_count, %%count
 
@@ -54,12 +51,9 @@
 	shr	rcx, 3			; rcx = bytes
 	add	%%m_out_buf, rcx
 	shl	rcx, 3			; rcx = bits
-	sub	%%m_bit_count, rcx
-%ifdef USE_HSWNI
-	shrx	%%m_bits, %%m_bits, rcx
-%else
-	shr	%%m_bits, cl
-%endif
+	and	%%m_bit_count, 0x7
+
+	SHRX	%%m_bits, %%m_bits, rcx
 %endm
 
 %macro write_dword 2
