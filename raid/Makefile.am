@@ -27,10 +27,11 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ########################################################################
 
+include raid/aarch64/Makefile.am
+
 lsrc        += 	raid/raid_base.c
 
 lsrc_base_aliases += raid/raid_base_aliases.c
-lsrc_aarch64      += raid/raid_base_aliases.c
 
 lsrc_x86_64 += \
 		raid/xor_gen_sse.asm \
