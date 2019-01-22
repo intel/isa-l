@@ -38,7 +38,6 @@
 // Cached test, loop many times over small dataset
 # define TEST_SOURCES 10
 # define TEST_LEN     8*1024
-# define TEST_LOOPS   4000
 # define TEST_TYPE_STR "_warm"
 #else
 # ifndef TEST_CUSTOM
@@ -46,13 +45,9 @@
 #  define TEST_SOURCES 10
 #  define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
 #  define TEST_LEN     GT_L3_CACHE / TEST_SOURCES
-#  define TEST_LOOPS   10
 #  define TEST_TYPE_STR "_cold"
 # else
 #  define TEST_TYPE_STR "_cus"
-#  ifndef TEST_LOOPS
-#    define TEST_LOOPS 1000
-#  endif
 # endif
 #endif
 
@@ -99,12 +94,26 @@ void gf_vect_dot_prod_ref(int len, int vlen, u8 * v, u8 ** src, u8 * dest)
 	}
 }
 
+void gf_vect_dot_prod_mult(int len, int vlen, u8 * v, u8 ** src, u8 * dest)
+{
+	int i, j;
+	u8 s;
+	for (i = 0; i < len; i++) {
+		s = 0;
+		for (j = 0; j < vlen; j++) {
+			s ^= gf_mul_table[v[j] * 256 + src[j][i]];
+		}
+		dest[i] = s;
+	}
+
+}
+
 int main(void)
 {
-	int i, j, k;
-	u8 s, vec[TEST_SOURCES], dest1[TEST_LEN], dest2[TEST_LEN];
+	int i, j;
+	u8 vec[TEST_SOURCES], dest1[TEST_LEN], dest2[TEST_LEN];
 	u8 *matrix[TEST_SOURCES];
-	struct perf start, stop;
+	struct perf start;
 
 	mk_gf_field();
 	mk_gf_mul_table(gf_mul_table);
@@ -122,38 +131,15 @@ int main(void)
 
 	}
 
-	gf_vect_dot_prod_ref(TEST_LEN, TEST_SOURCES, vec, matrix, dest1);
-
-	perf_start(&start);
-	for (i = 0; i < TEST_LOOPS; i++)
-		gf_vect_dot_prod_ref(TEST_LEN, TEST_SOURCES, vec, matrix, dest1);
-
-	perf_stop(&stop);
+	BENCHMARK(&start, BENCHMARK_TIME,
+		  gf_vect_dot_prod_ref(TEST_LEN, TEST_SOURCES, vec, matrix, dest1));
 	printf("gf_vect_dot_prod_2tbl" TEST_TYPE_STR ": ");
-	perf_print(stop, start, (long long)TEST_LEN * (TEST_SOURCES + 1) * i);
+	perf_print(start, (long long)TEST_LEN * (TEST_SOURCES + 1));
 
-	// Warm up mult tables
-	for (i = 0; i < TEST_LEN; i++) {
-		s = 0;
-		for (j = 0; j < TEST_SOURCES; j++) {
-			s ^= gf_mul_table[vec[j] * 256 + matrix[j][i]];
-		}
-		dest2[i] = s;
-	}
-
-	perf_start(&start);
-	for (k = 0; k < TEST_LOOPS; k++) {
-		for (i = 0; i < TEST_LEN; i++) {
-			s = 0;
-			for (j = 0; j < TEST_SOURCES; j++) {
-				s ^= gf_mul_table[vec[j] * 256 + matrix[j][i]];
-			}
-			dest2[i] = s;
-		}
-	}
-	perf_stop(&stop);
+	BENCHMARK(&start, BENCHMARK_TIME,
+		  gf_vect_dot_prod_mult(TEST_LEN, TEST_SOURCES, vec, matrix, dest2));
 	printf("gf_vect_dot_prod_1tbl" TEST_TYPE_STR ": ");
-	perf_print(stop, start, (long long)TEST_LEN * (TEST_SOURCES + 1) * k);
+	perf_print(start, (long long)TEST_LEN * (TEST_SOURCES + 1));
 
 	// Compare with reference function
 	if (0 != memcmp(dest1, dest2, TEST_LEN)) {

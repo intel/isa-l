@@ -50,7 +50,6 @@ int usage(void)
 		"Usage: igzip_semi_dynamic [options] <infile>\n"
 		"  -h        help\n"
 		"  -v        (don't) validate output by inflate and compare\n"
-		"  -i <iter> iterations\n"
 		"  -t <type> 1:stateless 0:(default)stateful\n"
 		"  -c <size> chunk size default=%d\n"
 		"  -s <size> sample size default=%d\n"
@@ -90,6 +89,88 @@ int str_to_i(char *s)
 	return i;
 }
 
+void semi_dyn_stateless_perf(struct isal_zstream *stream, uint8_t * inbuf,
+			     uint64_t infile_size, uint8_t * outbuf, uint64_t outbuf_size,
+			     int segment_size, int hist_size)
+{
+	struct isal_huff_histogram histogram;
+	struct isal_hufftables hufftable;
+
+	isal_deflate_stateless_init(stream);
+	stream->end_of_stream = 0;
+	stream->flush = FULL_FLUSH;
+	stream->next_in = inbuf;
+	stream->next_out = outbuf;
+	int remaining = infile_size;
+	int chunk_size = segment_size;
+
+	while (remaining > 0) {
+		// Generate custom hufftables on sample
+		memset(&histogram, 0, sizeof(struct isal_huff_histogram));
+		if (remaining < segment_size * 2) {
+			chunk_size = remaining;
+			stream->end_of_stream = 1;
+		}
+		int hist_rem = (hist_size > chunk_size) ? chunk_size : hist_size;
+		isal_update_histogram(stream->next_in, hist_rem, &histogram);
+
+		if (hist_rem == chunk_size)
+			isal_create_hufftables_subset(&hufftable, &histogram);
+		else
+			isal_create_hufftables(&hufftable, &histogram);
+
+		// Compress with custom table
+		stream->avail_in = chunk_size;
+		stream->avail_out = chunk_size + 8 * (1 + (chunk_size >> 16));
+		stream->hufftables = &hufftable;
+		remaining -= chunk_size;
+		isal_deflate_stateless(stream);
+		if (stream->avail_in != 0)
+			break;
+	}
+}
+
+void semi_dyn_stateful_perf(struct isal_zstream *stream, uint8_t * inbuf,
+			    uint64_t infile_size, uint8_t * outbuf, uint64_t outbuf_size,
+			    int segment_size, int hist_size)
+{
+	struct isal_huff_histogram histogram;
+	struct isal_hufftables hufftable;
+
+	isal_deflate_init(stream);
+	stream->end_of_stream = 0;
+	stream->flush = SYNC_FLUSH;
+	stream->next_in = inbuf;
+	stream->next_out = outbuf;
+	stream->avail_out = outbuf_size;
+	int remaining = infile_size;
+	int chunk_size = segment_size;
+
+	while (remaining > 0) {
+		// Generate custom hufftables on sample
+		memset(&histogram, 0, sizeof(struct isal_huff_histogram));
+		if (remaining < segment_size * 2) {
+			chunk_size = remaining;
+			stream->end_of_stream = 1;
+		}
+		int hist_rem = (hist_size > chunk_size) ? chunk_size : hist_size;
+		isal_update_histogram(stream->next_in, hist_rem, &histogram);
+
+		if (hist_rem == chunk_size)
+			isal_create_hufftables_subset(&hufftable, &histogram);
+		else
+			isal_create_hufftables(&hufftable, &histogram);
+
+		// Compress with custom table
+		stream->avail_in = chunk_size;
+		stream->hufftables = &hufftable;
+		remaining -= chunk_size;
+		isal_deflate(stream);
+		if (stream->internal_state.state != ZSTATE_NEW_HDR)
+			break;
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	FILE *in = stdin, *out = NULL;
@@ -99,14 +180,12 @@ int main(int argc, char *argv[])
 	int segment_size = DEFAULT_SEG_SIZE;
 	int sample_size = DEFAULT_SAMPLE_SIZE;
 	int check_output = 1;
-	int iterations = 0, do_stateless = 0, do_stateful = 1;
+	int do_stateless = 0, do_stateful = 1;
 	int ret = 0;
 	char *out_file_name = NULL;
 	struct isal_zstream stream;
-	struct isal_huff_histogram histogram;
-	struct isal_hufftables hufftable;
 
-	while ((c = getopt(argc, argv, "vht:c:s:o:i:")) != -1) {
+	while ((c = getopt(argc, argv, "vht:c:s:o:")) != -1) {
 		switch (c) {
 		case 'v':
 			check_output ^= 1;
@@ -125,9 +204,6 @@ int main(int argc, char *argv[])
 			break;
 		case 'o':
 			out_file_name = optarg;
-			break;
-		case 'i':
-			iterations = str_to_i(optarg);
 			break;
 		case 'h':
 		default:
@@ -165,12 +241,6 @@ int main(int argc, char *argv[])
 		usage();
 	}
 
-	if (iterations == 0) {
-		iterations = RUN_MEM_SIZE / infile_size;
-		if (iterations < MIN_TEST_LOOPS)
-			iterations = MIN_TEST_LOOPS;
-	}
-
 	outbuf_size = infile_size * 1.30 > MIN_BUF_SIZE ? infile_size * 1.30 : MIN_BUF_SIZE;
 
 	if (NULL == (inbuf = malloc(infile_size))) {
@@ -186,7 +256,7 @@ int main(int argc, char *argv[])
 
 	printf("semi-dynamic sample=%d segment=%d %s\n", hist_size, segment_size,
 	       do_stateful ? "stateful" : "stateless");
-	printf("igzip_file_perf: %s %d iterations\n", argv[optind], iterations);
+	printf("igzip_file_perf: %s\n", argv[optind]);
 
 	// Read complete input file into buffer
 	stream.avail_in = (uint32_t) fread(inbuf, 1, infile_size, in);
@@ -195,88 +265,19 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
-	struct perf start, stop;
+	struct perf start;
 
 	if (do_stateful) {
-		perf_start(&start);
-
-		for (i = 0; i < iterations; i++) {
-			isal_deflate_init(&stream);
-			stream.end_of_stream = 0;
-			stream.flush = SYNC_FLUSH;
-			stream.next_in = inbuf;
-			stream.next_out = outbuf;
-			stream.avail_out = outbuf_size;
-			int remaining = infile_size;
-			int chunk_size = segment_size;
-
-			while (remaining > 0) {
-				// Generate custom hufftables on sample
-				memset(&histogram, 0, sizeof(struct isal_huff_histogram));
-				if (remaining < segment_size * 2) {
-					chunk_size = remaining;
-					stream.end_of_stream = 1;
-				}
-				int hist_rem =
-				    (hist_size > chunk_size) ? chunk_size : hist_size;
-				isal_update_histogram(stream.next_in, hist_rem, &histogram);
-
-				if (hist_rem == chunk_size)
-					isal_create_hufftables_subset(&hufftable, &histogram);
-				else
-					isal_create_hufftables(&hufftable, &histogram);
-
-				// Compress with custom table
-				stream.avail_in = chunk_size;
-				stream.hufftables = &hufftable;
-				remaining -= chunk_size;
-				isal_deflate(&stream);
-				if (stream.internal_state.state != ZSTATE_NEW_HDR)
-					break;
-			}
-		}
-		perf_stop(&stop);
+		BENCHMARK(&start, BENCHMARK_TIME,
+			  semi_dyn_stateful_perf(&stream, inbuf, infile_size, outbuf,
+						 outbuf_size, segment_size, hist_size)
+		    );
 	}
 
 	if (do_stateless) {
-		perf_start(&start);
-
-		for (i = 0; i < iterations; i++) {
-			isal_deflate_stateless_init(&stream);
-			stream.end_of_stream = 0;
-			stream.flush = FULL_FLUSH;
-			stream.next_in = inbuf;
-			stream.next_out = outbuf;
-			int remaining = infile_size;
-			int chunk_size = segment_size;
-
-			while (remaining > 0) {
-				// Generate custom hufftables on sample
-				memset(&histogram, 0, sizeof(struct isal_huff_histogram));
-				if (remaining < segment_size * 2) {
-					chunk_size = remaining;
-					stream.end_of_stream = 1;
-				}
-				int hist_rem =
-				    (hist_size > chunk_size) ? chunk_size : hist_size;
-				isal_update_histogram(stream.next_in, hist_rem, &histogram);
-
-				if (hist_rem == chunk_size)
-					isal_create_hufftables_subset(&hufftable, &histogram);
-				else
-					isal_create_hufftables(&hufftable, &histogram);
-
-				// Compress with custom table
-				stream.avail_in = chunk_size;
-				stream.avail_out = chunk_size + 8 * (1 + (chunk_size >> 16));
-				stream.hufftables = &hufftable;
-				remaining -= chunk_size;
-				isal_deflate_stateless(&stream);
-				if (stream.avail_in != 0)
-					break;
-			}
-		}
-		perf_stop(&stop);
+		BENCHMARK(&start, BENCHMARK_TIME,
+			  semi_dyn_stateless_perf(&stream, inbuf, infile_size, outbuf,
+						  outbuf_size, segment_size, hist_size));
 	}
 
 	if (stream.avail_in != 0) {
@@ -288,7 +289,7 @@ int main(int argc, char *argv[])
 	       infile_size, stream.total_out, i, 100.0 * stream.total_out / infile_size);
 
 	printf("igzip_file: ");
-	perf_print(stop, start, (long long)infile_size * i);
+	perf_print(start, (long long)infile_size);
 
 	if (out != NULL) {
 		printf("writing %s\n", out_file_name);

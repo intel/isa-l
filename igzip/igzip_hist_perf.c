@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 {
 	FILE *in;
 	unsigned char *inbuf, *outbuf;
-	int i, iterations, avail_in;
+	int iterations, avail_in;
 	uint64_t infile_size, outbuf_size;
 	struct isal_huff_histogram histogram1, histogram2;
 
@@ -120,16 +120,12 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
-	struct perf start, stop;
-	perf_start(&start);
-
-	for (i = 0; i < iterations; i++)
-		isal_update_histogram(inbuf, infile_size, &histogram1);
-	perf_stop(&stop);
-
-	printf("  file %s - in_size=%lu iter=%d\n", argv[1], infile_size, i);
+	struct perf start;
+	BENCHMARK(&start, BENCHMARK_TIME,
+		  isal_update_histogram(inbuf, infile_size, &histogram1));
+	printf("  file %s - in_size=%lu\n", argv[1], infile_size);
 	printf("igzip_file: ");
-	perf_print(stop, start, (long long)infile_size * i);
+	perf_print(start, (long long)infile_size);
 
 	fclose(in);
 	fflush(0);

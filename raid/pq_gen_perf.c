@@ -40,7 +40,6 @@
 // Cached test, loop many times over small dataset
 # define TEST_SOURCES 10
 # define TEST_LEN     8*1024
-# define TEST_LOOPS   800000
 # define TEST_TYPE_STR "_warm"
 #else
 # ifndef TEST_CUSTOM
@@ -48,13 +47,9 @@
 #  define TEST_SOURCES 10
 #  define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
 #  define TEST_LEN     ((GT_L3_CACHE / TEST_SOURCES) & ~(64-1))
-#  define TEST_LOOPS   1000
 #  define TEST_TYPE_STR "_cold"
 # else
 #  define TEST_TYPE_STR "_cus"
-#  ifndef TEST_LOOPS
-#   define TEST_LOOPS  1000
-#  endif
 # endif
 #endif
 
@@ -64,7 +59,7 @@ int main(int argc, char *argv[])
 {
 	int i;
 	void *buffs[TEST_SOURCES + 2];
-	struct perf start, stop;
+	struct perf start;
 
 	printf("Test pq_gen_perf %d sources X %d bytes\n", TEST_SOURCES, TEST_LEN);
 
@@ -85,13 +80,9 @@ int main(int argc, char *argv[])
 		memset(buffs[i], 0, TEST_LEN);
 
 	// Warm up
-	pq_gen(TEST_SOURCES + 2, TEST_LEN, buffs);
-	perf_start(&start);
-	for (i = 0; i < TEST_LOOPS; i++)
-		pq_gen(TEST_SOURCES + 2, TEST_LEN, buffs);
-	perf_stop(&stop);
+	BENCHMARK(&start, BENCHMARK_TIME, pq_gen(TEST_SOURCES + 2, TEST_LEN, buffs));
 	printf("pq_gen" TEST_TYPE_STR ": ");
-	perf_print(stop, start, (long long)TEST_MEM * i);
+	perf_print(start, (long long)TEST_MEM);
 
 	return 0;
 }

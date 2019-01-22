@@ -29,20 +29,19 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "mem_routines.h"
 #include "test.h"
 #include "types.h"
 
 #define TEST_LEN     8*1024
-#define TEST_LOOPS   10000000
 #define TEST_TYPE_STR "_warm"
 
 int main(int argc, char *argv[])
 {
-	int i;
 	int val = 0;
 	void *buf;
-	struct perf start, stop;
+	struct perf start;
 
 	printf("Test mem_zero_detect_perf %d bytes\n", TEST_LEN);
 
@@ -50,17 +49,12 @@ int main(int argc, char *argv[])
 		printf("alloc error: Fail");
 		return -1;
 	}
-	// Warm up
-	isal_zero_detect(buf, TEST_LEN);
 
-	perf_start(&start);
+	memset(buf, 0, TEST_LEN);
+	BENCHMARK(&start, BENCHMARK_TIME, val |= isal_zero_detect(buf, TEST_LEN));
 
-	for (i = 0; i < TEST_LOOPS; i++)
-		val |= isal_zero_detect(buf, TEST_LEN);
-
-	perf_stop(&stop);
 	printf("mem_zero_detect_perf" TEST_TYPE_STR ": ");
-	perf_print(stop, start, (long long)TEST_LEN * i);
+	perf_print(start, (long long)TEST_LEN);
 
 	return 0;
 }

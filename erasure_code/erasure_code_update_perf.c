@@ -53,7 +53,6 @@
 // Cached test, loop many times over small dataset
 # define TEST_SOURCES 32
 # define TEST_LEN(m)  ((128*1024 / m) & ~(64-1))
-# define TEST_LOOPS(m)   (10000*m)
 # define TEST_TYPE_STR "_warm"
 #else
 # ifndef TEST_CUSTOM
@@ -61,13 +60,9 @@
 #  define TEST_SOURCES 32
 #  define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
 #  define TEST_LEN(m)  ((GT_L3_CACHE / m) & ~(64-1))
-#  define TEST_LOOPS(m)   (50*m)
 #  define TEST_TYPE_STR "_cold"
 # else
 #  define TEST_TYPE_STR "_cus"
-#  ifndef TEST_LOOPS
-#    define TEST_LOOPS(m) 1000
-#  endif
 # endif
 #endif
 
@@ -87,17 +82,65 @@ void dump(unsigned char *buf, int len)
 	printf("\n");
 }
 
+void encode_update_test_ref(int m, int k, u8 * g_tbls, u8 ** buffs, u8 * a)
+{
+	ec_init_tables(k, m - k, &a[k * k], g_tbls);
+	REF_FUNCTION(TEST_LEN(m), k, m - k, g_tbls, buffs, &buffs[k]);
+}
+
+void encode_update_test(int m, int k, u8 * g_tbls, u8 ** perf_update_buffs, u8 * a)
+{
+	// Make parity vects
+	ec_init_tables(k, m - k, &a[k * k], g_tbls);
+	for (int i = 0; i < k; i++) {
+		FUNCTION_UNDER_TEST(TEST_LEN(m), k, m - k, i, g_tbls,
+				    perf_update_buffs[i], &perf_update_buffs[k]);
+	}
+}
+
+int decode_test(int m, int k, u8 ** update_buffs, u8 ** recov, u8 * a, u8 * src_in_err,
+		u8 * src_err_list, int nerrs, u8 * g_tbls, u8 ** perf_update_buffs)
+{
+	int i, j, r;
+	u8 b[MMAX * KMAX], c[MMAX * KMAX], d[MMAX * KMAX];
+	// Construct b by removing error rows
+	for (i = 0, r = 0; i < k; i++, r++) {
+		while (src_in_err[r])
+			r++;
+		recov[i] = update_buffs[r];
+		for (j = 0; j < k; j++)
+			b[k * i + j] = a[k * r + j];
+	}
+
+	if (gf_invert_matrix(b, d, k) < 0) {
+		printf("BAD MATRIX\n");
+		return -1;
+	}
+
+	for (i = 0; i < nerrs; i++)
+		for (j = 0; j < k; j++)
+			c[k * i + j] = d[k * src_err_list[i] + j];
+
+	// Recover data
+	ec_init_tables(k, nerrs, c, g_tbls);
+	for (i = 0; i < k; i++) {
+		FUNCTION_UNDER_TEST(TEST_LEN(m), k, nerrs, i, g_tbls, recov[i],
+				    perf_update_buffs);
+	}
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
-	int i, j, rtest, m, k, nerrs, r;
+	int i, j, check, m, k, nerrs;
 	void *buf;
 	u8 *temp_buffs[TEST_SOURCES], *buffs[TEST_SOURCES];
 	u8 *update_buffs[TEST_SOURCES];
 	u8 *perf_update_buffs[TEST_SOURCES];
-	u8 a[MMAX * KMAX], b[MMAX * KMAX], c[MMAX * KMAX], d[MMAX * KMAX];
+	u8 a[MMAX * KMAX];
 	u8 g_tbls[KMAX * TEST_SOURCES * 32], src_in_err[TEST_SOURCES];
 	u8 src_err_list[TEST_SOURCES], *recov[TEST_SOURCES];
-	struct perf start, stop;
+	struct perf start;
 
 	// Pick test parameters
 	k = 10;
@@ -160,13 +203,9 @@ int main(int argc, char *argv[])
 		}
 
 	gf_gen_rs_matrix(a, m, k);
-	ec_init_tables(k, m - k, &a[k * k], g_tbls);
-	REF_FUNCTION(TEST_LEN(m), k, m - k, g_tbls, buffs, &buffs[k]);
 
-	for (i = 0; i < k; i++) {
-		FUNCTION_UNDER_TEST(TEST_LEN(m), k, m - k, i, g_tbls, update_buffs[i],
-				    &update_buffs[k]);
-	}
+	encode_update_test_ref(m, k, g_tbls, buffs, a);
+	encode_update_test(m, k, g_tbls, update_buffs, a);
 	for (i = 0; i < m - k; i++) {
 		if (0 != memcmp(update_buffs[k + i], buffs[k + i], TEST_LEN(m))) {
 			printf("\nupdate_buffs%d  :", i);
@@ -178,58 +217,34 @@ int main(int argc, char *argv[])
 	}
 
 #ifdef DO_REF_PERF
-	REF_FUNCTION(TEST_LEN(m), k, m - k, g_tbls, buffs, &buffs[k]);
 	// Start encode test
-	perf_start(&start);
-	for (rtest = 0; rtest < TEST_LOOPS(m); rtest++) {
-		// Make parity vects
-		ec_init_tables(k, m - k, &a[k * k], g_tbls);
-		REF_FUNCTION(TEST_LEN(m), k, m - k, g_tbls, buffs, &buffs[k]);
-	}
-	perf_stop(&stop);
+	BENCHMARK(&start, BENCHMARK_TIME, encode_update_test_ref(m, k, g_tbls, buffs, a));
 	printf(xstr(REF_FUNCTION) TEST_TYPE_STR ": ");
-	perf_print(stop, start, (long long)(TEST_LEN(m)) * (m) * rtest);
+	perf_print(start, (long long)(TEST_LEN(m)) * (m));
 #endif
-	for (i = 0; i < k; i++) {
-		FUNCTION_UNDER_TEST(TEST_LEN(m), k, m - k, i, g_tbls, perf_update_buffs[i],
-				    &perf_update_buffs[k]);
-	}
+
 	// Start encode test
-	perf_start(&start);
-	for (rtest = 0; rtest < TEST_LOOPS(m); rtest++) {
-		// Make parity vects
-		ec_init_tables(k, m - k, &a[k * k], g_tbls);
-		for (i = 0; i < k; i++) {
-			FUNCTION_UNDER_TEST(TEST_LEN(m), k, m - k, i, g_tbls,
-					    perf_update_buffs[i], &perf_update_buffs[k]);
-		}
-	}
-	perf_stop(&stop);
+	BENCHMARK(&start, BENCHMARK_TIME,
+		  encode_update_test(m, k, g_tbls, perf_update_buffs, a));
 	printf(xstr(FUNCTION_UNDER_TEST) TEST_TYPE_STR ": ");
-	perf_print(stop, start, (long long)(TEST_LEN(m)) * (m) * rtest);
+	perf_print(start, (long long)(TEST_LEN(m)) * (m));
 
 	// Start encode test
-	perf_start(&start);
-	for (rtest = 0; rtest < TEST_LOOPS(m); rtest++) {
-		// Make parity vects
-		ec_init_tables(k, m - k, &a[k * k], g_tbls);
-		FUNCTION_UNDER_TEST(TEST_LEN(m), k, m - k, 0, g_tbls, perf_update_buffs[0],
-				    &perf_update_buffs[k]);
-	}
-	perf_stop(&stop);
+	BENCHMARK(&start, BENCHMARK_TIME,
+		  // Make parity vects
+		  ec_init_tables(k, m - k, &a[k * k], g_tbls);
+		  FUNCTION_UNDER_TEST(TEST_LEN(m), k, m - k, 0, g_tbls, perf_update_buffs[0],
+				      &perf_update_buffs[k]));
 	printf(xstr(FUNCTION_UNDER_TEST) "_single_src" TEST_TYPE_STR ": ");
-	perf_print(stop, start, (long long)(TEST_LEN(m)) * (m - k + 1) * rtest);
+	perf_print(start, (long long)(TEST_LEN(m)) * (m - k + 1));
 
 	// Start encode test
-	perf_start(&start);
-	for (rtest = 0; rtest < TEST_LOOPS(m); rtest++) {
-		// Make parity vects
-		FUNCTION_UNDER_TEST(TEST_LEN(m), k, m - k, 0, g_tbls, perf_update_buffs[0],
-				    &perf_update_buffs[k]);
-	}
-	perf_stop(&stop);
+	BENCHMARK(&start, BENCHMARK_TIME,
+		  // Make parity vects
+		  FUNCTION_UNDER_TEST(TEST_LEN(m), k, m - k, 0, g_tbls, perf_update_buffs[0],
+				      &perf_update_buffs[k]));
 	printf(xstr(FUNCTION_UNDER_TEST) "_single_src_simple" TEST_TYPE_STR ": ");
-	perf_print(stop, start, (long long)(TEST_LEN(m)) * (m - k + 1) * rtest);
+	perf_print(start, (long long)(TEST_LEN(m)) * (m - k + 1));
 
 	for (i = k; i < m; i++) {
 		memset(update_buffs[i], 0, TEST_LEN(m));	// initialize the destination buffer to be zero for update function
@@ -238,68 +253,26 @@ int main(int argc, char *argv[])
 		FUNCTION_UNDER_TEST(TEST_LEN(m), k, m - k, i, g_tbls, update_buffs[i],
 				    &update_buffs[k]);
 	}
-	// Construct b by removing error rows
-	for (i = 0, r = 0; i < k; i++, r++) {
-		while (src_in_err[r])
-			r++;
-		recov[i] = update_buffs[r];
-		for (j = 0; j < k; j++)
-			b[k * i + j] = a[k * r + j];
-	}
 
-	if (gf_invert_matrix(b, d, k) < 0) {
-		printf("BAD MATRIX\n");
+	decode_test(m, k, update_buffs, recov, a, src_in_err, src_err_list,
+		    nerrs, g_tbls, temp_buffs);
+	BENCHMARK(&start, BENCHMARK_TIME, check =
+		  decode_test(m, k, update_buffs, recov, a, src_in_err, src_err_list,
+			      nerrs, g_tbls, perf_update_buffs));
+	if (check) {
+		printf("BAD_MATRIX\n");
 		return -1;
 	}
 
-	for (i = 0; i < nerrs; i++)
-		for (j = 0; j < k; j++)
-			c[k * i + j] = d[k * src_err_list[i] + j];
-
-	// Recover data
-	ec_init_tables(k, nerrs, c, g_tbls);
-	for (i = 0; i < k; i++) {
-		FUNCTION_UNDER_TEST(TEST_LEN(m), k, nerrs, i, g_tbls, recov[i], temp_buffs);
-	}
-	// Start decode test
-	perf_start(&start);
-	for (rtest = 0; rtest < TEST_LOOPS(m); rtest++) {
-		// Construct b by removing error rows
-		for (i = 0, r = 0; i < k; i++, r++) {
-			while (src_in_err[r])
-				r++;
-			recov[i] = update_buffs[r];
-			for (j = 0; j < k; j++)
-				b[k * i + j] = a[k * r + j];
-		}
-
-		if (gf_invert_matrix(b, d, k) < 0) {
-			printf("BAD MATRIX\n");
-			return -1;
-		}
-
-		for (i = 0; i < nerrs; i++)
-			for (j = 0; j < k; j++)
-				c[k * i + j] = d[k * src_err_list[i] + j];
-
-		// Recover data
-		ec_init_tables(k, nerrs, c, g_tbls);
-		for (i = 0; i < k; i++) {
-			FUNCTION_UNDER_TEST(TEST_LEN(m), k, nerrs, i, g_tbls, recov[i],
-					    perf_update_buffs);
-		}
-	}
-	perf_stop(&stop);
-
 	for (i = 0; i < nerrs; i++) {
 		if (0 != memcmp(temp_buffs[i], update_buffs[src_err_list[i]], TEST_LEN(m))) {
-			printf("Fail error recovery (%d, %d, %d) - ", m, k, nerrs);
+			printf("Fail error recovery (%d, %d, %d) - \n", m, k, nerrs);
 			return -1;
 		}
 	}
 
 	printf(xstr(FUNCTION_UNDER_TEST) "_decode" TEST_TYPE_STR ": ");
-	perf_print(stop, start, (long long)(TEST_LEN(m)) * (k + nerrs) * rtest);
+	perf_print(start, (long long)(TEST_LEN(m)) * (k + nerrs));
 
 	printf("done all: Pass\n");
 	return 0;

@@ -38,10 +38,6 @@
 #include <zlib.h>
 
 #define BUF_SIZE 1024
-#define MIN_TEST_LOOPS   1
-#ifndef RUN_MEM_SIZE
-# define RUN_MEM_SIZE 200000000
-#endif
 
 #define OPTARGS "hl:f:z:i:d:stub:y:"
 
@@ -127,21 +123,20 @@ struct perf_info {
 	char *file_name;
 	size_t file_size;
 	size_t deflate_size;
-	int32_t deflate_iter;
-	int32_t inflate_iter;
 	uint32_t inblock_size;
 	uint32_t flush_type;
+	int32_t deflate_time;
+	int32_t inflate_time;
 	struct compress_strategy strategy;
 	uint32_t inflate_mode;
 	struct perf start;
-	struct perf stop;
 };
 
 void init_perf_info(struct perf_info *info)
 {
 	memset(info, 0, sizeof(*info));
-	info->inflate_iter = UNSET;
-	info->deflate_iter = UNSET;
+	info->deflate_time = BENCHMARK_TIME;
+	info->inflate_time = BENCHMARK_TIME;
 }
 
 int usage(void)
@@ -153,8 +148,8 @@ int usage(void)
 		"  -l <level>  isa-l stateless deflate level to test\n"
 		"  -f <level>  isa-l stateful deflate level to test\n"
 		"  -z <level>  zlib  deflate level to test\n"
-		"  -d <iter>   number of iterations for deflate (at least 1)\n"
-		"  -i <iter>   number of iterations for inflate (at least 1)\n"
+		"  -d <time>   approx time in seconds for deflate (at least 0)\n"
+		"  -i <time>   approx time in seconds for inflate (at least 0)\n"
 		"  -s          performance test isa-l stateful inflate\n"
 		"  -t          performance test isa-l stateless inflate\n"
 		"  -u          performance test zlib inflate\n"
@@ -166,10 +161,8 @@ int usage(void)
 
 void print_perf_info_line(struct perf_info *info)
 {
-	printf("igzip_perf-> compress level: %d compress_iterations: %d "
-	       "decompress_iterations: %d flush_type: %d block_size: %d\n",
-	       info->strategy.level, info->deflate_iter, info->inflate_iter,
-	       info->flush_type, info->inblock_size);
+	printf("igzip_perf-> compress level: %d flush_type: %d block_size: %d\n",
+	       info->strategy.level, info->flush_type, info->inblock_size);
 }
 
 void print_file_line(struct perf_info *info)
@@ -188,7 +181,7 @@ void print_deflate_perf_line(struct perf_info *info)
 	else if (info->strategy.mode == ZLIB)
 		printf("    zlib_deflate->           ");
 
-	perf_print(info->stop, info->start, info->file_size * info->deflate_iter);
+	perf_print(info->start, info->file_size);
 }
 
 void print_inflate_perf_line(struct perf_info *info)
@@ -200,7 +193,7 @@ void print_inflate_perf_line(struct perf_info *info)
 	else if (info->inflate_mode == ZLIB)
 		printf("    zlib_inflate->           ");
 
-	perf_print(info->stop, info->start, info->file_size * info->inflate_iter);
+	perf_print(info->start, info->file_size);
 }
 
 int isal_deflate_round(struct isal_zstream *stream, uint8_t * outbuf, uint32_t outbuf_size,
@@ -386,12 +379,12 @@ int zlib_inflate_round(z_stream * gstream, uint8_t * inbuf,
 }
 
 int isal_deflate_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t * inbuf,
-		      uint64_t inbuf_size, int level, int flush_type, int iterations,
-		      struct perf *start, struct perf *stop)
+		      uint64_t inbuf_size, int level, int flush_type, int time,
+		      struct perf *start)
 {
 	struct isal_zstream stream;
 	uint8_t *level_buf = NULL;
-	int i, check;
+	int check;
 
 	if (level_size_buf[level] > 0) {
 		level_buf = malloc(level_size_buf[level]);
@@ -399,31 +392,20 @@ int isal_deflate_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t * inbuf,
 			return 1;
 	}
 
-	check = isal_deflate_round(&stream, outbuf, *outbuf_size, inbuf,
-				   inbuf_size, level, level_buf, level_size_buf[level],
-				   flush_type);
-
-	perf_start(start);
-
-	for (i = 0; i < iterations && check == 0; i++)
-		check = isal_deflate_round(&stream, outbuf, *outbuf_size, inbuf,
-					   inbuf_size, level, level_buf,
-					   level_size_buf[level], flush_type);
-
-	perf_stop(stop);
-
+	BENCHMARK(start, time, check = isal_deflate_round(&stream, outbuf, *outbuf_size, inbuf,
+							  inbuf_size, level, level_buf,
+							  level_size_buf[level], flush_type));
 	*outbuf_size = stream.total_out;
 	return check;
 }
 
 int isal_deflate_stateful_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t * inbuf,
 			       uint64_t inbuf_size, int level, int flush_type,
-			       uint64_t in_block_size, int iterations, struct perf *start,
-			       struct perf *stop)
+			       uint64_t in_block_size, int time, struct perf *start)
 {
 	struct isal_zstream stream;
 	uint8_t *level_buf = NULL;
-	int i, check;
+	int check;
 
 	if (in_block_size == 0)
 		in_block_size = inbuf_size;
@@ -434,30 +416,21 @@ int isal_deflate_stateful_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t
 			return 1;
 	}
 
-	check = isal_deflate_stateful_round(&stream, outbuf, *outbuf_size, inbuf,
-					    inbuf_size, in_block_size, level, level_buf,
-					    level_size_buf[level], flush_type);
-	perf_start(start);
-
-	for (i = 0; i < iterations && check == 0; i++)
-		check = isal_deflate_stateful_round(&stream, outbuf, *outbuf_size,
-						    inbuf, inbuf_size, in_block_size, level,
-						    level_buf, level_size_buf[level],
-						    flush_type);
-
-	perf_stop(stop);
+	BENCHMARK(start, time, check =
+		  isal_deflate_stateful_round(&stream, outbuf, *outbuf_size, inbuf, inbuf_size,
+					      in_block_size, level, level_buf,
+					      level_size_buf[level], flush_type));
 
 	*outbuf_size = stream.total_out;
-	return 0;
+	return check;
 
 }
 
 int zlib_deflate_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t * inbuf,
 		      uint64_t inbuf_size, int level, int flush_type,
-		      uint64_t in_block_size, int iterations, struct perf *start,
-		      struct perf *stop)
+		      uint64_t in_block_size, int time, struct perf *start)
 {
-	int i, check;
+	int check;
 	z_stream gstream;
 	int flush_translator[] = { Z_NO_FLUSH, Z_SYNC_FLUSH, Z_FULL_FLUSH };
 
@@ -475,16 +448,9 @@ int zlib_deflate_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t * inbuf,
 	if (0 != deflateInit2(&gstream, level, Z_DEFLATED, -15, 9, Z_DEFAULT_STRATEGY))
 		return 1;
 
-	check = zlib_deflate_round(&gstream, outbuf, *outbuf_size, inbuf,
-				   inbuf_size, in_block_size, level, flush_type);
-
-	perf_start(start);
-
-	for (i = 0; i < iterations && check == 0; i++)
-		check = zlib_deflate_round(&gstream, outbuf, *outbuf_size, inbuf,
-					   inbuf_size, in_block_size, level, flush_type);
-
-	perf_stop(stop);
+	BENCHMARK(start, time, check =
+		  zlib_deflate_round(&gstream, outbuf, *outbuf_size, inbuf, inbuf_size,
+				     in_block_size, level, flush_type));
 
 	*outbuf_size = gstream.total_out;
 	deflateEnd(&gstream);
@@ -494,33 +460,28 @@ int zlib_deflate_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t * inbuf,
 
 int isal_inflate_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * outbuf,
 		      uint64_t outbuf_size, uint8_t * filebuf, uint64_t file_size,
-		      int iterations, struct perf *start, struct perf *stop)
+		      int time, struct perf *start)
 {
 	struct inflate_state state;
-	int i, check;
+	int check;
 
 	/* Check that data decompresses */
 	check = isal_inflate_round(&state, inbuf, inbuf_size, outbuf, outbuf_size);
 	if (check || state.total_out != file_size || memcmp(outbuf, filebuf, file_size))
 		return 1;
 
-	perf_start(start);
-
-	for (i = 0; i < iterations && check == 0; i++)
-		check = isal_inflate_round(&state, inbuf, inbuf_size, outbuf, outbuf_size);
-
-	perf_stop(stop);
+	BENCHMARK(start, time,
+		  isal_inflate_round(&state, inbuf, inbuf_size, outbuf, outbuf_size));
 
 	return check;
 }
 
 int isal_inflate_stateful_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * outbuf,
 			       uint64_t outbuf_size, uint8_t * filebuf, uint64_t file_size,
-			       uint64_t in_block_size, int iterations, struct perf *start,
-			       struct perf *stop)
+			       uint64_t in_block_size, int time, struct perf *start)
 {
 	struct inflate_state state;
-	int i, check;
+	int check;
 
 	if (in_block_size == 0)
 		in_block_size = inbuf_size;
@@ -529,13 +490,9 @@ int isal_inflate_stateful_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * o
 	if (check || state.total_out != file_size || memcmp(outbuf, filebuf, file_size))
 		return 1;
 
-	perf_start(start);
-
-	for (i = 0; i < iterations && check == 0; i++)
-		check = isal_inflate_stateful_round(&state, inbuf, inbuf_size, in_block_size,
-						    outbuf, outbuf_size);
-
-	perf_stop(stop);
+	BENCHMARK(start, time,
+		  isal_inflate_stateful_round(&state, inbuf, inbuf_size, in_block_size, outbuf,
+					      outbuf_size));
 
 	return 0;
 
@@ -543,9 +500,9 @@ int isal_inflate_stateful_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * o
 
 int zlib_inflate_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * outbuf,
 		      uint64_t outbuf_size, uint8_t * filebuf, uint64_t file_size,
-		      int iterations, struct perf *start, struct perf *stop)
+		      int time, struct perf *start)
 {
-	int i, check;
+	int check;
 	z_stream gstream;
 
 	gstream.next_in = inbuf;
@@ -560,12 +517,9 @@ int zlib_inflate_perf(uint8_t * inbuf, uint64_t inbuf_size, uint8_t * outbuf,
 	if (check || gstream.total_out != file_size || memcmp(outbuf, filebuf, file_size))
 		return 1;
 
-	perf_start(start);
+	BENCHMARK(start, time,
+		  zlib_inflate_round(&gstream, inbuf, inbuf_size, outbuf, outbuf_size));
 
-	for (i = 0; i < iterations && check == 0; i++)
-		check = zlib_inflate_round(&gstream, inbuf, inbuf_size, outbuf, outbuf_size);
-
-	perf_stop(stop);
 	inflateEnd(&gstream);
 	return 0;
 }
@@ -636,13 +590,13 @@ int main(int argc, char *argv[])
 			compression_queue_size++;
 			break;
 		case 'i':
-			info.inflate_iter = atoi(optarg);
-			if (info.inflate_iter < 0)
+			info.inflate_time = atoi(optarg);
+			if (info.inflate_time < 0)
 				usage();
 			break;
 		case 'd':
-			info.deflate_iter = atoi(optarg);
-			if (info.deflate_iter < 1)
+			info.deflate_time = atoi(optarg);
+			if (info.deflate_time < 0)
 				usage();
 			break;
 		case 's':
@@ -700,20 +654,6 @@ int main(int argc, char *argv[])
 	}
 
 	decompbuf_size = info.file_size;
-	if (info.inflate_iter == UNSET) {
-		info.inflate_iter =
-		    info.file_size ? RUN_MEM_SIZE / info.file_size : MIN_TEST_LOOPS;
-		if (info.inflate_iter < MIN_TEST_LOOPS)
-			info.inflate_iter = MIN_TEST_LOOPS;
-	}
-
-	decompbuf_size = info.file_size;
-	if (info.deflate_iter == UNSET) {
-		info.deflate_iter =
-		    info.file_size ? RUN_MEM_SIZE / info.file_size : MIN_TEST_LOOPS;
-		if (info.deflate_iter < MIN_TEST_LOOPS)
-			info.deflate_iter = MIN_TEST_LOOPS;
-	}
 
 	if (compression_queue_size == 0) {
 		if (info.inblock_size == 0)
@@ -770,21 +710,20 @@ int main(int argc, char *argv[])
 		if (info.strategy.mode == ISAL_STATELESS)
 			ret = isal_deflate_perf(compressbuf, &info.deflate_size, filebuf,
 						info.file_size, compression_queue[i].level,
-						info.flush_type, info.deflate_iter,
-						&info.start, &info.stop);
+						info.flush_type, info.deflate_time,
+						&info.start);
 		else if (info.strategy.mode == ISAL_STATEFUL)
 			ret =
 			    isal_deflate_stateful_perf(compressbuf, &info.deflate_size,
 						       filebuf, info.file_size,
 						       compression_queue[i].level,
 						       info.flush_type, info.inblock_size,
-						       info.deflate_iter, &info.start,
-						       &info.stop);
+						       info.deflate_time, &info.start);
 		else if (info.strategy.mode == ZLIB)
 			ret = zlib_deflate_perf(compressbuf, &info.deflate_size, filebuf,
 						info.file_size, compression_queue[i].level,
 						info.flush_type, info.inblock_size,
-						info.deflate_iter, &info.start, &info.stop);
+						info.deflate_time, &info.start);
 
 		if (ret) {
 			printf("  Error in compression\n");
@@ -796,14 +735,14 @@ int main(int argc, char *argv[])
 		print_deflate_perf_line(&info);
 		printf("\n");
 
-		if (info.inflate_iter == 0)
+		if (info.inflate_time == 0)
 			continue;
 
 		if (inflate_strat.stateless) {
 			info.inflate_mode = ISAL_STATELESS;
 			ret = isal_inflate_perf(compressbuf, info.deflate_size, decompbuf,
 						decompbuf_size, filebuf, info.file_size,
-						info.inflate_iter, &info.start, &info.stop);
+						info.inflate_time, &info.start);
 			if (ret)
 				printf("    Error in isal stateless inflate\n");
 			else
@@ -816,8 +755,7 @@ int main(int argc, char *argv[])
 			    isal_inflate_stateful_perf(compressbuf, info.deflate_size,
 						       decompbuf, decompbuf_size, filebuf,
 						       info.file_size, info.inblock_size,
-						       info.inflate_iter, &info.start,
-						       &info.stop);
+						       info.inflate_time, &info.start);
 
 			if (ret)
 				printf("    Error in isal stateful inflate\n");
@@ -829,7 +767,7 @@ int main(int argc, char *argv[])
 			info.inflate_mode = ZLIB;
 			ret = zlib_inflate_perf(compressbuf, info.deflate_size, decompbuf,
 						decompbuf_size, filebuf, info.file_size,
-						info.inflate_iter, &info.start, &info.stop);
+						info.inflate_time, &info.start);
 			if (ret)
 				printf("    Error in zlib inflate\n");
 			else

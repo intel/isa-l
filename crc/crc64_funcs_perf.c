@@ -39,13 +39,11 @@
 #ifdef CACHED_TEST
 // Cached test, loop many times over small dataset
 # define TEST_LEN     8*1024
-# define TEST_LOOPS   400000
 # define TEST_TYPE_STR "_warm"
 #else
 // Uncached test.  Pull from large mem base.
 #  define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
 #  define TEST_LEN     (2 * GT_L3_CACHE)
-#  define TEST_LOOPS   100
 #  define TEST_TYPE_STR "_cold"
 #endif
 
@@ -74,10 +72,10 @@ func_case_t test_funcs[] = {
 
 int main(int argc, char *argv[])
 {
-	int i, j;
+	int j;
 	void *buf;
 	uint64_t crc;
-	struct perf start, stop;
+	struct perf start;
 	func_case_t *test_func;
 
 	if (posix_memalign(&buf, 1024, TEST_LEN)) {
@@ -93,14 +91,10 @@ int main(int argc, char *argv[])
 		printf("Start timed tests\n");
 		fflush(0);
 
-		crc = test_func->crc64_func_call(TEST_SEED, buf, TEST_LEN);
-		perf_start(&start);
-		for (i = 0; i < TEST_LOOPS; i++) {
-			crc = test_func->crc64_func_call(TEST_SEED, buf, TEST_LEN);
-		}
-		perf_stop(&stop);
+		BENCHMARK(&start, BENCHMARK_TIME, crc =
+			  test_func->crc64_func_call(TEST_SEED, buf, TEST_LEN));
 		printf("%s" TEST_TYPE_STR ": ", test_func->note);
-		perf_print(stop, start, (long long)TEST_LEN * i);
+		perf_print(start, (long long)TEST_LEN);
 
 		printf("finish 0x%lx\n", crc);
 	}

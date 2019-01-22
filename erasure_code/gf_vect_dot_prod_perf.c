@@ -45,7 +45,6 @@
 // Cached test, loop many times over small dataset
 # define TEST_SOURCES 10
 # define TEST_LEN     8*1024
-# define TEST_LOOPS   40000
 # define TEST_TYPE_STR "_warm"
 #else
 # ifndef TEST_CUSTOM
@@ -53,13 +52,9 @@
 #  define TEST_SOURCES 10
 #  define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
 #  define TEST_LEN     ((GT_L3_CACHE / TEST_SOURCES) & ~(64-1))
-#  define TEST_LOOPS   100
 #  define TEST_TYPE_STR "_cold"
 # else
 #  define TEST_TYPE_STR "_cus"
-#  ifndef TEST_LOOPS
-#    define TEST_LOOPS 1000
-#  endif
 # endif
 #endif
 
@@ -88,13 +83,24 @@ void dump_matrix(unsigned char **s, int k, int m)
 	printf("\n");
 }
 
+void vect_dot_prod_perf(void (*fun_ptr)
+			 (int, int, unsigned char *, unsigned char **, unsigned char *),
+			u8 * g, u8 * g_tbls, u8 ** buffs, u8 * dest_ref)
+{
+	int j;
+	for (j = 0; j < TEST_SOURCES; j++)
+		gf_vect_mul_init(g[j], &g_tbls[j * 32]);
+
+	(*fun_ptr) (TEST_LEN, TEST_SOURCES, &g_tbls[0], buffs, dest_ref);
+}
+
 int main(int argc, char *argv[])
 {
 	int i, j;
 	void *buf;
 	u8 g[TEST_SOURCES], g_tbls[TEST_SOURCES * 32], *dest, *dest_ref;
 	u8 *temp_buff, *buffs[TEST_SOURCES];
-	struct perf start, stop;
+	struct perf start;
 
 	printf(xstr(FUNCTION_UNDER_TEST) ": %dx%d\n", TEST_SOURCES, TEST_LEN);
 
@@ -138,36 +144,20 @@ int main(int argc, char *argv[])
 	for (i = 0; i < TEST_SOURCES; i++)
 		g[i] = rand();
 
-	for (j = 0; j < TEST_SOURCES; j++)
-		gf_vect_mul_init(g[j], &g_tbls[j * 32]);
-
-	gf_vect_dot_prod_base(TEST_LEN, TEST_SOURCES, &g_tbls[0], buffs, dest_ref);
-
 #ifdef DO_REF_PERF
-	perf_start(&start);
-	for (i = 0; i < TEST_LOOPS; i++) {
-		for (j = 0; j < TEST_SOURCES; j++)
-			gf_vect_mul_init(g[j], &g_tbls[j * 32]);
-
-		gf_vect_dot_prod_base(TEST_LEN, TEST_SOURCES, &g_tbls[0], buffs, dest_ref);
-	}
-	perf_stop(&stop);
+	BENCHMARK(&start, BENCHMARK_TIME,
+		  vect_dot_prod_perf(&gf_vect_dot_prod_base, g, g_tbls, buffs, dest_ref)
+	    );
 	printf("gf_vect_dot_prod_base" TEST_TYPE_STR ": ");
-	perf_print(stop, start, (long long)TEST_LEN * (TEST_SOURCES + 1) * i);
+	perf_print(start, (long long)TEST_LEN * (TEST_SOURCES + 1));
+#else
+	vect_dot_prod_perf(&gf_vect_dot_prod_base, g, g_tbls, buffs, dest_ref);
 #endif
 
-	FUNCTION_UNDER_TEST(TEST_LEN, TEST_SOURCES, g_tbls, buffs, dest);
-
-	perf_start(&start);
-	for (i = 0; i < TEST_LOOPS; i++) {
-		for (j = 0; j < TEST_SOURCES; j++)
-			gf_vect_mul_init(g[j], &g_tbls[j * 32]);
-
-		FUNCTION_UNDER_TEST(TEST_LEN, TEST_SOURCES, g_tbls, buffs, dest);
-	}
-	perf_stop(&stop);
+	BENCHMARK(&start, BENCHMARK_TIME,
+		  vect_dot_prod_perf(&FUNCTION_UNDER_TEST, g, g_tbls, buffs, dest));
 	printf(xstr(FUNCTION_UNDER_TEST) TEST_TYPE_STR ": ");
-	perf_print(stop, start, (long long)TEST_LEN * (TEST_SOURCES + 1) * i);
+	perf_print(start, (long long)TEST_LEN * (TEST_SOURCES + 1));
 
 	if (0 != memcmp(dest_ref, dest, TEST_LEN)) {
 		printf("Fail zero " xstr(FUNCTION_UNDER_TEST) " test\n");

@@ -40,14 +40,12 @@
 #ifdef CACHED_TEST
 // Cached test, loop many times over small dataset
 # define NBLOCKS      100
-# define TEST_LOOPS   1000000
 # define TEST_TYPE_STR "_warm"
 #else
 // Uncached test.  Pull from large mem base.
 #  define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
 #  define TEST_LEN     (2 * GT_L3_CACHE)
 #  define NBLOCKS      (TEST_LEN / BLKSIZE)
-#  define TEST_LOOPS    100
 #  define TEST_TYPE_STR "_cold"
 #endif
 
@@ -66,13 +64,25 @@ struct blk_ext {
 	uint16_t crc;
 };
 
+void crc16_t10dif_copy_perf(struct blk *blks, struct blk *blkp, struct blk_ext *blks_ext,
+			    struct blk_ext *blkp_ext, uint16_t * crc)
+{
+	int i;
+	for (i = 0, blkp = blks, blkp_ext = blks_ext; i < NBLOCKS; i++) {
+		*crc = crc16_t10dif_copy(TEST_SEED, blkp_ext->data, blkp->data,
+					 sizeof(blks->data));
+		blkp_ext->crc = *crc;
+		blkp++;
+		blkp_ext++;
+	}
+}
+
 int main(int argc, char *argv[])
 {
-	int i, j;
 	uint16_t crc;
 	struct blk *blks, *blkp;
 	struct blk_ext *blks_ext, *blkp_ext;
-	struct perf start, stop;
+	struct perf start;
 
 	printf("crc16_t10dif_streaming_insert_perf:\n");
 
@@ -95,19 +105,11 @@ int main(int argc, char *argv[])
 	fflush(0);
 
 	// Copy and insert test
-	perf_start(&start);
-	for (j = 0; j < TEST_LOOPS; j++) {
-		for (i = 0, blkp = blks, blkp_ext = blks_ext; i < NBLOCKS; i++) {
-			crc = crc16_t10dif_copy(TEST_SEED, blkp_ext->data, blkp->data,
-						sizeof(blks->data));
-			blkp_ext->crc = crc;
-			blkp++;
-			blkp_ext++;
-		}
-	}
-	perf_stop(&stop);
+	BENCHMARK(&start, BENCHMARK_TIME,
+		  crc16_t10dif_copy_perf(blks, blkp, blks_ext, blkp_ext, &crc));
+
 	printf("crc16_t10pi_op_copy_insert" TEST_TYPE_STR ": ");
-	perf_print(stop, start, (long long)sizeof(blks->data) * NBLOCKS * TEST_LOOPS);
+	perf_print(start, (long long)sizeof(blks->data) * NBLOCKS);
 
 	printf("finish 0x%x\n", crc);
 	return 0;

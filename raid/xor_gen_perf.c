@@ -40,14 +40,12 @@
 // Loop many times over same
 # define TEST_SOURCES 10
 # define TEST_LEN     8*1024
-# define TEST_LOOPS   2000000
 # define TEST_TYPE_STR "_warm"
 #else
 // Uncached test.  Pull from large mem base.
 # define TEST_SOURCES 10
 # define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
 # define TEST_LEN     GT_L3_CACHE / TEST_SOURCES
-# define TEST_LOOPS   1000
 # define TEST_TYPE_STR "_cold"
 #endif
 
@@ -58,7 +56,7 @@ int main(int argc, char *argv[])
 	int i, ret, fail = 0;
 	void **buffs;
 	void *buff;
-	struct perf start, stop;
+	struct perf start;
 
 	printf("Test xor_gen_perf\n");
 
@@ -84,15 +82,9 @@ int main(int argc, char *argv[])
 	for (i = 0; i < TEST_SOURCES + 1; i++)
 		memset(buffs[i], 0, TEST_LEN);
 
-	// Warm up
-	xor_gen(TEST_SOURCES + 1, TEST_LEN, buffs);
-
-	perf_start(&start);
-	for (i = 0; i < TEST_LOOPS; i++)
-		xor_gen(TEST_SOURCES + 1, TEST_LEN, buffs);
-	perf_stop(&stop);
+	BENCHMARK(&start, BENCHMARK_TIME, xor_gen(TEST_SOURCES + 1, TEST_LEN, buffs));
 	printf("xor_gen" TEST_TYPE_STR ": ");
-	perf_print(stop, start, (long long)TEST_MEM * i);
+	perf_print(start, (long long)TEST_MEM);
 
 	return fail;
 }

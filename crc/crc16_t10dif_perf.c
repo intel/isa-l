@@ -39,13 +39,11 @@
 #ifdef CACHED_TEST
 // Cached test, loop many times over small dataset
 # define TEST_LEN     8*1024
-# define TEST_LOOPS   4000000
 # define TEST_TYPE_STR "_warm"
 #else
 // Uncached test.  Pull from large mem base.
 #  define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
 #  define TEST_LEN     (2 * GT_L3_CACHE)
-#  define TEST_LOOPS   100
 #  define TEST_TYPE_STR "_cold"
 #endif
 
@@ -57,10 +55,9 @@
 
 int main(int argc, char *argv[])
 {
-	int i;
 	void *buf;
 	uint16_t crc;
-	struct perf start, stop;
+	struct perf start;
 
 	printf("crc16_t10dif_perf:\n");
 
@@ -73,14 +70,9 @@ int main(int argc, char *argv[])
 	fflush(0);
 
 	memset(buf, 0, TEST_LEN);
-	crc = crc16_t10dif(TEST_SEED, buf, TEST_LEN);
-	perf_start(&start);
-	for (i = 0; i < TEST_LOOPS; i++) {
-		crc = crc16_t10dif(TEST_SEED, buf, TEST_LEN);
-	}
-	perf_stop(&stop);
+	BENCHMARK(&start, BENCHMARK_TIME, crc = crc16_t10dif(TEST_SEED, buf, TEST_LEN));
 	printf("crc16_t10dif" TEST_TYPE_STR ": ");
-	perf_print(stop, start, (long long)TEST_LEN * i);
+	perf_print(start, (long long)TEST_LEN);
 
 	printf("finish 0x%x\n", crc);
 	return 0;

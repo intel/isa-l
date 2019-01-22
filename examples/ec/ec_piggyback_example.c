@@ -334,16 +334,12 @@ int main(int argc, char *argv[])
 		ec_encode_data(len / 2, k2, p2, g_tbls, frag_ptrs, parity_ptrs);
 
 		if (benchmark) {
-			struct perf start, stop;
-			unsigned long long iterations = (1ull << 32) / (m * len);
-			perf_start(&start);
-			for (i = 0; i < iterations; i++) {
-				ec_encode_data(len / 2, k2, p2, g_tbls, frag_ptrs,
-					       parity_ptrs);
-			}
-			perf_stop(&stop);
+			struct perf start;
+			BENCHMARK(&start, BENCHMARK_TIME,
+				  ec_encode_data(len / 2, k2, p2, g_tbls, frag_ptrs,
+						 parity_ptrs));
 			printf("ec_piggyback_encode_std: ");
-			perf_print(stop, start, iterations * m2 * len / 2);
+			perf_print(start, m2 * len / 2);
 		}
 	} else {
 		// Sparse matrix optimization - use fact that input matrix is sparse
@@ -380,18 +376,14 @@ int main(int argc, char *argv[])
 			       &parity_ptrs[p]);
 
 		if (benchmark) {
-			struct perf start, stop;
-			unsigned long long iterations = (1ull << 32) / (m * len);
-			perf_start(&start);
-			for (i = 0; i < iterations; i++) {
-				ec_encode_data(len / 2, k, p, g_tbls_faster, frag_ptrs,
-					       parity_ptrs);
-				ec_encode_data(len / 2, k2, p, &g_tbls[k2 * p * 32], frag_ptrs,
-					       &parity_ptrs[p]);
-			}
-			perf_stop(&stop);
+			struct perf start;
+			BENCHMARK(&start, BENCHMARK_TIME,
+				  ec_encode_data(len / 2, k, p, g_tbls_faster, frag_ptrs,
+						 parity_ptrs);
+				  ec_encode_data(len / 2, k2, p, &g_tbls[k2 * p * 32],
+						 frag_ptrs, &parity_ptrs[p]));
 			printf("ec_piggyback_encode_sparse: ");
-			perf_print(stop, start, iterations * m2 * len / 2);
+			perf_print(start, m2 * len / 2);
 		}
 	}
 
@@ -429,16 +421,12 @@ int main(int argc, char *argv[])
 	ec_encode_data(len / 2, k2, nerrs2, g_tbls, recover_srcs, recover_outp);
 
 	if (benchmark) {
-		struct perf start, stop;
-		unsigned long long iterations = (1ull << 32) / (k * len);
-		perf_start(&start);
-		for (i = 0; i < iterations; i++) {
-			ec_encode_data(len / 2, k2, nerrs2, g_tbls, recover_srcs,
-				       recover_outp);
-		}
-		perf_stop(&stop);
+		struct perf start;
+		BENCHMARK(&start, BENCHMARK_TIME,
+			  ec_encode_data(len / 2, k2, nerrs2, g_tbls, recover_srcs,
+					 recover_outp));
 		printf("ec_piggyback_decode: ");
-		perf_print(stop, start, iterations * (k2 + nerrs2) * len / 2);
+		perf_print(start, (k2 + nerrs2) * len / 2);
 	}
 	// Check that recovered buffers are the same as original
 	printf(" check recovery of block {");
