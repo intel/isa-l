@@ -146,7 +146,7 @@ fi
 for f in $samp_files; do
     echo Using sample file $f
     f_base=`basename $f`
-    ./igzip_stateless_file_perf $f -o $fuzzin_dir/samp_${f_base}_cmp
+    ./igzip_file_perf $f -o $fuzzin_dir/samp_${f_base}_cmp
 done
 
 # Optionally run tests alternately one after the other

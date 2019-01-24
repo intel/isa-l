@@ -110,9 +110,6 @@ echo Other tests using $in_file
 test_start "igzip_file_perf"
 ./igzip_file_perf $in_file
 test_end "igzip_file_perf" $?
-test_start "igzip_stateless_file_perf"
-./igzip_stateless_file_perf $in_file
-test_end "igzip_stateless_file_perf" $?
 test_start "igzip_hist_perf"
 ./igzip_hist_perf $in_file
 test_end "igzip_hist_perf" $?
