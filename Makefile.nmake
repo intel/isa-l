@@ -235,15 +235,6 @@ $(tests): $(@B).obj
 # Performance tests
 perfs = \
 	gf_vect_mul_perf.exe \
-	gf_vect_mul_sse_perf.exe \
-	gf_vect_mul_avx_perf.exe \
-	gf_vect_dot_prod_sse_perf.exe \
-	gf_vect_dot_prod_avx_perf.exe \
-	gf_2vect_dot_prod_sse_perf.exe \
-	gf_3vect_dot_prod_sse_perf.exe \
-	gf_4vect_dot_prod_sse_perf.exe \
-	gf_5vect_dot_prod_sse_perf.exe \
-	gf_6vect_dot_prod_sse_perf.exe \
 	gf_vect_dot_prod_perf.exe \
 	gf_vect_dot_prod_1tbl.exe \
 	erasure_code_perf.exe \
