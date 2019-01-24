@@ -246,7 +246,6 @@ perfs = \
 	gf_6vect_dot_prod_sse_perf.exe \
 	gf_vect_dot_prod_perf.exe \
 	gf_vect_dot_prod_1tbl.exe \
-	gf_vect_mad_perf.exe \
 	erasure_code_perf.exe \
 	erasure_code_base_perf.exe \
 	erasure_code_sse_perf.exe \
