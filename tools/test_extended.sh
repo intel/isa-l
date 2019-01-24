@@ -119,9 +119,6 @@ test_end "igzip_hist_perf" $?
 test_start "igzip_semi_dyn_file_perf"
 ./igzip_semi_dyn_file_perf $in_file
 test_end "igzip_semi_dyn_file_perf" $?
-test_start "igzip_inflate_perf"
-./igzip_inflate_perf $in_file
-test_end "igzip_inflate_perf" $?
 test_start "igzip_fuzz_inflate"
 ./igzip_fuzz_inflate $in_file
 test_end "igzip_fuzz_inflate" $?

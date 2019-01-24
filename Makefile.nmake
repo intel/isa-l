@@ -263,5 +263,4 @@ clean:
 	-if exist isa-l.dll del isa-l.dll
 
 zlib.lib:
-igzip_inflate_perf.exe:  zlib.lib
 igzip_inflate_test.exe:  zlib.lib
