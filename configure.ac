@@ -124,7 +124,28 @@ if test x"$is_x86" = x"yes"; then
       AC_MSG_ERROR([No modern yasm or nasm found as required. Yasm should be 1.2.0 or later, and nasm should be v2.11.01 or later (v2.13 for AVX512).])
     fi
   fi
-  echo "Using assembler $AS"
+
+  case $host_os in
+       *linux*)  arch=linux   yasm_args="-f elf64";;
+       *darwin*) arch=darwin  yasm_args="-f macho64 --prefix=_ ";;
+       *netbsd*) arch=netbsd  yasm_args="-f elf64";;
+       *mingw*)  arch=mingw   yasm_args="-f win64";;
+       *)        arch=unknown yasm_args="-f elf64";;
+  esac
+
+  # Fix for nasm missing windows features
+  if test x"$arch" = x"mingw"; then
+    if test x"$with_modern_yasm" = x"yes"; then
+      AS=yasm
+      if test x"$yasm_knows_avx512" = x"yes"; then
+        have_as_knows_avx512=yes
+      else
+        have_as_knows_avx512=no
+      fi
+    else
+      AC_MSG_ERROR([Mingw build requires Yasm 1.2.0 or later.])
+    fi
+  fi
 
   if test \( x"$AS" = x"yasm" -a x"$yasm_knows_avx512" = x"yes" \) -o \( x"$AS" = x"nasm" -a x"$nasm_knows_avx512" = x"yes" \); then
     AC_DEFINE(HAVE_AS_KNOWS_AVX512, [1], [Assembler can do AVX512.])
@@ -132,22 +153,15 @@ if test x"$is_x86" = x"yes"; then
   else
     AC_MSG_RESULT([Assembler does not understand AVX512 opcodes.  Consider upgrading for best performance.])
   fi
+
+  AM_CONDITIONAL(USE_YASM, test x"$AS" = x"yasm")
+  AM_CONDITIONAL(USE_NASM, test x"$AS" = x"nasm")
+  AM_CONDITIONAL(WITH_AVX512, test x"$have_as_knows_avx512" = x"yes")
+  AC_SUBST([yasm_args])
+  AM_CONDITIONAL(DARWIN, test x"$arch" = x"darwin")
+  AC_MSG_RESULT([Using $AS args target "$arch" "$yasm_args"])
 fi
 
-AM_CONDITIONAL(USE_YASM, test x"$AS" = x"yasm")
-AM_CONDITIONAL(USE_NASM, test x"$AS" = x"nasm")
-AM_CONDITIONAL(WITH_AVX512, test x"$have_as_knows_avx512" = x"yes")
-
-
-case $host_os in
-     *linux*)	arch=linux   yasm_args="-f elf64";;
-     *darwin*)	arch=darwin  yasm_args="-f macho64 --prefix=_ ";;
-     *netbsd*)	arch=netbsd  yasm_args="-f elf64";;
-     *)		arch=unknown yasm_args="-f elf64";;
-esac
-AC_SUBST([yasm_args])
-AM_CONDITIONAL(DARWIN, test x"$arch" = x"darwin")
-AC_MSG_RESULT([Using yasm args target "$arch" "$yasm_args"])
 
 # Check for header files
 AC_CHECK_HEADERS([limits.h stdint.h stdlib.h string.h])
