@@ -39,7 +39,7 @@
 
 #define BUF_SIZE 1024
 
-#define OPTARGS "hl:f:z:i:d:stub:y:w:"
+#define OPTARGS "hl:f:z:i:d:stub:y:w:o:"
 
 #define COMPRESSION_QUEUE_LIMIT 32
 #define UNSET -1
@@ -154,6 +154,7 @@ int usage(void)
 		"  -s          performance test isa-l stateful inflate\n"
 		"  -t          performance test isa-l stateless inflate\n"
 		"  -u          performance test zlib inflate\n"
+		"  -o <file>   output file to store compressed data (last one if multiple)\n"
 		"  -b <size>   input buffer size, applies to stateful options (-f,-z,-s)\n"
 		"  -y <type>   flush type: 0 (default: no flush), 1 (sync flush), 2 (full flush)\n"
 		"  -w <size>   log base 2 size of history window, between 9 and 15\n",
@@ -549,6 +550,7 @@ int main(int argc, char *argv[])
 {
 	FILE *in = NULL;
 	unsigned char *compressbuf, *decompbuf, *filebuf;
+	char *outfile = NULL;
 	int i, c, ret = 0;
 	uint64_t decompbuf_size, compressbuf_size;
 	uint64_t block_count;
@@ -646,6 +648,9 @@ int main(int argc, char *argv[])
 			info.hist_bits = atoi(optarg);
 			if (info.hist_bits > 15 || info.hist_bits < 9)
 				usage();
+			break;
+		case 'o':
+			outfile = optarg;
 			break;
 		case 'h':
 		default:
@@ -763,6 +768,13 @@ int main(int argc, char *argv[])
 		printf("\n");
 		print_deflate_perf_line(&info);
 		printf("\n");
+
+		if (outfile != NULL && i + 1 == compression_queue_size) {
+			FILE *out;
+			out = fopen(outfile, "wb");
+			fwrite(compressbuf, 1, info.deflate_size, out);
+			fclose(out);
+		}
 
 		if (info.inflate_time == 0)
 			continue;
