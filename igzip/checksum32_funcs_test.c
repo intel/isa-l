@@ -33,6 +33,7 @@
 #include <stdint.h>
 #include "igzip_checksums.h"
 #include "checksum_test_ref.h"
+#include "types.h"
 
 #ifndef TEST_SEED
 # define TEST_SEED 0x1234

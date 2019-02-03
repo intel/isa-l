@@ -914,6 +914,23 @@ int isal_inflate(struct inflate_state *state);
  */
 int isal_inflate_stateless(struct inflate_state *state);
 
+/******************************************************************************/
+/* Other functions */
+/******************************************************************************/
+/**
+ * @brief Calculate Adler-32 checksum, runs appropriate version.
+ *
+ * This function determines what instruction sets are enabled and selects the
+ * appropriate version at runtime.
+ *
+ * @param init: initial Adler-32 value
+ * @param buf: buffer to calculate checksum on
+ * @param len: buffer length in bytes
+ *
+ * @returns 32-bit Adler-32 checksum
+ */
+uint32_t isal_adler32(uint32_t init, const unsigned char *buf, uint64_t len);
+
 #ifdef __cplusplus
 }
 #endif
