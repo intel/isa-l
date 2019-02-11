@@ -163,6 +163,12 @@ if test x"$is_x86" = x"yes"; then
   AC_SUBST([yasm_args])
   AM_CONDITIONAL(DARWIN, test x"$arch" = x"darwin")
   AC_MSG_RESULT([Using $AS args target "$arch" "$yasm_args"])
+else
+  # Disable below conditionals if not x86
+  AM_CONDITIONAL(USE_YASM, test "x" = "y")
+  AM_CONDITIONAL(USE_NASM, test "x" = "y")
+  AM_CONDITIONAL(WITH_AVX512, test "x" = "y")
+  AM_CONDITIONAL(DARWIN, test "x" = "y")
 fi
 
 
