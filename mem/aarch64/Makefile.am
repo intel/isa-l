@@ -1,5 +1,5 @@
 ########################################################################
-#  Copyright(c) 2011-2018 Intel Corporation All rights reserved.
+#  Copyright(c) 2019 Arm Corporation All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
 #      notice, this list of conditions and the following disclaimer in
 #      the documentation and/or other materials provided with the
 #      distribution.
-#    * Neither the name of Intel Corporation nor the names of its
+#    * Neither the name of Arm Corporation nor the names of its
 #      contributors may be used to endorse or promote products derived
 #      from this software without specific prior written permission.
 #
@@ -25,23 +25,8 @@
 #  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 #  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-########################################################################
+#########################################################################
 
-include mem/aarch64/Makefile.am
-
-lsrc        += 	mem/mem_zero_detect_base.c
-
-lsrc_base_aliases += mem/mem_zero_detect_base_aliases.c
-
-lsrc_x86_64 += 	mem/mem_zero_detect_avx.asm \
-		mem/mem_zero_detect_sse.asm \
-		mem/mem_multibinary.asm
-
-extern_hdrs +=	include/mem_routines.h
-
-other_src   +=  include/test.h \
-		include/types.h
-
-check_tests  +=  mem/mem_zero_detect_test
-
-perf_tests  +=  mem/mem_zero_detect_perf
+lsrc_aarch64 += \
+	mem/aarch64/mem_zero_detect_neon.S \
+	mem/aarch64/mem_multibinary_arm.S
