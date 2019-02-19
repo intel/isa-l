@@ -301,12 +301,11 @@ encode_deflate_icf_ %+ ARCH:
 	vpaddq code_lens1, code_lens1, code_lens3
 
 	;; Determine total bits at end of each qword
-	kshiftlq k7, k3, 2
 	vpermq	zbits_count {k5}{z}, zrot_perm, code_lens1
 	vpaddq	code_lens2, zbits_count, code_lens1
 	vshufi64x2 zbits_count {k3}{z}, code_lens2, code_lens2, 0x90
 	vpaddq	code_lens2, code_lens2, zbits_count
-	vshufi64x2 zbits_count {k7}{z}, code_lens2, code_lens2, 0x40
+	vshufi64x2 zbits_count {k2}{z}, code_lens2, code_lens2, 0x40
 	vpaddq	code_lens2, code_lens2, zbits_count
 
 	;; Bit align quadwords
@@ -613,7 +612,7 @@ eb_icr_mask:
 
 ;; k mask constants
 k_mask_1: dq 0x55555555
-k_mask_2: dq 0x11111111
+k_mask_2: dq 0xfffffff0
 k_mask_3: dq 0xfffffffc
 k_mask_4: dw 0x0101, 0x0101, 0x0101, 0x0101
 k_mask_5: dq 0xfffffffe
