@@ -113,6 +113,7 @@
 %define zbits		zmm12
 %define zbits_count	zmm13
 %define zoffset_mask	zmm14
+%define znotoffset_mask	zmm23
 
 %define zq_64		zmm15
 %define zlit_mask	zmm16
@@ -122,7 +123,6 @@
 %define zmax_write	zmm20
 %define zrot_perm	zmm21
 %define zq_8		zmm22
-%define zmin_write	zmm23
 
 %define VECTOR_SIZE 0x40
 %define VECTOR_LOOP_PROCESSED (2 * VECTOR_SIZE)
@@ -218,9 +218,10 @@ encode_deflate_icf_ %+ ARCH:
 
 	vbroadcasti64x2 zq_64, [q_64]
 	vbroadcasti64x2 zq_8, [q_8]
-	vbroadcasti64x2 zmin_write, [min_write_q]
 
 	vpbroadcastq zoffset_mask, [offset_mask]
+	vpternlogd znotoffset_mask, znotoffset_mask, zoffset_mask, 0x55
+
 	vpbroadcastd zlit_mask, [lit_mask]
 	vpbroadcastd zdist_mask, [dist_mask]
 	vpbroadcastd zlit_icr_mask, [lit_icr_mask]
@@ -313,15 +314,16 @@ encode_deflate_icf_ %+ ARCH:
 	vpermq	zbits_count_q {k5}{z}, zrot_perm, zbits_count
 	vpsllvq	codes1, codes1, zbits_count_q
 
+	;; Check whether any of the last bytes overlap
+	vpcmpq k6 {k5}, code_lens1, zbits_count, 1
+
 	;; Get last byte in each qword
 	vpsrlq	code_lens2, code_lens2, 3
 	vpaddq	code_lens1, code_lens1, zbits_count_q
-	vpsrlq	code_lens1, code_lens1, 3
-	vpaddq	code_lens1, code_lens1, zq_8
-	vpshufb	codes3 {k4}{z}, codes1, code_lens1
+	vpandq	code_lens1, code_lens1, znotoffset_mask
+	vpsrlvq	codes3, codes1, code_lens1
 
-	;; Check whether any of the last bytes overlap
-	vpcmpq k6 {k5}, code_lens1, zmin_write, 0
+	;; Branch to handle overlapping last bytes
 	ktestd k6, k6
 	jnz .small_codes
 
@@ -587,8 +589,6 @@ rot_perm:
 	dq 0x00000003, 0x00000004, 0x00000005, 0x00000006
 
 ;; 16 byte data
-min_write_q:
-	dq 0x00, 0x08, 0x00, 0x08, 0x00, 0x08, 0x00, 0x08
 q_64:
 	dq 0x0000000000000040, 0x0000000000000000
 q_8 :
