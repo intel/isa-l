@@ -214,25 +214,27 @@ encode_deflate_icf_ %+ ARCH:
 	kmovq	k4, [k_mask_4]
 	kmovq	k5, [k_mask_5]
 
-	vmovdqa64 zoffset_mask, [offset_mask]
-	vmovdqa64 zlit_mask, [lit_mask]
-	vmovdqa64 zdist_mask, [dist_mask]
-	vmovdqa64 zlit_icr_mask, [lit_icr_mask]
-	vmovdqa64 zeb_icr_mask, [eb_icr_mask]
-	vmovdqa64 zmax_write, [max_write_d]
-	vmovdqa64 zq_64, [q_64]
 	vmovdqa64 zrot_perm, [rot_perm]
-	vmovdqa64 zq_8, [q_8]
-	vmovdqa64 zmin_write, [min_write_q]
+
+	vbroadcasti64x2 zq_64, [q_64]
+	vbroadcasti64x2 zq_8, [q_8]
+	vbroadcasti64x2 zmin_write, [min_write_q]
+
+	vpbroadcastq zoffset_mask, [offset_mask]
+	vpbroadcastd zlit_mask, [lit_mask]
+	vpbroadcastd zdist_mask, [dist_mask]
+	vpbroadcastd zlit_icr_mask, [lit_icr_mask]
+	vpbroadcastd zeb_icr_mask, [eb_icr_mask]
+	vpbroadcastd zmax_write, [max_write_d]
 
 	knotq	k6, k0
 	vmovdqu64	datas, [ptr]
-	vpandd	syms, datas, [lit_mask]
+	vpandd	syms, datas, zlit_mask
 	vpgatherdd codes_lookup1 {k6}, [hufftables + _lit_len_table + 4 * syms]
 
 	knotq	k7, k0
 	vpsrld	dsyms, datas, DIST_OFFSET
-	vpandd	dsyms, dsyms, [dist_mask]
+	vpandd	dsyms, dsyms, zdist_mask
 	vpgatherdd codes_lookup2 {k7}, [hufftables + _dist_table + 4 * dsyms]
 
 	vmovq	zbits %+ x, bits
@@ -580,50 +582,36 @@ encode_deflate_icf_ %+ ARCH:
 
 section .data
 	align 64
-max_write_d:
-	dd	0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c
-	dd	0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c
-min_write_q:
-	dq	0x00, 0x08, 0x00, 0x08, 0x00, 0x08, 0x00, 0x08
-offset_mask:
-	dq	0x0000000000000007, 0x0000000000000007
-	dq	0x0000000000000007, 0x0000000000000007
-	dq	0x0000000000000007, 0x0000000000000007
-	dq	0x0000000000000007, 0x0000000000000007
-q_64:
-	dq	0x0000000000000040, 0x0000000000000000
-	dq	0x0000000000000040, 0x0000000000000000
-	dq	0x0000000000000040, 0x0000000000000000
-	dq	0x0000000000000040, 0x0000000000000000
-q_8 :
-	dq	0x0000000000000000, 0x0000000000000008
-	dq	0x0000000000000000, 0x0000000000000008
-	dq	0x0000000000000000, 0x0000000000000008
-	dq	0x0000000000000000, 0x0000000000000008
-lit_mask:
-	dd LIT_MASK, LIT_MASK, LIT_MASK, LIT_MASK
-	dd LIT_MASK, LIT_MASK, LIT_MASK, LIT_MASK
-	dd LIT_MASK, LIT_MASK, LIT_MASK, LIT_MASK
-	dd LIT_MASK, LIT_MASK, LIT_MASK, LIT_MASK
-dist_mask:
-	dd DIST_MASK, DIST_MASK, DIST_MASK, DIST_MASK
-	dd DIST_MASK, DIST_MASK, DIST_MASK, DIST_MASK
-	dd DIST_MASK, DIST_MASK, DIST_MASK, DIST_MASK
-	dd DIST_MASK, DIST_MASK, DIST_MASK, DIST_MASK
-lit_icr_mask:
-	dd 0x00ffffff, 0x00ffffff, 0x00ffffff, 0x00ffffff
-	dd 0x00ffffff, 0x00ffffff, 0x00ffffff, 0x00ffffff
-	dd 0x00ffffff, 0x00ffffff, 0x00ffffff, 0x00ffffff
-	dd 0x00ffffff, 0x00ffffff, 0x00ffffff, 0x00ffffff
-eb_icr_mask:
-	dd 0x000000ff, 0x000000ff, 0x000000ff, 0x000000ff
-	dd 0x000000ff, 0x000000ff, 0x000000ff, 0x000000ff
-	dd 0x000000ff, 0x000000ff, 0x000000ff, 0x000000ff
-	dd 0x000000ff, 0x000000ff, 0x000000ff, 0x000000ff
+;; 64 byte data
 rot_perm:
 	dq 0x00000007, 0x00000000, 0x00000001, 0x00000002
 	dq 0x00000003, 0x00000004, 0x00000005, 0x00000006
 
+;; 16 byte data
+min_write_q:
+	dq 0x00, 0x08, 0x00, 0x08, 0x00, 0x08, 0x00, 0x08
+q_64:
+	dq 0x0000000000000040, 0x0000000000000000
+q_8 :
+	dq 0x0000000000000000, 0x0000000000000008
+
+;; 8 byte data
+offset_mask:
+	dq 0x0000000000000007
+
+;; 4 byte data
+max_write_d:
+	dd 0x1c
+lit_mask:
+	dd LIT_MASK
+dist_mask:
+	dd DIST_MASK
+lit_icr_mask:
+	dd 0x00ffffff
+eb_icr_mask:
+	dd 0x000000ff
+
+;; k mask constants
 k_mask_1: dq 0x55555555
 k_mask_2: dq 0x11111111
 k_mask_3: dq 0xfffffffc
