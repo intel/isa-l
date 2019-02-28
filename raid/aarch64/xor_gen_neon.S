@@ -30,6 +30,7 @@
 .text
 
 .global xor_gen_neon
+.type xor_gen_neon, %function
 
 /* int xor_gen_neon(int vects, int len, void **src) */
 

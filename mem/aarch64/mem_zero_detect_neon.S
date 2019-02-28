@@ -37,6 +37,7 @@
 // output: -> x0 (true or false)
 
 .global mem_zero_detect_neon
+.type mem_zero_detect_neon, %function
 
 mem_zero_detect_neon:
 	cmp	x1, #(16*24-1)

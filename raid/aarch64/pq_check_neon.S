@@ -30,6 +30,7 @@
 .text
 
 .global pq_check_neon
+.type pq_check_neon, %function
 
 /* int pq_check_neon(int vects, int len, void **src) */
 

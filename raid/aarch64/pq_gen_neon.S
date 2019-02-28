@@ -30,6 +30,7 @@
 .text
 
 .global pq_gen_neon
+.type pq_gen_neon, %function
 
 /* int pq_gen_neon(int vects, int len, void **src) */
 

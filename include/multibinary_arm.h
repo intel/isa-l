@@ -36,6 +36,8 @@
 
 	.text
 	.global \name
+	.type \name, %function
+
 	\name\():
 		adrp	x9, \name\()_dispatched
 		ldr	x10, [x9, :lo12:\name\()_dispatched]
