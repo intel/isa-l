@@ -185,7 +185,7 @@ AC_TYPE_UINT8_T
 
 # Checks for library functions.
 AC_FUNC_MALLOC  # Used only in tests
-AC_CHECK_FUNCS([memmove memset])
+AC_CHECK_FUNCS([memmove memset getopt])
 
 my_CFLAGS="\
 -Wall \
