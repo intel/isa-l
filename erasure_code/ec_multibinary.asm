@@ -81,18 +81,10 @@ mbin_interface gf_vect_mad
 %else
 
  mbin_dispatch_init5 gf_vect_mul, gf_vect_mul_base, gf_vect_mul_sse, gf_vect_mul_avx, gf_vect_mul_avx
-
-%ifdef HAVE_AS_KNOWS_AVX512
-  mbin_dispatch_init6 ec_encode_data, ec_encode_data_base, ec_encode_data_sse, ec_encode_data_avx, ec_encode_data_avx2, ec_encode_data_avx512
-  mbin_dispatch_init6 ec_encode_data_update, ec_encode_data_update_base, ec_encode_data_update_sse, ec_encode_data_update_avx, ec_encode_data_update_avx2, ec_encode_data_update_avx512
-  mbin_dispatch_init6 gf_vect_mad, gf_vect_mad_base, gf_vect_mad_sse, gf_vect_mad_avx, gf_vect_mad_avx2, gf_vect_mad_avx512
-  mbin_dispatch_init6 gf_vect_dot_prod, gf_vect_dot_prod_base, gf_vect_dot_prod_sse, gf_vect_dot_prod_avx, gf_vect_dot_prod_avx2, gf_vect_dot_prod_avx512
-%else
-  mbin_dispatch_init5 ec_encode_data, ec_encode_data_base, ec_encode_data_sse, ec_encode_data_avx, ec_encode_data_avx2
-  mbin_dispatch_init5 ec_encode_data_update, ec_encode_data_update_base, ec_encode_data_update_sse, ec_encode_data_update_avx, ec_encode_data_update_avx2
-  mbin_dispatch_init5 gf_vect_mad, gf_vect_mad_base, gf_vect_mad_sse, gf_vect_mad_avx, gf_vect_mad_avx2
-  mbin_dispatch_init5 gf_vect_dot_prod, gf_vect_dot_prod_base, gf_vect_dot_prod_sse, gf_vect_dot_prod_avx, gf_vect_dot_prod_avx2
-%endif
+ mbin_dispatch_init6 ec_encode_data, ec_encode_data_base, ec_encode_data_sse, ec_encode_data_avx, ec_encode_data_avx2, ec_encode_data_avx512
+ mbin_dispatch_init6 ec_encode_data_update, ec_encode_data_update_base, ec_encode_data_update_sse, ec_encode_data_update_avx, ec_encode_data_update_avx2, ec_encode_data_update_avx512
+ mbin_dispatch_init6 gf_vect_mad, gf_vect_mad_base, gf_vect_mad_sse, gf_vect_mad_avx, gf_vect_mad_avx2, gf_vect_mad_avx512
+ mbin_dispatch_init6 gf_vect_dot_prod, gf_vect_dot_prod_base, gf_vect_dot_prod_sse, gf_vect_dot_prod_avx, gf_vect_dot_prod_avx2, gf_vect_dot_prod_avx512
 %endif
 
 ;;;       func                 		core, ver, snum

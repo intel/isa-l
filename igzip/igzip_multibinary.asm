@@ -109,7 +109,6 @@ mbin_dispatch_init5	isal_deflate_icf_finish_lvl3, isal_deflate_icf_finish_hash_m
 mbin_interface		isal_update_histogram
 mbin_dispatch_init5	isal_update_histogram, isal_update_histogram_base, isal_update_histogram_01, isal_update_histogram_01, isal_update_histogram_04
 
-%ifdef HAVE_AS_KNOWS_AVX512
 mbin_interface		encode_deflate_icf
 mbin_dispatch_init6	encode_deflate_icf, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_04, encode_deflate_icf_06
 
@@ -118,16 +117,6 @@ mbin_dispatch_init6	set_long_icf_fg, set_long_icf_fg_base, set_long_icf_fg_base,
 
 mbin_interface		gen_icf_map_lh1
 mbin_dispatch_init6	gen_icf_map_lh1, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_lh1_04, gen_icf_map_lh1_06
-%else
-mbin_interface		encode_deflate_icf
-mbin_dispatch_init5	encode_deflate_icf, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_04
-
-mbin_interface		set_long_icf_fg
-mbin_dispatch_init5	set_long_icf_fg, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_04
-
-mbin_interface		gen_icf_map_lh1
-mbin_dispatch_init5	gen_icf_map_lh1, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_lh1_04
-%endif
 
 mbin_interface		isal_adler32
 mbin_dispatch_init5	isal_adler32, adler32_base, adler32_sse, adler32_sse, adler32_avx2_4
@@ -143,4 +132,3 @@ mbin_dispatch_init5	isal_deflate_hash_lvl2, isal_deflate_hash_base, isal_deflate
 
 mbin_interface		isal_deflate_hash_lvl3
 mbin_dispatch_init5	isal_deflate_hash_lvl3, isal_deflate_hash_base, isal_deflate_hash_base, isal_deflate_hash_base, isal_deflate_hash_mad_base
-

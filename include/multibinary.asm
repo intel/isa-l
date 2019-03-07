@@ -235,6 +235,7 @@
 		ret
 %endmacro
 
+%ifdef HAVE_AS_KNOWS_AVX512
 ;;;;;
 ; mbin_dispatch_init6 parameters
 ; 1-> function name
@@ -303,5 +304,11 @@
 		pop	mbin_rsi
 		ret
 %endmacro
+
+%else
+%macro mbin_dispatch_init6 6
+	mbin_dispatch_init5 %1, %2, %3, %4, %5
+%endmacro
+%endif
 
 %endif ; ifndef _MULTIBINARY_ASM_
