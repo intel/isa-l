@@ -50,6 +50,10 @@
  %define mbin_rdx	rdx
 %endif
 
+%ifndef AS_FEATURE_LEVEL
+%define AS_FEATURE_LEVEL 4
+%endif
+
 ;;;;
 ; multibinary macro:
 ;   creates the visable entry point that uses HW optimized call pointer
