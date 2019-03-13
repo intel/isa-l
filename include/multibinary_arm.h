@@ -44,8 +44,8 @@
 		br	x10
 	\name\()_dispatch_init:
 		add	x9, x9, :lo12:\name\()_dispatched
-		adrp	x10, \func_neon
-		add	x10, x10, :lo12:\func_neon
+		adrp	x10, :got:\func_neon
+		ldr	x10, [x10, :got_lo12:\func_neon]
 		str	x10, [x9]
 		br	x10
 .endm
@@ -69,8 +69,8 @@ xor_gen:
 
 xor_gen_dispatch_init:
 	add	x9, x9, :lo12:xor_gen_dispatched
-	adrp	x10, xor_gen_neon
-	add	x10, x10, :lo12:xor_gen_neon
+	adrp	x10, :got:xor_gen_neon
+	ldr	x10, [x10, :got_lo12:xor_gen_neon]
 	str	x10, [x9]
 	br	x10
 #endif

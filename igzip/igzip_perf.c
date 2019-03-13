@@ -29,6 +29,7 @@
 
 #define _FILE_OFFSET_BITS 64
 #include <stdio.h>
+#include <stdlib.h>
 #include <assert.h>
 #include <getopt.h>
 #include "huff_codes.h"

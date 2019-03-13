@@ -2644,7 +2644,11 @@ int test_compress_file(char *file_name)
 			printf("Failed to allocate in_buf for test_compress_file\n");
 			return MALLOC_FAILED;
 		}
-		fread(in_buf, 1, in_size, in_file);
+		if (fread(in_buf, 1, in_size, in_file) != in_size) {
+			printf("Failed to read in_buf from test_compress_file\n");
+			free(in_buf);
+			return FILE_READ_FAILED;
+		}
 	}
 
 	ret |= test_compress_stateless(in_buf, in_size, NO_FLUSH);
@@ -2702,9 +2706,7 @@ int create_custom_hufftables(struct isal_hufftables *hufftables_custom, int file
 			}
 		}
 
-		fread(stream, 1, file_length, file);
-
-		if (ferror(file)) {
+		if (fread(stream, 1, file_length, file) != file_length) {
 			printf("Error occurred when reading file\n");
 			fclose(file);
 			free(stream);

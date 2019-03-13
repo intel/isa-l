@@ -304,7 +304,7 @@ void *malloc_safe(size_t size)
 FILE *fopen_safe(char *file_name, char *mode)
 {
 	FILE *file;
-	char answer = 0, tmp;
+	int answer = 0, tmp;
 
 	/* Assumes write mode always starts with w */
 	if (mode[0] == 'w') {

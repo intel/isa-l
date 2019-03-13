@@ -266,8 +266,7 @@ int main(int argc, char *argv[])
 			fclose(file);
 			return 1;
 		}
-		fread(stream, 1, file_length, file);
-		if (ferror(file)) {
+		if (fread(stream, 1, file_length, file) != file_length) {
 			printf("Error occurred when reading file");
 			fclose(file);
 			free(stream);

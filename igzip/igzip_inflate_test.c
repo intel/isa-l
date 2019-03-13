@@ -30,6 +30,7 @@
 #define _FILE_OFFSET_BITS 64
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <zlib.h>
 #include "igzip_lib.h"
 #include "huff_codes.h"

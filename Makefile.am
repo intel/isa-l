@@ -19,6 +19,9 @@ unit_tests_extra=
 perf_tests_extra=
 examples=
 other_tests=
+other_tests_x86_64=
+other_tests_x86_32=
+other_tests_aarch64=
 lsrc_x86_64=
 lsrc_x86_32=
 lsrc_aarch64=
@@ -50,14 +53,17 @@ libisal_la_SOURCES = ${lsrc}
 
 if CPU_X86_64
 libisal_la_SOURCES += ${lsrc_x86_64}
+other_tests += ${other_tests_x86_64}
 endif
 
 if CPU_X86_32
 libisal_la_SOURCES += ${lsrc_x86_32}
+other_tests += ${other_tests_x86_32}
 endif
 
 if CPU_AARCH64
 libisal_la_SOURCES += ${lsrc_aarch64}
+other_tests += ${other_tests_aarch64}
 endif
 
 if CPU_UNDEFINED
