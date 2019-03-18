@@ -166,7 +166,8 @@ static inline long long get_base_elapsed(struct perf *p) {
 	return p->run_total;
 }
 
-static inline int estimate_perf_iterations(struct perf *p, unsigned long long runs,
+static inline unsigned long long estimate_perf_iterations(struct perf *p,
+						   unsigned long long runs,
 						   unsigned long long total) {
 	total = total * runs;
 	if (get_base_elapsed(p) > 0)
@@ -176,7 +177,7 @@ static inline int estimate_perf_iterations(struct perf *p, unsigned long long ru
 }
 
 #define CALLIBRATE(PERF, FUNC_CALL) {				\
-	unsigned long long _iter = 1;				\
+	unsigned long long _i, _iter = 1;			\
 	perf_start(PERF);					\
 	FUNC_CALL;						\
 	perf_pause(PERF);					\
@@ -185,7 +186,7 @@ static inline int estimate_perf_iterations(struct perf *p, unsigned long long ru
 		_iter = estimate_perf_iterations(PERF, _iter,	\
 						2 * CALLIBRATE_TIME);	\
 		perf_start(PERF);				\
-		for (int _i = 0; _i < _iter; _i++) {		\
+		for (_i = 0; _i < _iter; _i++) {		\
 			FUNC_CALL;				\
 		}						\
 		perf_stop(PERF);				\
@@ -194,13 +195,13 @@ static inline int estimate_perf_iterations(struct perf *p, unsigned long long ru
 }
 
 #define PERFORMANCE_TEST(PERF, RUN_TIME, FUNC_CALL) {		\
-	unsigned long long _iter = (PERF)->iterations;		\
+	unsigned long long _i, _iter = (PERF)->iterations;	\
 	unsigned long long _run_total = RUN_TIME;		\
 	_run_total *= UNIT_SCALE;				\
 	_iter = estimate_perf_iterations(PERF, _iter, _run_total);\
 	(PERF)->iterations = 0;					\
 	perf_start(PERF);					\
-	for (int _i = 0; _i < _iter; _i++) {			\
+	for (_i = 0; _i < _iter; _i++) {			\
 		FUNC_CALL;					\
 	}							\
 	perf_pause(PERF);					\
@@ -212,7 +213,7 @@ static inline int estimate_perf_iterations(struct perf *p, unsigned long long ru
 			_run_total - get_base_elapsed(PERF) +	\
 			(UNIT_SCALE / 16));			\
 		perf_continue(PERF);				\
-		for (int _i = 0; _i < _iter; _i++) {		\
+		for (_i = 0; _i < _iter; _i++) {		\
 			FUNC_CALL;				\
 		}						\
 		perf_pause(PERF);				\
