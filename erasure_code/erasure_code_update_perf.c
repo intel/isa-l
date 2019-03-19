@@ -90,9 +90,11 @@ void encode_update_test_ref(int m, int k, u8 * g_tbls, u8 ** buffs, u8 * a)
 
 void encode_update_test(int m, int k, u8 * g_tbls, u8 ** perf_update_buffs, u8 * a)
 {
+	int i;
+
 	// Make parity vects
 	ec_init_tables(k, m - k, &a[k * k], g_tbls);
-	for (int i = 0; i < k; i++) {
+	for (i = 0; i < k; i++) {
 		FUNCTION_UNDER_TEST(TEST_LEN(m), k, m - k, i, g_tbls,
 				    perf_update_buffs[i], &perf_update_buffs[k]);
 	}

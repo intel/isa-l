@@ -2677,10 +2677,11 @@ int create_custom_hufftables(struct isal_hufftables *hufftables_custom, int file
 	uint8_t *stream = NULL;
 	struct isal_huff_histogram histogram;
 	FILE *file;
+	int i;
 
 	memset(&histogram, 0, sizeof(histogram));
 
-	for (int i = 0; i < file_count; i++) {
+	for (i = 0; i < file_count; i++) {
 		printf("Processing %s\n", files[i]);
 		file = fopen(files[i], "r");
 		if (file == NULL) {
