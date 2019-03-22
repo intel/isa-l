@@ -101,6 +101,8 @@ other_src   += 	igzip/bitbuf2.asm  \
 		igzip/static_inflate.h \
 		igzip/igzip_checksums.h
 
+perf_tests  +=  igzip/adler32_perf
+
 examples    += 	igzip/igzip_example igzip/igzip_sync_flush_example
 
 igzip_igzip_rand_test_LDADD = libisal.la
