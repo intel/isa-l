@@ -1,4 +1,4 @@
-v2.25 Intel Intelligent Storage Acceleration Library Release Notes
+v2.26 Intel Intelligent Storage Acceleration Library Release Notes
 ==================================================================
 
 RELEASE NOTE CONTENTS
@@ -15,6 +15,10 @@ RELEASE NOTE CONTENTS
 
 2. FIXED ISSUES
 ---------------
+v2.26
+
+* Fixes for sanitizer warnings.
+
 v2.25
 
 * Fix for nasm on Mac OS X/darwin.
@@ -96,6 +100,12 @@ v2.10
 
 3. CHANGE LOG & FEATURES ADDED
 ------------------------------
+v2.26
+
+* Adler32 added to external API.
+* Multi-arch improvements.
+* Performance test improvements.
+
 v2.25
 
 * Igzip performance improvements and features.
