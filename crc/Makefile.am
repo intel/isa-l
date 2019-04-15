@@ -56,7 +56,8 @@ lsrc_x86_64 += \
 src_include += -I $(srcdir)/crc
 extern_hdrs +=  include/crc.h include/crc64.h
 
-other_src   +=  include/reg_sizes.asm include/types.h include/test.h
+other_src   +=  include/reg_sizes.asm include/types.h include/test.h \
+		crc/crc_ref.h crc/crc64_ref.h
 
 check_tests +=  crc/crc16_t10dif_test \
 		crc/crc16_t10dif_copy_test \

@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "crc.h"
+#include "crc_ref.h"
 
 #ifndef RANDOMS
 # define RANDOMS   20
@@ -47,6 +48,9 @@
 
 typedef uint16_t u16;
 typedef uint8_t u8;
+
+// bitwise crc version
+uint16_t crc16_t10dif_copy_ref(uint16_t seed, uint8_t * dst, uint8_t * src, uint64_t len);
 
 void rand_buffer(unsigned char *buf, long buffer_size)
 {
@@ -75,6 +79,8 @@ int crc_copy_check(const char *description, u8 * dst, u8 * src, u8 dst_fill_val,
 	seed = rand();
 	rem = tot - len;
 	memset(dst, dst_fill_val, tot);
+
+	// multi-binary crc version
 	u16 crc_dut = crc16_t10dif_copy(seed, dst, src, len);
 	u16 crc_ref = crc16_t10dif(seed, src, len);
 	if (crc_dut != crc_ref) {
@@ -86,6 +92,20 @@ int crc_copy_check(const char *description, u8 * dst, u8 * src, u8 dst_fill_val,
 		return 1;
 	} else if (memtst(&dst[len], dst_fill_val, rem)) {
 		printf("%s, writeover fail: len=%d\n", description, len);
+		return 1;
+	}
+	// bitwise crc version
+	crc_dut = crc16_t10dif_copy_ref(seed, dst, src, len);
+	crc_ref = crc16_t10dif_ref(seed, src, len);
+	if (crc_dut != crc_ref) {
+		printf("%s, crc gen fail (table-driven): 0x%4x 0x%4x len=%d\n", description,
+		       crc_dut, crc_ref, len);
+		return 1;
+	} else if (memcmp(dst, src, len)) {
+		printf("%s, copy fail (table driven): len=%d\n", description, len);
+		return 1;
+	} else if (memtst(&dst[len], dst_fill_val, rem)) {
+		printf("%s, writeover fail (table driven): len=%d\n", description, len);
 		return 1;
 	}
 	return 0;
