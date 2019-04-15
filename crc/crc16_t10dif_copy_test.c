@@ -48,6 +48,8 @@
 typedef uint16_t u16;
 typedef uint8_t u8;
 
+uint16_t crc16_t10dif_copy_base_ref(uint16_t seed, uint8_t * dst, uint8_t * src, uint64_t len);
+
 void rand_buffer(unsigned char *buf, long buffer_size)
 {
 	long i;
@@ -91,6 +93,32 @@ int crc_copy_check(const char *description, u8 * dst, u8 * src, u8 dst_fill_val,
 	return 0;
 }
 
+int crc_copy_base_check(const char *description, u8 * dst, u8 * src, u8 dst_fill_val, int len,
+			int tot)
+{
+	u16 seed;
+	int rem;
+
+	assert(tot >= len);
+	seed = rand();
+	rem = tot - len;
+	memset(dst, dst_fill_val, tot);
+	u16 crc_dut = crc16_t10dif_copy_base_ref(seed, dst, src, len);
+	u16 crc_ref = crc16_t10dif(seed, src, len);
+	if (crc_dut != crc_ref) {
+		printf("%s, crc gen fail (table-driven): 0x%4x 0x%4x len=%d\n", description,
+		       crc_dut, crc_ref, len);
+		return 1;
+	} else if (memcmp(dst, src, len)) {
+		printf("%s, copy fail (table driven): len=%d\n", description, len);
+		return 1;
+	} else if (memtst(&dst[len], dst_fill_val, rem)) {
+		printf("%s, writeover fail (table driven): len=%d\n", description, len);
+		return 1;
+	}
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	int r = 0;
@@ -114,22 +142,26 @@ int main(int argc, char *argv[])
 	// Test of all zeros
 	memset(src, 0, TEST_LEN);
 	r |= crc_copy_check("zero tst", dst, src, 0x5e, MAX_BUF, TEST_LEN);
+	r |= crc_copy_base_check("zero tst", dst, src, 0x5e, MAX_BUF, TEST_LEN);
 
 	// Another simple test pattern
 	memset(src, 0xff, TEST_LEN);
 	r |= crc_copy_check("simp tst", dst, src, 0x5e, MAX_BUF, TEST_LEN);
+	r |= crc_copy_base_check("simp tst", dst, src, 0x5e, MAX_BUF, TEST_LEN);
 
 	// Do a few short len random data tests
 	rand_buffer(src, TEST_LEN);
 	rand_buffer(dst, TEST_LEN);
 	for (i = 0; i < MAX_BUF; i++) {
 		r |= crc_copy_check("short len", dst, src, rand(), i, MAX_BUF);
+		r |= crc_copy_base_check("short len", dst, src, rand(), i, MAX_BUF);
 	}
 	printf(".");
 
 	// Do a few longer tests, random data
 	for (i = TEST_LEN; i >= (TEST_LEN - TEST_SIZE); i--) {
 		r |= crc_copy_check("long len", dst, src, rand(), i, TEST_LEN);
+		r |= crc_copy_base_check("long len", dst, src, rand(), i, TEST_LEN);
 	}
 	printf(".");
 
@@ -137,6 +169,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < RANDOMS; i++) {
 		len = rand() % TEST_LEN;
 		r |= crc_copy_check("rand len", dst, src, rand(), len, TEST_LEN);
+		r |= crc_copy_base_check("rand len", dst, src, rand(), len, TEST_LEN);
 	}
 	printf(".");
 
@@ -147,6 +180,7 @@ int main(int argc, char *argv[])
 		dst = &dst_raw[TEST_LEN - len - 1];
 		tot = len;
 		r |= crc_copy_check("end of buffer", dst, src, rand(), len, tot);
+		r |= crc_copy_base_check("end of buffer", dst, src, rand(), len, tot);
 	}
 	printf(".");
 

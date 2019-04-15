@@ -45,6 +45,8 @@ typedef uint32_t u32;
 typedef uint16_t u16;
 typedef uint8_t u8;
 
+uint16_t crc16_t10dif_base_ref(uint16_t seed, uint8_t * buf, uint64_t len);
+
 void rand_buffer(unsigned char *buf, long buffer_size)
 {
 	long i;
@@ -73,22 +75,24 @@ int main(int argc, char *argv[])
 	// Test of all zeros
 	memset(buf, 0, MAX_BUF * 10);
 	u16 crc = crc16_t10dif(TEST_SEED, buf, MAX_BUF);
-	u16 crc_ref = crc16_t10dif_base(TEST_SEED, buf, MAX_BUF);
-	if (crc != crc_ref) {
+	u16 crc_ref = crc16_t10dif_base_ref(TEST_SEED, buf, MAX_BUF);
+	u16 crc_base = crc16_t10dif_base(TEST_SEED, buf, MAX_BUF);
+	if ((crc != crc_ref) || (crc != crc_base)) {
 		fail++;
 		printf("\n           opt   ref\n");
 		printf("         ------ ------\n");
-		printf("crc    zero = 0x%4x 0x%4x \n", crc, crc_ref);
+		printf("crc    zero = 0x%4x 0x%4x 0x%4x \n", crc, crc_ref, crc_base);
 	} else
 		printf(".");
 
 	// Another simple test pattern
 	memset(buf, 0x8a, MAX_BUF);
 	crc = crc16_t10dif(TEST_SEED, buf, MAX_BUF);
-	crc_ref = crc16_t10dif_base(TEST_SEED, buf, MAX_BUF);
-	if (crc != crc_ref) {
+	crc_ref = crc16_t10dif_base_ref(TEST_SEED, buf, MAX_BUF);
+	crc_base = crc16_t10dif_base(TEST_SEED, buf, MAX_BUF);
+	if ((crc != crc_ref) || (crc != crc_base)) {
 		fail++;
-		printf("crc  all 8a = 0x%4x 0x%4x\n", crc, crc_ref);
+		printf("crc  all 8a = 0x%4x 0x%4x 0x%4x\n", crc, crc_ref, crc_base);
 	} else
 		printf(".");
 
@@ -98,11 +102,12 @@ int main(int argc, char *argv[])
 
 	for (i = 0; i < TEST_SIZE; i++) {
 		crc = crc16_t10dif(TEST_SEED, buf, MAX_BUF);
-		crc_ref = crc16_t10dif_base(TEST_SEED, buf, MAX_BUF);
-		if (crc != crc_ref)
+		crc_ref = crc16_t10dif_base_ref(TEST_SEED, buf, MAX_BUF);
+		crc_base = crc16_t10dif_base(TEST_SEED, buf, MAX_BUF);
+		if ((crc != crc_ref) || (crc != crc_base))
 			fail++;
 		if (verbose)
-			printf("crc rand%3d = 0x%4x 0x%4x\n", i, crc, crc_ref);
+			printf("crc rand%3d = 0x%4x 0x%4x 0x%4x\n", i, crc, crc_ref, crc_base);
 		else
 			printf(".");
 		buf += MAX_BUF;
@@ -114,10 +119,12 @@ int main(int argc, char *argv[])
 
 	for (i = MAX_BUF; i >= 0; i--) {
 		crc = crc16_t10dif(r, buf, i);
-		crc_ref = crc16_t10dif_base(r, buf, i);
-		if (crc != crc_ref) {
+		crc_ref = crc16_t10dif_base_ref(r, buf, i);
+		crc_base = crc16_t10dif_base(r, buf, i);
+		if ((crc != crc_ref) || (crc != crc_base)) {
 			fail++;
-			printf("fail random size%i 0x%8x 0x%8x\n", i, crc, crc_ref);
+			printf("fail random size%i 0x%8x 0x%8x 0x%8x\n", i, crc, crc_ref,
+			       crc_base);
 		} else
 			printf(".");
 	}
@@ -134,11 +141,13 @@ int main(int argc, char *argv[])
 
 		for (i = 0; i < TEST_SIZE; i++) {
 			crc = crc16_t10dif(r, buf, MAX_BUF);
-			crc_ref = crc16_t10dif_base(r, buf, MAX_BUF);
-			if (crc != crc_ref)
+			crc_ref = crc16_t10dif_base_ref(r, buf, MAX_BUF);
+			crc_base = crc16_t10dif_base(r, buf, MAX_BUF);
+			if ((crc != crc_ref) || (crc != crc_base))
 				fail++;
 			if (verbose)
-				printf("crc rand%3d = 0x%4x 0x%4x\n", i, crc, crc_ref);
+				printf("crc rand%3d = 0x%4x 0x%4x 0x%4x\n", i, crc, crc_ref,
+				       crc_base);
 			else
 				printf(".");
 			buf += MAX_BUF;
@@ -150,11 +159,13 @@ int main(int argc, char *argv[])
 	buf = buf + ((MAX_BUF - 1) * TEST_SIZE);	//Line up TEST_SIZE from end
 	for (i = 0; i < TEST_SIZE; i++) {
 		crc = crc16_t10dif(TEST_SEED, buf + i, TEST_SIZE - i);
-		crc_ref = crc16_t10dif_base(TEST_SEED, buf + i, TEST_SIZE - i);
+		crc_ref = crc16_t10dif_base_ref(TEST_SEED, buf + i, TEST_SIZE - i);
+		crc_base = crc16_t10dif_base(TEST_SEED, buf + i, TEST_SIZE - i);
 		if (crc != crc_ref)
 			fail++;
 		if (verbose)
-			printf("crc eob rand%3d = 0x%4x 0x%4x\n", i, crc, crc_ref);
+			printf("crc eob rand%3d = 0x%4x 0x%4x 0x%4x\n", i, crc, crc_ref,
+			       crc_base);
 		else
 			printf(".");
 	}

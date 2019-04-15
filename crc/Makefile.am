@@ -31,6 +31,10 @@ lsrc  += \
 	crc/crc_base.c \
 	crc/crc64_base.c
 
+lsrc += \
+	crc/crc_ref.c \
+	crc/crc64_ref.c
+
 lsrc_base_aliases += crc/crc_base_aliases.c
 lsrc_x86_32       += crc/crc_base_aliases.c
 lsrc_aarch64      += crc/crc_base_aliases.c
