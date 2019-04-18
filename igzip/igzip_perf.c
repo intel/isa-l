@@ -45,6 +45,9 @@
 #define COMPRESSION_QUEUE_LIMIT 32
 #define UNSET -1
 
+#define xstr(a) str(a)
+#define str(a) #a
+
 /* Limit output buffer size to 2 Gigabytes. Since stream->avail_out is a
  * uint32_t and there is no logic for handling an overflowed output buffer in
  * the perf test, this define must be less then 4 Gigabytes */
@@ -144,11 +147,14 @@ void init_perf_info(struct perf_info *info)
 int usage(void)
 {
 	fprintf(stderr,
-		"Usage: igzip_inflate_perf [options] <infile>\n"
+		"Usage: igzip_perf [options] <infile>\n"
 		"  -h          help, print this message\n"
-		"  The options -l, -f, -z may be used up to %d times\n"
-		"  -l <level>  isa-l stateless deflate level to test\n"
-		"  -f <level>  isa-l stateful deflate level to test\n"
+		"  The options -l, -f, -z may be used up to "
+		xstr(COMPRESSION_QUEUE_LIMIT) " times\n"
+		"  -l <level>  isa-l stateless deflate level to test ("
+		xstr(ISAL_DEF_MIN_LEVEL) "-" xstr(ISAL_DEF_MAX_LEVEL) ")\n"
+		"  -f <level>  isa-l stateful deflate level to test ("
+		xstr(ISAL_DEF_MIN_LEVEL) "-" xstr(ISAL_DEF_MAX_LEVEL) ")\n"
 		"  -z <level>  zlib  deflate level to test\n"
 		"  -d <time>   approx time in seconds for deflate (at least 0)\n"
 		"  -i <time>   approx time in seconds for inflate (at least 0)\n"
@@ -158,8 +164,7 @@ int usage(void)
 		"  -o <file>   output file to store compressed data (last one if multiple)\n"
 		"  -b <size>   input buffer size, applies to stateful options (-f,-z,-s)\n"
 		"  -y <type>   flush type: 0 (default: no flush), 1 (sync flush), 2 (full flush)\n"
-		"  -w <size>   log base 2 size of history window, between 9 and 15\n",
-		COMPRESSION_QUEUE_LIMIT);
+		"  -w <size>   log base 2 size of history window, between 9 and 15\n");
 	exit(0);
 }
 
