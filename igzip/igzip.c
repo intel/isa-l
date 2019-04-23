@@ -1732,8 +1732,8 @@ static int write_deflate_header_unaligned_stateless(struct isal_zstream *stream)
 	struct isal_hufftables *hufftables = stream->hufftables;
 	unsigned int count;
 	uint64_t bit_count;
-	uint64_t *header_next;
-	uint64_t *header_end;
+	uint8_t *header_next;
+	uint8_t *header_end;
 	uint64_t header_bits;
 
 	if (state->bitbuf.m_bit_count == 0)
@@ -1744,24 +1744,25 @@ static int write_deflate_header_unaligned_stateless(struct isal_zstream *stream)
 
 	set_buf(&state->bitbuf, stream->next_out, stream->avail_out);
 
-	header_next = (uint64_t *) hufftables->deflate_hdr;
-	header_end = header_next + hufftables->deflate_hdr_count / 8;
+	header_next = hufftables->deflate_hdr;
+	header_end = header_next +
+	    (hufftables->deflate_hdr_count / sizeof(header_bits)) * sizeof(header_bits);
 
-	header_bits = *header_next;
+	header_bits = load_u64(header_next);
 
 	if (stream->end_of_stream == 0)
 		header_bits--;
 	else
 		state->has_eob_hdr = 1;
 
-	header_next++;
+	header_next += sizeof(header_bits);
 
 	/* Write out Complete Header bits */
-	for (; header_next <= header_end; header_next++) {
+	for (; header_next <= header_end; header_next += sizeof(header_bits)) {
 		write_bits(&state->bitbuf, header_bits, 32);
 		header_bits >>= 32;
 		write_bits(&state->bitbuf, header_bits, 32);
-		header_bits = *header_next;
+		header_bits = load_u64(header_next);
 	}
 	bit_count =
 	    (hufftables->deflate_hdr_count & 0x7) * 8 + hufftables->deflate_hdr_extra_bits;
