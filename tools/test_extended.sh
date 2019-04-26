@@ -181,7 +181,7 @@ $MAKE -f Makefile.unx arch=noarch clean
 msg+=$'Noarch build: Pass\n'
 
 # Try mingw build
-if command -V x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
+if [ $(uname -m) == "x86_64" ] && [ command -V x86_64-w64-mingw32-gcc >/dev/null 2>&1 ]; then
     test_start "mingw_build"
     time $MAKE -f Makefile.unx -j $cpus arch=mingw
     test_end "mingw_build" $?
