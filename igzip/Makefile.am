@@ -90,6 +90,7 @@ other_src   += 	igzip/bitbuf2.asm  \
 		include/reg_sizes.asm \
 		include/multibinary.asm \
 		include/test.h \
+		include/unaligned.h \
 		igzip/huffman.h \
 		igzip/igzip_level_buf_structs.h \
 		igzip/igzip_decode_block_stateless.asm \
