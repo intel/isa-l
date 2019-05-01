@@ -8,6 +8,11 @@ noinst_LTLIBRARIES =
 bin_PROGRAMS =
 INCLUDE = -I $(srcdir)/include/
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libisal.pc
+EXTRA_DIST += libisal.pc.in
+CLEANFILES += libisal.pc
+
 lsrc=
 src_include=
 extern_hdrs=
