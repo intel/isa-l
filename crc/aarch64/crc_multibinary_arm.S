@@ -26,17 +26,17 @@
 #  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
+#include <aarch64_multibinary.h>
 
-#include "multibinary_arm.h"
 
-mbin_dispatch crc32_iscsi crc32_iscsi_base
-mbin_dispatch crc16_t10dif crc16_t10dif_base
-mbin_dispatch crc16_t10dif_copy crc16_t10dif_copy_base
-mbin_dispatch crc32_ieee crc32_ieee_base
-mbin_dispatch crc32_gzip_refl crc32_gzip_refl_base
-mbin_dispatch crc64_ecma_refl crc64_ecma_refl_base
-mbin_dispatch crc64_ecma_norm crc64_ecma_norm_base
-mbin_dispatch crc64_iso_refl crc64_iso_refl_base
-mbin_dispatch crc64_iso_norm crc64_iso_norm_base
-mbin_dispatch crc64_jones_refl crc64_jones_refl_base
-mbin_dispatch crc64_jones_norm crc64_jones_norm_base
+mbin_interface crc32_iscsi
+mbin_interface crc16_t10dif
+mbin_interface crc16_t10dif_copy
+mbin_interface crc32_ieee
+mbin_interface crc32_gzip_refl
+mbin_interface crc64_ecma_refl
+mbin_interface crc64_ecma_norm
+mbin_interface crc64_iso_refl
+mbin_interface crc64_iso_norm
+mbin_interface crc64_jones_refl
+mbin_interface crc64_jones_norm

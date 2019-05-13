@@ -27,9 +27,10 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
-#include "multibinary_arm.h"
+#include "aarch64_multibinary.h"
 
-mbin_dispatch xor_gen, xor_gen_neon
-mbin_dispatch xor_check, xor_check_neon
-mbin_dispatch pq_gen, pq_gen_neon
-mbin_dispatch pq_check, pq_check_neon
+
+mbin_interface xor_gen
+mbin_interface xor_check
+mbin_interface pq_gen
+mbin_interface pq_check

@@ -32,4 +32,5 @@ lsrc_aarch64 += \
 		raid/aarch64/pq_gen_neon.S	\
 		raid/aarch64/xor_check_neon.S	\
 		raid/aarch64/pq_check_neon.S	\
-		raid/aarch64/raid_multibinary_arm.S
+		raid/aarch64/raid_multibinary_arm.S	\
+		raid/aarch64/raid_aarch64_dispatcher.c

@@ -27,6 +27,7 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
-#include "multibinary_arm.h"
+#include <aarch64_multibinary.h>
 
-mbin_dispatch isal_zero_detect, mem_zero_detect_neon
+mbin_interface isal_zero_detect
+

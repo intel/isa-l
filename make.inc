@@ -43,6 +43,11 @@ version ?= 2.27.0
 host_cpu ?= $(shell uname -m | sed -e 's/amd/x86_/')
 arch ?= $(shell uname | grep -v -e Linux -e BSD )
 
+# aarch64 cpu arch = aarch64
+ifeq ($(host_cpu)_$(arch),aarch64_)
+  arch = aarch64
+endif
+
 CC  = gcc
 AS  = nasm
 AWK = awk
@@ -87,6 +92,14 @@ endif
 ARFLAGS_noarch = cr $@
 ifeq ($(arch),noarch)
   host_cpu=base_aliases
+endif
+
+# arch=aarch64 build options
+ASFLAGS_aarch64 = -c
+ARFLAGS_aarch64 = cr $@
+ifeq ($(arch),aarch64)
+  AS=$(CC) -D__ASSEMBLY__
+  SIM=
 endif
 
 ASFLAGS_Darwin = -f macho64 --prefix=_
@@ -201,8 +214,11 @@ $(O)/%.o: %.asm
 # gcc assembly files
 $(O)/%.o: $(host_cpu)/%.S
 	@echo "  ---> Building $< $(msg)"
-	@$(COMPILE.c) $(OUTPUT_OPTION) $<
+	@$(AS) $(ASFLAGS) -o $@ $<
 
+$(O)/%.o   : $(host_cpu)/%.c
+	@echo "  ---> Building $< $(msg)"
+	@$(COMPILE.c) $(OUTPUT_OPTION) $<
 $(O)/%.o %.o: %.c
 	@echo "  ---> Building $< $(msg)"
 	@$(COMPILE.c) $(OUTPUT_OPTION) $<
@@ -248,7 +264,9 @@ shared_objs  += $(addprefix $(O)/shared_ver_,$(patsubst %.c,%.o,$(filter %.c,$(n
 $(O)/shared_ver_%.o: %.c
 	@echo "  ---> Building shared $< $(msg)"
 	@$(COMPILE.c) $(OUTPUT_OPTION) $<
-
+$(O)/shared_ver_%.o: $(host_cpu)/%.c
+	@echo "  ---> Building shared $< $(msg)"
+	@$(COMPILE.c) $(OUTPUT_OPTION) $<
 ifneq ($(lib_debug),1)
  $(so_lib_name): DEBUG_$(AS)=
  $(so_lib_name): DEBUG=

@@ -28,7 +28,8 @@
 #########################################################################
 
 lsrc_aarch64 += \
-	crc/aarch64/crc_multibinary_arm.S
+	crc/aarch64/crc_multibinary_arm.S	\
+	crc/aarch64/crc_aarch64_dispatcher.c
 
 lsrc_aarch64 += \
 	crc/aarch64/crc16_t10dif_pmull.S \

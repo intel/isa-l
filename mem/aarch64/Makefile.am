@@ -29,4 +29,5 @@
 
 lsrc_aarch64 += \
 	mem/aarch64/mem_zero_detect_neon.S \
-	mem/aarch64/mem_multibinary_arm.S
+	mem/aarch64/mem_multibinary_arm.S  \
+	mem/aarch64/mem_aarch64_dispatcher.c
