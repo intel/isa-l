@@ -162,6 +162,34 @@
 
 .endm
 
+/**
+ * mbin_interface_base is used for the interfaces which have only
+ * noarch implementation
+ */
+.macro mbin_interface_base name:req, base:req
+	.extern \base
+	.section        .data
+	.balign 8
+	.global \name\()_dispatcher_info
+	.type   \name\()_dispatcher_info,%object
+
+	\name\()_dispatcher_info:
+		.quad   \base         //func_entry
+	.size   \name\()_dispatcher_info,. - \name\()_dispatcher_info
+
+	.balign 8
+	.text
+	.global \name
+	.type \name,%function
+	.align  2
+	\name\():
+		adrp    x9, :got:\name\()_dispatcher_info
+		ldr     x9, [x9, #:got_lo12:\name\()_dispatcher_info]
+		ldr     x10,[x9]
+		br      x10
+	.size \name,. - \name
+
+.endm
 
 #else /* __ASSEMBLY__ */
 #include <sys/auxv.h>
