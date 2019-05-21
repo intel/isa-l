@@ -2772,7 +2772,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if (file_count > 1) {
+	if (file_count > 0) {
 		printf("igzip_rand_test files:                  ");
 
 		for (i = 0; i < file_count; i++) {
