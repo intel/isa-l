@@ -41,7 +41,7 @@ mbin_dispatch	isal_update_histogram , isal_update_histogram_base
 mbin_dispatch	encode_deflate_icf , encode_deflate_icf_base
 mbin_dispatch	set_long_icf_fg , set_long_icf_fg_base
 mbin_dispatch	gen_icf_map_lh1 , gen_icf_map_h1_base
-mbin_dispatch	isal_adler32 , adler32_base
+mbin_dispatch	isal_adler32 , adler32_neon
 mbin_dispatch	isal_deflate_hash_lvl0 , isal_deflate_hash_base
 mbin_dispatch	isal_deflate_hash_lvl1 , isal_deflate_hash_base
 mbin_dispatch	isal_deflate_hash_lvl2 , isal_deflate_hash_base
