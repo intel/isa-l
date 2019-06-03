@@ -102,6 +102,11 @@ ARFLAGS  = $(ARFLAGS_$(arch))
 DEFINES += $(addprefix -D , $D)
 CLEANFILES += $(O) *.o *.a $(all_tests) $(bin_PROGRAMS) $(lib_name) $(so_lib_name) $(all_llvm_fuzz_tests)
 
+# add armv8 crc crypto option support
+ifeq ($(shell uname -m), aarch64)
+CFLAGS  += -march=armv8-a+crc+crypto
+endif
+
 other_tests += $(other_tests_$(host_cpu))
 
 lsrc += $(lsrc_$(host_cpu))

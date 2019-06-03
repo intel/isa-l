@@ -69,6 +69,7 @@ endif
 if CPU_AARCH64
 libisal_la_SOURCES += ${lsrc_aarch64}
 other_tests += ${other_tests_aarch64}
+my_CFLAGS += -march=armv8-a+crc+crypto
 endif
 
 if CPU_UNDEFINED

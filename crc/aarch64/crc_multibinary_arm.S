@@ -1,5 +1,5 @@
 ########################################################################
-#  Copyright(c) 2011-2017 Intel Corporation All rights reserved.
+#  Copyright(c) 2019 Arm Corporation All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
 #      notice, this list of conditions and the following disclaimer in
 #      the documentation and/or other materials provided with the
 #      distribution.
-#    * Neither the name of Intel Corporation nor the names of its
+#    * Neither the name of Arm Corporation nor the names of its
 #      contributors may be used to endorse or promote products derived
 #      from this software without specific prior written permission.
 #
@@ -25,50 +25,18 @@
 #  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 #  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-########################################################################
+#########################################################################
 
-include crc/aarch64/Makefile.am
+#include "multibinary_arm.h"
 
-lsrc  += \
-	crc/crc_base.c \
-	crc/crc64_base.c
-
-lsrc_base_aliases += crc/crc_base_aliases.c
-lsrc_x86_32       += crc/crc_base_aliases.c
-
-lsrc_x86_64 += \
-	crc/crc16_t10dif_01.asm \
-	crc/crc16_t10dif_by4.asm \
-	crc/crc16_t10dif_copy_by4.asm \
-	crc/crc32_ieee_01.asm \
-	crc/crc32_ieee_by4.asm \
-	crc/crc32_iscsi_01.asm \
-	crc/crc32_iscsi_00.asm \
-	crc/crc_multibinary.asm \
-	crc/crc64_multibinary.asm \
-	crc/crc64_ecma_refl_by8.asm \
-	crc/crc64_ecma_norm_by8.asm \
-	crc/crc64_iso_refl_by8.asm \
-	crc/crc64_iso_norm_by8.asm \
-	crc/crc64_jones_refl_by8.asm \
-	crc/crc64_jones_norm_by8.asm \
-	crc/crc32_gzip_refl_by8.asm
-
-src_include += -I $(srcdir)/crc
-extern_hdrs +=  include/crc.h include/crc64.h
-
-other_src   +=  include/reg_sizes.asm include/types.h include/test.h \
-		crc/crc_ref.h crc/crc64_ref.h
-
-check_tests +=  crc/crc16_t10dif_test \
-		crc/crc16_t10dif_copy_test \
-		crc/crc64_funcs_test \
-		crc/crc32_funcs_test
-
-perf_tests  +=  crc/crc16_t10dif_perf crc/crc16_t10dif_copy_perf \
-		crc/crc16_t10dif_op_perf \
-		crc/crc32_ieee_perf crc/crc32_iscsi_perf \
-		crc/crc64_funcs_perf crc/crc32_gzip_refl_perf
-
-examples    +=  crc/crc_simple_test crc/crc64_example
-
+mbin_dispatch crc32_iscsi crc32_iscsi_refl_hw_fold
+mbin_dispatch crc16_t10dif crc16_t10dif_pmull
+mbin_dispatch crc16_t10dif_copy crc16_t10dif_copy_pmull
+mbin_dispatch crc32_ieee crc32_ieee_norm_pmull
+mbin_dispatch crc32_gzip_refl crc32_gzip_refl_hw_fold
+mbin_dispatch crc64_ecma_refl crc64_ecma_refl_pmull
+mbin_dispatch crc64_ecma_norm crc64_ecma_norm_pmull
+mbin_dispatch crc64_iso_refl crc64_iso_refl_pmull
+mbin_dispatch crc64_iso_norm crc64_iso_norm_pmull
+mbin_dispatch crc64_jones_refl crc64_jones_refl_pmull
+mbin_dispatch crc64_jones_norm crc64_jones_norm_pmull
