@@ -3,9 +3,9 @@ set -o pipefail
 
 CWD=$PWD
 SRC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
-IGZIP=$SRC_DIR/igzip
+IGZIP="$SRC_DIR/igzip $@"
 TEST_DIR="/tmp/igzip_cli_test_$$/"
-TEST_FILE=$IGZIP
+TEST_FILE=$SRC_DIR/igzip
 DIFF="diff -q"
 
 mkdir -p $TEST_DIR
@@ -215,6 +215,31 @@ truncate -s -1 $file1$ds
 $IGZIP -t $file1$ds &> /dev/null && ret=1
 pass_check $ret "Test test"
 clear_dir
+
+# Large stream test with threading if enabled
+ret=0
+(for i in `seq 100`; do cat $TEST_FILE ; done) | $IGZIP -c -T 4 | $IGZIP -t || ret=1
+pass_check $ret "Large stream test"
+
+
+# Large stream tests with decompression and threading if enabled
+if command -V md5sum >/dev/null 2>&1 && command -V dd >/dev/null 2>&1; then
+    ret=0
+    dd if=<(for i in `seq 1000`; do cat $TEST_FILE; done) iflag=fullblock bs=1M count=201 2> out.stder | tee >(md5sum > out.sum1) \
+	| $IGZIP -c -T 4 | $IGZIP -d | md5sum > out.sum2 \
+	&& $DIFF out.sum1 out.sum2 || ret=1
+    pass_check $ret "Large stream compresss test"
+    clear_dir
+
+    if test -e /dev/urandom; then
+	ret=0
+	dd if=/dev/urandom iflag=fullblock bs=1M count=200 2> out.stder | tee >(md5sum > out.sum3) \
+	    | $IGZIP -c -T 2 | $IGZIP -d | md5sum > out.sum4 \
+	    && $DIFF out.sum3 out.sum4 || ret=1
+	pass_check $ret "Large stream random data test"
+	clear_dir
+    fi
+fi
 
 echo "Passed all cli checks"
 cleanup 0

@@ -145,9 +145,15 @@ $(all_llvm_fuzz_tests): CXXFLAGS += -fsanitize-coverage=trace-pc-guard -fsanitiz
 $(all_llvm_fuzz_tests): % : %.o $(lib_name)
 	$(CXX) $(CXXFLAGS)  $^ $(LDLIBS) $(FUZZLINK) -o $@
 
+# Check for pthreads
+have_threads ?= $(shell printf "\#include <pthread.h>\nint main(void){return 0;}\n" | $(CC) -x c - -o /dev/null -lpthread && echo y )
+THREAD_LD_$(have_threads) := -lpthread
+THREAD_CFLAGS_$(have_threads) := -DHAVE_THREADS
 
 progs: $(bin_PROGRAMS)
 $(bin_PROGRAMS): CFLAGS += -DVERSION=\"$(version)\"
+$(bin_PROGRAMS): LDLIBS += $(THREAD_LD_y)
+$(bin_PROGRAMS): CFLAGS += $(THREAD_CFLAGS_y)
 sim test trace: $(addsuffix .run,$(all_unit_tests))
 perf: $(addsuffix .run,$(all_perf_tests))
 check: $(addsuffix .run,$(all_check_tests))
