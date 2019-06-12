@@ -1,5 +1,5 @@
 ########################################################################
-#  Copyright(c) 2011-2017 Intel Corporation All rights reserved.
+#  Copyright(c) 2011-2019 Intel Corporation All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions
@@ -80,10 +80,14 @@ lsrc_x86_64  += \
 		erasure_code/gf_2vect_dot_prod_avx512.asm \
 		erasure_code/gf_3vect_dot_prod_avx512.asm \
 		erasure_code/gf_4vect_dot_prod_avx512.asm \
+		erasure_code/gf_5vect_dot_prod_avx512.asm \
+		erasure_code/gf_6vect_dot_prod_avx512.asm \
 		erasure_code/gf_vect_mad_avx512.asm \
 		erasure_code/gf_2vect_mad_avx512.asm \
 		erasure_code/gf_3vect_mad_avx512.asm \
-		erasure_code/gf_4vect_mad_avx512.asm
+		erasure_code/gf_4vect_mad_avx512.asm \
+		erasure_code/gf_5vect_mad_avx512.asm \
+		erasure_code/gf_6vect_mad_avx512.asm
 
 lsrc_x86_32  += \
 		erasure_code/ec_highlevel_func.c \
