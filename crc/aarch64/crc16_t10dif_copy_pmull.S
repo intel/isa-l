@@ -33,7 +33,7 @@
 	.type	crc16_t10dif_copy_pmull, %function
 
 /* uint16_t crc16_t10dif_pmull(uint16_t seed, uint8_t *buf, uint64_t len) */
-
+//
 /* arguments */
 w_seed		.req	w0
 x_dst		.req	x1
