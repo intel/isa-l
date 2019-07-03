@@ -918,7 +918,7 @@ static inline void reset_match_history(struct isal_zstream *stream)
 		uint16_t hash_init_val;
 
 		hash_init_val = stream->total_in & 0xffff;
-		wmemset((wchar_t *) hash_table, hash_init_val,
+		wmemset((wchar_t *)hash_table, hash_init_val,
 			hash_table_size / sizeof(wchar_t));
 
 	} else if (sizeof(wchar_t) == 4) {
@@ -930,7 +930,7 @@ static inline void reset_match_history(struct isal_zstream *stream)
 		     rep_bits *= 2)
 			hash_init_val |= hash_init_val << rep_bits;
 
-		wmemset((wchar_t *) hash_table, hash_init_val,
+		wmemset((wchar_t *)hash_table, hash_init_val,
 			hash_table_size / sizeof(wchar_t));
 	} else {
 		if ((stream->total_in & 0xFFFF) == 0)
@@ -1136,7 +1136,7 @@ uint32_t isal_write_gzip_header(struct isal_zstream *stream, struct isal_gzip_he
 	return ISAL_DECOMP_OK;
 }
 
-uint32_t isal_write_zlib_header(struct isal_zstream * stream, struct isal_zlib_header * z_hdr)
+uint32_t isal_write_zlib_header(struct isal_zstream *stream, struct isal_zlib_header *z_hdr)
 {
 	uint32_t cmf, flg, dict_flag = 0, hdr_size = ZLIB_HDR_BASE;
 	uint8_t *out_buf = stream->next_out;
