@@ -3,7 +3,8 @@
 set -e
 rc=0
 verbose=0
-indent_args='-npro -kr -i8 -ts8 -sob -l95 -ss -ncs -cp1 -lps'
+indent_args='-linux -l95 -cp1 -lps -il6 -ncs'
+function iver { printf "%03d%03d%03d%03d" $(echo "$@" | sed 's/GNU indent//' | tr '.' ' '); }
 
 while [ -n "$*" ]; do
     case "$1" in
@@ -24,7 +25,7 @@ if ! git rev-parse --is-inside-work-tree >& /dev/null; then
     exit 1
 fi
 
-if hash indent && indent --version | grep -q GNU; then
+if hash indent && [ $(iver $(indent --version)) -ge $(iver 2.2.12) ]; then
     echo "Checking C files for coding style..."
     for f in `git ls-files '*.c'`; do
 	[ "$verbose" -gt 0 ] && echo "checking style on $f"
@@ -36,7 +37,7 @@ if hash indent && indent --version | grep -q GNU; then
     done
     [ "$rc" -gt 0 ] && echo "  Run ./tools/iindent on files"
 else
-	echo "You do not have indent installed so your code style is not being checked!"
+	echo "You do not have a recent indent installed so your code style is not being checked!"
 fi
 
 if hash grep; then
