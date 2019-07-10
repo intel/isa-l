@@ -6,12 +6,18 @@ matrix:
     - os: osx
       env: C_COMPILER=clang
 
-    ### linux gcc
-    - dist: trusty
+    ### linux gcc and format check
+    - dist: xenial
+      install:
+        # Install newer indent to check formatting
+        - sudo apt-get install texinfo
+        - wget http://archive.ubuntu.com/ubuntu/pool/main/i/indent/indent_2.2.12.orig.tar.xz -O /tmp/indent.tar.xz
+        - tar -xJf /tmp/indent.tar.xz -C /tmp/
+        - pushd /tmp/indent-2.2.12 && ./configure --prefix=/usr && make && sudo make install && popd
       env: C_COMPILER=gcc
 
     ### linux clang
-    - dist: trusty
+    - dist: xenial
       env: C_COMPILER=clang
 
     ### linux newer clang
@@ -45,6 +51,14 @@ matrix:
             - g++-6
       env: C_COMPILER=gcc-6
 
+    ### linux with nasm
+    - dist: xenial
+      addons:
+        apt:
+          packages:
+            - nasm
+      env: C_COMPILER=gcc AS_ASSEMBL=nasm
+
     ### linux with new nasm
     # Removed until travis issue fixed pulling from nasm from debian
     #- dist: trusty
@@ -57,7 +71,7 @@ matrix:
     #  env: C_COMPILER=gcc AS_ASSEMBL=nasm
 
     ### linux extended tests
-    - dist: trusty
+    - dist: xenial
       addons:
         apt:
           sources:
@@ -74,10 +88,10 @@ before_install:
 
 before_script:
   - if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get -q update; fi
-  - if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get install yasm indent; fi
+  - if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get install yasm; fi
   - if [ $TRAVIS_OS_NAME = osx ]; then brew install yasm; fi
 
 script:
   - if [ -n "${CC}" ]; then $CC --version; fi
-  - if [ -n "${AS}" ]; then $AS --version; fi
+  - if [ -n "${AS}" ]; then $AS --version || echo No version; fi
   - ./tools/test_autorun.sh "${TEST_TYPE}"
