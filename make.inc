@@ -44,7 +44,7 @@ host_cpu ?= $(shell uname -m | sed -e 's/amd/x86_/')
 arch ?= $(shell uname | grep -v -e Linux -e BSD )
 
 CC  = gcc
-AS  = yasm
+AS  = nasm
 AWK = awk
 
 DEBUG      = -g
@@ -76,6 +76,7 @@ LDFLAGS_so = -Wl,-soname,$(soname)
 ifeq ($(arch),mingw)
   CC=x86_64-w64-mingw32-gcc
   AR=x86_64-w64-mingw32-ar
+  AS=yasm
   LDFLAGS += -Wl,--force-exe-suffix
   SIM=wine
   EXT=.exe
@@ -144,6 +145,13 @@ $(all_llvm_fuzz_tests): CFLAGS += -fsanitize-coverage=trace-pc-guard -fsanitize=
 $(all_llvm_fuzz_tests): CXXFLAGS += -fsanitize-coverage=trace-pc-guard -fsanitize=address
 $(all_llvm_fuzz_tests): % : %.o $(lib_name)
 	$(CXX) $(CXXFLAGS)  $^ $(LDLIBS) $(FUZZLINK) -o $@
+
+# Check for modern as
+tmpfile := $(shell mktemp)
+have_as_w_avx512 ?= $(shell printf "vinserti32x8 zmm0, ymm1, 1;" > ${tmpfile} && $(AS) $(ASFLAGS) ${tmpfile} -o /dev/null 2> /dev/null && echo y; rm ${tmpfile})
+D_HAVE_AS_KNOWS_AVX512_$(have_as_w_avx512) := -DHAVE_AS_KNOWS_AVX512
+CFLAGS  += $(D_HAVE_AS_KNOWS_AVX512_y)
+ASFLAGS += $(D_HAVE_AS_KNOWS_AVX512_y)
 
 # Check for pthreads
 have_threads ?= $(shell printf "\#include <pthread.h>\nint main(void){return 0;}\n" | $(CC) -x c - -o /dev/null -lpthread && echo y )
