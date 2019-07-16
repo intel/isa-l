@@ -45,7 +45,7 @@
 #endif
 
 #ifndef TEST_MIN_SIZE
-# define TEST_MIN_SIZE  ALIGN_SIZE
+# define TEST_MIN_SIZE 64
 #endif
 
 #define str(s) #s

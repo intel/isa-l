@@ -199,7 +199,7 @@ void gf_vect_dot_prod(int len, int vlen, unsigned char *gftbls,
  * This function determines what instruction sets are enabled and selects the
  * appropriate version at runtime.
  *
- * @param len    Length of each vector in bytes. Must be >= 32.
+ * @param len    Length of each vector in bytes. Must be >= 64.
  * @param vec    The number of vector sources or rows in the generator matrix
  * 		 for coding.
  * @param vec_i  The vector index corresponding to the single input source.
