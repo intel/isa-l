@@ -728,39 +728,12 @@ void isal_update_histogram_base(uint8_t * start_stream, int length,
 static uint32_t convert_dist_to_dist_sym(uint32_t dist)
 {
 	assert(dist <= 32768 && dist > 0);
-	if (dist <= 2)
-		return dist - 1;
-	else if (dist <= 4)
-		return 0 + (dist - 1) / 1;
-	else if (dist <= 8)
-		return 2 + (dist - 1) / 2;
-	else if (dist <= 16)
-		return 4 + (dist - 1) / 4;
-	else if (dist <= 32)
-		return 6 + (dist - 1) / 8;
-	else if (dist <= 64)
-		return 8 + (dist - 1) / 16;
-	else if (dist <= 128)
-		return 10 + (dist - 1) / 32;
-	else if (dist <= 256)
-		return 12 + (dist - 1) / 64;
-	else if (dist <= 512)
-		return 14 + (dist - 1) / 128;
-	else if (dist <= 1024)
-		return 16 + (dist - 1) / 256;
-	else if (dist <= 2048)
-		return 18 + (dist - 1) / 512;
-	else if (dist <= 4096)
-		return 20 + (dist - 1) / 1024;
-	else if (dist <= 8192)
-		return 22 + (dist - 1) / 2048;
-	else if (dist <= 16384)
-		return 24 + (dist - 1) / 4096;
-	else if (dist <= 32768)
-		return 26 + (dist - 1) / 8192;
-	else
-		return ~0;	/* ~0 is an invalid distance code */
-
+	if (dist <= 32768) {
+		uint32_t msb = dist > 4 ? bsr(dist - 1) - 2 : 0;
+		return (msb * 2) + ((dist - 1) >> msb);
+	} else {
+		return ~0;
+	}
 }
 
 /**
