@@ -103,6 +103,11 @@ ARFLAGS  = $(ARFLAGS_$(arch))
 DEFINES += $(addprefix -D , $D)
 CLEANFILES += $(O) *.o *.a $(all_tests) $(bin_PROGRAMS) $(lib_name) $(so_lib_name) $(all_llvm_fuzz_tests)
 
+# set host_cpu=base_aliases for unsupported CPUs
+ifeq ($(filter aarch64 x86_%,$(host_cpu)),)
+  host_cpu=base_aliases
+endif
+
 other_tests += $(other_tests_$(host_cpu))
 
 lsrc += $(lsrc_$(host_cpu))
