@@ -44,11 +44,27 @@
 # define inline __inline
 #endif //__x86_64__  || __i386__ || _M_X64 || _M_IX86
 
+/**
+ * @brief Calculate the bit offset of the msb.
+ * @param val 32-bit unsigned integer input
+ *
+ * @returns bit offset of msb starting at 1 for first bit
+ */
 static inline uint32_t bsr(uint32_t val)
 {
 	uint32_t msb;
-#ifdef __LZCNT__
+#if defined(_MSC_VER)
+	unsigned long ret = 0;
+	if (val != 0) {
+		_BitScanReverse(&ret, val);
+		msb = ret + 1;
+	}
+	else
+		msb = 0;
+#elif defined( __LZCNT__)
 	msb = 32 - __lzcnt32(val);
+#elif defined(__x86_64__) || defined(__aarch64__)
+	msb = (val == 0)? 0 : 32 - __builtin_clz(val);
 #else
 	for(msb = 0; val > 0; val >>= 1)
 		msb++;
@@ -63,7 +79,7 @@ static inline uint32_t tzbytecnt(uint64_t val)
 #ifdef __BMI__
 	cnt = __tzcnt_u64(val);
 	cnt = cnt / 8;
-#elif defined(__x86_64__)
+#elif defined(__x86_64__) || defined(__aarch64__)
 
 	cnt = (val == 0)? 64 : __builtin_ctzll(val);
 	cnt = cnt / 8;
