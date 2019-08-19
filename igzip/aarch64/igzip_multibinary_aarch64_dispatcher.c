@@ -26,24 +26,14 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
+#include <aarch64_multibinary.h>
 
-#include "aarch64_multibinary.h"
+DEFINE_INTERFACE_DISPATCHER(isal_adler32)
+{
+	unsigned long auxval = getauxval(AT_HWCAP);
+	if (auxval & HWCAP_ASIMD)
+		return PROVIDER_INFO(adler32_neon);
 
-mbin_interface_base	isal_deflate_body , isal_deflate_body_base
-mbin_interface_base	isal_deflate_finish , isal_deflate_finish_base
-mbin_interface_base	isal_deflate_icf_body_lvl1 , isal_deflate_icf_body_hash_hist_base
-mbin_interface_base	isal_deflate_icf_body_lvl2 , isal_deflate_icf_body_hash_hist_base
-mbin_interface_base	isal_deflate_icf_body_lvl3 , icf_body_hash1_fillgreedy_lazy
-mbin_interface_base	isal_deflate_icf_finish_lvl1 , isal_deflate_icf_finish_hash_hist_base
-mbin_interface_base	isal_deflate_icf_finish_lvl2 , isal_deflate_icf_finish_hash_hist_base
-mbin_interface_base	isal_deflate_icf_finish_lvl3 , isal_deflate_icf_finish_hash_map_base
-mbin_interface_base	isal_update_histogram , isal_update_histogram_base
-mbin_interface_base	encode_deflate_icf , encode_deflate_icf_base
-mbin_interface_base	set_long_icf_fg , set_long_icf_fg_base
-mbin_interface_base	gen_icf_map_lh1 , gen_icf_map_h1_base
-mbin_interface_base	isal_deflate_hash_lvl0 , isal_deflate_hash_base
-mbin_interface_base	isal_deflate_hash_lvl1 , isal_deflate_hash_base
-mbin_interface_base	isal_deflate_hash_lvl2 , isal_deflate_hash_base
-mbin_interface_base	isal_deflate_hash_lvl3 , isal_deflate_hash_base
+	return PROVIDER_BASIC(adler32);
 
-mbin_interface		isal_adler32
+}
