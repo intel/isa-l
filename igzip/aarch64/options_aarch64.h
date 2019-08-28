@@ -27,24 +27,45 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#include "aarch64_multibinary.h"
+#ifndef __OPTIONS_AARCH64_H__
+#define __OPTIONS_AARCH64_H__
 
 
-mbin_interface_base	isal_deflate_icf_body_lvl1 , isal_deflate_icf_body_hash_hist_base
-mbin_interface_base	isal_deflate_icf_body_lvl2 , isal_deflate_icf_body_hash_hist_base
-mbin_interface_base	isal_deflate_icf_body_lvl3 , icf_body_hash1_fillgreedy_lazy
-mbin_interface_base	isal_deflate_icf_finish_lvl1 , isal_deflate_icf_finish_hash_hist_base
-mbin_interface_base	isal_deflate_icf_finish_lvl2 , isal_deflate_icf_finish_hash_hist_base
-mbin_interface_base	isal_deflate_icf_finish_lvl3 , isal_deflate_icf_finish_hash_map_base
-mbin_interface_base	isal_update_histogram , isal_update_histogram_base
-mbin_interface_base	encode_deflate_icf , encode_deflate_icf_base
-mbin_interface_base	set_long_icf_fg , set_long_icf_fg_base
-mbin_interface_base	gen_icf_map_lh1 , gen_icf_map_h1_base
-mbin_interface_base	isal_deflate_hash_lvl0 , isal_deflate_hash_base
-mbin_interface_base	isal_deflate_hash_lvl1 , isal_deflate_hash_base
-mbin_interface_base	isal_deflate_hash_lvl2 , isal_deflate_hash_base
-mbin_interface_base	isal_deflate_hash_lvl3 , isal_deflate_hash_base
+#ifdef __ASSEMBLY__
 
-mbin_interface		isal_deflate_body
-mbin_interface		isal_deflate_finish
-mbin_interface		isal_adler32
+///   Options:dir
+///   m - reschedule mem reads
+///   e b - bitbuff style
+///   t s x - compare style
+///   h - limit hash updates
+///   l - use longer huffman table
+///   f - fix cache read
+
+#ifndef IGZIP_HIST_SIZE
+#define IGZIP_HIST_SIZE (32 * 1024)
+#endif
+
+#if (IGZIP_HIST_SIZE > (32 * 1024))
+#undef IGZIP_HIST_SIZE
+#define IGZIP_HIST_SIZE (32 * 1024)
+#endif
+
+#ifdef LONGER_HUFFTABLE
+#if (IGZIP_HIST_SIZE > 8 * 1024)
+#undef IGZIP_HIST_SIZE
+#define IGZIP_HIST_SIZE (8 * 1024)
+#endif
+#endif
+
+///   (h) limit hash update
+#define LIMIT_HASH_UPDATE
+
+///   (f) fix cache read problem
+#define FIX_CACHE_READ
+
+#define ISAL_DEF_MAX_HDR_SIZE 328
+
+
+
+#endif
+#endif

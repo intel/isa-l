@@ -43,6 +43,8 @@ lsrc_aarch64 +=	igzip/aarch64/igzip_inflate_multibinary_arm64.S  \
 		igzip/aarch64/igzip_multibinary_arm64.S	\
 		igzip/aarch64/igzip_isal_adler32_neon.S	\
 		igzip/aarch64/igzip_multibinary_aarch64_dispatcher.c \
+		igzip/aarch64/igzip_deflate_body_aarch64.S \
+		igzip/aarch64/igzip_deflate_finish_aarch64.S \
 		igzip/proc_heap_base.c
 
 lsrc_x86_64 +=	igzip/igzip_body.asm \
