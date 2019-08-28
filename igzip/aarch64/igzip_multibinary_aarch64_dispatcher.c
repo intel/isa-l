@@ -37,3 +37,24 @@ DEFINE_INTERFACE_DISPATCHER(isal_adler32)
 	return PROVIDER_BASIC(adler32);
 
 }
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_body)
+{
+	unsigned long auxval = getauxval(AT_HWCAP);
+
+	if (auxval & HWCAP_CRC32)
+		return PROVIDER_INFO(isal_deflate_body_aarch64);
+
+	return PROVIDER_BASIC(isal_deflate_body);
+
+}
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_finish)
+{
+	unsigned long auxval = getauxval(AT_HWCAP);
+	if (auxval & HWCAP_CRC32)
+		return PROVIDER_INFO(isal_deflate_finish_aarch64);
+
+	return PROVIDER_BASIC(isal_deflate_finish);
+
+}

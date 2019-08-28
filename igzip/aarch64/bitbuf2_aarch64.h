@@ -27,24 +27,31 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#include "aarch64_multibinary.h"
+#ifndef __BITBUF2_AARCH64_H__
+#define __BITBUF2_AARCH64_H__
+#include "options_aarch64.h"
+
+#ifdef __ASSEMBLY__
+.macro update_bits	stream:req,code:req,code_len:req,m_bits:req,m_bit_count:req \
+			m_out_buf:req
+
+	lsl	x_\code,x_\code,x_\m_bit_count
+	orr	x_\m_bits,x_\code,x_\m_bits
+	add	x_\m_bit_count,x_\code_len,x_\m_bit_count
+
+	str	x_\m_bits,[x_\m_out_buf]
+
+	and	w_\code,w_\m_bit_count,-8
+	lsr	w_\code_len,w_\m_bit_count,3
+	add	x_\m_out_buf,x_\m_out_buf,w_\code_len,uxtw
+	sub	w_\m_bit_count,w_\m_bit_count,w_\code
+	lsr	x_\m_bits,x_\m_bits,x_\code
+
+	str	x_\m_bits,[stream,_internal_state_bitbuf_m_bits]
+	str 	w_\m_bit_count,[stream,_internal_state_bitbuf_m_bit_count]
+	str	x_\m_out_buf,[stream,_internal_state_bitbuf_m_out_buf]
 
 
-mbin_interface_base	isal_deflate_icf_body_lvl1 , isal_deflate_icf_body_hash_hist_base
-mbin_interface_base	isal_deflate_icf_body_lvl2 , isal_deflate_icf_body_hash_hist_base
-mbin_interface_base	isal_deflate_icf_body_lvl3 , icf_body_hash1_fillgreedy_lazy
-mbin_interface_base	isal_deflate_icf_finish_lvl1 , isal_deflate_icf_finish_hash_hist_base
-mbin_interface_base	isal_deflate_icf_finish_lvl2 , isal_deflate_icf_finish_hash_hist_base
-mbin_interface_base	isal_deflate_icf_finish_lvl3 , isal_deflate_icf_finish_hash_map_base
-mbin_interface_base	isal_update_histogram , isal_update_histogram_base
-mbin_interface_base	encode_deflate_icf , encode_deflate_icf_base
-mbin_interface_base	set_long_icf_fg , set_long_icf_fg_base
-mbin_interface_base	gen_icf_map_lh1 , gen_icf_map_h1_base
-mbin_interface_base	isal_deflate_hash_lvl0 , isal_deflate_hash_base
-mbin_interface_base	isal_deflate_hash_lvl1 , isal_deflate_hash_base
-mbin_interface_base	isal_deflate_hash_lvl2 , isal_deflate_hash_base
-mbin_interface_base	isal_deflate_hash_lvl3 , isal_deflate_hash_base
-
-mbin_interface		isal_deflate_body
-mbin_interface		isal_deflate_finish
-mbin_interface		isal_adler32
+.endm
+#endif
+#endif

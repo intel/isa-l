@@ -27,24 +27,31 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#include "aarch64_multibinary.h"
+#ifndef __STDMAC_AARCH64_H__
+#define __STDMAC_AARCH64_H__
 
+#ifdef __ASSEMBLY__
 
-mbin_interface_base	isal_deflate_icf_body_lvl1 , isal_deflate_icf_body_hash_hist_base
-mbin_interface_base	isal_deflate_icf_body_lvl2 , isal_deflate_icf_body_hash_hist_base
-mbin_interface_base	isal_deflate_icf_body_lvl3 , icf_body_hash1_fillgreedy_lazy
-mbin_interface_base	isal_deflate_icf_finish_lvl1 , isal_deflate_icf_finish_hash_hist_base
-mbin_interface_base	isal_deflate_icf_finish_lvl2 , isal_deflate_icf_finish_hash_hist_base
-mbin_interface_base	isal_deflate_icf_finish_lvl3 , isal_deflate_icf_finish_hash_map_base
-mbin_interface_base	isal_update_histogram , isal_update_histogram_base
-mbin_interface_base	encode_deflate_icf , encode_deflate_icf_base
-mbin_interface_base	set_long_icf_fg , set_long_icf_fg_base
-mbin_interface_base	gen_icf_map_lh1 , gen_icf_map_h1_base
-mbin_interface_base	isal_deflate_hash_lvl0 , isal_deflate_hash_base
-mbin_interface_base	isal_deflate_hash_lvl1 , isal_deflate_hash_base
-mbin_interface_base	isal_deflate_hash_lvl2 , isal_deflate_hash_base
-mbin_interface_base	isal_deflate_hash_lvl3 , isal_deflate_hash_base
+#define DEBUG_STACK	144
 
-mbin_interface		isal_deflate_body
-mbin_interface		isal_deflate_finish
-mbin_interface		isal_adler32
+.macro push_stack
+	stp	x29, x30,[sp,0-DEBUG_STACK]!
+	mov	x29, sp
+        stp     x19, x20, [sp, 16]
+        stp     x21, x22, [sp, 32]
+        stp     x23, x24, [sp, 48]
+        stp     x25, x26, [sp, 64]
+        stp     x27, x28, [sp, 80]
+.endm
+.macro pop_stack
+	ldp     x19, x20, [sp, 16]
+        ldp     x21, x22, [sp, 32]
+        ldp     x23, x24, [sp, 48]
+        ldp     x25, x26, [sp, 64]
+        ldp     x27, x28, [sp, 80]
+
+        ldp     x29, x30, [sp], DEBUG_STACK
+.endm
+
+#endif
+#endif

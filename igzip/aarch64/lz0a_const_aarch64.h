@@ -27,24 +27,46 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#include "aarch64_multibinary.h"
+#ifndef __LZ0A_CONST_AARCH64_H__
+#define __LZ0A_CONST_AARCH64_H__
+#include "options_aarch64.h"
+
+#ifdef __ASSEMBLY__
+.set K , 1024
+.set D , IGZIP_HIST_SIZE //  Amount of history
+.set LA , 18 * 16 //  Max look-ahead, rounded up to 32 byte boundary
+.set BSIZE , 2*IGZIP_HIST_SIZE + LA //  Nominal buffer size
+
+///    Constants for stateless compression
+#define LAST_BYTES_COUNT 3 //  Bytes to prevent reading out of array bounds
+#define LA_STATELESS 258 //  No round up since no data is copied to a buffer
+
+.set IGZIP_LVL0_HASH_SIZE , (8 * K)
+.set IGZIP_HASH8K_HASH_SIZE , (8 * K)
+.set IGZIP_HASH_HIST_HASH_SIZE , IGZIP_HIST_SIZE
+.set IGZIP_HASH_MAP_HASH_SIZE , IGZIP_HIST_SIZE
+
+#define LVL0_HASH_MASK (IGZIP_LVL0_HASH_SIZE - 1)
+#define HASH8K_HASH_MASK (IGZIP_HASH8K_HASH_SIZE - 1)
+#define HASH_HIST_HASH_MASK (IGZIP_HASH_HIST_HASH_SIZE - 1)
+#define HASH_MAP_HASH_MASK (IGZIP_HASH_MAP_HASH_SIZE - 1)
+
+.set MIN_DEF_MATCH , 3 // Minimum length of a match in deflate
+.set SHORTEST_MATCH , 4
+
+.set SLOP , 8
+
+#define ICF_CODE_BYTES 4
+#define LIT_LEN_BIT_COUNT 10
+#define DIST_LIT_BIT_COUNT 9
+
+#define LIT_LEN_MASK ((1 << LIT_LEN_BIT_COUNT) - 1)
+#define LIT_DIST_MASK ((1 << DIST_LIT_BIT_COUNT) - 1)
+
+#define DIST_OFFSET LIT_LEN_BIT_COUNT
+#define EXTRA_BITS_OFFSET (DIST_OFFSET + DIST_LIT_BIT_COUNT)
+#define LIT (0x1E << DIST_OFFSET)
 
 
-mbin_interface_base	isal_deflate_icf_body_lvl1 , isal_deflate_icf_body_hash_hist_base
-mbin_interface_base	isal_deflate_icf_body_lvl2 , isal_deflate_icf_body_hash_hist_base
-mbin_interface_base	isal_deflate_icf_body_lvl3 , icf_body_hash1_fillgreedy_lazy
-mbin_interface_base	isal_deflate_icf_finish_lvl1 , isal_deflate_icf_finish_hash_hist_base
-mbin_interface_base	isal_deflate_icf_finish_lvl2 , isal_deflate_icf_finish_hash_hist_base
-mbin_interface_base	isal_deflate_icf_finish_lvl3 , isal_deflate_icf_finish_hash_map_base
-mbin_interface_base	isal_update_histogram , isal_update_histogram_base
-mbin_interface_base	encode_deflate_icf , encode_deflate_icf_base
-mbin_interface_base	set_long_icf_fg , set_long_icf_fg_base
-mbin_interface_base	gen_icf_map_lh1 , gen_icf_map_h1_base
-mbin_interface_base	isal_deflate_hash_lvl0 , isal_deflate_hash_base
-mbin_interface_base	isal_deflate_hash_lvl1 , isal_deflate_hash_base
-mbin_interface_base	isal_deflate_hash_lvl2 , isal_deflate_hash_base
-mbin_interface_base	isal_deflate_hash_lvl3 , isal_deflate_hash_base
-
-mbin_interface		isal_deflate_body
-mbin_interface		isal_deflate_finish
-mbin_interface		isal_adler32
+#endif
+#endif
