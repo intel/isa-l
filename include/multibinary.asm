@@ -392,7 +392,7 @@
 %endmacro
 %else
 %macro mbin_dispatch_init7 7
-	mbin_dispatch_init5 %1, %2, %3, %4, %5
+	mbin_dispatch_init6 %1, %2, %3, %4, %5, %6
 %endmacro
 %endif
 
