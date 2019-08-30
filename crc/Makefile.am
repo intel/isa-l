@@ -49,6 +49,7 @@ lsrc_x86_64 += \
 	crc/crc64_ecma_refl_by8.asm \
 	crc/crc64_ecma_norm_by8.asm \
 	crc/crc64_iso_refl_by8.asm \
+	crc/crc64_iso_refl_by16_10.asm \
 	crc/crc64_iso_norm_by8.asm \
 	crc/crc64_jones_refl_by8.asm \
 	crc/crc64_jones_norm_by8.asm \
