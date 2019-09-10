@@ -58,3 +58,57 @@ DEFINE_INTERFACE_DISPATCHER(isal_deflate_finish)
 	return PROVIDER_BASIC(isal_deflate_finish);
 
 }
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_body_lvl1)
+{
+	unsigned long auxval = getauxval(AT_HWCAP);
+	if (auxval & HWCAP_CRC32)
+		return PROVIDER_INFO(isal_deflate_icf_body_hash_hist_aarch64);
+
+	return PROVIDER_BASIC(isal_deflate_icf_body_hash_hist);
+}
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_finish_lvl1)
+{
+	unsigned long auxval = getauxval(AT_HWCAP);
+	if (auxval & HWCAP_CRC32)
+		return PROVIDER_INFO(isal_deflate_icf_finish_hash_hist_aarch64);
+
+	return PROVIDER_BASIC(isal_deflate_icf_finish_hash_hist);
+}
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_body_lvl2)
+{
+	unsigned long auxval = getauxval(AT_HWCAP);
+	if (auxval & HWCAP_CRC32)
+		return PROVIDER_INFO(isal_deflate_icf_body_hash_hist_aarch64);
+
+	return PROVIDER_BASIC(isal_deflate_icf_body_hash_hist);
+}
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_finish_lvl2)
+{
+	unsigned long auxval = getauxval(AT_HWCAP);
+	if (auxval & HWCAP_CRC32)
+		return PROVIDER_INFO(isal_deflate_icf_finish_hash_hist_aarch64);
+
+	return PROVIDER_BASIC(isal_deflate_icf_finish_hash_hist);
+}
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_body_lvl3)
+{
+	unsigned long auxval = getauxval(AT_HWCAP);
+	if (auxval & HWCAP_CRC32)
+		return PROVIDER_INFO(icf_body_hash1_fillgreedy_lazy);
+
+	return PROVIDER_INFO(icf_body_hash1_fillgreedy_lazy);
+}
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_finish_lvl3)
+{
+	unsigned long auxval = getauxval(AT_HWCAP);
+	if (auxval & HWCAP_CRC32)
+		return PROVIDER_INFO(isal_deflate_icf_finish_hash_map_base);
+
+	return PROVIDER_BASIC(isal_deflate_icf_finish_hash_map);
+}
