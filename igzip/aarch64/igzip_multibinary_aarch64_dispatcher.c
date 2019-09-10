@@ -58,3 +58,21 @@ DEFINE_INTERFACE_DISPATCHER(isal_deflate_finish)
 	return PROVIDER_BASIC(isal_deflate_finish);
 
 }
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_body_hash_hist)
+{
+	unsigned long auxval = getauxval(AT_HWCAP);
+	if (auxval & HWCAP_CRC32)
+		return PROVIDER_INFO(isal_deflate_icf_body_hash_hist_aarch64);
+
+	return PROVIDER_BASIC(isal_deflate_icf_body_hash_hist);
+}
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_finish_hash_hist)
+{
+	unsigned long auxval = getauxval(AT_HWCAP);
+	if (auxval & HWCAP_CRC32)
+		return PROVIDER_INFO(isal_deflate_icf_finish_hash_hist_aarch64);
+
+	return PROVIDER_BASIC(isal_deflate_icf_finish_hash_hist);
+}
