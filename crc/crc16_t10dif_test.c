@@ -39,7 +39,7 @@
 # define TEST_SEED 0x1234
 #endif
 
-#define MAX_BUF   512
+#define MAX_BUF   4096
 #define TEST_SIZE  20
 
 typedef uint32_t u32;
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 	unsigned char *buf;
 
 	printf("Test crc16_t10dif_test ");
-	if (posix_memalign(&buf_raw, MAX_BUF, MAX_BUF * TEST_SIZE)) {
+	if (posix_memalign(&buf_raw, 32, MAX_BUF * TEST_SIZE)) {
 		printf("alloc error: Fail");
 		return -1;
 	}
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
 			fail++;
 		if (verbose)
 			printf("crc rand%3d = 0x%4x 0x%4x 0x%4x\n", i, crc_ref, crc_base, crc);
-		else
+		else if (i % (TEST_SIZE / 8) == 0)
 			printf(".");
 		buf += MAX_BUF;
 	}
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
 			fail++;
 			printf("fail random size%i 0x%8x 0x%8x 0x%8x\n", i, crc_ref, crc_base,
 			       crc);
-		} else
+		} else if (i % (MAX_BUF / 8) == 0)
 			printf(".");
 	}
 
@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
 			if (verbose)
 				printf("crc rand%3d = 0x%4x 0x%4x 0x%4x\n", i, crc_ref,
 				       crc_base, crc);
-			else
+			else if (i % (TEST_SIZE * 20 / 8) == 0)
 				printf(".");
 			buf += MAX_BUF;
 		}

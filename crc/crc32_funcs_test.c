@@ -39,7 +39,7 @@
 # define TEST_SEED 0x1234
 #endif
 
-#define MAX_BUF   512
+#define MAX_BUF   4096
 #define TEST_SIZE  32
 
 typedef uint32_t(*crc32_func_t) (uint32_t, const uint8_t *, uint64_t);
@@ -107,8 +107,8 @@ int main(int argc, char *argv[])
 
 	verbose = argc - 1;
 
-	// Align to MAX_BUF boundary
-	ret = posix_memalign(&buf_alloc, MAX_BUF, MAX_BUF * TEST_SIZE);
+	// Align to TEST_SIZE boundary
+	ret = posix_memalign(&buf_alloc, TEST_SIZE, MAX_BUF * TEST_SIZE);
 	if (ret) {
 		printf("alloc error: Fail");
 		return -1;
@@ -120,13 +120,13 @@ int main(int argc, char *argv[])
 		fail_case = 0;
 		test_func = &test_funcs[i];
 
-		printf("Test %s ", test_func->note);
+		printf("Test %s\t", test_func->note);
 		fail_case += zeros_test(test_func);
 		fail_case += simple_pattern_test(test_func);
 		fail_case += seeds_sizes_test(test_func);
 		fail_case += eob_test(test_func);
 		fail_case += update_test(test_func);
-		printf("Test %s done: %s\n", test_func->note, fail_case ? "Fail" : "Pass");
+		printf(" done: %s\n", fail_case ? "Fail" : "Pass");
 
 		if (fail_case) {
 			printf("\n%s Failed %d tests\n", test_func->note, fail_case);
@@ -208,7 +208,7 @@ int seeds_sizes_test(func_case_t * test_func)
 			fail++;
 		if (verbose)
 			printf("crc rand%3d = 0x%8x 0x%8x 0x%8x\n", i, crc_ref, crc_base, crc);
-		else
+		else if (i % (TEST_SIZE / 8) == 0)
 			printf(".");
 		buf += MAX_BUF;
 	}
@@ -226,7 +226,7 @@ int seeds_sizes_test(func_case_t * test_func)
 			fail++;
 			printf("fail random size%i 0x%8x 0x%8x 0x%8x\n", i, crc_ref, crc_base,
 			       crc);
-		} else
+		} else if (i % (MAX_BUF / 8) == 0)
 			printf(".");
 	}
 
@@ -250,7 +250,7 @@ int seeds_sizes_test(func_case_t * test_func)
 			if (verbose)
 				printf("crc rand%3d = 0x%8x 0x%8x 0x%8x\n", i, crc_ref,
 				       crc_base, crc);
-			else
+			else if (i % (TEST_SIZE * 20 / 8) == 0)
 				printf(".");
 			buf += MAX_BUF;
 		}
@@ -285,7 +285,7 @@ int eob_test(func_case_t * test_func)
 		if (verbose)
 			printf("crc eob rand%3d = 0x%8x 0x%8x 0x%8x\n", i, crc_ref, crc_base,
 			       crc);
-		else
+		else if (i % (TEST_SIZE / 8) == 0)
 			printf(".");
 	}
 
