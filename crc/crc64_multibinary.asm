@@ -57,6 +57,7 @@ extern crc64_jones_norm_base
 
 %if (AS_FEATURE_LEVEL) >= 10
 extern crc64_iso_refl_by16_10
+extern crc64_iso_norm_by16_10
 extern crc64_jones_refl_by16_10
 extern crc64_ecma_refl_by16_10
 %endif
@@ -72,9 +73,8 @@ mbin_dispatch_init_clmul	crc64_ecma_norm, crc64_ecma_norm_base, crc64_ecma_norm_
 
 mbin_interface			crc64_iso_refl
 mbin_dispatch_init7		crc64_iso_refl, crc64_iso_refl_base, crc64_iso_refl_by8, crc64_iso_refl_by8, crc64_iso_refl_by8, crc64_iso_refl_by8, crc64_iso_refl_by16_10
-
 mbin_interface			crc64_iso_norm
-mbin_dispatch_init_clmul	crc64_iso_norm, crc64_iso_norm_base, crc64_iso_norm_by8
+mbin_dispatch_init7		crc64_iso_norm, crc64_iso_norm_base, crc64_iso_norm_by8, crc64_iso_norm_by8, crc64_iso_norm_by8, crc64_iso_norm_by8, crc64_iso_norm_by16_10
 
 mbin_interface			crc64_jones_refl
 mbin_dispatch_init7		crc64_jones_refl, crc64_jones_refl_base, crc64_jones_refl_by8, crc64_jones_refl_by8, crc64_jones_refl_by8, crc64_jones_refl_by8, crc64_jones_refl_by16_10
