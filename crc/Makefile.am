@@ -56,6 +56,7 @@ lsrc_x86_64 += \
 	crc/crc64_jones_refl_by8.asm \
 	crc/crc64_jones_refl_by16_10.asm \
 	crc/crc64_jones_norm_by8.asm \
+	crc/crc64_jones_norm_by16_10.asm \
 	crc/crc32_gzip_refl_by8.asm
 
 src_include += -I $(srcdir)/crc
