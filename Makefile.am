@@ -49,7 +49,7 @@ include mem/Makefile.am
 
 # LIB version info not necessarily the same as package version
 LIBISAL_CURRENT=2
-LIBISAL_REVISION=27
+LIBISAL_REVISION=28
 LIBISAL_AGE=0
 
 lib_LTLIBRARIES = libisal.la

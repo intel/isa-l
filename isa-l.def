@@ -1,5 +1,5 @@
 LIBRARY  isa-l
-VERSION  2.27
+VERSION  2.28
 EXPORTS
 
 ec_encode_data_sse      @1
