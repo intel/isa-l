@@ -1,4 +1,4 @@
-v2.27 Intel Intelligent Storage Acceleration Library Release Notes
+v2.28 Intel Intelligent Storage Acceleration Library Release Notes
 ==================================================================
 
 RELEASE NOTE CONTENTS
@@ -15,6 +15,11 @@ RELEASE NOTE CONTENTS
 
 2. FIXED ISSUES
 ---------------
+v2.28
+
+* Fix documentation on gf_vect_mad(). Min length listed as 32 instead of
+  required min 64 bytes.
+
 v2.27
 
 * Fix lack of install for pkg-config files
@@ -104,6 +109,11 @@ v2.10
 
 3. CHANGE LOG & FEATURES ADDED
 ------------------------------
+v2.28
+
+* New next-arch versions of 64-bit CRC. All norm and reflected 64-bit
+  polynomials are expanded to utilize vpclmulqdq.
+
 v2.27
 
 * New multi-threaded compression option for igzip cli tool
