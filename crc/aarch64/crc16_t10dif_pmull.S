@@ -136,7 +136,8 @@ v_tmp3			.req	v16
 	ldr	q_x2, [x_buf, 32]
 	ldr	q_x3, [x_buf, 48]
 
-	ldr	q7, .shuffle_mask
+	adrp	x_tmp, .shuffle_mask_lanchor
+	ldr	q7, [x_tmp, :lo12:.shuffle_mask_lanchor]
 
 	tbl	v_tmp1.16b, {v_x0.16b}, v7.16b
 	eor	v_x0.16b, v_tmp3.16b, v_tmp1.16b
@@ -357,7 +358,10 @@ v_br1			.req	v5
 	.section	.rodata
 
 	.align	4
-.shuffle_mask:
+.shuffle_mask_lanchor = . + 0
+	.type	shuffle_mask, %object
+	.size	shuffle_mask, 16
+shuffle_mask:
 	.byte	15, 14, 13, 12, 11, 10, 9, 8
 	.byte	7,   6,  5,  4,  3,  2, 1, 0
 
