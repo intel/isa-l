@@ -66,7 +66,7 @@
 	.text
 	.section	.rodata
 	.align	4
-	.set	lanchor_crc64_tab,. + 0
+	.set	.lanchor_crc_tab,. + 0
 	.type	crc64_tab, %object
 	.size	crc64_tab, 2048
 

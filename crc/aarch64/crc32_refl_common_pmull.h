@@ -27,254 +27,100 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
+#include "crc_common_pmull.h"
+
 .macro crc32_refl_func name:req
-	.arch armv8-a+crc+crypto
+	.arch armv8-a+crypto
 	.text
 	.align	3
 	.global	\name
 	.type	\name, %function
 
-/* crc32_refl_func(uint32_t seed, uint8_t * buf, uint64_t len) */
+/* uint32_t crc32_refl_func(uint32_t seed, uint8_t * buf, uint64_t len) */
 
-// constant
-.equ	FOLD_SIZE, 1024
-
-// paramter
-w_seed		.req	w0
-x_seed		.req	x0
-x_buf		.req	x1
-x_len		.req	x2
-
-x_buf_tmp	.req	x0
-
-// crc32 refl function entry
 \name\():
 	mvn	w_seed, w_seed
-	mov	x3, 0
-	mov	w4, 0
+	mov	x_counter, 0
 	cmp	x_len, (FOLD_SIZE - 1)
 	bhi	.crc32_clmul_pre
 
-.crc32_refl_tab_pre:
-	cmp	x_len, x3
+.crc_tab_pre:
+	cmp	x_len, x_counter
 	bls	.done
-	sxtw	x4, w4
-	adrp	x5, .LANCHOR0
-	sub	x_buf, x_buf, x4
-	add	x5, x5, :lo12:.LANCHOR0
+
+	adrp	x_tmp, .lanchor_crc_tab
+	add	x_buf_iter, x_buf, x_counter
+	add	x_buf, x_buf, x_len
+	add	x_crc_tab_addr, x_tmp, :lo12:.lanchor_crc_tab
 
 	.align 3
-.loop_crc32_refl_tab:
-	ldrb	w3, [x_buf, x4]
-	add	x4, x4, 1
-	cmp	x_len, x4
-	eor	x3, x_seed, x3
-	and	x3, x3, 255
-	ldr	w3, [x5, x3, lsl 2]
-	eor	w_seed, w3, w_seed, lsr 8
-	bhi	.loop_crc32_refl_tab
+.loop_crc_tab:
+	ldrb	w_tmp, [x_buf_iter], 1
+	cmp	x_buf, x_buf_iter
+	eor	w_tmp, w_tmp, w_seed
+	and	w_tmp, w_tmp, 255
+	ldr	w_tmp, [x_crc_tab_addr, w_tmp, uxtw 2]
+	eor	w_seed, w_tmp, w_seed, lsr 8
+	bhi	.loop_crc_tab
+
 .done:
-	mvn	w_seed, w_seed
+	mvn	w_crc_ret, w_seed
 	ret
 
-d_y0_tmp	.req	d0
-v_y0_tmp	.req	v0
-
-q_x0_tmp	.req	q3
-v_x0_tmp	.req	v3
-
-v_x0		.req	v0
-q_x1		.req	q2
-q_x2		.req	q4
-q_x3		.req	q1
-
-d_p4_low	.req	d17
-d_p4_high	.req	d19
-
-x_buf_end	.req	x3
 	.align 2
 .crc32_clmul_pre:
-	and	x4, x_len, -64
-	uxtw	x_seed, w_seed
-	cmp	x4, 63
-	bls	.clmul_end
+	fmov	s_x0, w_seed // save crc to s_x0
 
-	fmov	d_y0_tmp, x_seed
-	ins	v_y0_tmp.d[1], x3
+	crc_refl_load_first_block
 
-	ldr	q_x0_tmp, [x_buf]
-	ldr	q_x1, [x_buf, 16]
-	ldr	q_x2, [x_buf, 32]
-	ldr	q_x3, [x_buf, 48]
-	eor	v_x0.16b, v_y0_tmp.16b, v_x0_tmp.16b
-
-	sub	x5, x4, #64
-	cmp	x5, 63
-
-	add	x_buf_tmp, x_buf, 64
 	bls	.clmul_loop_end
 
-	mov	x4, p4_high_b0
-	movk	x4, p4_high_b1, lsl 16
-	fmov	d_p4_high, x4
+	crc32_load_p4
 
-	mov	x4, p4_low_b0
-	movk	x4, p4_low_b1, lsl 16
-	fmov	d_p4_low, x4
-
-	add	x_buf_end, x_buf_tmp, x5
-
-v_p4_low	.req	v17
-v_p4_high	.req	v19
-
-// v_x0		.req	v0
-v_x1		.req	v2
-v_x2		.req	v4
-v_x3		.req	v1
-
-q_y0		.req	q7
-q_y1		.req	q5
-q_y2		.req	q3
-q_y3		.req	q21
-
-v_y0		.req	v7
-v_y1		.req	v5
-v_y2		.req	v3
-v_y3		.req	v21
-
-d_x0_h		.req	d22
-d_x1_h		.req	d20
-d_x2_h		.req	d18
-d_x3_h		.req	d6
-
-v_x0_h		.req	v22
-v_x1_h		.req	v20
-v_x2_h		.req	v18
-v_x3_h		.req	v6
-
-	.align 3
-.clmul_loop:
-	add	x_buf_tmp, x_buf_tmp, 64
-	cmp	x_buf_tmp, x_buf_end
-
-	dup	d_x0_h, v_x0.d[1]
-	dup	d_x1_h, v_x1.d[1]
-	dup	d_x2_h, v_x2.d[1]
-	dup	d_x3_h, v_x3.d[1]
-
-	ldr	q_y0, [x_buf_tmp, -64]
-	ldr	q_y1, [x_buf_tmp, -48]
-	ldr	q_y2, [x_buf_tmp, -32]
-	ldr	q_y3, [x_buf_tmp, -16]
-
-	pmull	v_x0.1q, v_x0.1d, v_p4_low.1d
-	pmull	v_x1.1q, v_x1.1d, v_p4_low.1d
-	pmull	v_x2.1q, v_x2.1d, v_p4_low.1d
-	pmull	v_x3.1q, v_x3.1d, v_p4_low.1d
-
-	pmull	v_x0_h.1q, v_x0_h.1d, v_p4_high.1d
-	pmull	v_x1_h.1q, v_x1_h.1d, v_p4_high.1d
-	pmull	v_x2_h.1q, v_x2_h.1d, v_p4_high.1d
-	pmull	v_x3_h.1q, v_x3_h.1d, v_p4_high.1d
-
-	eor	v_y0.16b, v_y0.16b, v22.16b
-	eor	v_y1.16b, v_y1.16b, v20.16b
-	eor	v_y2.16b, v_y2.16b, v18.16b
-	eor	v_y3.16b, v_y3.16b, v6.16b
-
-	eor	v_x0.16b, v_y0.16b, v_x0.16b
-	eor	v_x1.16b, v_y1.16b, v_x1.16b
-	eor	v_x2.16b, v_y2.16b, v_x2.16b
-	eor	v_x3.16b, v_y3.16b, v_x3.16b
-
-	bne	.clmul_loop
-
-
-// v_x0		.req	v0
-// v_x1		.req	v2
-// v_x2		.req	v4
-// v_x3		.req	v1
-
-d_x0		.req	d0
-
-d_p1_high	.req	d7
-d_p1_low	.req	d17
-
-v_p1_high	.req	v7
-v_p1_low	.req	v17
+// 1024bit --> 512bit loop
+// merge x0, x1, x2, x3, y0, y1, y2, y3 => x0, x1, x2, x3 (uint64x2_t)
+	crc_refl_loop
 
 .clmul_loop_end:
-// fold 128b
-	mov	x0, p1_high_b0
-	movk	x0, p1_high_b1, lsl 16
-	fmov	d_p1_high, x0
+// folding 512bit --> 128bit
+	crc32_fold_512b_to_128b
 
-	mov	x0, p1_low_b0
-	movk	x0, p1_low_b1, lsl 16
-	fmov	d_p1_low, x0
+// folding 128bit --> 64bit
+	mov	x_tmp, p0_low_b0
+	movk	x_tmp, p0_low_b1, lsl 16
+	fmov	d_p0_low2, x_tmp
 
-	dup	d6, v_x0.d[1]
-	pmull	v_x0.1q, v_x0.1d, v_p1_low.1d
-	pmull	v6.1q, v6.1d, v_p1_high.1d
-	eor	v6.16b, v6.16b, v_x0.16b
-	eor	v_x1.16b, v6.16b, v_x1.16b
+	mov d_tmp_high, v_x3.d[1]
 
-	dup	d6, v_x1.d[1]
-	pmull	v_x1.1q, v_x1.1d, v_p1_low.1d
-	pmull	v6.1q, v6.1d, v_p1_high.1d
-	eor	v6.16b, v6.16b, v_x1.16b
-	eor	v_x2.16b, v6.16b, v_x2.16b
+	mov	d_p0_low, v_p1.d[1]
+	pmull	v_x3.1q, v_x3.1d, v_p0.1d
 
-	dup	d_x0, v_x2.d[1] // d_x0 temparory saved v_x2 high
-	pmull	v_x2.1q, v_x2.1d, v_p1_low.1d
-	pmull	v_x0.1q, v_x0.1d, v_p1_high.1d
-	eor	v_x0.16b, v_x0.16b, v_x2.16b
-	eor	v_x0.16b, v_x0.16b, v_x3.16b
-
-// all
-	mov	x0, 4294967295
-	fmov	d3, x0
-
-	movi	v5.4s, 0
-
-// fold 64b
-	mov	x4, p0_low_b0
-	movk	x4, p0_low_b1, lsl 16
-	fmov	d1, x4
-
-	dup	d2, v0.d[0]
-	ext	v0.16b, v0.16b, v5.16b, #8
-	pmull	v2.1q, v2.1d, v7.1d
-	eor	v0.16b, v0.16b, v2.16b
-	and	v2.16b, v3.16b, v0.16b
-	ext	v0.16b, v0.16b, v5.16b, #4
-	pmull	v2.1q, v2.1d, v1.1d
+	eor	v_tmp_high.16b, v_tmp_high.16b, v_x3.16b
+	mov s_x3, v_tmp_high.s[0]
+	ext	v_tmp_high.16b, v_tmp_high.16b, v_tmp_high.16b, #4
+	pmull	v_x3.1q, v_x3.1d, v_p02.1d
 
 // barrett reduction
-	mov	x3, br_high_b0
-	movk	x3, br_high_b1, lsl 16
-	movk	x3, br_high_b2, lsl 32
+	mov	x_tmp2, br_high_b0
+	movk	x_tmp2, br_high_b1, lsl 16
+	movk	x_tmp2, br_high_b2, lsl 32
+	fmov	d_br_high, x_tmp2
 
-	fmov	d1, x3
-	eor	v0.16b, v0.16b, v2.16b
-	and	v2.16b, v0.16b, v3.16b
-	pmull	v2.1q, v2.1d, v1.1d
+	mov	x_tmp, br_low_b0
+	movk	x_tmp, br_low_b1, lsl 16
+	movk	x_tmp, br_low_b2, lsl 32
+	fmov	d_br_low, x_tmp
 
-	mov	x0, br_low_b0
-	movk	x0, br_low_b1, lsl 16
-	movk	x0, br_low_b2, lsl 32
+	eor	v_tmp_high.16b, v_tmp_high.16b, v_x3.16b
+	mov	s_x3, v_tmp_high.s[0]
+	pmull	v_x3.1q, v_x3.1d, v_br_high.1d
 
-	fmov	d1, x0
-	and	v2.16b, v3.16b, v2.16b
-	pmull	v2.1q, v2.1d, v1.1d
-	eor	v0.16b, v0.16b, v2.16b
-	umov	w_seed, v0.s[1]
-	uxtw	x_seed, w_seed
+	mov s_x3, v_x3.s[0]
+	pmull	v_x3.1q, v_x3.1d, v_br_low.1d
+	eor	v_tmp_high.8b, v_tmp_high.8b, v_x3.8b
+	umov	w_seed, v_tmp_high.s[1]
 
-.clmul_end:
-	and	w4, w2, -64
-	sxtw	x3, w4
-	add	x_buf, x_buf, x3
-	b	.crc32_refl_tab_pre
+	b	.crc_tab_pre
+
 	.size	\name, .-\name
 .endm
