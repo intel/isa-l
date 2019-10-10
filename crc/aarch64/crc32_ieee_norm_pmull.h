@@ -49,7 +49,7 @@
 	.text
 	.section	.rodata
 	.align	4
-	.set	.LANCHOR0,. + 0
+	.set	.lanchor_crc_tab,. + 0
 	.type	crc32_table_ieee_norm, %object
 	.size	crc32_table_ieee_norm, 1024
 crc32_table_ieee_norm:
