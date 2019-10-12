@@ -117,7 +117,7 @@ if USE_NASM
   as_filter = ${srcdir}/tools/nasm-filter.sh
 endif
 if CPU_AARCH64
-  as_filter = gcc -D__ASSEMBLY__
+  as_filter = $(CC) -D__ASSEMBLY__
 endif
 
 CCAS = $(as_filter)
