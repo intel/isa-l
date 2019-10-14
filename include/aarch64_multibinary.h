@@ -212,7 +212,7 @@
 #define PROVIDER_INFO(_func_entry)                                  	\
 	({	DIGNOSTIC_PUSH()					\
 		DIGNOSTIC_IGNORE(-Wnested-externs)			\
-		extern void  _func_entry();				\
+		extern void  _func_entry(void);				\
 		DIGNOSTIC_POP()						\
 		_func_entry;						\
 	})
