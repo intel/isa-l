@@ -15,10 +15,12 @@ INPUT                  = isa-l.h \
 			 CONTRIBUTING.md \
 			 Release_notes.txt
 
-EXCLUDE                = include/test.h include/types.h
+EXCLUDE                = include/test.h include/types.h include/unaligned.h
+EXCLUDE_PATTERNS       = */include/*_multibinary.h
 EXAMPLE_PATH           = . crc raid erasure_code igzip
 PAPER_TYPE             = letter
 LATEX_SOURCE_CODE      = YES
+GENERATE_TREEVIEW      = YES
 MACRO_EXPANSION        = YES
 EXPAND_ONLY_PREDEF     = YES
 PREDEFINED             = "DECLARE_ALIGNED(n, a)=ALIGN n" \
