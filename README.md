@@ -20,7 +20,7 @@ Also see:
 * For crypto functions see [isa-l_crypto on github](https://github.com/intel/isa-l_crypto).
 * The [github wiki](https://github.com/intel/isa-l/wiki) including a list of
   [distros/ports](https://github.com/intel/isa-l/wiki/Ports--Repos) offering binary packages.
-* ISA-L [mailing list](https://lists.01.org/mailman/listinfo/isal).
+* ISA-L [mailing list](https://lists.01.org/hyperkitty/list/isal@lists.01.org/).
 * [Contributing](CONTRIBUTING.md).
 
 Building ISA-L

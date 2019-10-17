@@ -34,6 +34,6 @@ And use check format script before submitting.
 
     ./tools/check_format.sh
 
-[mailing list]:https://lists.01.org/mailman/listinfo/isal
+[mailing list]:https://lists.01.org/hyperkitty/list/isal@lists.01.org/
 [license]:LICENSE
 [signed-off-by language]:https://01.org/community/signed-process
