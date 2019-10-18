@@ -126,3 +126,39 @@ DEFINE_INTERFACE_DISPATCHER(isal_update_histogram)
 
 	return PROVIDER_BASIC(isal_update_histogram);
 }
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_hash_lvl0)
+{
+	unsigned long auxval = getauxval(AT_HWCAP);
+	if (auxval & HWCAP_CRC32)
+		return PROVIDER_INFO(isal_deflate_hash_aarch64);
+
+	return PROVIDER_BASIC(isal_deflate_hash);
+}
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_hash_lvl1)
+{
+	unsigned long auxval = getauxval(AT_HWCAP);
+	if (auxval & HWCAP_CRC32)
+		return PROVIDER_INFO(isal_deflate_hash_aarch64);
+
+	return PROVIDER_BASIC(isal_deflate_hash);
+}
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_hash_lvl2)
+{
+	unsigned long auxval = getauxval(AT_HWCAP);
+	if (auxval & HWCAP_CRC32)
+		return PROVIDER_INFO(isal_deflate_hash_aarch64);
+
+	return PROVIDER_BASIC(isal_deflate_hash);
+}
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_hash_lvl3)
+{
+	unsigned long auxval = getauxval(AT_HWCAP);
+	if (auxval & HWCAP_CRC32)
+		return PROVIDER_INFO(isal_deflate_hash_aarch64);
+
+	return PROVIDER_BASIC(isal_deflate_hash);
+}
