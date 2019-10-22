@@ -150,5 +150,24 @@ _compare_258_loop:
 	csel	x_\match_length,x_\match_length,x_\max_length,ls
 .endm
 
+.macro compare_aarch64 str0:req,str1:req,max_length:req,match_length:req,tmp0:req,tmp1:req
+	mov	x_\match_length,0
+_compare_loop:
+	ldr	x_\tmp0,[x_\str0,x_\match_length]
+	ldr	x_\tmp1,[x_\str1,x_\match_length]
+	eor 	x_\tmp0,x_\tmp1,x_\tmp0
+	rbit	x_\tmp0,x_\tmp0
+	clz	x_\tmp0,x_\tmp0
+	lsr	x_\tmp0,x_\tmp0,3
+	add	x_\match_length,x_\match_length,x_\tmp0
+
+	cmp	x_\max_length,x_\match_length
+	ccmp	x_\tmp0,8,0,hi
+	beq	_compare_loop
+
+	cmp	x_\match_length,x_\max_length
+	csel	x_\match_length,x_\match_length,x_\max_length,ls
+.endm
+
 #endif
 #endif
