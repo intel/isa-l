@@ -149,7 +149,7 @@ isal_deflate_body_aarch64:
 
 	//file_start = (uint8_t *) ((uintptr_t) stream->next_in - stream->total_in);
 	ldr	w_file_start,[stream,_total_in]
-	sub	file_start,next_in,file_start,uxtw
+	sub	file_start,next_in,w_file_start,uxtw
 
 	//uint32_t hist_size = state->dist_mask;
 	ldr	hist_size,[stream,_internal_state + _dist_mask]

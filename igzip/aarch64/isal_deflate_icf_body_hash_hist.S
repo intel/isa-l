@@ -162,12 +162,12 @@ isal_deflate_icf_body_hash_hist_aarch64:
 	mov	next_in, start_in
 	and	x0, x0, -4
 	ldp	hist_size, hash_mask, [state, offset_dist_mask] // 12
-	add	end_in, start_in, x_avail_in, uxtw
+	add	end_in, start_in, avail_in, uxtw
 	mov	next_out, start_out
 	add	end_out, start_out, x0
 
 	add	x0, next_in, ISAL_LOOK_AHEAD // 288
-	sub	file_start, start_in, total_in, uxtw
+	sub	file_start, start_in, w_total_in, uxtw
 	mov	NULL_DIST_SYM, 30
 	add	next_in_iter, next_in, 1
 	cmp	end_in, x0
@@ -199,7 +199,7 @@ isal_deflate_icf_body_hash_hist_aarch64:
 	and	w_literal, w_literal, 255
 	mov	next_in, next_in_iter
 	add	next_out, next_out, 4
-	add	x1, level_buf, literal, uxtb 2
+	add	x1, level_buf, w_literal, uxtb 2
 	ldr	w0, [x1, 2296]
 	add	w0, w0, 1
 	str	w0, [x1, 2296]
@@ -223,7 +223,7 @@ isal_deflate_icf_body_hash_hist_aarch64:
 .dist_vs_hist_size:
 	mov	x1, next_in
 	mov	w2, 258
-	sub	x0, next_in, dist, uxth
+	sub	x0, next_in, w_dist, uxth
 	compare_258_bytes param0,param1,match_length,tmp0,tmp1
 
 	and	w1, w_match_length, 65535 // 0xffff
@@ -232,7 +232,7 @@ isal_deflate_icf_body_hash_hist_aarch64:
 
 	ldr	w0, [next_in, 1]
 	mov	x4, next_in
-	add	next_in, next_in, x1, uxth
+	add	next_in, next_in, w1, uxth
 	crc32cw	w0, wzr, w0
 
 	and	w0, hash_mask, w0
