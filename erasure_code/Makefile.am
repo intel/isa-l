@@ -27,11 +27,11 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ########################################################################
 
+include erasure_code/aarch64/Makefile.am
+
 lsrc         += erasure_code/ec_base.c
 
 lsrc_base_aliases += erasure_code/ec_base_aliases.c
-lsrc_aarch64      += erasure_code/ec_base_aliases.c
-
 lsrc_x86_64  += \
 		erasure_code/ec_highlevel_func.c \
 		erasure_code/gf_vect_mul_sse.asm \
