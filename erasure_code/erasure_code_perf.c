@@ -58,14 +58,15 @@
 
 typedef unsigned char u8;
 
-void ec_encode_perf(int m, int k, u8 * a, u8 * g_tbls, u8 ** buffs)
+void ec_encode_perf(int m, int k, u8 * a, u8 * g_tbls, u8 ** buffs, struct perf *start)
 {
 	ec_init_tables(k, m - k, &a[k * k], g_tbls);
-	ec_encode_data(TEST_LEN(m), k, m - k, g_tbls, buffs, &buffs[k]);
+	BENCHMARK(start, BENCHMARK_TIME,
+		  ec_encode_data(TEST_LEN(m), k, m - k, g_tbls, buffs, &buffs[k]));
 }
 
 int ec_decode_perf(int m, int k, u8 * a, u8 * g_tbls, u8 ** buffs, u8 * src_in_err,
-		   u8 * src_err_list, int nerrs, u8 ** temp_buffs)
+		   u8 * src_err_list, int nerrs, u8 ** temp_buffs, struct perf *start)
 {
 	int i, j, r;
 	u8 b[MMAX * KMAX], c[MMAX * KMAX], d[MMAX * KMAX];
@@ -89,7 +90,8 @@ int ec_decode_perf(int m, int k, u8 * a, u8 * g_tbls, u8 ** buffs, u8 * src_in_e
 
 	// Recover data
 	ec_init_tables(k, nerrs, c, g_tbls);
-	ec_encode_data(TEST_LEN(m), k, nerrs, g_tbls, recov, temp_buffs);
+	BENCHMARK(start, BENCHMARK_TIME,
+		  ec_encode_data(TEST_LEN(m), k, nerrs, g_tbls, recov, temp_buffs));
 
 	return 0;
 }
@@ -147,14 +149,13 @@ int main(int argc, char *argv[])
 	gf_gen_rs_matrix(a, m, k);
 
 	// Start encode test
-	BENCHMARK(&start, BENCHMARK_TIME, ec_encode_perf(m, k, a, g_tbls, buffs));
+	ec_encode_perf(m, k, a, g_tbls, buffs, &start);
 	printf("erasure_code_encode" TEST_TYPE_STR ": ");
 	perf_print(start, (long long)(TEST_LEN(m)) * (m));
 
 	// Start decode test
-	BENCHMARK(&start, BENCHMARK_TIME, check =
-		  ec_decode_perf(m, k, a, g_tbls, buffs, src_in_err, src_err_list, nerrs,
-				 temp_buffs));
+	check = ec_decode_perf(m, k, a, g_tbls, buffs, src_in_err, src_err_list, nerrs,
+			       temp_buffs, &start);
 
 	if (check == BAD_MATRIX) {
 		printf("BAD MATRIX\n");
