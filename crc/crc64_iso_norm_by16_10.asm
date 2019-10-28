@@ -37,6 +37,10 @@
 ;
 %include "reg_sizes.asm"
 
+%ifndef FUNCTION_NAME
+%define FUNCTION_NAME crc64_iso_norm_by16_10
+%endif
+
 %if (AS_FEATURE_LEVEL) >= 10
 
 %define	fetch_dist	1024
@@ -62,10 +66,6 @@ section .text
 	%define VARIABLE_OFFSET 16*12+8
 %else
 	%define VARIABLE_OFFSET 16*2+8
-%endif
-
-%ifndef FUNCTION_NAME
-%define FUNCTION_NAME crc64_iso_norm_by16_10
 %endif
 
 align 16
@@ -519,6 +519,6 @@ dq 0x8080808080808080, 0x8080808080808080
 %else  ; Assembler doesn't understand these opcodes. Add empty symbol for windows.
 %ifidn __OUTPUT_FORMAT__, win64
 global no_ %+ FUNCTION_NAME
-no_ %+ FUNCTION_NAME:
+no_ %+ FUNCTION_NAME %+ :
 %endif
 %endif ; (AS_FEATURE_LEVEL) >= 10
