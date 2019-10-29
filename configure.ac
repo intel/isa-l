@@ -149,6 +149,14 @@ if test x"$is_x86" = x"yes"; then
         AC_MSG_RESULT([no])
       fi
     fi
+    
+    case $host_os in
+       *linux*)  arch=linux   yasm_args="-f elf64";;
+       *darwin*) arch=darwin  yasm_args="-f macho64 --prefix=_ ";;
+       *netbsd*) arch=netbsd  yasm_args="-f elf64";;
+       *mingw*)  arch=mingw   yasm_args="-f win64";;
+       *)        arch=unknown yasm_args="-f elf64";;
+    esac
 
     if test x"$arch" = x"mingw"; then
        AS=yasm
@@ -209,14 +217,6 @@ if test x"$is_x86" = x"yes"; then
   if test $as_feature_level -lt 2 ; then
     AC_MSG_ERROR([No modern nasm or yasm found as required. Nasm should be v2.11.01 or later (v2.13 for AVX512) and yasm should be 1.2.0 or later.])
   fi
-
-  case $host_os in
-       *linux*)  arch=linux   yasm_args="-f elf64";;
-       *darwin*) arch=darwin  yasm_args="-f macho64 --prefix=_ ";;
-       *netbsd*) arch=netbsd  yasm_args="-f elf64";;
-       *mingw*)  arch=mingw   yasm_args="-f win64";;
-       *)        arch=unknown yasm_args="-f elf64";;
-  esac
 
   # Fix for nasm missing windows features
   if test x"$arch" = x"mingw" -a x"$AS" != x"yasm"; then
