@@ -97,6 +97,7 @@ before_install:
 before_script:
   - if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get -q update; fi
   - if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get install yasm; fi
+  - if [ $TRAVIS_OS_NAME = osx ]; then brew update; fi
   - if [ $TRAVIS_OS_NAME = osx ]; then brew install yasm; fi
 
 script:
