@@ -59,19 +59,13 @@ matrix:
             - g++-6
       env: C_COMPILER=gcc-6
 
-    ### arm64: clang-3.8
-    - os: linux
-      dist: xenial
-      arch: arm64
-      env: C_COMPILER=clang
-
     ### arm64: gcc-5.4
     - os: linux
       dist: xenial
       arch: arm64
       env: C_COMPILER=gcc
 
-    ### arm64: gcc-5.4
+    ### arm64: gcc-5.4 extended tests
     - os: linux
       dist: xenial
       arch: arm64
