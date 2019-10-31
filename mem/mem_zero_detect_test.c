@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include "mem_routines.h"
-#include "types.h"
+#include "types.h"	// include posix_* definitions for MSVC
 
 #define TEST_MEM  10*1024*1024
 #define TEST_LEN  8*1024

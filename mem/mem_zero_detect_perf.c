@@ -32,7 +32,7 @@
 #include <string.h>
 #include "mem_routines.h"
 #include "test.h"
-#include "types.h"
+#include "types.h"	// include posix_* definitions for MSVC
 
 #define TEST_LEN     8*1024
 #define TEST_TYPE_STR "_warm"

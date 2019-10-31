@@ -33,6 +33,7 @@
 #include <stdint.h>
 #include "crc.h"
 #include "test.h"
+#include "types.h"	// include posix_* definitions for MSVC
 
 #define BLKSIZE (512)
 

@@ -33,7 +33,7 @@
 #include<stdlib.h>
 #include<sys/time.h>
 #include "raid.h"
-#include "test.h"
+#include "types.h"	// include posix_* definitions for MSVC
 
 //#define CACHED_TEST
 #ifdef CACHED_TEST
