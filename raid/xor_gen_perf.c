@@ -31,7 +31,6 @@
 #include<stdint.h>
 #include<string.h>
 #include<stdlib.h>
-#include<sys/time.h>
 #include "raid.h"
 #include "test.h"
 #include "types.h"	// include posix_* definitions for MSVC

@@ -239,17 +239,16 @@ perfs = \
 	gf_vect_dot_prod_1tbl.exe \
 	erasure_code_perf.exe \
 	erasure_code_base_perf.exe \
-	erasure_code_sse_perf.exe \
 	erasure_code_update_perf.exe \
 	xor_gen_perf.exe \
 	pq_gen_perf.exe \
 	crc16_t10dif_perf.exe \
 	crc32_ieee_perf.exe \
 	crc32_iscsi_perf.exe \
-	igzip_perf.exe \
-	igzip_sync_flush_perf.exe \
+	crc64_funcs_perf.exe \
 	crc32_gzip_refl_perf.exe \
 	mem_zero_detect_perf.exe
+	# igzip_perf.exe // has getopt.h dependency - more work required for MSVC
 
 perfs: lib $(perfs)
 $(perfs): $(@B).obj
