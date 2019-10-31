@@ -190,9 +190,9 @@ gf_vect_mad_neon:
 	tbl	v_tmp2_lo.16b, {v_gft1_lo.16b}, v_data_1_lo.16b
 	tbl	v_tmp2_hi.16b, {v_gft1_hi.16b}, v_data_1_hi.16b
 
-	eor	v_tmp1_hi.16b, v_tmp1_lo.16b, v_tmp1_hi.16b
+	eor	v_d1_0.16b, v_tmp1_lo.16b, v_d1_0.16b
 	eor	v_d1_0.16b, v_d1_0.16b, v_tmp1_hi.16b
-	eor	v_tmp2_hi.16b, v_tmp2_lo.16b, v_tmp2_hi.16b
+	eor	v_d1_1.16b, v_tmp2_lo.16b, v_d1_1.16b
 	eor	v_d1_1.16b, v_d1_1.16b, v_tmp2_hi.16b
 
 	tbl	v_tmp1_lo.16b, {v_gft1_lo.16b}, v_data_2_lo.16b
@@ -200,9 +200,9 @@ gf_vect_mad_neon:
 	tbl	v_tmp2_lo.16b, {v_gft1_lo.16b}, v_data_3_lo.16b
 	tbl	v_tmp2_hi.16b, {v_gft1_hi.16b}, v_data_3_hi.16b
 
-	eor	v_tmp1_hi.16b, v_tmp1_lo.16b, v_tmp1_hi.16b
+	eor	v_d1_2.16b, v_tmp1_lo.16b, v_d1_2.16b
 	eor	v_d1_2.16b, v_d1_2.16b, v_tmp1_hi.16b
-	eor	v_tmp2_hi.16b, v_tmp2_lo.16b, v_tmp2_hi.16b
+	eor	v_d1_3.16b, v_tmp2_lo.16b, v_d1_3.16b
 	eor	v_d1_3.16b, v_d1_3.16b, v_tmp2_hi.16b
 
 	tbl	v_tmp1_lo.16b, {v_gft1_lo.16b}, v_data_4_lo.16b
@@ -210,9 +210,9 @@ gf_vect_mad_neon:
 	tbl	v_tmp2_lo.16b, {v_gft1_lo.16b}, v_data_5_lo.16b
 	tbl	v_tmp2_hi.16b, {v_gft1_hi.16b}, v_data_5_hi.16b
 
-	eor	v_tmp1_hi.16b, v_tmp1_lo.16b, v_tmp1_hi.16b
+	eor	v_d1_4.16b, v_tmp1_lo.16b, v_d1_4.16b
 	eor	v_d1_4.16b, v_d1_4.16b, v_tmp1_hi.16b
-	eor	v_tmp2_hi.16b, v_tmp2_lo.16b, v_tmp2_hi.16b
+	eor	v_d1_5.16b, v_tmp2_lo.16b, v_d1_5.16b
 	eor	v_d1_5.16b, v_d1_5.16b, v_tmp2_hi.16b
 
 	tbl	v_tmp1_lo.16b, {v_gft1_lo.16b}, v_data_6_lo.16b
@@ -220,9 +220,9 @@ gf_vect_mad_neon:
 	tbl	v_tmp2_lo.16b, {v_gft1_lo.16b}, v_data_7_lo.16b
 	tbl	v_tmp2_hi.16b, {v_gft1_hi.16b}, v_data_7_hi.16b
 
-	eor	v_tmp1_hi.16b, v_tmp1_lo.16b, v_tmp1_hi.16b
+	eor	v_d1_6.16b, v_tmp1_lo.16b, v_d1_6.16b
 	eor	v_d1_6.16b, v_d1_6.16b, v_tmp1_hi.16b
-	eor	v_tmp2_hi.16b, v_tmp2_lo.16b, v_tmp2_hi.16b
+	eor	v_d1_7.16b, v_tmp2_lo.16b, v_d1_7.16b
 	eor	v_d1_7.16b, v_d1_7.16b, v_tmp2_hi.16b
 
 	str	q_d1_0, [x_dest1, #16*0]
@@ -262,7 +262,7 @@ gf_vect_mad_neon:
 
 	tbl	v_tmp1_lo.16b, {v_gft1_lo.16b}, v_data_lo.16b
 	tbl	v_tmp1_hi.16b, {v_gft1_hi.16b}, v_data_hi.16b
-	eor	v_tmp1_hi.16b, v_tmp1_lo.16b, v_tmp1_hi.16b
+	eor	v_d1_0.16b, v_tmp1_lo.16b, v_d1_0.16b
 	eor	v_d1_0.16b, v_d1_0.16b, v_tmp1_hi.16b
 
 	str	q_d1_0, [x_dest1]
