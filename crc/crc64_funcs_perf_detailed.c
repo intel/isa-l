@@ -61,23 +61,23 @@ func_case_t test_funcs[] = {
 };
 
 typedef struct test_func_selection {
-    char *name;
-    int indices[6];
+	char *name;
+	int indices[6];
 } test_func_selection_t;
 
 test_func_selection_t test_func_selections[] = {
-    {"all",         {0,  1,  2,  3,  4,  5}},
-    {"norm",        {0,  2,  4, -1, -1, -1}},
-    {"refl",        {1,  3,  5, -1, -1, -1}},
-    {"ecma",        {0,  1, -1, -1, -1, -1}},
-    {"ecma_norm",   {0, -1, -1, -1, -1, -1}},
-    {"ecma_refl",   {1, -1, -1, -1, -1, -1}},
-    {"iso",         {2,  3, -1, -1, -1, -1}},
-    {"iso_norm",    {2, -1, -1, -1, -1, -1}},
-    {"iso_refl",    {3, -1, -1, -1, -1, -1}},
-    {"jones",       {4,  5, -1, -1, -1, -1}},
-    {"jones_norm",  {4, -1, -1, -1, -1, -1}},
-    {"jones_refl",  {5, -1, -1, -1, -1, -1}},
+	{"all",         {0,  1,  2,  3,  4,  5}},
+	{"norm",        {0,  2,  4, -1, -1, -1}},
+	{"refl",        {1,  3,  5, -1, -1, -1}},
+	{"ecma",        {0,  1, -1, -1, -1, -1}},
+	{"ecma_norm",   {0, -1, -1, -1, -1, -1}},
+	{"ecma_refl",   {1, -1, -1, -1, -1, -1}},
+	{"iso",         {2,  3, -1, -1, -1, -1}},
+	{"iso_norm",    {2, -1, -1, -1, -1, -1}},
+	{"iso_refl",    {3, -1, -1, -1, -1, -1}},
+	{"jones",       {4,  5, -1, -1, -1, -1}},
+	{"jones_norm",  {4, -1, -1, -1, -1, -1}},
+	{"jones_refl",  {5, -1, -1, -1, -1, -1}},
 };
 
 static uint64_t offset = 0;
@@ -104,8 +104,8 @@ void run_tests(test_func_selection_t selected_funcs, void *buf, uint64_t test_si
 	uint64_t len_pages = (1+((test_size-1) >> 12)) << 12;
 
 	for (uint32_t j = 0; j < sizeof(selected_funcs.indices) / sizeof(int); j++) {
-        if(selected_funcs.indices[j] < 0)
-            break;
+		if(selected_funcs.indices[j] < 0)
+			break;
 
 		func_case_t test_func = test_funcs[selected_funcs.indices[j]];
 
@@ -147,213 +147,213 @@ static const uint32_t default_buffer_offset = 0;
 
 void print_help()
 {
-    printf("Options listed below - boolean options set to true if specified. Other options expect a space and then a string specifying the value to take.\n\n"
-           "-v, --verbose   : Make performance output more verbose (default %s)\n" \
-           "--hot           : Test CRC functions with a hot buffer (i.e. repeatedly call the function on the same region of memory) (default %s)\n" \
-           "--cold          : Test CRC functions with a cold buffer (i.e. use a distinct region of memory for each call to the function) (default %s)\n" \
-           "-f, --functions : Select which CRC functions to test (default %s)\n" \
-           "-t, --time      : Set how long in seconds to test the each CRC function for each combination of settings (default %u)\n" \
-           "-s, --start     : The first test size in bytes (default %u)\n" \
-           "-e, --end       : The maximum test size in bytes (default %u)\n" \
-           "--stride        : The initial stride in bytes (default %u)\n" \
-           "--stridesBeforeDoubling : The number of strides taken before the stride is doubled (default %u) - Note this can be set to -1 if no stride doubling is desired.\n" \
-           "-a, --bufferAlignment : The tests will take place on chunks of data aligned to this parameter (default %u)\n" \
-           "-o, --bufferOffset : The first byte of the buffers being tested will be offset by this parameter from the alignment (default %u)\n" \
-           "-h, --help      : Print this message\n",
-           default_verbose ? "true" : "false",
-           default_hot ? "true" : "false",
-           default_cold ? "true" : "false",
-           test_func_selections[0].name,
-           default_benchmark_time,
-           default_start_size,
-           default_end_size,
-           default_stride,
-           default_strides_before_doubling,
-           default_buffer_alignment,
-           default_buffer_offset);
+	printf(	"Options listed below - boolean options set to true if specified. Other options expect a space and then a string specifying the value to take.\n\n"
+			"-v, --verbose   : Make performance output more verbose (default %s)\n" \
+			"--hot           : Test CRC functions with a hot buffer (i.e. repeatedly call the function on the same region of memory) (default %s)\n" \
+			"--cold          : Test CRC functions with a cold buffer (i.e. use a distinct region of memory for each call to the function) (default %s)\n" \
+			"-f, --functions : Select which CRC functions to test (default %s)\n" \
+			"-t, --time      : Set how long in seconds to test the each CRC function for each combination of settings (default %u)\n" \
+			"-s, --start     : The first test size in bytes (default %u)\n" \
+			"-e, --end       : The maximum test size in bytes (default %u)\n" \
+			"--stride        : The initial stride in bytes (default %u)\n" \
+			"--stridesBeforeDoubling : The number of strides taken before the stride is doubled (default %u) - Note this can be set to -1 if no stride doubling is desired.\n" \
+			"-a, --bufferAlignment : The tests will take place on chunks of data aligned to this parameter (default %u)\n" \
+			"-o, --bufferOffset : The first byte of the buffers being tested will be offset by this parameter from the alignment (default %u)\n" \
+			"-h, --help      : Print this message\n",
+			default_verbose ? "true" : "false",
+			default_hot ? "true" : "false",
+			default_cold ? "true" : "false",
+			test_func_selections[0].name,
+			default_benchmark_time,
+			default_start_size,
+			default_end_size,
+			default_stride,
+			default_strides_before_doubling,
+			default_buffer_alignment,
+			default_buffer_offset);
 }
 
 int main(int argc, char *argv[])
 {
 	uint64_t buffer_alignment = default_buffer_alignment;
-    uint64_t buffer_offset = default_buffer_offset;
+	uint64_t buffer_offset = default_buffer_offset;
 	void *buf;
 	bool verbose = default_verbose;
-    bool hot = default_hot;
-    bool cold = default_cold;
-    test_func_selection_t func_selection = test_func_selections[0];
-    uint32_t benchmark_time = default_benchmark_time;
-    uint32_t start_size = default_start_size;
-    uint32_t end_size = default_end_size;
-    uint32_t stride = default_stride;
-    uint32_t strides_before_doubling = default_strides_before_doubling;
+	bool hot = default_hot;
+	bool cold = default_cold;
+	test_func_selection_t func_selection = test_func_selections[0];
+	uint32_t benchmark_time = default_benchmark_time;
+	uint32_t start_size = default_start_size;
+	uint32_t end_size = default_end_size;
+	uint32_t stride = default_stride;
+	uint32_t strides_before_doubling = default_strides_before_doubling;
 
 	uint32_t arg_index = 1;
-    uint32_t parsed_arg_count = 0;
-    bool arg_parsing_failed = false;
+	uint32_t parsed_arg_count = 0;
+	bool arg_parsing_failed = false;
 
 	while (arg_index < argc) {
 		if (!strcmp("-h", argv[arg_index]) || !strcmp("--help", argv[arg_index])) {
-            print_help();
-            exit(0);
-        } else if (!strcmp("-v", argv[arg_index]) || !strcmp("--verbose", argv[arg_index])) {
-            verbose = true;
-        } else if (!strcmp("--hot", argv[arg_index])) {
-            hot = true;
-        } else if (!strcmp("--cold", argv[arg_index])) {
-            cold = true;
-        } else if (!strcmp("-f", argv[arg_index]) || !strcmp("--functions", argv[arg_index])) {
-            bool selection_success = false;
-            if (arg_index+1 < argc) {
-                arg_index++;
-                for (uint32_t selectionIndex = 0; selectionIndex < sizeof(test_func_selections) / sizeof(test_func_selections[0]); selectionIndex++)
-                {
-                    if (!strcmp(test_func_selections[selectionIndex].name, argv[arg_index])) {
-                        func_selection = test_func_selections[selectionIndex];
-                        selection_success = true;
-                        break;
-                    }
-                }
-            }
+			print_help();
+			exit(0);
+		} else if (!strcmp("-v", argv[arg_index]) || !strcmp("--verbose", argv[arg_index])) {
+			verbose = true;
+		} else if (!strcmp("--hot", argv[arg_index])) {
+			hot = true;
+		} else if (!strcmp("--cold", argv[arg_index])) {
+			cold = true;
+		} else if (!strcmp("-f", argv[arg_index]) || !strcmp("--functions", argv[arg_index])) {
+			bool selection_success = false;
+			if (arg_index+1 < argc) {
+				arg_index++;
+				for (uint32_t selectionIndex = 0; selectionIndex < sizeof(test_func_selections) / sizeof(test_func_selections[0]); selectionIndex++)
+				{
+					if (!strcmp(test_func_selections[selectionIndex].name, argv[arg_index])) {
+						func_selection = test_func_selections[selectionIndex];
+						selection_success = true;
+						break;
+					}
+				}
+			}
 
-            if (!selection_success) {
-                printf("Error parsing argument %d - Expecting a function selection following -f or --functions, one of:\n", parsed_arg_count);
-                printf("%s", test_func_selections[0].name);
-                for (uint32_t selectionIndex = 1; selectionIndex < sizeof(test_func_selections) / sizeof(test_func_selections[0]); selectionIndex++)
-                {
-                    printf(", %s", test_func_selections[selectionIndex].name);
-                }
-                printf("\n");
-                arg_parsing_failed = true;
-            }
-        } else if (!strcmp("-t", argv[arg_index]) || !strcmp("--time", argv[arg_index])) {
-            bool time_parsing_success = false;
-            if (arg_index+1 < argc) {
-                arg_index++;
-                int parsed_time = atoi(argv[arg_index]);
-                if(parsed_time > 0 && parsed_time <= 600) {
-                    benchmark_time = parsed_time;
-                    time_parsing_success = true;
-                }
-            }
+			if (!selection_success) {
+				printf("Error parsing argument %d - Expecting a function selection following -f or --functions, one of:\n", parsed_arg_count);
+				printf("%s", test_func_selections[0].name);
+				for (uint32_t selectionIndex = 1; selectionIndex < sizeof(test_func_selections) / sizeof(test_func_selections[0]); selectionIndex++)
+				{
+					printf(", %s", test_func_selections[selectionIndex].name);
+				}
+				printf("\n");
+				arg_parsing_failed = true;
+			}
+		} else if (!strcmp("-t", argv[arg_index]) || !strcmp("--time", argv[arg_index])) {
+			bool time_parsing_success = false;
+			if (arg_index+1 < argc) {
+				arg_index++;
+				int parsed_time = atoi(argv[arg_index]);
+				if(parsed_time > 0 && parsed_time <= 600) {
+					benchmark_time = parsed_time;
+					time_parsing_success = true;
+				}
+			}
 
-            if(!time_parsing_success) {
-                printf("Error parsing argument %d - Expecting a number of seconds between 1 and 600 following -t or --time\n", parsed_arg_count);
-                arg_parsing_failed = true;
-            }
-        } else if (!strcmp("-s", argv[arg_index]) || !strcmp("--start", argv[arg_index])) {
-            bool start_parsing_success = false;
-            if (arg_index+1 < argc) {
-                arg_index++;
-                int parsed_size = atoi(argv[arg_index]);
-                if(parsed_size > 0 && parsed_size <= 1<<24) {
-                    start_size = parsed_size;
-                    start_parsing_success = true;
-                }
-            }
+			if(!time_parsing_success) {
+				printf("Error parsing argument %d - Expecting a number of seconds between 1 and 600 following -t or --time\n", parsed_arg_count);
+				arg_parsing_failed = true;
+			}
+		} else if (!strcmp("-s", argv[arg_index]) || !strcmp("--start", argv[arg_index])) {
+			bool start_parsing_success = false;
+			if (arg_index+1 < argc) {
+				arg_index++;
+				int parsed_size = atoi(argv[arg_index]);
+				if(parsed_size > 0 && parsed_size <= 1<<24) {
+					start_size = parsed_size;
+					start_parsing_success = true;
+				}
+			}
 
-            if(!start_parsing_success) {
-                printf("Error parsing argument %d - Expecting a number of bytes between 1 and 1<<24 following -s or --start\n", parsed_arg_count);
-                arg_parsing_failed = true;
-            }
-        } else if (!strcmp("-e", argv[arg_index]) || !strcmp("--end", argv[arg_index])) {
-            bool end_parsing_success = false;
-            if (arg_index+1 < argc) {
-                arg_index++;
-                int parsed_size = atoi(argv[arg_index]);
-                if(parsed_size > 0 && parsed_size <= 1<<24) {
-                    end_size = parsed_size;
-                    end_parsing_success = true;
-                }
-            }
+			if(!start_parsing_success) {
+				printf("Error parsing argument %d - Expecting a number of bytes between 1 and 1<<24 following -s or --start\n", parsed_arg_count);
+				arg_parsing_failed = true;
+			}
+		} else if (!strcmp("-e", argv[arg_index]) || !strcmp("--end", argv[arg_index])) {
+			bool end_parsing_success = false;
+			if (arg_index+1 < argc) {
+				arg_index++;
+				int parsed_size = atoi(argv[arg_index]);
+				if(parsed_size > 0 && parsed_size <= 1<<24) {
+					end_size = parsed_size;
+					end_parsing_success = true;
+				}
+			}
 
-            if(!end_parsing_success) {
-                printf("Error parsing argument %d - Expecting a number of bytes between 1 and 1<<24 following -e or --end\n", parsed_arg_count);
-                arg_parsing_failed = true;
-            }
-        } else if (!strcmp("--stride", argv[arg_index])) {
-            bool stride_parsing_success = false;
-            if (arg_index+1 < argc) {
-                arg_index++;
-                int parsed_stride = atoi(argv[arg_index]);
-                if(parsed_stride > 0 && parsed_stride <= 1<<24) {
-                    stride = parsed_stride;
-                    stride_parsing_success = true;
-                }
-            }
+			if(!end_parsing_success) {
+				printf("Error parsing argument %d - Expecting a number of bytes between 1 and 1<<24 following -e or --end\n", parsed_arg_count);
+				arg_parsing_failed = true;
+			}
+		} else if (!strcmp("--stride", argv[arg_index])) {
+			bool stride_parsing_success = false;
+			if (arg_index+1 < argc) {
+				arg_index++;
+				int parsed_stride = atoi(argv[arg_index]);
+				if(parsed_stride > 0 && parsed_stride <= 1<<24) {
+					stride = parsed_stride;
+					stride_parsing_success = true;
+				}
+			}
 
-            if(!stride_parsing_success) {
-                printf("Error parsing argument %d - Expecting a number of bytes between 1 and 1<<24 following --stride\n", parsed_arg_count);
-                arg_parsing_failed = true;
-            }
-        } else if (!strcmp("--stridesBeforeDoubling", argv[arg_index])) {
-            bool stride_parsing_success = false;
-            if (arg_index+1 < argc) {
-                arg_index++;
-                int parsed_strides_before_doubling = atoi(argv[arg_index]);
-                if(parsed_strides_before_doubling > 0 && parsed_strides_before_doubling <= 1<<10) {
-                    strides_before_doubling = parsed_strides_before_doubling;
-                    stride_parsing_success = true;
-                } else if (parsed_strides_before_doubling == -1) {
-                    strides_before_doubling = UINT32_MAX;
-                    stride_parsing_success = true;
-                }
-            }
+			if(!stride_parsing_success) {
+				printf("Error parsing argument %d - Expecting a number of bytes between 1 and 1<<24 following --stride\n", parsed_arg_count);
+				arg_parsing_failed = true;
+			}
+		} else if (!strcmp("--stridesBeforeDoubling", argv[arg_index])) {
+			bool stride_parsing_success = false;
+			if (arg_index+1 < argc) {
+				arg_index++;
+				int parsed_strides_before_doubling = atoi(argv[arg_index]);
+				if(parsed_strides_before_doubling > 0 && parsed_strides_before_doubling <= 1<<10) {
+					strides_before_doubling = parsed_strides_before_doubling;
+					stride_parsing_success = true;
+				} else if (parsed_strides_before_doubling == -1) {
+					strides_before_doubling = UINT32_MAX;
+					stride_parsing_success = true;
+				}
+			}
 
-            if(!stride_parsing_success) {
-                printf("Error parsing argument %d - Expecting a number of strides between 1 and 1<<10, or -1 following --stridesBeforeDoubling\n", parsed_arg_count);
-                arg_parsing_failed = true;
-            }
-        } else if (!strcmp("-a", argv[arg_index]) || !strcmp("--bufferAlignment", argv[arg_index])) {
-            bool alignment_parsing_success = false;
-            if (arg_index+1 < argc) {
-                arg_index++;
-                int parsed_alignment = atoi(argv[arg_index]);
-                if(parsed_alignment > 0 && parsed_alignment <= 1<<24) {
-                    buffer_alignment = parsed_alignment;
-                    alignment_parsing_success = true;
-                }
-            }
+			if(!stride_parsing_success) {
+				printf("Error parsing argument %d - Expecting a number of strides between 1 and 1<<10, or -1 following --stridesBeforeDoubling\n", parsed_arg_count);
+				arg_parsing_failed = true;
+			}
+		} else if (!strcmp("-a", argv[arg_index]) || !strcmp("--bufferAlignment", argv[arg_index])) {
+			bool alignment_parsing_success = false;
+			if (arg_index+1 < argc) {
+				arg_index++;
+				int parsed_alignment = atoi(argv[arg_index]);
+				if(parsed_alignment > 0 && parsed_alignment <= 1<<24) {
+					buffer_alignment = parsed_alignment;
+					alignment_parsing_success = true;
+				}
+			}
 
-            if(!alignment_parsing_success) {
-                printf("Error parsing argument %d - Expecting a number of bytes between 1 and 1<<24 following -a or --bufferAlignment\n", parsed_arg_count);
-                arg_parsing_failed = true;
-            }
-        } else if (!strcmp("-o", argv[arg_index]) || !strcmp("--bufferOffset", argv[arg_index])) {
-            bool offset_parsing_success = false;
-            if (arg_index+1 < argc) {
-                arg_index++;
-                int parsed_offset = atoi(argv[arg_index]);
-                if(parsed_offset >= 0 && parsed_offset < 1<<24) {
-                    buffer_offset = parsed_offset;
-                    offset_parsing_success = true;
-                }
-            }
+			if(!alignment_parsing_success) {
+				printf("Error parsing argument %d - Expecting a number of bytes between 1 and 1<<24 following -a or --bufferAlignment\n", parsed_arg_count);
+				arg_parsing_failed = true;
+			}
+		} else if (!strcmp("-o", argv[arg_index]) || !strcmp("--bufferOffset", argv[arg_index])) {
+			bool offset_parsing_success = false;
+			if (arg_index+1 < argc) {
+				arg_index++;
+				int parsed_offset = atoi(argv[arg_index]);
+				if(parsed_offset >= 0 && parsed_offset < 1<<24) {
+					buffer_offset = parsed_offset;
+					offset_parsing_success = true;
+				}
+			}
 
-            if(!offset_parsing_success) {
-                printf("Error parsing argument %d - Expecting a number of bytes between 0 and (1<<24)-1 following -o or --bufferOffset\n", parsed_arg_count);
-                arg_parsing_failed = true;
-            }
-        } else {
-            printf("Error parsing argument %d - Unexpected format %s\n", parsed_arg_count, argv[arg_index]);
-            arg_parsing_failed = true;
-        }
+			if(!offset_parsing_success) {
+				printf("Error parsing argument %d - Expecting a number of bytes between 0 and (1<<24)-1 following -o or --bufferOffset\n", parsed_arg_count);
+				arg_parsing_failed = true;
+			}
+		} else {
+			printf("Error parsing argument %d - Unexpected format %s\n", parsed_arg_count, argv[arg_index]);
+			arg_parsing_failed = true;
+		}
 
-        parsed_arg_count++;
-        arg_index++;
-    }
+		parsed_arg_count++;
+		arg_index++;
+	}
 
-    if(arg_parsing_failed)
-    {
-        print_help();
-        exit(1);
-    }
+	if(arg_parsing_failed)
+	{
+		print_help();
+		exit(1);
+	}
 
-    if (!hot && !cold) {
-        printf("Neither --hot nor --cold arguments specified - testing both hot and cold\n");
-        hot = true;
-        cold = true;
-    }
+	if (!hot && !cold) {
+		printf("Neither --hot nor --cold arguments specified - testing both hot and cold\n");
+		hot = true;
+		cold = true;
+	}
 
 	if (posix_memalign(&buf, buffer_alignment, BUFFER_LEN+buffer_offset)) {
 		printf("alloc error: Fail");
@@ -361,26 +361,26 @@ int main(int argc, char *argv[])
 	}
 	memset(buf, (char)TEST_SEED, BUFFER_LEN);
 
-    uint32_t remaining_strides = strides_before_doubling;
-    uint32_t test_stride = stride;
-    for(uint32_t test_size = start_size; test_size <= end_size; ) {
-        if (hot)
-        {
-            run_tests(func_selection, ((uint8_t *) buf)+buffer_offset, test_size, benchmark_time, true, verbose);
-        }
-        if (cold)
-        {
-            run_tests(func_selection, ((uint8_t *) buf)+buffer_offset, test_size, benchmark_time, false, verbose);
-        }
+	uint32_t remaining_strides = strides_before_doubling;
+	uint32_t test_stride = stride;
+	for(uint32_t test_size = start_size; test_size <= end_size; ) {
+		if (hot)
+		{
+			run_tests(func_selection, ((uint8_t *) buf)+buffer_offset, test_size, benchmark_time, true, verbose);
+		}
+		if (cold)
+		{
+			run_tests(func_selection, ((uint8_t *) buf)+buffer_offset, test_size, benchmark_time, false, verbose);
+		}
 
-        test_size += test_stride;
+		test_size += test_stride;
 
-        remaining_strides--;
-        if(remaining_strides == 0) {
-            remaining_strides = strides_before_doubling;
-            test_stride <<= 1;
-        }
-    }
+		remaining_strides--;
+		if(remaining_strides == 0) {
+			remaining_strides = strides_before_doubling;
+			test_stride <<= 1;
+		}
+	}
 
 	return 0;
 }
