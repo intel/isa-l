@@ -34,6 +34,7 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
 
@@ -235,29 +236,49 @@ static inline unsigned long long estimate_perf_iterations(struct perf *p,
 }
 
 #ifdef USE_CYCLES
-static inline void perf_print(struct perf p, long long unit_count) {
+static inline void perf_print_v(struct perf p, long long unit_count, bool verbose) {
 	long long total_units = p.iterations * unit_count;
 
-	printf("runtime = %10lld ticks", get_base_elapsed(&p));
-	if (total_units != 0) {
-		printf(", bandwidth %lld MB in %.4f GC = %.2f ticks/byte",
-		       total_units / (1000000), get_time_elapsed(&p),
-		       get_base_elapsed(&p) / (double)total_units);
+	if (verbose) {
+		printf("runtime = %10lld ticks", get_base_elapsed(&p));
+		if (total_units != 0) {
+			printf(", bandwidth %lld MB in %.4f GC = %.2f ticks/byte",
+				total_units / (1000000), get_time_elapsed(&p),
+				get_base_elapsed(&p) / (double)total_units);
+		}
+	} else {
+		if (total_units != 0) {
+			printf("%.2f ticks/byte", get_base_elapsed(&p) / (double)total_units);
+		}
 	}
 	printf("\n");
 }
+
+static inline void perf_print(struct perf p, long long unit_count) {
+	perf_print_v(p, unit_count, true);
+}
 #else
-static inline void perf_print(struct perf p, double unit_count) {
+static inline void perf_print_v(struct perf p, double unit_count, bool verbose) {
 	long long total_units = p.iterations * unit_count;
 	long long usecs = (long long)(get_time_elapsed(&p) * 1000000);
 
-	printf("runtime = %10lld usecs", usecs);
-	if (total_units != 0) {
-		printf(", bandwidth %lld MB in %.4f sec = %.2f MB/s",
-		       total_units / (1000000), get_time_elapsed(&p),
-		       ((double)total_units) / (1000000 * get_time_elapsed(&p)));
+	if (verbose) {
+		printf("runtime = %10lld usecs", usecs);
+		if (total_units != 0) {
+			printf(", bandwidth %lld MB in %.4f sec = %.2f MB/s",
+				total_units / (1000000), get_time_elapsed(&p),
+				((double)total_units) / (1000000 * get_time_elapsed(&p)));
+		}
+	} else {
+		if (total_units != 0) {
+			printf("%.2f MB/s", ((double)total_units) / (1000000 * get_time_elapsed(&p)));
+		}
 	}
 	printf("\n");
+}
+
+static inline void perf_print(struct perf p, double unit_count) {
+	perf_print_v(p, unit_count, true);
 }
 #endif
 
