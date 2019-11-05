@@ -246,14 +246,14 @@ int main(int argc, char *argv[])
 			if (arg_index+1 < argc) {
 				arg_index++;
 				int parsed_size = atoi(argv[arg_index]);
-				if(parsed_size > 0 && parsed_size <= 1<<24) {
+				if(parsed_size > 0 && parsed_size <= 1<<29) {
 					start_size = parsed_size;
 					start_parsing_success = true;
 				}
 			}
 
 			if(!start_parsing_success) {
-				printf("Error parsing argument %d - Expecting a number of bytes between 1 and 1<<24 following -s or --start\n", parsed_arg_count);
+				printf("Error parsing argument %d - Expecting a number of bytes between 1 and 1<<29 following -s or --start\n", parsed_arg_count);
 				arg_parsing_failed = true;
 			}
 		} else if (!strcmp("-e", argv[arg_index]) || !strcmp("--end", argv[arg_index])) {
@@ -261,14 +261,14 @@ int main(int argc, char *argv[])
 			if (arg_index+1 < argc) {
 				arg_index++;
 				int parsed_size = atoi(argv[arg_index]);
-				if(parsed_size > 0 && parsed_size <= 1<<24) {
+				if(parsed_size > 0 && parsed_size <= 1<<29) {
 					end_size = parsed_size;
 					end_parsing_success = true;
 				}
 			}
 
 			if(!end_parsing_success) {
-				printf("Error parsing argument %d - Expecting a number of bytes between 1 and 1<<24 following -e or --end\n", parsed_arg_count);
+				printf("Error parsing argument %d - Expecting a number of bytes between 1 and 1<<29 following -e or --end\n", parsed_arg_count);
 				arg_parsing_failed = true;
 			}
 		} else if (!strcmp("--stride", argv[arg_index])) {
@@ -276,14 +276,14 @@ int main(int argc, char *argv[])
 			if (arg_index+1 < argc) {
 				arg_index++;
 				int parsed_stride = atoi(argv[arg_index]);
-				if(parsed_stride > 0 && parsed_stride <= 1<<24) {
+				if(parsed_stride > 0 && parsed_stride <= 1<<28) {
 					stride = parsed_stride;
 					stride_parsing_success = true;
 				}
 			}
 
 			if(!stride_parsing_success) {
-				printf("Error parsing argument %d - Expecting a number of bytes between 1 and 1<<24 following --stride\n", parsed_arg_count);
+				printf("Error parsing argument %d - Expecting a number of bytes between 1 and 1<<28 following --stride\n", parsed_arg_count);
 				arg_parsing_failed = true;
 			}
 		} else if (!strcmp("--stridesBeforeDoubling", argv[arg_index])) {
