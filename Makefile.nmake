@@ -246,7 +246,7 @@ perfs = \
 	crc16_t10dif_perf.exe \
 	crc32_ieee_perf.exe \
 	crc32_iscsi_perf.exe \
-	crc64_perf_detailed.exe \
+	crc64_funcs_perf_detailed.exe \
 	igzip_perf.exe \
 	igzip_sync_flush_perf.exe \
 	crc32_gzip_refl_perf.exe \
