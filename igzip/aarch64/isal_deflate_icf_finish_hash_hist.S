@@ -206,7 +206,7 @@ isal_deflate_icf_finish_hash_hist_aarch64:
 	ldr	w_file_start, [stream, offset_total_in] // 12
 	mov	tmp0, offset_hash_hist // 4712
 	add	last_seen, level_buf, tmp0
-	add	end_in, start_in, end_in, uxtw
+	add	end_in, start_in, w_end_in, uxtw
 	and	end_out, end_out, -4
 	mov	next_out, start_out
 	ldp	hist_size, hash_mask, [state, offset_dist_mask] // 12
@@ -231,7 +231,7 @@ isal_deflate_icf_finish_hash_hist_aarch64:
 	ldrh	dist, [last_seen, x0]
 	strh	w2, [last_seen, x0]
 	sub	w2, w2, dist
-	and	dist, w2, 65535
+	and	w_dist, w2, 65535
 	sub	dist_inc, dist, #1
 	cmp	dist_inc, hist_size
 	bcs	.skip_compare258
@@ -239,7 +239,7 @@ isal_deflate_icf_finish_hash_hist_aarch64:
 	mov	x2, 0
 	sub	w2, w_end_in, w8
 	mov	x1, next_in
-	sub	x0, next_in, x7, uxth
+	sub	x0, next_in, w_dist, uxth
 
 	compare_max_258_bytes param0,param1,param2,tmp2,tmp0,tmp1
 	mov	w0, w_tmp2
@@ -253,7 +253,7 @@ isal_deflate_icf_finish_hash_hist_aarch64:
 	add	next_in, next_in, 1
 	mov	w1, literal_code
 	mov	x0, next_out
-	add	x_literal_code, level_buf, x_literal_code, uxtb 2 // level_buf->hist.ll_hist
+	add	x_literal_code, level_buf, literal_code, uxtb 2 // level_buf->hist.ll_hist
 
 	ldr	w_tmp0, [x_literal_code, offset_hist_ll_hist] // 2296
 	add	w_tmp0, w_tmp0, 1
@@ -286,7 +286,7 @@ isal_deflate_icf_finish_hash_hist_aarch64:
 	mov	x0, next_out_iter
 	add	next_out_iter, next_out_iter, 4
 	mov	w1, w2
-	add	x2, level_buf, x2, uxtb 2
+	add	x2, level_buf, w2, uxtb 2
 
 	ldr	w_tmp0, [x2, offset_hist_ll_hist] // 2296
 	add	w_tmp0, w_tmp0, 1
@@ -309,10 +309,10 @@ isal_deflate_icf_finish_hash_hist_aarch64:
 
 .while_first_match_length_end:
 	ubfiz	x_tmp2, x1, 2, 17
-	add	x_tmp1, level_buf, x24, uxtw 2
+	add	x_tmp1, level_buf, dist_inc, uxtw 2
 	add	x_tmp2, level_buf, x_tmp2
 
-	add	next_in, next_in, x2, uxth
+	add	next_in, next_in, w2, uxth
 	mov	w2, dist_inc
 
 	ldr	w_tmp0, [x_tmp2, offset_hist_ll_hist] // 2296

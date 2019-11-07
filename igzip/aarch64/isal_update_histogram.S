@@ -168,7 +168,7 @@ isal_update_histogram_aarch64:
 	str	x23, [sp, 48]
 
 	add	last_seen, histogram, hash_offset
-	add	end_stream, start_stream, length, sxtw
+	add	end_stream, start_stream, w_length, sxtw
 	mov	current, start_stream
 	sub	loop_end_iter, end_stream, #3
 	mov	histogram_saved, histogram
@@ -217,7 +217,7 @@ isal_update_histogram_aarch64:
 
 	sub	w2, w_end_stream, w_current
 	mov	x1, current
-	sub	x0, current, dist, uxth
+	sub	x0, current, w_dist, uxth
 	compare_max_258_bytes param0,param1,param2,match_length,tmp0,tmp1
 
 	cmp	match_length, 3
