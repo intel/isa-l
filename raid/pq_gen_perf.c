@@ -33,7 +33,7 @@
 #include<stdlib.h>
 #include "raid.h"
 #include "test.h"
-#include "types.h"	// include posix_* definitions for MSVC
+#include "types.h"		// include posix_* definitions for MSVC
 
 //#define CACHED_TEST
 #ifdef CACHED_TEST

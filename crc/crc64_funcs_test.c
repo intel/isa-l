@@ -32,7 +32,7 @@
 #include <string.h>
 #include <stdint.h>
 #include "crc64.h"
-#include "types.h"	// include posix_* definitions for MSVC
+#include "types.h"		// include posix_* definitions for MSVC
 #include "crc64_ref.h"
 
 #ifndef TEST_SEED

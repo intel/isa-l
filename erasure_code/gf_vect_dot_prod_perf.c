@@ -32,7 +32,7 @@
 #include <string.h>		// for memset, memcmp
 #include "erasure_code.h"
 #include "test.h"
-#include "types.h"	// include posix_* definitions for MSVC
+#include "types.h"		// include posix_* definitions for MSVC
 
 #ifndef FUNCTION_UNDER_TEST
 # define FUNCTION_UNDER_TEST gf_vect_dot_prod

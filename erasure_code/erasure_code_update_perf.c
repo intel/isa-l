@@ -31,7 +31,7 @@
 #include <stdlib.h>
 #include <string.h>		// for memset, memcmp
 #include "erasure_code.h"
-#include "types.h"	// include posix_* definitions for MSVC
+#include "types.h"		// include posix_* definitions for MSVC
 #include "test.h"
 
 //By default, test multibinary version

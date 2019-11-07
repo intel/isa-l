@@ -224,7 +224,7 @@ size_t get_filesize(FILE * fp)
 	fseeko(fp, 0, SEEK_END);
 #endif
 	fgetpos(fp, &pos);
-	file_size = *(size_t *)&pos;
+	file_size = *(size_t *) & pos;
 	fsetpos(fp, &pos_curr);	/* Restore position */
 
 	return file_size;
