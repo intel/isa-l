@@ -37,7 +37,7 @@ mbin_interface		isal_deflate_icf_finish_lvl1
 mbin_interface		isal_deflate_icf_finish_lvl2
 mbin_interface		isal_deflate_icf_finish_lvl3
 mbin_interface		isal_update_histogram
-mbin_interface_base	encode_deflate_icf , encode_deflate_icf_base
+mbin_interface		encode_deflate_icf
 mbin_interface		set_long_icf_fg
 mbin_interface_base	gen_icf_map_lh1 , gen_icf_map_h1_base
 mbin_interface		isal_deflate_hash_lvl0

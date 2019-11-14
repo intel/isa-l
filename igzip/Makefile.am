@@ -48,6 +48,7 @@ lsrc_aarch64 +=	igzip/aarch64/igzip_inflate_multibinary_arm64.S  \
 		igzip/aarch64/isal_deflate_icf_body_hash_hist.S \
 		igzip/aarch64/isal_deflate_icf_finish_hash_hist.S \
 		igzip/aarch64/igzip_set_long_icf_fg.S \
+		igzip/aarch64/encode_df.S \
 		igzip/aarch64/isal_update_histogram.S \
 		igzip/aarch64/igzip_deflate_hash_aarch64.S \
 		igzip/proc_heap_base.c
