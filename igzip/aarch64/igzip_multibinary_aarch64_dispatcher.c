@@ -132,6 +132,16 @@ DEFINE_INTERFACE_DISPATCHER(isal_update_histogram)
 	return PROVIDER_BASIC(isal_update_histogram);
 }
 
+DEFINE_INTERFACE_DISPATCHER(gen_icf_map_lh1)
+{
+	unsigned long auxval = getauxval(AT_HWCAP);
+	if (auxval & HWCAP_CRC32) {
+		return PROVIDER_INFO(gen_icf_map_h1_aarch64);
+	}
+
+	return PROVIDER_BASIC(gen_icf_map_h1);
+}
+
 DEFINE_INTERFACE_DISPATCHER(isal_deflate_hash_lvl0)
 {
 	unsigned long auxval = getauxval(AT_HWCAP);
