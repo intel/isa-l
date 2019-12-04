@@ -110,12 +110,15 @@ int main(int argc, char *argv[])
 	}
 
 	if (outbuf == NULL) {
+		free(inbuf);
 		fprintf(stderr, "Can't allocate output buffer memory\n");
 		exit(0);
 	}
 
 	avail_in = fread(inbuf, 1, infile_size, in);
 	if (avail_in != infile_size) {
+		free(inbuf);
+		free(outbuf);
 		fprintf(stderr, "Couldn't fit all of input file into buffer\n");
 		exit(0);
 	}
@@ -124,10 +127,13 @@ int main(int argc, char *argv[])
 	BENCHMARK(&start, BENCHMARK_TIME,
 		  isal_update_histogram(inbuf, infile_size, &histogram1));
 	printf("  file %s - in_size=%lu\n", argv[1], infile_size);
-	printf("igzip_file: ");
+	printf("igzip_hist_file: ");
 	perf_print(start, (long long)infile_size);
 
 	fclose(in);
 	fflush(0);
+	free(inbuf);
+	free(outbuf);
+
 	return 0;
 }

@@ -288,7 +288,7 @@ int main(int argc, char *argv[])
 	printf("  file %s - in_size=%lu out_size=%d iter=%d ratio=%3.1f%%\n", argv[optind],
 	       infile_size, stream.total_out, i, 100.0 * stream.total_out / infile_size);
 
-	printf("igzip_file: ");
+	printf("igzip_semi_dyn_file: ");
 	perf_print(start, (long long)infile_size);
 
 	if (out != NULL) {
