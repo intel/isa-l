@@ -51,7 +51,7 @@
 /* Limit output buffer size to 2 Gigabytes. Since stream->avail_out is a
  * uint32_t and there is no logic for handling an overflowed output buffer in
  * the perf test, this define must be less then 4 Gigabytes */
-#define MAX_COMPRESS_BUF_SIZE (1 << 31)
+#define MAX_COMPRESS_BUF_SIZE (1U << 31)
 
 int level_size_buf[10] = {
 #ifdef ISAL_DEF_LVL0_DEFAULT

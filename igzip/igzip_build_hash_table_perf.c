@@ -31,8 +31,7 @@ int main(int argc, char *argv[])
 	struct perf start;
 	BENCHMARK(&start, time, isal_deflate_hash(&stream, dict, dict_len));
 
-	printf("igzip_build_hash_table_perf:\n");
-	printf("  in_size=%u ", dict_len);
+	printf("igzip_build_hash_table_perf: in_size=%u ", dict_len);
 	perf_print(start, (long long)dict_len);
 
 	return 0;
