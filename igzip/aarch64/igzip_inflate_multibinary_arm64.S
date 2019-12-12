@@ -29,4 +29,4 @@
 
 #include "aarch64_multibinary.h"
 
-mbin_interface_base	decode_huffman_code_block_stateless,decode_huffman_code_block_stateless_base
+mbin_interface decode_huffman_code_block_stateless

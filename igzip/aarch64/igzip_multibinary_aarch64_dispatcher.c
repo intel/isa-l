@@ -177,3 +177,12 @@ DEFINE_INTERFACE_DISPATCHER(isal_deflate_hash_lvl3)
 
 	return PROVIDER_BASIC(isal_deflate_hash);
 }
+
+DEFINE_INTERFACE_DISPATCHER(decode_huffman_code_block_stateless)
+{
+	unsigned long auxval = getauxval(AT_HWCAP);
+	if (auxval & HWCAP_CRC32)
+		return PROVIDER_INFO(decode_huffman_code_block_stateless_aarch64);
+
+	return PROVIDER_BASIC(decode_huffman_code_block_stateless);
+}
