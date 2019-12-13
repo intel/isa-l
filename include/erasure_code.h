@@ -926,7 +926,10 @@ void gf_gen_cauchy1_matrix(unsigned char *a, int m, int k);
 /**
  * @brief Invert a matrix in GF(2^8)
  *
- * @param in  input matrix
+ * Attempts to construct an n x n inverse of the input matrix. Returns non-zero
+ * if singular. Will always destroy input matrix in process.
+ *
+ * @param in  input matrix, destroyed by invert process
  * @param out output matrix such that [in] x [out] = [I] - identity matrix
  * @param n   size of matrix [nxn]
  * @returns 0 successful, other fail on singular input matrix
