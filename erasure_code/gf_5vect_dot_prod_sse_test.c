@@ -239,7 +239,7 @@ int main(int argc, char *argv[])
 	gf_vect_dot_prod_base(TEST_LEN, TEST_SOURCES, &g_tbls[128 * TEST_SOURCES], buffs,
 			      dest_ref5);
 
-	FUNCTION_UNDER_TEST(TEST_LEN, TEST_SOURCES, g_tbls, buffs, dest_ptrs);
+	FUNCTION_UNDER_TEST(TEST_LEN, TEST_SOURCES, g_tbls, (const u8 **)buffs, dest_ptrs);
 
 	if (0 != memcmp(dest_ref1, dest1, TEST_LEN)) {
 		printf("Fail zero " xstr(FUNCTION_UNDER_TEST) " test1\n");
@@ -321,7 +321,8 @@ int main(int argc, char *argv[])
 		gf_vect_dot_prod_base(TEST_LEN, TEST_SOURCES, &g_tbls[128 * TEST_SOURCES],
 				      buffs, dest_ref5);
 
-		FUNCTION_UNDER_TEST(TEST_LEN, TEST_SOURCES, g_tbls, buffs, dest_ptrs);
+		FUNCTION_UNDER_TEST(TEST_LEN, TEST_SOURCES, g_tbls, (const u8 **)buffs,
+				    dest_ptrs);
 
 		if (0 != memcmp(dest_ref1, dest1, TEST_LEN)) {
 			printf("Fail rand " xstr(FUNCTION_UNDER_TEST) " test1 %d\n", rtest);
@@ -405,7 +406,8 @@ int main(int argc, char *argv[])
 			gf_vect_dot_prod_base(TEST_LEN, srcs, &g_tbls[128 * srcs], buffs,
 					      dest_ref5);
 
-			FUNCTION_UNDER_TEST(TEST_LEN, srcs, g_tbls, buffs, dest_ptrs);
+			FUNCTION_UNDER_TEST(TEST_LEN, srcs, g_tbls, (const u8 **)buffs,
+					    dest_ptrs);
 
 			if (0 != memcmp(dest_ref1, dest1, TEST_LEN)) {
 				printf("Fail rand " xstr(FUNCTION_UNDER_TEST)
@@ -498,7 +500,8 @@ int main(int argc, char *argv[])
 		gf_vect_dot_prod_base(size, TEST_SOURCES, &g_tbls[128 * TEST_SOURCES],
 				      efence_buffs, dest_ref5);
 
-		FUNCTION_UNDER_TEST(size, TEST_SOURCES, g_tbls, efence_buffs, dest_ptrs);
+		FUNCTION_UNDER_TEST(size, TEST_SOURCES, g_tbls, (const u8 **)efence_buffs,
+				    dest_ptrs);
 
 		if (0 != memcmp(dest_ref1, dest1, size)) {
 			printf("Fail rand " xstr(FUNCTION_UNDER_TEST) " test1 %d\n", rtest);
@@ -604,7 +607,7 @@ int main(int argc, char *argv[])
 		gf_vect_dot_prod_base(size, srcs, &g_tbls[96 * srcs], ubuffs, dest_ref4);
 		gf_vect_dot_prod_base(size, srcs, &g_tbls[128 * srcs], ubuffs, dest_ref5);
 
-		FUNCTION_UNDER_TEST(size, srcs, g_tbls, ubuffs, udest_ptrs);
+		FUNCTION_UNDER_TEST(size, srcs, g_tbls, (const u8 **)ubuffs, udest_ptrs);
 
 		if (memcmp(dest_ref1, udest_ptrs[0], size)) {
 			printf("Fail rand " xstr(FUNCTION_UNDER_TEST) " test ualign srcs=%d\n",
@@ -744,7 +747,7 @@ int main(int argc, char *argv[])
 		gf_vect_dot_prod_base(size, srcs, &g_tbls[96 * srcs], buffs, dest_ref4);
 		gf_vect_dot_prod_base(size, srcs, &g_tbls[128 * srcs], buffs, dest_ref5);
 
-		FUNCTION_UNDER_TEST(size, srcs, g_tbls, buffs, dest_ptrs);
+		FUNCTION_UNDER_TEST(size, srcs, g_tbls, (const u8 **)buffs, dest_ptrs);
 
 		if (memcmp(dest_ref1, dest_ptrs[0], size)) {
 			printf("Fail rand " xstr(FUNCTION_UNDER_TEST) " test ualign len=%d\n",

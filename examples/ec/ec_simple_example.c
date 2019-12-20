@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
 	ec_init_tables(k, p, &encode_matrix[k * k], g_tbls);
 
 	// Generate EC parity blocks from sources
-	ec_encode_data(len, k, p, g_tbls, frag_ptrs, &frag_ptrs[k]);
+	ec_encode_data(len, k, p, g_tbls, (const u8 **)frag_ptrs, &frag_ptrs[k]);
 
 	if (nerrs <= 0)
 		return 0;
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
 
 	// Recover data
 	ec_init_tables(k, nerrs, decode_matrix, g_tbls);
-	ec_encode_data(len, k, nerrs, g_tbls, recover_srcs, recover_outp);
+	ec_encode_data(len, k, nerrs, g_tbls, (const u8 **)recover_srcs, recover_outp);
 
 	// Check that recovered buffers are the same as original
 	printf(" check recovery of block {");

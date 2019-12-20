@@ -283,7 +283,7 @@ int main(int argc, char *argv[])
 
 	// Perform matrix dot_prod for EC encoding
 	// using g_tbls from encode matrix encode_matrix
-	ec_encode_data(TEST_LEN, k, m - k, g_tbls, buffs, &buffs[k]);
+	ec_encode_data(TEST_LEN, k, m - k, g_tbls, (const u8 **)buffs, &buffs[k]);
 
 	// Choose random buffers to be in erasure
 	memset(src_in_err, 0, TEST_SOURCES);
@@ -306,7 +306,7 @@ int main(int argc, char *argv[])
 
 	// Recover data
 	ec_init_tables(k, nerrs, decode_matrix, g_tbls);
-	ec_encode_data(TEST_LEN, k, nerrs, g_tbls, recov, &temp_buffs[k]);
+	ec_encode_data(TEST_LEN, k, nerrs, g_tbls, (const u8 **)recov, &temp_buffs[k]);
 	for (i = 0; i < nerrs; i++) {
 
 		if (0 != memcmp(temp_buffs[k + i], buffs[src_err_list[i]], TEST_LEN)) {
@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
 
 	// Perform matrix dot_prod for EC encoding
 	// using g_tbls from encode matrix encode_matrix
-	ec_encode_data(TEST_LEN, k, m - k, g_tbls, buffs, &buffs[k]);
+	ec_encode_data(TEST_LEN, k, m - k, g_tbls, (const u8 **)buffs, &buffs[k]);
 
 	// Choose random buffers to be in erasure
 	memset(src_in_err, 0, TEST_SOURCES);
@@ -374,7 +374,7 @@ int main(int argc, char *argv[])
 
 	// Recover data
 	ec_init_tables(k, nerrs, decode_matrix, g_tbls);
-	ec_encode_data(TEST_LEN, k, nerrs, g_tbls, recov, &temp_buffs[k]);
+	ec_encode_data(TEST_LEN, k, nerrs, g_tbls, (const u8 **)recov, &temp_buffs[k]);
 	for (i = 0; i < nerrs; i++) {
 
 		if (0 != memcmp(temp_buffs[k + i], buffs[src_err_list[i]], TEST_LEN)) {
@@ -421,7 +421,7 @@ int main(int argc, char *argv[])
 		ec_init_tables(k, m - k, &encode_matrix[k * k], g_tbls);
 		// Perform matrix dot_prod for EC encoding
 		// using g_tbls from encode matrix a
-		ec_encode_data(TEST_LEN, k, m - k, g_tbls, buffs, &buffs[k]);
+		ec_encode_data(TEST_LEN, k, m - k, g_tbls, (const u8 **)buffs, &buffs[k]);
 
 		// Random errors
 		memset(src_in_err, 0, TEST_SOURCES);
@@ -444,7 +444,7 @@ int main(int argc, char *argv[])
 
 		// Recover data
 		ec_init_tables(k, nerrs, decode_matrix, g_tbls);
-		ec_encode_data(TEST_LEN, k, nerrs, g_tbls, recov, &temp_buffs[k]);
+		ec_encode_data(TEST_LEN, k, nerrs, g_tbls, (const u8 **)recov, &temp_buffs[k]);
 
 		for (i = 0; i < nerrs; i++) {
 
@@ -504,7 +504,8 @@ int main(int argc, char *argv[])
 			ec_init_tables(k, m - k, &encode_matrix[k * k], g_tbls);
 			// Perform matrix dot_prod for EC encoding
 			// using g_tbls from encode matrix a
-			ec_encode_data(size, k, m - k, g_tbls, efence_buffs, &efence_buffs[k]);
+			ec_encode_data(size, k, m - k, g_tbls, (const u8 **)efence_buffs,
+				       &efence_buffs[k]);
 
 			// Random errors
 			memset(src_in_err, 0, TEST_SOURCES);
@@ -527,7 +528,8 @@ int main(int argc, char *argv[])
 
 			// Recover data
 			ec_init_tables(k, nerrs, decode_matrix, g_tbls);
-			ec_encode_data(size, k, nerrs, g_tbls, recov, &temp_buffs[k]);
+			ec_encode_data(size, k, nerrs, g_tbls, (const u8 **)recov,
+				       &temp_buffs[k]);
 
 			for (i = 0; i < nerrs; i++) {
 
@@ -596,7 +598,7 @@ int main(int argc, char *argv[])
 		ec_init_tables(k, m - k, &encode_matrix[k * k], g_tbls);
 		// Perform matrix dot_prod for EC encoding
 		// using g_tbls from encode matrix a
-		ec_encode_data(size, k, m - k, g_tbls, ubuffs, &ubuffs[k]);
+		ec_encode_data(size, k, m - k, g_tbls, (const u8 **)ubuffs, &ubuffs[k]);
 
 		// Random errors
 		memset(src_in_err, 0, TEST_SOURCES);
@@ -619,7 +621,7 @@ int main(int argc, char *argv[])
 
 		// Recover data
 		ec_init_tables(k, nerrs, decode_matrix, g_tbls);
-		ec_encode_data(size, k, nerrs, g_tbls, recov, &temp_ubuffs[k]);
+		ec_encode_data(size, k, nerrs, g_tbls, (const u8 **)recov, &temp_ubuffs[k]);
 
 		for (i = 0; i < nerrs; i++) {
 
@@ -708,7 +710,7 @@ int main(int argc, char *argv[])
 		ec_init_tables(k, m - k, &encode_matrix[k * k], g_tbls);
 		// Perform matrix dot_prod for EC encoding
 		// using g_tbls from encode matrix a
-		ec_encode_data(size, k, m - k, g_tbls, buffs, &buffs[k]);
+		ec_encode_data(size, k, m - k, g_tbls, (const u8 **)buffs, &buffs[k]);
 
 		// Random errors
 		memset(src_in_err, 0, TEST_SOURCES);
@@ -730,7 +732,7 @@ int main(int argc, char *argv[])
 
 		// Recover data
 		ec_init_tables(k, nerrs, decode_matrix, g_tbls);
-		ec_encode_data(size, k, nerrs, g_tbls, recov, &temp_buffs[k]);
+		ec_encode_data(size, k, nerrs, g_tbls, (const u8 **)recov, &temp_buffs[k]);
 
 		for (i = 0; i < nerrs; i++) {
 
