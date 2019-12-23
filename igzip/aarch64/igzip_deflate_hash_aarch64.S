@@ -77,7 +77,7 @@ isal_deflate_hash_aarch64:
 
 
         cmp     next_in, end_in
-        bhi     exit_func
+        bcs     exit_func
 
         mov     w7, 0
 loop_start:
