@@ -1574,7 +1574,7 @@ int isal_deflate(struct isal_zstream *stream)
 
 	/* Buffer history if data was pulled from the external buffer and future
 	 * calls to deflate will be required */
-	if (!internal && (state->state != ZSTATE_END || state->state != ZSTATE_TRL)) {
+	if (!internal && (state->state != ZSTATE_END && state->state != ZSTATE_TRL)) {
 		/* If the external buffer was used, sufficient history must
 		 * exist in the user input buffer */
 		/* assert(stream->total_in - total_start >= */
