@@ -42,6 +42,7 @@ extern crc32_ieee_base
 
 extern crc16_t10dif_01
 extern crc16_t10dif_by4  ;; Optimized for SLM
+extern crc16_t10dif_02
 extern crc16_t10dif_base
 
 extern crc32_gzip_refl_by8
@@ -157,17 +158,33 @@ crc16_t10dif_dispatch_init:
 
 	mov     eax, 1
 	cpuid
-	lea     rbx, [crc16_t10dif_01 WRT_OPT]
-	lea     rdx, [crc16_t10dif_by4 WRT_OPT]
-
+	mov	ebx, ecx ; save cpuid1.ecx
 	test    ecx, FLAG_CPUID1_ECX_SSE3
-	jz      use_t10dif_base
+	jz      .t10dif_init_done ; use t10dif_base
 	test    ecx, FLAG_CPUID1_ECX_CLMUL
-	cmovne  rsi, rbx
+	jz	.t10dif_init_done ; use t10dif_base
+	lea	rsi, [crc16_t10dif_01 WRT_OPT]
+
+	;; Extra Avoton test
+	lea	rdx, [crc16_t10dif_by4 WRT_OPT]
 	and     eax, FLAG_CPUID1_EAX_STEP_MASK
 	cmp     eax, FLAG_CPUID1_EAX_AVOTON
 	cmove   rsi, rdx
-use_t10dif_base:
+
+	;; Test for XMM_YMM support/AVX
+	test	ecx, FLAG_CPUID1_ECX_OSXSAVE
+	je	.t10dif_init_done
+	xor	ecx, ecx
+	xgetbv	; xcr -> edx:eax
+
+	and	eax, FLAG_XGETBV_EAX_XMM_YMM
+	cmp	eax, FLAG_XGETBV_EAX_XMM_YMM
+	jne	.t10dif_init_done
+	test	ebx, FLAG_CPUID1_ECX_AVX
+	je	.t10dif_init_done
+	lea	rsi, [crc16_t10dif_02 WRT_OPT] ; AVX/02 opt
+
+.t10dif_init_done:
 	mov     [crc16_t10dif_dispatched], rsi
 	pop     rsi
 	pop     rdx

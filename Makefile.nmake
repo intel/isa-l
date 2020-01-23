@@ -90,6 +90,7 @@ objs =  \
 	bin\xor_gen_sse.obj \
 	bin\crc16_t10dif_01.obj \
 	bin\crc16_t10dif_by4.obj \
+	bin\crc16_t10dif_02.obj \
 	bin\crc16_t10dif_copy_by4.obj \
 	bin\crc32_ieee_01.obj \
 	bin\crc32_ieee_by4.obj \
