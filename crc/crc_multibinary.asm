@@ -46,6 +46,7 @@ extern crc16_t10dif_02
 extern crc16_t10dif_base
 
 extern crc32_gzip_refl_by8
+extern crc32_gzip_refl_by8_02
 extern crc32_gzip_refl_base
 
 extern crc16_t10dif_copy_by4
@@ -194,10 +195,10 @@ crc16_t10dif_dispatch_init:
 	ret
 
 mbin_interface			crc32_gzip_refl
-mbin_dispatch_init_clmul	crc32_gzip_refl, crc32_gzip_refl_base, crc32_gzip_refl_by8
+mbin_dispatch_init_clmul	crc32_gzip_refl, crc32_gzip_refl_base, crc32_gzip_refl_by8, crc32_gzip_refl_by8_02
 
 mbin_interface			crc16_t10dif_copy
-mbin_dispatch_init_clmul	crc16_t10dif_copy, crc16_t10dif_copy_base, crc16_t10dif_copy_by4
+mbin_dispatch_init_clmul	crc16_t10dif_copy, crc16_t10dif_copy_base, crc16_t10dif_copy_by4, crc16_t10dif_copy_by4
 
 ;;;       func            	core, ver, snum
 slversion crc16_t10dif,		00,   03,  011a

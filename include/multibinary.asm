@@ -152,8 +152,9 @@
 ; 1-> function name
 ; 2-> base function
 ; 3-> SSE4_1 and CLMUL optimized function
+; 4-> AVX/02 opt func
 ;;;;;
-%macro mbin_dispatch_init_clmul 3
+%macro mbin_dispatch_init_clmul 4
 	section .text
 	%1_dispatch_init:
 		push	mbin_rsi
@@ -165,13 +166,26 @@
 
 		mov     eax, 1
 		cpuid
-		lea	mbin_rbx, [%3 WRT_OPT] ; SSE opt func
-
-		; Test for SSE4.2
+		mov	ebx, ecx ; save cpuid1.ecx
 		test	ecx, FLAG_CPUID1_ECX_SSE4_1
 		jz	_%1_init_done
 		test    ecx, FLAG_CPUID1_ECX_CLMUL
-		cmovne	mbin_rsi, mbin_rbx
+		jz	_%1_init_done
+		lea	mbin_rsi, [%3 WRT_OPT] ; SSE possible so use 00/01 opt
+
+		;; Test for XMM_YMM support/AVX
+		test	ecx, FLAG_CPUID1_ECX_OSXSAVE
+		je	_%1_init_done
+		xor	ecx, ecx
+		xgetbv	; xcr -> edx:eax
+
+		and	eax, FLAG_XGETBV_EAX_XMM_YMM
+		cmp	eax, FLAG_XGETBV_EAX_XMM_YMM
+		jne	_%1_init_done
+		test	ebx, FLAG_CPUID1_ECX_AVX
+		je	_%1_init_done
+		lea	mbin_rsi, [%4 WRT_OPT] ; AVX/02 opt
+
 	_%1_init_done:
 		pop	mbin_rdx
 		pop	mbin_rcx
