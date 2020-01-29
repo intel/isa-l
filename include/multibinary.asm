@@ -153,8 +153,9 @@
 ; 2-> base function
 ; 3-> SSE4_1 and CLMUL optimized function
 ; 4-> AVX/02 opt func
+; 5-> AVX512/10 opt func
 ;;;;;
-%macro mbin_dispatch_init_clmul 4
+%macro mbin_dispatch_init_clmul 5
 	section .text
 	%1_dispatch_init:
 		push	mbin_rsi
@@ -162,6 +163,7 @@
 		push	mbin_rbx
 		push	mbin_rcx
 		push	mbin_rdx
+		push	mbin_rdi
 		lea     mbin_rsi, [%2 WRT_OPT] ; Default - use base function
 
 		mov     eax, 1
@@ -178,6 +180,7 @@
 		je	_%1_init_done
 		xor	ecx, ecx
 		xgetbv	; xcr -> edx:eax
+		mov	edi, eax	  ; save xgetvb.eax
 
 		and	eax, FLAG_XGETBV_EAX_XMM_YMM
 		cmp	eax, FLAG_XGETBV_EAX_XMM_YMM
@@ -186,7 +189,29 @@
 		je	_%1_init_done
 		lea	mbin_rsi, [%4 WRT_OPT] ; AVX/02 opt
 
+%if AS_FEATURE_LEVEL >= 10
+		;; Test for AVX2
+		xor	ecx, ecx
+		mov	eax, 7
+		cpuid
+		test	ebx, FLAG_CPUID7_EBX_AVX2
+		je	_%1_init_done		; No AVX2 possible
+
+		;; Test for AVX512
+		and	edi, FLAG_XGETBV_EAX_ZMM_OPM
+		cmp	edi, FLAG_XGETBV_EAX_ZMM_OPM
+		jne	_%1_init_done	  ; No AVX512 possible
+		and	ebx, FLAGS_CPUID7_EBX_AVX512_G1
+		cmp	ebx, FLAGS_CPUID7_EBX_AVX512_G1
+		jne	_%1_init_done
+
+		and	ecx, FLAGS_CPUID7_ECX_AVX512_G2
+		cmp	ecx, FLAGS_CPUID7_ECX_AVX512_G2
+		lea	mbin_rbx, [%5 WRT_OPT] ; AVX512/10 opt
+		cmove	mbin_rsi, mbin_rbx
+%endif
 	_%1_init_done:
+		pop	mbin_rdi
 		pop	mbin_rdx
 		pop	mbin_rcx
 		pop	mbin_rbx

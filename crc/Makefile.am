@@ -63,7 +63,8 @@ lsrc_x86_64 += \
 	crc/crc64_jones_norm_by8.asm \
 	crc/crc64_jones_norm_by16_10.asm \
 	crc/crc32_gzip_refl_by8.asm \
-	crc/crc32_gzip_refl_by8_02.asm
+	crc/crc32_gzip_refl_by8_02.asm \
+	crc/crc32_gzip_refl_by16_10.asm
 
 src_include += -I $(srcdir)/crc
 extern_hdrs +=  include/crc.h include/crc64.h
