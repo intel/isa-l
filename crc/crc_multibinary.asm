@@ -38,6 +38,7 @@ extern crc32_iscsi_base
 
 extern crc32_ieee_01
 extern crc32_ieee_by4  ;; Optimized for SLM
+extern crc32_ieee_02
 extern crc32_ieee_base
 
 extern crc16_t10dif_01
@@ -121,17 +122,33 @@ crc32_ieee_dispatch_init:
 
 	mov     eax, 1
 	cpuid
-	lea     rbx, [crc32_ieee_01 WRT_OPT]
-	lea     rdx, [crc32_ieee_by4 WRT_OPT]
-
-	test	ecx, FLAG_CPUID1_ECX_SSE3
-	jz	use_ieee_base
+	mov	ebx, ecx ; save cpuid1.ecx
+	test    ecx, FLAG_CPUID1_ECX_SSE3
+	jz      .crc_ieee_init_done ; use ieee_base
 	test    ecx, FLAG_CPUID1_ECX_CLMUL
-	cmovne  rsi, rbx
+	jz	.crc_ieee_init_done ; use ieee_base
+	lea	rsi, [crc32_ieee_01 WRT_OPT]
+
+	;; Extra Avoton test
+	lea	rdx, [crc32_ieee_by4 WRT_OPT]
 	and     eax, FLAG_CPUID1_EAX_STEP_MASK
 	cmp     eax, FLAG_CPUID1_EAX_AVOTON
 	cmove   rsi, rdx
-use_ieee_base:
+
+	;; Test for XMM_YMM support/AVX
+	test	ecx, FLAG_CPUID1_ECX_OSXSAVE
+	je	.crc_ieee_init_done
+	xor	ecx, ecx
+	xgetbv	; xcr -> edx:eax
+
+	and	eax, FLAG_XGETBV_EAX_XMM_YMM
+	cmp	eax, FLAG_XGETBV_EAX_XMM_YMM
+	jne	.crc_ieee_init_done
+	test	ebx, FLAG_CPUID1_ECX_AVX
+	je	.crc_ieee_init_done
+	lea	rsi, [crc32_ieee_02 WRT_OPT] ; AVX/02 opt
+
+.crc_ieee_init_done:
 	mov     [crc32_ieee_dispatched], rsi
 	pop     rsi
 	pop     rdx
