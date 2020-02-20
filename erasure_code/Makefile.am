@@ -29,6 +29,8 @@
 
 include erasure_code/aarch64/Makefile.am
 
+include erasure_code/ppc64le/Makefile.am
+
 lsrc         += erasure_code/ec_base.c
 
 lsrc_base_aliases += erasure_code/ec_base_aliases.c

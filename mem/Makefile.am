@@ -32,6 +32,7 @@ include mem/aarch64/Makefile.am
 lsrc        += 	mem/mem_zero_detect_base.c
 
 lsrc_base_aliases += mem/mem_zero_detect_base_aliases.c
+lsrc_ppc64le      += mem/mem_zero_detect_base_aliases.c
 
 lsrc_x86_64 += 	mem/mem_zero_detect_avx.asm \
 		mem/mem_zero_detect_sse.asm \
