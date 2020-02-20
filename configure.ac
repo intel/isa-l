@@ -30,10 +30,13 @@ AS_CASE([$host_cpu],
   [i?86], [CPU="x86_32"],
   [aarch64], [CPU="aarch64"],
   [arm64], [CPU="aarch64"],
+  [powerpc64le], [CPU="ppc64le"],
+  [ppc64le], [CPU="ppc64le"],
 )
 AM_CONDITIONAL([CPU_X86_64], [test "$CPU" = "x86_64"])
 AM_CONDITIONAL([CPU_X86_32], [test "$CPU" = "x86_32"])
 AM_CONDITIONAL([CPU_AARCH64], [test "$CPU" = "aarch64"])
+AM_CONDITIONAL([CPU_PPC64LE], [test "$CPU" = "ppc64le"])
 AM_CONDITIONAL([CPU_UNDEFINED], [test "x$CPU" = "x"])
 
 if test "$CPU" = "x86_64"; then
