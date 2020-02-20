@@ -56,6 +56,7 @@ extern crc16_t10dif_copy_base
 
 %if (AS_FEATURE_LEVEL) >= 10
 extern crc32_gzip_refl_by16_10
+extern crc32_ieee_by16_10
 %endif
 
 %include "multibinary.asm"
@@ -123,6 +124,7 @@ crc32_ieee_dispatch_init:
 	push    rcx
 	push    rdx
 	push    rsi
+	push	rdi
 	lea     rsi, [crc32_ieee_base WRT_OPT] ; Default
 
 	mov     eax, 1
@@ -145,6 +147,7 @@ crc32_ieee_dispatch_init:
 	je	.crc_ieee_init_done
 	xor	ecx, ecx
 	xgetbv	; xcr -> edx:eax
+	mov	edi, eax	  ; save xgetvb.eax
 
 	and	eax, FLAG_XGETBV_EAX_XMM_YMM
 	cmp	eax, FLAG_XGETBV_EAX_XMM_YMM
@@ -153,8 +156,31 @@ crc32_ieee_dispatch_init:
 	je	.crc_ieee_init_done
 	lea	rsi, [crc32_ieee_02 WRT_OPT] ; AVX/02 opt
 
+%if AS_FEATURE_LEVEL >= 10
+	;; Test for AVX2
+	xor	ecx, ecx
+	mov	eax, 7
+	cpuid
+	test	ebx, FLAG_CPUID7_EBX_AVX2
+	je	.crc_ieee_init_done		; No AVX2 possible
+
+	;; Test for AVX512
+	and	edi, FLAG_XGETBV_EAX_ZMM_OPM
+	cmp	edi, FLAG_XGETBV_EAX_ZMM_OPM
+	jne	.crc_ieee_init_done	  ; No AVX512 possible
+	and	ebx, FLAGS_CPUID7_EBX_AVX512_G1
+	cmp	ebx, FLAGS_CPUID7_EBX_AVX512_G1
+	jne	.crc_ieee_init_done
+
+	and	ecx, FLAGS_CPUID7_ECX_AVX512_G2
+	cmp	ecx, FLAGS_CPUID7_ECX_AVX512_G2
+	lea	rbx, [crc32_ieee_by16_10 WRT_OPT] ; AVX512/10 opt
+	cmove	rsi, rbx
+%endif
+
 .crc_ieee_init_done:
 	mov     [crc32_ieee_dispatched], rsi
+	pop	rdi
 	pop     rsi
 	pop     rdx
 	pop     rcx

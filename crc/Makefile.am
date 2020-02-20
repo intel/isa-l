@@ -46,6 +46,7 @@ lsrc_x86_64 += \
 	crc/crc32_ieee_01.asm \
 	crc/crc32_ieee_02.asm \
 	crc/crc32_ieee_by4.asm \
+	crc/crc32_ieee_by16_10.asm \
 	crc/crc32_iscsi_01.asm \
 	crc/crc32_iscsi_00.asm \
 	crc/crc_multibinary.asm \
