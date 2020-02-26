@@ -1,4 +1,4 @@
-v2.28 Intel Intelligent Storage Acceleration Library Release Notes
+v2.29 Intel Intelligent Storage Acceleration Library Release Notes
 ==================================================================
 
 RELEASE NOTE CONTENTS
@@ -109,6 +109,15 @@ v2.10
 
 3. CHANGE LOG & FEATURES ADDED
 ------------------------------
+v2.29
+
+* CRC Improvements
+  - New AVX512 vclmul versions of crc16_t10dif(), crc32_ieee(), crc32_gzip_refl.
+
+* Erasure code improvements
+  - Added AVX512 ec functions with 5 and 6 outputs. Can improve performance for
+    codes with 5 or more parity by running in batches of up to 6 at a time.
+
 v2.28
 
 * New next-arch versions of 64-bit CRC. All norm and reflected 64-bit
