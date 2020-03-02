@@ -1,5 +1,5 @@
 /**********************************************************************
-  Copyright(c) 2019 Arm Corporation All rights reserved.
+  Copyright(c) 2020 Arm Corporation All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -216,6 +216,96 @@
 		DIGNOSTIC_POP()						\
 		_func_entry;						\
 	})
+
+/**
+ * Micro-Architector definitions
+ * Reference: https://developer.arm.com/docs/ddi0595/f/aarch64-system-registers/midr_el1
+ */
+
+#define CPU_IMPLEMENTER_RESERVE			0x00
+#define CPU_IMPLEMENTER_ARM			0x41
+
+
+#define CPU_PART_CORTEX_A57		0xD07
+#define CPU_PART_CORTEX_A72		0xD08
+#define CPU_PART_NEOVERSE_N1		0xD0C
+
+#define MICRO_ARCH_ID(imp,part)	\
+	(((CPU_IMPLEMENTER_##imp&0xff)<<24)|((CPU_PART_##part&0xfff)<<4))
+
+#ifndef HWCAP_CPUID
+#define HWCAP_CPUID (1<<11)
+#endif
+
+/**
+ * @brief  get_micro_arch_id
+ *
+ * read micro-architector register instruction if possible.This function
+ * provides microarchitecture information and make microarchitecture optimization
+ * possible.
+ *
+ * Read system registers(MRS) is forbidden in userspace. If executed, it
+ * will raise illegal instruction error. Kernel provides a solution for
+ * this issue. The solution depends on HWCAP_CPUID flags. Reference(1)
+ * describes how to use it. It provides a "illegal insstruction" handler
+ * in kernel space, the handler will execute MRS and return the correct
+ * value to userspace.
+ *
+ * To avoid too many kernel trap, this function MUST be only called in
+ * dispatcher. And HWCAP must be match,That will make sure there are no
+ * illegal instruction errors. HWCAP_CPUID should be available to get the
+ * best performance.
+ *
+ * NOTICE:
+ *     - HWCAP_CPUID should be available. Otherwise it returns reserve value
+ *     - It MUST be called inside dispather.
+ *     - It MUST meet the HWCAP requirements
+ *
+ * Example:
+ *      DEFINE_INTERFACE_DISPATCHER(crc32_iscsi)
+ *      {
+ *              unsigned long auxval = getauxval(AT_HWCAP);
+ *              // MUST do the judgement is MUST.
+ *              if ((HWCAP_CRC32 | HWCAP_PMULL) == (auxval & (HWCAP_CRC32 | HWCAP_PMULL))) {
+ *                      switch (get_micro_arch_id()) {
+ *                      case MICRO_ARCH_ID(ARM, CORTEX_A57):
+ *                              return PROVIDER_INFO(crc32_pmull_crc_for_a57);
+ *                      case MICRO_ARCH_ID(ARM, CORTEX_A72):
+ *                              return PROVIDER_INFO(crc32_pmull_crc_for_a72);
+ *                      case MICRO_ARCH_ID(ARM, NEOVERSE_N1):
+ *                              return PROVIDER_INFO(crc32_pmull_crc_for_n1);
+ *                      case default:
+ *                              return PROVIDER_INFO(crc32_pmull_crc_for_others);
+ *                      }
+ *              }
+ *              return PROVIDER_BASIC(crc32_iscsi);
+ *      }
+ * KNOWN ISSUE:
+ *   On a heterogeneous system (big.LITTLE), it will work but the performance
+ *   might not be the best one as expected.
+ *
+ *   If this function is called on the big core, it will return the function
+ *   optimized for the big core.
+ *
+ *   If execution is then scheduled to the little core. It will still work (1),
+ *   but the function won't be optimized for the little core, thus the performance
+ *   won't be as expected.
+ *
+ * References:
+ * -  [CPU Feature detection](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/arm64/cpu-feature-registers.rst?h=v5.5)
+ *
+ */
+static inline uint32_t get_micro_arch_id(void)
+{
+	uint32_t id=CPU_IMPLEMENTER_RESERVE;
+	if ((getauxval(AT_HWCAP) & HWCAP_CPUID)) {
+		/** Here will trap into kernel space */
+		asm("mrs %0, MIDR_EL1 " : "=r" (id));
+	}
+	return id&0xff00fff0;
+}
+
+
 
 #endif /* __ASSEMBLY__ */
 #endif
