@@ -149,19 +149,5 @@ perf_tests   += erasure_code/gf_vect_mul_perf \
 
 other_tests  += erasure_code/gen_rs_matrix_limits
 
-other_tests_x86_64 += \
-		erasure_code/gf_2vect_dot_prod_sse_test \
-		erasure_code/gf_3vect_dot_prod_sse_test \
-		erasure_code/gf_4vect_dot_prod_sse_test \
-		erasure_code/gf_5vect_dot_prod_sse_test \
-		erasure_code/gf_6vect_dot_prod_sse_test
-
-other_tests_x86_32 += \
-		erasure_code/gf_2vect_dot_prod_sse_test \
-		erasure_code/gf_3vect_dot_prod_sse_test \
-		erasure_code/gf_4vect_dot_prod_sse_test \
-		erasure_code/gf_5vect_dot_prod_sse_test \
-		erasure_code/gf_6vect_dot_prod_sse_test
-
 other_src    += include/test.h \
 		include/types.h
