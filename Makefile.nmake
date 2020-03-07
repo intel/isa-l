@@ -1,5 +1,5 @@
 ########################################################################
-#  Copyright(c) 2011-2016 Intel Corporation All rights reserved.
+#  Copyright(c) 2011-2017 Intel Corporation All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions
@@ -27,126 +27,141 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ########################################################################
 
-objs =  \
+# This file can be auto-regenerated with $make -f Makefile.unx Makefile.nmake
+
+objs = \
 	bin\ec_base.obj \
+	bin\raid_base.obj \
+	bin\crc_base.obj \
+	bin\crc64_base.obj \
+	bin\igzip.obj \
+	bin\hufftables_c.obj \
+	bin\igzip_base.obj \
+	bin\igzip_icf_base.obj \
+	bin\adler32_base.obj \
+	bin\flatten_ll.obj \
+	bin\encode_df.obj \
+	bin\igzip_icf_body.obj \
+	bin\huff_codes.obj \
+	bin\igzip_inflate.obj \
+	bin\mem_zero_detect_base.obj \
 	bin\ec_highlevel_func.obj \
-	bin\ec_multibinary.obj \
-	bin\gf_2vect_dot_prod_avx.obj \
-	bin\gf_2vect_dot_prod_avx2.obj \
-	bin\gf_2vect_dot_prod_avx512.obj \
-	bin\gf_2vect_dot_prod_sse.obj \
-	bin\gf_2vect_mad_avx.obj \
-	bin\gf_2vect_mad_avx2.obj \
-	bin\gf_2vect_mad_avx512.obj \
-	bin\gf_2vect_mad_sse.obj \
-	bin\gf_3vect_dot_prod_avx.obj \
-	bin\gf_3vect_dot_prod_avx2.obj \
-	bin\gf_3vect_dot_prod_avx512.obj \
-	bin\gf_3vect_dot_prod_sse.obj \
-	bin\gf_3vect_mad_avx.obj \
-	bin\gf_3vect_mad_avx2.obj \
-	bin\gf_3vect_mad_avx512.obj \
-	bin\gf_3vect_mad_sse.obj \
-	bin\gf_4vect_dot_prod_avx.obj \
-	bin\gf_4vect_dot_prod_avx2.obj \
-	bin\gf_4vect_dot_prod_avx512.obj \
-	bin\gf_4vect_dot_prod_sse.obj \
-	bin\gf_4vect_mad_avx.obj \
-	bin\gf_4vect_mad_avx2.obj \
-	bin\gf_4vect_mad_avx512.obj \
-	bin\gf_4vect_mad_sse.obj \
-	bin\gf_5vect_dot_prod_avx.obj \
-	bin\gf_5vect_dot_prod_avx2.obj \
-	bin\gf_5vect_dot_prod_sse.obj \
-	bin\gf_5vect_mad_avx.obj \
-	bin\gf_5vect_mad_avx2.obj \
-	bin\gf_5vect_mad_sse.obj \
-	bin\gf_6vect_dot_prod_avx.obj \
-	bin\gf_6vect_dot_prod_avx2.obj \
-	bin\gf_6vect_dot_prod_sse.obj \
-	bin\gf_6vect_mad_avx.obj \
-	bin\gf_6vect_mad_avx2.obj \
-	bin\gf_6vect_mad_sse.obj \
+	bin\gf_vect_mul_sse.obj \
+	bin\gf_vect_mul_avx.obj \
+	bin\gf_vect_dot_prod_sse.obj \
 	bin\gf_vect_dot_prod_avx.obj \
 	bin\gf_vect_dot_prod_avx2.obj \
-	bin\gf_vect_dot_prod_avx512.obj \
-	bin\gf_vect_dot_prod_sse.obj \
-	bin\gf_vect_mad_avx.obj \
-	bin\gf_vect_mad_avx2.obj \
-	bin\gf_vect_mad_avx512.obj \
+	bin\gf_2vect_dot_prod_sse.obj \
+	bin\gf_3vect_dot_prod_sse.obj \
+	bin\gf_4vect_dot_prod_sse.obj \
+	bin\gf_5vect_dot_prod_sse.obj \
+	bin\gf_6vect_dot_prod_sse.obj \
+	bin\gf_2vect_dot_prod_avx.obj \
+	bin\gf_3vect_dot_prod_avx.obj \
+	bin\gf_4vect_dot_prod_avx.obj \
+	bin\gf_5vect_dot_prod_avx.obj \
+	bin\gf_6vect_dot_prod_avx.obj \
+	bin\gf_2vect_dot_prod_avx2.obj \
+	bin\gf_3vect_dot_prod_avx2.obj \
+	bin\gf_4vect_dot_prod_avx2.obj \
+	bin\gf_5vect_dot_prod_avx2.obj \
+	bin\gf_6vect_dot_prod_avx2.obj \
 	bin\gf_vect_mad_sse.obj \
-	bin\gf_vect_mul_avx.obj \
-	bin\gf_vect_mul_sse.obj \
+	bin\gf_2vect_mad_sse.obj \
+	bin\gf_3vect_mad_sse.obj \
+	bin\gf_4vect_mad_sse.obj \
+	bin\gf_5vect_mad_sse.obj \
+	bin\gf_6vect_mad_sse.obj \
+	bin\gf_vect_mad_avx.obj \
+	bin\gf_2vect_mad_avx.obj \
+	bin\gf_3vect_mad_avx.obj \
+	bin\gf_4vect_mad_avx.obj \
+	bin\gf_5vect_mad_avx.obj \
+	bin\gf_6vect_mad_avx.obj \
+	bin\gf_vect_mad_avx2.obj \
+	bin\gf_2vect_mad_avx2.obj \
+	bin\gf_3vect_mad_avx2.obj \
+	bin\gf_4vect_mad_avx2.obj \
+	bin\gf_5vect_mad_avx2.obj \
+	bin\gf_6vect_mad_avx2.obj \
+	bin\ec_multibinary.obj \
+	bin\gf_vect_dot_prod_avx512.obj \
+	bin\gf_2vect_dot_prod_avx512.obj \
+	bin\gf_3vect_dot_prod_avx512.obj \
+	bin\gf_4vect_dot_prod_avx512.obj \
+	bin\gf_5vect_dot_prod_avx512.obj \
+	bin\gf_6vect_dot_prod_avx512.obj \
+	bin\gf_vect_mad_avx512.obj \
+	bin\gf_2vect_mad_avx512.obj \
+	bin\gf_3vect_mad_avx512.obj \
+	bin\gf_4vect_mad_avx512.obj \
+	bin\gf_5vect_mad_avx512.obj \
+	bin\gf_6vect_mad_avx512.obj \
+	bin\xor_gen_sse.obj \
+	bin\pq_gen_sse.obj \
+	bin\xor_check_sse.obj \
 	bin\pq_check_sse.obj \
 	bin\pq_gen_avx.obj \
-	bin\pq_gen_avx2.obj \
-	bin\pq_gen_avx512.obj \
-	bin\pq_gen_sse.obj \
-	bin\raid_base.obj \
-	bin\raid_multibinary.obj \
-	bin\xor_check_sse.obj \
 	bin\xor_gen_avx.obj \
+	bin\pq_gen_avx2.obj \
 	bin\xor_gen_avx512.obj \
-	bin\xor_gen_sse.obj \
+	bin\pq_gen_avx512.obj \
+	bin\raid_multibinary.obj \
 	bin\crc16_t10dif_01.obj \
 	bin\crc16_t10dif_by4.obj \
 	bin\crc16_t10dif_02.obj \
+	bin\crc16_t10dif_by16_10.obj \
 	bin\crc16_t10dif_copy_by4.obj \
 	bin\crc16_t10dif_copy_by4_02.obj \
 	bin\crc32_ieee_01.obj \
 	bin\crc32_ieee_02.obj \
 	bin\crc32_ieee_by4.obj \
-	bin\crc32_iscsi_00.obj \
+	bin\crc32_ieee_by16_10.obj \
 	bin\crc32_iscsi_01.obj \
-	bin\crc64_base.obj \
-	bin\crc64_ecma_norm_by8.obj \
-	bin\crc64_ecma_refl_by8.obj \
-	bin\crc64_iso_norm_by8.obj \
-	bin\crc64_iso_refl_by8.obj \
-	bin\crc64_jones_norm_by8.obj \
-	bin\crc64_jones_refl_by8.obj \
-	bin\crc64_multibinary.obj \
-	bin\crc_base.obj \
-	bin\adler32_base.obj \
+	bin\crc32_iscsi_00.obj \
 	bin\crc_multibinary.obj \
-	bin\huff_codes.obj \
-	bin\hufftables_c.obj \
-	bin\igzip.obj \
-	bin\igzip_base.obj \
-	bin\igzip_body.obj \
-	bin\igzip_decode_block_stateless_01.obj \
-	bin\igzip_decode_block_stateless_04.obj \
-	bin\igzip_finish.obj \
-	bin\flatten_ll.obj \
-	bin\encode_df.obj \
-	bin\encode_df_04.obj \
-	bin\proc_heap.obj \
-	bin\igzip_icf_body_h1_gr_bt.obj \
-	bin\igzip_icf_finish.obj \
-	bin\igzip_icf_base.obj \
-	bin\igzip_inflate.obj \
-	bin\igzip_inflate_multibinary.obj \
-	bin\igzip_multibinary.obj \
-	bin\igzip_update_histogram_01.obj \
-	bin\igzip_update_histogram_04.obj \
-	bin\rfc1951_lookup.obj \
+	bin\crc64_multibinary.obj \
+	bin\crc64_ecma_refl_by8.obj \
+	bin\crc64_ecma_refl_by16_10.obj \
+	bin\crc64_ecma_norm_by8.obj \
+	bin\crc64_ecma_norm_by16_10.obj \
+	bin\crc64_iso_refl_by8.obj \
+	bin\crc64_iso_refl_by16_10.obj \
+	bin\crc64_iso_norm_by8.obj \
+	bin\crc64_iso_norm_by16_10.obj \
+	bin\crc64_jones_refl_by8.obj \
+	bin\crc64_jones_refl_by16_10.obj \
+	bin\crc64_jones_norm_by8.obj \
+	bin\crc64_jones_norm_by16_10.obj \
 	bin\crc32_gzip_refl_by8.obj \
 	bin\crc32_gzip_refl_by8_02.obj \
 	bin\crc32_gzip_refl_by16_10.obj \
+	bin\igzip_body.obj \
+	bin\igzip_finish.obj \
+	bin\igzip_icf_body_h1_gr_bt.obj \
+	bin\igzip_icf_finish.obj \
+	bin\rfc1951_lookup.obj \
 	bin\adler32_sse.obj \
 	bin\adler32_avx2_4.obj \
+	bin\igzip_multibinary.obj \
+	bin\igzip_update_histogram_01.obj \
+	bin\igzip_update_histogram_04.obj \
+	bin\igzip_decode_block_stateless_01.obj \
+	bin\igzip_decode_block_stateless_04.obj \
+	bin\igzip_inflate_multibinary.obj \
+	bin\encode_df_04.obj \
+	bin\encode_df_06.obj \
+	bin\proc_heap.obj \
 	bin\igzip_deflate_hash.obj \
-	bin\igzip_gen_icf_map_lh1_04.obj \
 	bin\igzip_gen_icf_map_lh1_06.obj \
+	bin\igzip_gen_icf_map_lh1_04.obj \
 	bin\igzip_set_long_icf_fg_04.obj \
 	bin\igzip_set_long_icf_fg_06.obj \
-	bin\igzip_icf_body.obj \
 	bin\mem_zero_detect_avx.obj \
-	bin\mem_zero_detect_base.obj \
-	bin\mem_multibinary.obj \
-	bin\mem_zero_detect_sse.obj
+	bin\mem_zero_detect_sse.obj \
+	bin\mem_multibinary.obj
 
-INCLUDES  = -I./ -Ierasure_code/ -Iraid/ -Icrc/ -Iigzip/ -Iinclude/ -Imem/
+INCLUDES  = -I./ -Ierasure_code/ -Iraid/ -Icrc/ -Iigzip/ -Iprograms/ -Imem/ -Iinclude/ -Itests/fuzz/ -Iexamples/ec/
 LINKFLAGS = /nologo
 CFLAGS   = -O2 -D NDEBUG /nologo -D_USE_MATH_DEFINES -Qstd=c99 $(INCLUDES) $(D)
 AFLAGS   = -f win64 $(INCLUDES) $(D)
@@ -189,13 +204,27 @@ $?
 {igzip}.asm.obj:
 	$(AS) $(AFLAGS) -o $@ $?
 
+{programs}.c.obj:
+	$(CC) $(CFLAGS) /c -Fo$@ $?
+{programs}.asm.obj:
+	$(AS) $(AFLAGS) -o $@ $?
+
 {mem}.c.obj:
 	$(CC) $(CFLAGS) /c -Fo$@ $?
 {mem}.asm.obj:
 	$(AS) $(AFLAGS) -o $@ $?
 
+
 # Examples
-ex = xor_example.exe crc_simple_test.exe crc64_example.exe igzip_example.exe igzip_sync_flush_example.exe
+ex = \
+	xor_example.exe \
+	crc_simple_test.exe \
+	crc64_example.exe \
+	igzip_example.exe \
+	igzip_sync_flush_example.exe \
+	ec_simple_example.exe \
+	ec_piggyback_example.exe
+
 ex: lib $(ex)
 
 $(ex): $(@B).obj
@@ -215,10 +244,11 @@ checks = \
 	pq_check_test.exe \
 	crc16_t10dif_test.exe \
 	crc16_t10dif_copy_test.exe \
-	crc32_funcs_test.exe \
 	crc64_funcs_test.exe \
-	igzip_wrapper_hdr_test.exe \
+	crc32_funcs_test.exe \
 	igzip_rand_test.exe \
+	igzip_wrapper_hdr_test.exe \
+	checksum32_funcs_test.exe \
 	mem_zero_detect_test.exe
 
 checks: lib $(checks)
@@ -244,20 +274,28 @@ perfs = \
 	gf_vect_dot_prod_1tbl.exe \
 	erasure_code_perf.exe \
 	erasure_code_base_perf.exe \
-	erasure_code_sse_perf.exe \
 	erasure_code_update_perf.exe \
 	xor_gen_perf.exe \
 	pq_gen_perf.exe \
 	crc16_t10dif_perf.exe \
+	crc16_t10dif_copy_perf.exe \
+	crc16_t10dif_op_perf.exe \
 	crc32_ieee_perf.exe \
 	crc32_iscsi_perf.exe \
-	igzip_perf.exe \
-	igzip_sync_flush_perf.exe \
+	crc64_funcs_perf.exe \
 	crc32_gzip_refl_perf.exe \
+	adler32_perf.exe \
 	mem_zero_detect_perf.exe
 
 perfs: lib $(perfs)
 $(perfs): $(@B).obj
+
+progs = \
+	igzip.exe
+
+progs: lib $(progs)
+igzip.exe: programs\igzip_cli.obj
+	link /out:$@ $(LINKFLAGS) isa-l.lib $?
 
 clean:
 	-if exist *.obj del *.obj
@@ -268,4 +306,5 @@ clean:
 	-if exist isa-l.dll del isa-l.dll
 
 zlib.lib:
+igzip_perf.exe:  zlib.lib
 igzip_inflate_test.exe:  zlib.lib

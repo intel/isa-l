@@ -51,5 +51,6 @@ endif
 lib_name := bin/isa-l.a
 
 include make.inc
+include tools/gen_nmake.mk
 
 VPATH = . $(units) include tests/fuzz examples/ec
