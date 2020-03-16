@@ -56,11 +56,11 @@
  %define func(x) proc_frame x
  %macro FUNC_SAVE 0
 	alloc_stack	stack_size
-	save_xmm128	xmm6, 0*16
-	save_xmm128	xmm7, 1*16
-	save_xmm128	xmm13, 2*16
-	save_xmm128	xmm14, 3*16
-	save_xmm128	xmm15, 4*16
+	vmovdqa		[rsp + 0*16], xmm6
+	vmovdqa		[rsp + 1*16], xmm7
+	vmovdqa		[rsp + 2*16], xmm13
+	vmovdqa		[rsp + 3*16], xmm14
+	vmovdqa		[rsp + 4*16], xmm15
 	end_prolog
  %endmacro
 

@@ -87,12 +87,12 @@
  %define func(x) proc_frame x
  %macro FUNC_SAVE 0
 	alloc_stack	stack_size
-	save_xmm128	xmm6, 0*16
-	save_xmm128	xmm7, 1*16
-	save_xmm128	xmm8, 2*16
-	save_xmm128	xmm9, 3*16
-	save_xmm128	xmm10, 4*16
-	save_xmm128	xmm11, 5*16
+	vmovdqa		[rsp + 0*16], xmm6
+	vmovdqa		[rsp + 1*16], xmm7
+	vmovdqa		[rsp + 2*16], xmm8
+	vmovdqa		[rsp + 3*16], xmm9
+	vmovdqa		[rsp + 4*16], xmm10
+	vmovdqa		[rsp + 5*16], xmm11
 	save_reg	r12,  6*16 + 0*8
 	save_reg	r13,  6*16 + 1*8
 	save_reg	r14,  6*16 + 2*8
