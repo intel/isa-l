@@ -45,7 +45,7 @@ section .data
 ;; 	uint16_t len_start[32];
 ;; };
 
-global rfc1951_lookup_table:ISAL_SYM_TYPE_DATA_INTERNAL
+mk_global rfc1951_lookup_table, data, internal
 rfc1951_lookup_table:
 len_to_code:
 	db	0x00, 0x00, 0x00

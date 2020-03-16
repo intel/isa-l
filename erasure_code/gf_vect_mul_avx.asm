@@ -111,7 +111,7 @@ section .text
 %define xtmp2c xmm7
 
 align 16
-global gf_vect_mul_avx:ISAL_SYM_TYPE_FUNCTION
+mk_global gf_vect_mul_avx, function
 func(gf_vect_mul_avx)
 	FUNC_SAVE
 	mov	pos, 0

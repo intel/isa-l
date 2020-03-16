@@ -86,7 +86,7 @@ section .text
 %endif
 
 align 16
-global  crc32_gzip_refl_by8_02:ISAL_SYM_TYPE_FUNCTION
+mk_global  crc32_gzip_refl_by8_02, function
 crc32_gzip_refl_by8_02:
 	not		arg1_low32
 	sub		rsp, VARIABLE_OFFSET

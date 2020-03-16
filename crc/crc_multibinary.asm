@@ -79,7 +79,7 @@ section .text
 ;;;;
 ; crc32_iscsi multibinary function
 ;;;;
-global crc32_iscsi:ISAL_SYM_TYPE_FUNCTION
+mk_global crc32_iscsi, function
 crc32_iscsi_mbinit:
 	call	crc32_iscsi_dispatch_init
 crc32_iscsi:
@@ -113,7 +113,7 @@ crc32_iscsi_dispatch_init:
 ;;;;
 ; crc32_ieee multibinary function
 ;;;;
-global crc32_ieee:ISAL_SYM_TYPE_FUNCTION
+mk_global crc32_ieee, function
 crc32_ieee_mbinit:
 	call	crc32_ieee_dispatch_init
 crc32_ieee:
@@ -192,7 +192,7 @@ crc32_ieee_dispatch_init:
 ;;;;
 ; crc16_t10dif multibinary function
 ;;;;
-global crc16_t10dif:ISAL_SYM_TYPE_FUNCTION
+mk_global crc16_t10dif, function
 crc16_t10dif_mbinit:
 	call	crc16_t10dif_dispatch_init
 crc16_t10dif:

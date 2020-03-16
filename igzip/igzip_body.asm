@@ -134,6 +134,11 @@ stack_size          equ 4*8 + 8*8 + 4*16 + 8
 %if ARCH == 04
 %define USE_HSWNI
 %endif
+
+[bits 64]
+default rel
+section .text
+
 ; void isal_deflate_body ( isal_zstream *stream )
 ; arg 1: rcx: addr of stream
 global isal_deflate_body_ %+ ARCH

@@ -238,7 +238,7 @@ section .text
 %endif
 
 align 16
-global gf_2vect_dot_prod_avx:ISAL_SYM_TYPE_FUNCTION
+mk_global gf_2vect_dot_prod_avx, function
 
 func(gf_2vect_dot_prod_avx)
 	FUNC_SAVE

@@ -85,6 +85,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 f_end_i_mem_offset	equ 0    ; local variable (8 bytes)
 stack_size		equ 8
+
+[bits 64]
+default rel
+section .text
+
 ; void isal_deflate_finish ( isal_zstream *stream )
 ; arg 1: rcx: addr of stream
 global isal_deflate_finish_01

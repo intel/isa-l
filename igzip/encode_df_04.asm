@@ -172,6 +172,9 @@ stack_size		equ	gpr_save_mem_size + xmm_save_mem_size + bitbuf_mem_size
 
 %endmacro
 
+default rel
+section .text
+
 global encode_deflate_icf_ %+ ARCH
 encode_deflate_icf_ %+ ARCH:
 	FUNC_SAVE

@@ -142,6 +142,10 @@
 %endif
 %define VECT_SIZE 16
 
+[bits 64]
+default rel
+section .text
+
 global set_long_icf_fg_06
 func(set_long_icf_fg_06)
 	FUNC_SAVE

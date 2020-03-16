@@ -30,14 +30,6 @@
 %ifndef _REG_SIZES_ASM_
 %define _REG_SIZES_ASM_
 
-%ifdef __NASM_VER__
-%ifidn __OUTPUT_FORMAT__, win64
-%error nasm not supported in windows
-%else
-%define endproc_frame
-%endif
-%endif
-
 %ifndef AS_FEATURE_LEVEL
 %define AS_FEATURE_LEVEL 4
 %endif
@@ -220,19 +212,57 @@ section .text
  %define WRT_OPT
 %endif
 
+%macro mk_global 1-3
+  %ifdef __NASM_VER__
+    %ifidn __OUTPUT_FORMAT__, macho64
+	global %1
+    %elifidn __OUTPUT_FORMAT__, win64
+	global %1
+    %else
+	global %1:%2 %3
+    %endif
+  %else
+	global %1:%2 %3
+  %endif
+%endmacro
+
+
+; Fixes for nasm lack of MS proc helpers
+%ifdef __NASM_VER__
+  %ifidn __OUTPUT_FORMAT__, win64
+    %macro alloc_stack 1
+	sub	rsp, %1
+    %endmacro
+
+    %macro proc_frame 1
+	%1:
+    %endmacro
+
+    %macro save_xmm128 2
+	movdqa	[rsp + %2], %1
+    %endmacro
+
+    %macro save_reg 2
+	mov	[rsp + %2], %1
+    %endmacro
+
+    %macro rex_push_reg	1
+	push	%1
+    %endmacro
+
+    %macro push_reg 1
+	push	%1
+    %endmacro
+
+    %define end_prolog
+  %endif
+
+  %define endproc_frame
+%endif
+
 %ifidn __OUTPUT_FORMAT__, macho64
  %define elf64 macho64
  mac_equ equ 1
- %ifdef __NASM_VER__
-  %define ISAL_SYM_TYPE_FUNCTION
-  %define ISAL_SYM_TYPE_DATA_INTERNAL
- %else
-  %define ISAL_SYM_TYPE_FUNCTION function
-  %define ISAL_SYM_TYPE_DATA_INTERNAL data internal
- %endif
-%else
- %define ISAL_SYM_TYPE_FUNCTION function
- %define ISAL_SYM_TYPE_DATA_INTERNAL data internal
 %endif
 
 %macro slversion 4

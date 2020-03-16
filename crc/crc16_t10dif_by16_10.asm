@@ -82,7 +82,7 @@ section .text
 %endif
 
 align 16
-global FUNCTION_NAME:ISAL_SYM_TYPE_FUNCTION
+mk_global FUNCTION_NAME, function
 FUNCTION_NAME:
 
 	; adjust the 16-bit initial_crc value, scale it to 32 bits

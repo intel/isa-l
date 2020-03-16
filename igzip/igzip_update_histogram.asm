@@ -249,6 +249,10 @@ _hash_offset	equ	(_dist_offset + 8 * DIST_LEN)
 	cmovle	%%dist_coded, %%dist
 %endm
 
+[bits 64]
+default rel
+section .text
+
 ; void isal_update_histogram
 global isal_update_histogram_ %+ ARCH
 isal_update_histogram_ %+ ARCH %+ :

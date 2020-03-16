@@ -66,7 +66,7 @@ section .text
 %endif
 
 align 16
-global	crc16_t10dif_by4:ISAL_SYM_TYPE_FUNCTION
+mk_global 	crc16_t10dif_by4, function
 crc16_t10dif_by4:
 
 	; adjust the 16-bit initial_crc value, scale it to 32 bits

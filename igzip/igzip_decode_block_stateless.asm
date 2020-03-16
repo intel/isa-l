@@ -459,6 +459,10 @@ stack_size		equ	4 * 8 + 8 * 8
 	decode_next_dist %%state, %%lookup_size, %%state_offset, %%read_in, %%read_in_length, %%next_sym, %%next_extra_bits, %%next_bits
 %endm
 
+[bits 64]
+default rel
+section .text
+
 global decode_huffman_code_block_stateless_ %+ ARCH
 decode_huffman_code_block_stateless_ %+ ARCH %+ :
 

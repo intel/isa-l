@@ -135,6 +135,10 @@ default rel
 %endif
 %define VECT_SIZE 8
 
+[bits 64]
+default rel
+section .text
+
 global set_long_icf_fg_04
 func(set_long_icf_fg_04)
 	FUNC_SAVE

@@ -169,6 +169,10 @@
 %define VECT_SIZE 8
 %define HASH_BYTES 2
 
+[bits 64]
+default rel
+section .text
+
 global gen_icf_map_lh1_04
 func(gen_icf_map_lh1_04)
 	FUNC_SAVE

@@ -50,7 +50,7 @@ default rel
 ;;;         len = rdx
 ;;;    crc_init = r8
 
-global  crc32_iscsi_01:ISAL_SYM_TYPE_FUNCTION
+mk_global  crc32_iscsi_01, function
 crc32_iscsi_01:
 
 %ifidn __OUTPUT_FORMAT__, elf64

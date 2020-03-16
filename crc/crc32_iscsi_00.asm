@@ -153,7 +153,7 @@ default rel
 ;;;    crc_init = r8
 ;;;
 
-global  crc32_iscsi_00:ISAL_SYM_TYPE_FUNCTION
+mk_global  crc32_iscsi_00, function
 crc32_iscsi_00:
 
 %ifidn __OUTPUT_FORMAT__, elf64

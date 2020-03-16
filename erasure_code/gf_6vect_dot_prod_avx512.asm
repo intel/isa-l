@@ -215,7 +215,7 @@ default rel
 section .text
 
 align 16
-global gf_6vect_dot_prod_avx512:ISAL_SYM_TYPE_FUNCTION
+mk_global gf_6vect_dot_prod_avx512, function
 func(gf_6vect_dot_prod_avx512)
 	FUNC_SAVE
 	sub	len, 64

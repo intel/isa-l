@@ -94,6 +94,10 @@ stack_size		equ 5*8
 
 %xdefine METHOD hash_hist
 
+[bits 64]
+default rel
+section .text
+
 ; void isal_deflate_icf_finish ( isal_zstream *stream )
 ; arg 1: rcx: addr of stream
 global isal_deflate_icf_finish_ %+ METHOD %+ _01

@@ -122,7 +122,7 @@ default rel
 section .text
 
 align 16
-global pq_check_sse:ISAL_SYM_TYPE_FUNCTION
+mk_global  pq_check_sse, function
 func(pq_check_sse)
 	FUNC_SAVE
 	sub	vec, 3			;Keep as offset to last source
