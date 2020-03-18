@@ -113,14 +113,14 @@
 	vmovdqa	[rsp + 7*16], xmm13
 	vmovdqa	[rsp + 8*16], xmm14
 	vmovdqa	[rsp + 9*16], xmm15
-	save_reg	r12,  9*16 + 0*8
-	save_reg	r13,  9*16 + 1*8
-	save_reg	r14,  9*16 + 2*8
-	save_reg	r15,  9*16 + 3*8
-	save_reg	rdi,  9*16 + 4*8
-	save_reg	rsi,  9*16 + 5*8
-	save_reg	rbp,  9*16 + 6*8
-	save_reg	rbx,  9*16 + 7*8
+	save_reg	r12,  10*16 + 0*8
+	save_reg	r13,  10*16 + 1*8
+	save_reg	r14,  10*16 + 2*8
+	save_reg	r15,  10*16 + 3*8
+	save_reg	rdi,  10*16 + 4*8
+	save_reg	rsi,  10*16 + 5*8
+	save_reg	rbp,  10*16 + 6*8
+	save_reg	rbx,  10*16 + 7*8
 	end_prolog
 	mov	arg4, arg(4)
  %endmacro
@@ -136,14 +136,14 @@
 	vmovdqa	xmm13, [rsp + 7*16]
 	vmovdqa	xmm14, [rsp + 8*16]
 	vmovdqa	xmm15, [rsp + 9*16]
-	mov	r12,  [rsp + 9*16 + 0*8]
-	mov	r13,  [rsp + 9*16 + 1*8]
-	mov	r14,  [rsp + 9*16 + 2*8]
-	mov	r15,  [rsp + 9*16 + 3*8]
-	mov	rdi,  [rsp + 9*16 + 4*8]
-	mov	rsi,  [rsp + 9*16 + 5*8]
-	mov	rbp,  [rsp + 9*16 + 6*8]
-	mov	rbx,  [rsp + 9*16 + 7*8]
+	mov	r12,  [rsp + 10*16 + 0*8]
+	mov	r13,  [rsp + 10*16 + 1*8]
+	mov	r14,  [rsp + 10*16 + 2*8]
+	mov	r15,  [rsp + 10*16 + 3*8]
+	mov	rdi,  [rsp + 10*16 + 4*8]
+	mov	rsi,  [rsp + 10*16 + 5*8]
+	mov	rbp,  [rsp + 10*16 + 6*8]
+	mov	rbx,  [rsp + 10*16 + 7*8]
 	add	rsp, stack_size
  %endmacro
 %endif
