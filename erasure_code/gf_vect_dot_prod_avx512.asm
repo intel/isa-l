@@ -73,15 +73,15 @@
  %define func(x) proc_frame x
  %macro FUNC_SAVE 0
 	alloc_stack	stack_size
-	save_reg	r12,  9*16 + 0*8
-	save_reg	r15,  9*16 + 3*8
+	save_reg	r12,  0*8
+	save_reg	r15,  1*8
 	end_prolog
 	mov	arg4, arg(4)
  %endmacro
 
  %macro FUNC_RESTORE 0
-	mov	r12,  [rsp + 9*16 + 0*8]
-	mov	r15,  [rsp + 9*16 + 3*8]
+	mov	r12,  [rsp + 0*8]
+	mov	r15,  [rsp + 1*8]
 	add	rsp, stack_size
  %endmacro
 %endif
