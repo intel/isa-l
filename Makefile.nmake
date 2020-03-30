@@ -161,12 +161,17 @@ objs = \
 	bin\mem_zero_detect_sse.obj \
 	bin\mem_multibinary.obj
 
-INCLUDES  = -I./ -Ierasure_code/ -Iraid/ -Icrc/ -Iigzip/ -Iprograms/ -Imem/ -Iinclude/ -Itests/fuzz/ -Iexamples/ec/
-LINKFLAGS = /nologo
-CFLAGS   = -O2 -D NDEBUG /nologo -D_USE_MATH_DEFINES -Qstd=c99 $(INCLUDES) $(D)
-AFLAGS   = -f win64 $(INCLUDES) $(D)
-CC       = icl
-AS       = yasm
+INCLUDES   = -I./ -Ierasure_code/ -Iraid/ -Icrc/ -Iigzip/ -Iprograms/ -Imem/ -Iinclude/ -Itests/fuzz/ -Iexamples/ec/
+# Modern asm feature level, consider upgrading nasm/yasm before decreasing feature_level
+FEAT_FLAGS = -DHAVE_AS_KNOWS_AVX512 -DAS_FEATURE_LEVEL=10
+CFLAGS_REL = -O2 -DNDEBUG /Z7 /MD /Gy
+CFLAGS_DBG = -Od -DDEBUG /Z7 /MDd
+LINKFLAGS  = -nologo -incremental:no -debug
+CFLAGS     = $(CFLAGS_REL) -nologo -D_USE_MATH_DEFINES $(FEAT_FLAGS) $(INCLUDES) $(D)
+AFLAGS     = -f win64 $(FEAT_FLAGS) $(INCLUDES) $(D)
+CC         = cl
+# or CC    = icl -Qstd=c99
+AS         = nasm
 
 lib: bin static dll
 static: bin isa-l_static.lib
@@ -180,7 +185,7 @@ $?
 <<
 
 isa-l.dll: $(objs)
-	link -out:$@ -dll -def:isa-l.def @<<
+	link -out:$@ -dll -def:isa-l.def $(LINKFLAGS) @<<
 $?
 <<
 
@@ -302,8 +307,10 @@ clean:
 	-if exist bin\*.obj del bin\*.obj
 	-if exist isa-l_static.lib del isa-l_static.lib
 	-if exist *.exe del *.exe
+	-if exist *.pdb del *.pdb
 	-if exist isa-l.lib del isa-l.lib
 	-if exist isa-l.dll del isa-l.dll
+	-if exist isa-l.exp del isa-l.exp
 
 zlib.lib:
 igzip_perf.exe:  zlib.lib

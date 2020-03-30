@@ -11,12 +11,17 @@ Makefile.nmake: FORCE
 	@$(foreach o, $(subst /,\\,$(objs:.o=.obj)), printf " %s\n\t%s" \\ $(o) >> $@; )
 	@echo ''			>> $@
 	@echo ''			>> $@
-	@echo 'INCLUDES  = $(INCLUDE)'	>> $@
-	@echo 'LINKFLAGS = /nologo'	>> $@
-	@echo 'CFLAGS   = -O2 -D NDEBUG /nologo -D_USE_MATH_DEFINES -Qstd=c99 $$(INCLUDES) $$(D)'	>> $@
-	@echo 'AFLAGS   = -f win64 $$(INCLUDES) $$(D)'	>> $@
-	@echo 'CC       = icl'		>> $@
-	@echo 'AS       = yasm'		>> $@
+	@echo 'INCLUDES   = $(INCLUDE)'	>> $@
+	@echo '# Modern asm feature level, consider upgrading nasm/yasm before decreasing feature_level'	>> $@
+	@echo 'FEAT_FLAGS = -DHAVE_AS_KNOWS_AVX512 -DAS_FEATURE_LEVEL=10'	>> $@
+	@echo 'CFLAGS_REL = -O2 -DNDEBUG /Z7 /MD /Gy'		>> $@
+	@echo 'CFLAGS_DBG = -Od -DDEBUG /Z7 /MDd'			>> $@
+	@echo 'LINKFLAGS  = -nologo -incremental:no -debug'	>> $@
+	@echo 'CFLAGS     = $$(CFLAGS_REL) -nologo -D_USE_MATH_DEFINES $$(FEAT_FLAGS) $$(INCLUDES) $$(D)'	>> $@
+	@echo 'AFLAGS     = -f win64 $$(FEAT_FLAGS) $$(INCLUDES) $$(D)'	>> $@
+	@echo 'CC         = cl'			>> $@
+	@echo '# or CC    = icl -Qstd=c99'	>> $@
+	@echo 'AS         = nasm'		>> $@
 	@echo ''			>> $@
 	@echo 'lib: bin static dll'	>> $@
 	@echo 'static: bin isa-l_static.lib'	>> $@
@@ -30,7 +35,7 @@ Makefile.nmake: FORCE
 	@echo '<<'			>> $@
 	@echo ''			>> $@
 	@echo 'isa-l.dll: $$(objs)'	>> $@
-	@echo '	link -out:$$@ -dll -def:isa-l.def @<<'	>> $@
+	@echo '	link -out:$$@ -dll -def:isa-l.def $$(LINKFLAGS) @<<'	>> $@
 	@echo '$$?'			>> $@
 	@echo '<<'			>> $@
 	@echo ''			>> $@
@@ -90,8 +95,10 @@ endif
 	@echo '	-if exist bin\*.obj del bin\*.obj'	>> $@
 	@echo '	-if exist isa-l_static.lib del isa-l_static.lib'	>> $@
 	@echo '	-if exist *.exe del *.exe'		>> $@
+	@echo '	-if exist *.pdb del *.pdb'		>> $@
 	@echo '	-if exist isa-l.lib del isa-l.lib'	>> $@
 	@echo '	-if exist isa-l.dll del isa-l.dll'	>> $@
+	@echo '	-if exist isa-l.exp del isa-l.exp'	>> $@
 	@echo ''		>> $@
 	$(if $(findstring igzip,$(units)),@echo 'zlib.lib:'	>> $@ )
 	@cat $(foreach unit,$(units), $(unit)/Makefile.am)  | sed  \
