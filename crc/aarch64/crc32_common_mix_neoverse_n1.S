@@ -56,18 +56,14 @@
 
 	vzr		.req	v26
 
-	BUF		.req	x0
-	LEN		.req	x1
-	CRC		.req	x2
-	wCRC		.req	w2
 	const_addr	.req	x3
 	crc_blk_ptr	.req	x4
 	pmull_blk_ptr	.req	x5
 	crc_data0	.req	x6
 	crc_data1	.req	x7
-	crc_data2	.req	x19
-	crc_data3	.req	x20
-	wPmull		.req	w21
+	crc_data2	.req	x9
+	crc_data3	.req	x10
+	wPmull		.req	w11
 
 	data0		.req	x4
 	data1		.req	x5
@@ -383,7 +379,7 @@ start_final:
 	bge		.loop_64B
 
 .loop_16B:
-	cmp		x1, 15
+	cmp		LEN, 15
 	bls		.less_16B
 	ldp		data0, data1, [BUF],#16
 	sub		LEN,LEN,#16
