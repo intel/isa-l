@@ -54,9 +54,13 @@
 
 
 /**
- *	 uint32_t crc32_mix_neoverse_n1(uint32_t * BUF,
- *	                     size_t LEN, uint CRC)
+ *	 uint32_t crc32_mix_neoverse_n1(uint CRC ,uint8_t * BUF,
+ *	                     size_t LEN)
  */
+	BUF		.req	x1
+	LEN		.req	x2
+	CRC		.req	x0
+	wCRC		.req	w0
 	.align		6
 	.global		crc32_mix_neoverse_n1
 	.type		crc32_mix_neoverse_n1, %function

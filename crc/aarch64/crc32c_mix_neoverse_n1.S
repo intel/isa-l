@@ -53,9 +53,13 @@
 	crc32cb		\dst,\src,\data
 .endm
 /**
- *	 uint32_t crc32c_mix_neoverse_n1(uint32_t * BUF,
+ *	 uint32_t crc32c_mix_neoverse_n1(uint8_t * BUF,
  *	                     size_t LEN, uint CRC)
  */
+	BUF		.req	x0
+	LEN		.req	x1
+	CRC		.req	x2
+	wCRC		.req	w2
 	.align		6
 	.global		crc32c_mix_neoverse_n1
 	.type		crc32c_mix_neoverse_n1, %function
