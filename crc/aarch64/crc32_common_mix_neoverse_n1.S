@@ -64,6 +64,7 @@
 	crc_data2	.req	x9
 	crc_data3	.req	x10
 	wPmull		.req	w11
+	xPmull		.req	x11
 
 	data0		.req	x4
 	data1		.req	x5
@@ -117,27 +118,29 @@
 
 .macro	crc32_common_mix	poly_type
 	.set		MIX_BLK_SIZE,2048
-	add		pmull_blk_ptr,BUF,MIX_BLK_SIZE-512
+
 .ifc	\poly_type,crc32
 	mvn		wCRC,wCRC
 .endif
 	cmp		LEN,MIX_BLK_SIZE-1
-	mov		pmull_blk_ptr,BUF
-	bls		start_final
 	adr		const_addr, .Lconstants
+	bls		start_final
 	ld1		{k1k2_v.16b,k3k4_v.16b,poly_v.16b},[const_addr],#48
-	mov		crc_blk_ptr,BUF
 	movi		vzr.16b, #0
 	ld1		{k5k0_v.8b,mask_v.8b,fold_poly_v.8b},[const_addr]
 
 loop_2048:
-	mov		crc_blk_ptr,BUF
+	ld1		{tmp0_v.16b-tmp3_v.16b}, [BUF]
+	add		pmull_blk_ptr,BUF,0x40
+	add		crc_blk_ptr, BUF,512
+	mov		tmp4_v.16b,vzr.16b
+	fmov		tmp4_s, wCRC
 	ldp		crc_data0,crc_data1,[crc_blk_ptr],16
-	add		pmull_blk_ptr,pmull_blk_ptr,MIX_BLK_SIZE-512
-	ldp		crc_data2,crc_data3,[crc_blk_ptr],16
-	ld1		{tmp0_v.16b-tmp3_v.16b}, [pmull_blk_ptr], #0x40
+	eor		tmp0_v.16b,tmp0_v.16b,tmp4_v.16b
+	mov		wCRC, 0
 	sub		LEN,LEN,MIX_BLK_SIZE
 	cmp		LEN,MIX_BLK_SIZE
+	ldp		crc_data2,crc_data3,[crc_blk_ptr],16
 	crc32_u64	wCRC,wCRC,crc_data0
 	crc32_u64	wCRC,wCRC,crc_data1
 	ldp		crc_data0,crc_data1,[crc_blk_ptr],16
@@ -324,7 +327,8 @@ loop_2048:
 	eor		tmp0_v.16b, tmp0_v.16b, tmp1_v.16b
 	crc32_u64	wCRC,wCRC,crc_data2
 	crc32_u64	wCRC,wCRC,crc_data3
-	mov		wPmull, tmp0_v.s[1]
+	mov		tmp4_v.16b,vzr.16b
+	mov		tmp4_v.s[0], tmp0_v.s[1]
 	ldp		crc_data2,crc_data3,[crc_blk_ptr],16
 	crc32_u64	wCRC,wCRC,crc_data0
 	crc32_u64	wCRC,wCRC,crc_data1
@@ -350,13 +354,11 @@ loop_2048:
 	crc32_u64	wCRC,wCRC,crc_data2
 	crc32_u64	wCRC,wCRC,crc_data3
 
-	fmov		d0, CRC
-	mov		w6, 0
-	pmull		v0.1q, v0.1d, fold_poly_v.1d
-	fmov		CRC, d0
+	pmull		tmp4_v.1q, tmp4_v.1d, fold_poly_v.1d
 	add		BUF,BUF,MIX_BLK_SIZE
-	crc32_u64  	w6, w6, CRC
-	eor		wCRC, w6, wPmull
+	fmov		xPmull, tmp4_d
+	crc32_u64  	wPmull, wzr, xPmull
+	eor		wCRC, wPmull, wCRC
 	bge		loop_2048
 start_final:
 	cmp		LEN, 63

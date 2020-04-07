@@ -38,7 +38,7 @@
 	.octa		0x00000000dea713f10000000105ec76f0
 	.quad		0x00000000dd45aab8
 	.quad		0x00000000FFFFFFFF
-	.quad		0x00000000dd7e3b0c
+	.quad		0x000000009ef68d35
 
 .macro	crc32_u64	dst,src,data
 	crc32cx		\dst,\src,\data
