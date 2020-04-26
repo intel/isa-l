@@ -73,7 +73,7 @@ DEFINE_INTERFACE_DISPATCHER(crc32_iscsi)
 		case MICRO_ARCH_ID(ARM, NEOVERSE_N1):
 			return PROVIDER_INFO(crc32c_mix_neoverse_n1);
 		}
-		return PROVIDER_INFO(crc32_iscsi_refl_hw_fold);
+		return PROVIDER_INFO(crc32c_mix_default);
 	}
 
 	if (auxval & HWCAP_PMULL) {
@@ -98,7 +98,7 @@ DEFINE_INTERFACE_DISPATCHER(crc32_gzip_refl)
 		case MICRO_ARCH_ID(ARM, NEOVERSE_N1):
 			return PROVIDER_INFO(crc32_mix_neoverse_n1);
 		}
-		return PROVIDER_INFO(crc32_gzip_refl_hw_fold);
+		return PROVIDER_INFO(crc32_mix_default);
 	}
 
 	if (auxval & HWCAP_PMULL)

@@ -45,6 +45,8 @@ lsrc_aarch64 += \
 	crc/aarch64/crc64_iso_norm_pmull.S \
 	crc/aarch64/crc64_jones_refl_pmull.S \
 	crc/aarch64/crc64_jones_norm_pmull.S \
+	crc/aarch64/crc32_mix_default.S \
+	crc/aarch64/crc32c_mix_default.S \
 	crc/aarch64/crc32_mix_neoverse_n1.S \
 	crc/aarch64/crc32c_mix_neoverse_n1.S \
 	crc/aarch64/crc32_crc_ext_cortex_a72.S \
