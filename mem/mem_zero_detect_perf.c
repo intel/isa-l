@@ -34,8 +34,15 @@
 #include "test.h"
 #include "types.h"
 
+#ifndef CACHED_TEST
+#define TEST_LEN     64*1024*1024
+#define TEST_TYPE_STR "_cold"
+#else
 #define TEST_LEN     8*1024
 #define TEST_TYPE_STR "_warm"
+#endif
+
+int mem_zero_detect_base(void *buf, size_t n);
 
 int main(int argc, char *argv[])
 {
@@ -53,8 +60,12 @@ int main(int argc, char *argv[])
 	memset(buf, 0, TEST_LEN);
 	BENCHMARK(&start, BENCHMARK_TIME, val |= isal_zero_detect(buf, TEST_LEN));
 
-	printf("mem_zero_detect_perf" TEST_TYPE_STR ": ");
+	printf("isal_zero_detect_perf" TEST_TYPE_STR ": ");
 	perf_print(start, (long long)TEST_LEN);
 
+	BENCHMARK(&start, BENCHMARK_TIME, val |= mem_zero_detect_base(buf, TEST_LEN));
+
+	printf("mem_zero_detect_base_perf" TEST_TYPE_STR ": ");
+	perf_print(start, (long long)TEST_LEN);
 	return 0;
 }
