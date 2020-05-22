@@ -164,6 +164,7 @@ section .text
 ; arg 1: rcx: addr of stream
 global isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH
 isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
+	endbranch
 %ifidn __OUTPUT_FORMAT__, elf64
 	mov	rcx, rdi
 %endif

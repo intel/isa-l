@@ -51,7 +51,7 @@
  %endmacro
  %define SSTR   SLDR
  %define PS     8
- %define func(x) x:
+ %define func(x) x: endbranch
  %define FUNC_SAVE
  %define FUNC_RESTORE
 %endif
@@ -111,7 +111,7 @@
 
  %define PS 4
  %define LOG_PS 2
- %define func(x) x:
+ %define func(x) x: endbranch
  %define arg(x) [ebp + PS*2 + PS*x]
 
  %define trans   ecx			;trans is for the variables in stack

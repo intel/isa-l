@@ -256,6 +256,7 @@ section .text
 ; void isal_update_histogram
 global isal_update_histogram_ %+ ARCH
 isal_update_histogram_ %+ ARCH %+ :
+	endbranch
 	FUNC_SAVE
 
 %ifnidn	file_start, arg0

@@ -102,6 +102,7 @@ section .text
 ; arg 1: rcx: addr of stream
 global isal_deflate_icf_finish_ %+ METHOD %+ _01
 isal_deflate_icf_finish_ %+ METHOD %+ _01:
+	endbranch
 	PUSH_ALL	rbx, rsi, rdi, rbp, r12, r13, r14, r15
 	sub	rsp, stack_size
 

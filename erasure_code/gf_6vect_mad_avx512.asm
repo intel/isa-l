@@ -46,7 +46,7 @@
  %define tmp2   r10
  %define tmp3   r12	;must be saved and restored
  %define return rax
- %define func(x) x:
+ %define func(x) x: endbranch
  %macro FUNC_SAVE 0
 	push	r12
  %endmacro

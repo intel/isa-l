@@ -122,7 +122,7 @@ default rel
 	add	rsp, stack_size
 %endm
 %else
-%define func(x) x:
+%define func(x) x: endbranch
 %macro FUNC_SAVE 0
 	push r12
 	push r13
@@ -141,6 +141,7 @@ section .text
 
 global set_long_icf_fg_04
 func(set_long_icf_fg_04)
+	endbranch
 	FUNC_SAVE
 
 	lea	end_in, [next_in + arg3]

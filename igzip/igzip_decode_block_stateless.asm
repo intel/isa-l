@@ -465,6 +465,7 @@ section .text
 
 global decode_huffman_code_block_stateless_ %+ ARCH
 decode_huffman_code_block_stateless_ %+ ARCH %+ :
+	endbranch
 
 	FUNC_SAVE
 

@@ -60,6 +60,7 @@ section .text
 
 	global build_huff_tree
 build_huff_tree:
+	endbranch
 %ifidn __OUTPUT_FORMAT__, win64
 	push	rsi
 	push	rdi
@@ -108,6 +109,7 @@ build_huff_tree:
 align 32
 	global	build_heap
 build_heap:
+	endbranch
 %ifidn __OUTPUT_FORMAT__, win64
 	push	rsi
 	push	rdi

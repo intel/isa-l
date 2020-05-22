@@ -67,6 +67,7 @@ section .text
 align 16
 mk_global crc64_iso_refl_by8, function
 crc64_iso_refl_by8:
+	endbranch
         ; uint64_t c = crc ^ 0xffffffff,ffffffffL;
 	not arg1
         sub     rsp, VARIABLE_OFFSET

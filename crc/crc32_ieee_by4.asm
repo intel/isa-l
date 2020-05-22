@@ -76,6 +76,7 @@ section .text
 align 16
 mk_global 	crc32_ieee_by4, function
 crc32_ieee_by4:
+	endbranch
 
 	not arg1_low32
 

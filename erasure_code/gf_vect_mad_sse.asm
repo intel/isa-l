@@ -82,7 +82,7 @@
  %define return rax
  %define return.w eax
 
- %define func(x) x:
+ %define func(x) x: endbranch
  %define FUNC_SAVE
  %define FUNC_RESTORE
 %endif

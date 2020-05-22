@@ -177,6 +177,7 @@ section .text
 
 global encode_deflate_icf_ %+ ARCH
 encode_deflate_icf_ %+ ARCH:
+	endbranch
 	FUNC_SAVE
 
 %ifnidn ptr, arg1

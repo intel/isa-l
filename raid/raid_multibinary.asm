@@ -74,8 +74,10 @@ section .text
 ;;;;
 mk_global  pq_check, function
 pq_check_mbinit:
+	endbranch
 	call	pq_check_dispatch_init
 pq_check:
+	endbranch
 	jmp     qword [pq_check_dispatched]
 
 pq_check_dispatch_init:
@@ -106,8 +108,10 @@ pq_check_dispatch_init:
 ;;;;
 mk_global  xor_check, function
 xor_check_mbinit:
+	endbranch
 	call    xor_check_dispatch_init
 xor_check:
+	endbranch
 	jmp     qword [xor_check_dispatched]
 
 xor_check_dispatch_init:
