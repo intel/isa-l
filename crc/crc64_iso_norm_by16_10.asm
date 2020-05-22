@@ -71,6 +71,7 @@ section .text
 align 16
 mk_global FUNCTION_NAME, function
 FUNCTION_NAME:
+	endbranch
 	not		arg1
 	sub		rsp, VARIABLE_OFFSET
 

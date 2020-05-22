@@ -71,6 +71,7 @@ section .text
 align 16
 mk_global 	crc16_t10dif_copy_by4_02, function
 crc16_t10dif_copy_by4_02:
+	endbranch
 
 	; adjust the 16-bit initial_crc value, scale it to 32 bits
 	shl	arg1_low32, 16

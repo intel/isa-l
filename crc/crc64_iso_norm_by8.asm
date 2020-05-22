@@ -63,6 +63,7 @@ section .text
 align 16
 mk_global 	crc64_iso_norm_by8, function
 crc64_iso_norm_by8:
+	endbranch
 
 	not	arg1      ;~init_crc
 

@@ -200,8 +200,21 @@ section .note.GNU-stack noalloc noexec nowrite progbits
 section .text
 %endif
 %ifidn __OUTPUT_FORMAT__,elf64
+ %define __x86_64__
 section .note.GNU-stack noalloc noexec nowrite progbits
 section .text
+%endif
+%ifidn __OUTPUT_FORMAT__,win64
+ %define __x86_64__
+%endif
+%ifidn __OUTPUT_FORMAT__,macho64
+ %define __x86_64__
+%endif
+
+%ifdef __x86_64__
+ %define endbranch db 0xf3, 0x0f, 0x1e, 0xfa
+%else
+ %define endbranch db 0xf3, 0x0f, 0x1e, 0xfb
 %endif
 
 %ifdef REL_TEXT

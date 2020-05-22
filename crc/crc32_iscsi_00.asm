@@ -155,6 +155,7 @@ default rel
 
 mk_global  crc32_iscsi_00, function
 crc32_iscsi_00:
+	endbranch
 
 %ifidn __OUTPUT_FORMAT__, elf64
 %define bufp            rdi

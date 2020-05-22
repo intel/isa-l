@@ -49,7 +49,7 @@
  %define PS     8
  %define LOG_PS 3
 
- %define func(x) x:
+ %define func(x) x: endbranch
  %define FUNC_SAVE
  %define FUNC_RESTORE
 %endif

@@ -88,6 +88,7 @@ section .text
 align 16
 mk_global  crc32_gzip_refl_by8_02, function
 crc32_gzip_refl_by8_02:
+	endbranch
 	not		arg1_low32
 	sub		rsp, VARIABLE_OFFSET
 

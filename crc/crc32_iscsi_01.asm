@@ -52,6 +52,7 @@ default rel
 
 mk_global  crc32_iscsi_01, function
 crc32_iscsi_01:
+	endbranch
 
 %ifidn __OUTPUT_FORMAT__, elf64
 %define bufp            rdi
@@ -214,6 +215,7 @@ non_prefetch:
 %rep 128-1
 
 CONCAT(crc_,i,:)
+	endbranch
 	crc32	crc_init,  qword [block_0 - i*8]
 	crc32	crc1,      qword [block_1 - i*8]
 	crc32	crc2,      qword [block_2 - i*8]

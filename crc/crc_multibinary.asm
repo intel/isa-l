@@ -81,8 +81,10 @@ section .text
 ;;;;
 mk_global crc32_iscsi, function
 crc32_iscsi_mbinit:
+	endbranch
 	call	crc32_iscsi_dispatch_init
 crc32_iscsi:
+	endbranch
 	jmp	qword [crc32_iscsi_dispatched]
 
 crc32_iscsi_dispatch_init:
@@ -115,8 +117,10 @@ crc32_iscsi_dispatch_init:
 ;;;;
 mk_global crc32_ieee, function
 crc32_ieee_mbinit:
+	endbranch
 	call	crc32_ieee_dispatch_init
 crc32_ieee:
+	endbranch
 	jmp	qword [crc32_ieee_dispatched]
 
 crc32_ieee_dispatch_init:
@@ -194,8 +198,10 @@ crc32_ieee_dispatch_init:
 ;;;;
 mk_global crc16_t10dif, function
 crc16_t10dif_mbinit:
+	endbranch
 	call	crc16_t10dif_dispatch_init
 crc16_t10dif:
+	endbranch
 	jmp	qword [crc16_t10dif_dispatched]
 
 crc16_t10dif_dispatch_init:

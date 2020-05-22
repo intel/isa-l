@@ -47,7 +47,7 @@
  %define arg5  r9
  %define tmp   r11
  %define tmp3  arg4
- %define func(x) x:
+ %define func(x) x: endbranch
  %define return rax
  %define FUNC_SAVE
  %define FUNC_RESTORE
