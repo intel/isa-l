@@ -78,7 +78,7 @@ if test x"$is_x86" = x"yes"; then
 		   intel_cet_enabled=yes],
 		  [AC_MSG_RESULT([no])
 		   intel_cet_enabled=no])
-  AM_CONDITIONAL(INTEL_CET_ENABLED, [test x"$intel_cet_enabled" = x"yes"])
+
 
   # Pick an assembler yasm or nasm
   if test x"$AS" = x""; then
@@ -261,6 +261,7 @@ else
   AM_CONDITIONAL(DARWIN, test "x" = "y")
 fi
 
+AM_CONDITIONAL(INTEL_CET_ENABLED, [test x"$intel_cet_enabled" = x"yes"])
 
 # Check for header files
 AC_CHECK_HEADERS([limits.h stdint.h stdlib.h string.h])
