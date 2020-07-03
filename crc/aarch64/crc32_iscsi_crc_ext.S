@@ -32,38 +32,34 @@
 	.arch		armv8-a+crc
 
 
-#include "crc32_common_crc_ext_cortex_a72.S"
-
-	BUF		.req	x1
-	LEN		.req	x2
-	wCRC		.req	w0
+#include "crc32_aarch64_common.h"
+	BUF		.req	x0
+	LEN		.req	x1
+	wCRC		.req	w2
 	data0		.req	x4
 	data1		.req	x5
 	data2		.req	x6
 	data3		.req	x7
 	wdata		.req	w3
 .macro	crc32_u64	dst,src,data
-	crc32x		\dst,\src,\data
+	crc32cx		\dst,\src,\data
 .endm
 .macro	crc32_u32	dst,src,data
-	crc32w		\dst,\src,\data
+	crc32cw		\dst,\src,\data
 .endm
 .macro	crc32_u16	dst,src,data
-	crc32h		\dst,\src,\data
+	crc32ch		\dst,\src,\data
 .endm
 .macro	crc32_u8	dst,src,data
-	crc32b		\dst,\src,\data
+	crc32cb		\dst,\src,\data
 .endm
 
 	/**
-	 * uint32_t crc32_crc_ext_cortex_a72(
-	 *                  uint32_t init_crc,
-	 *                  const unsigned char *buf,
-	 *                  uint64_t len);
+	 * uint32_t crc32_iscsi_crc_ext(const unsigned char *BUF,
+	 *                  uint64_t LEN,uint32_t wCRC);
 	 */
-	.global	crc32_crc_ext_cortex_a72
-	.type	crc32_crc_ext_cortex_a72, %function
-crc32_crc_ext_cortex_a72:
-	crc32_hw_common	crc32
-	ret
-	.size	crc32_crc_ext_cortex_a72, .-crc32_crc_ext_cortex_a72
+	.global	crc32_iscsi_crc_ext
+	.type	crc32_iscsi_crc_ext, %function
+crc32_iscsi_crc_ext:
+	crc32_hw_common	crc32c
+	.size	crc32_iscsi_crc_ext, .-crc32_iscsi_crc_ext

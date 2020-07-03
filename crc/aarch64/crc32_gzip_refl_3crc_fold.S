@@ -26,32 +26,70 @@
 #  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
+#include "crc32_aarch64_common.h"
+	.text
+	.align		6
+	.arch		armv8-a+crc+crypto
+.macro	crc32_u64	dst,src,data
+	crc32x		\dst,\src,\data
+.endm
+.macro	crc32_u32	dst,src,data
+	crc32w		\dst,\src,\data
+.endm
+.macro	crc32_u16	dst,src,data
+	crc32h		\dst,\src,\data
+.endm
+.macro	crc32_u8	dst,src,data
+	crc32b		\dst,\src,\data
+.endm
+.macro	declare_var_vector_reg name:req,reg:req
+	q\name	.req	q\reg
+	v\name	.req	v\reg
+	s\name	.req	s\reg
+	d\name	.req	d\reg
+.endm
 
-lsrc_aarch64 += \
-	crc/aarch64/crc_multibinary_arm.S	\
-	crc/aarch64/crc_aarch64_dispatcher.c
+	BUF		.req	x1
+	ptr_crc0	.req	x1
+	LEN		.req	x2
+	wCRC		.req	w0
+	crc0		.req	w0
+	xcrc0		.req	x0
 
-lsrc_aarch64 += \
-	crc/aarch64/crc16_t10dif_pmull.S \
-	crc/aarch64/crc16_t10dif_copy_pmull.S \
-	crc/aarch64/crc32_ieee_norm_pmull.S \
-	crc/aarch64/crc64_ecma_refl_pmull.S \
-	crc/aarch64/crc64_ecma_norm_pmull.S \
-	crc/aarch64/crc64_iso_refl_pmull.S \
-	crc/aarch64/crc64_iso_norm_pmull.S \
-	crc/aarch64/crc64_jones_refl_pmull.S \
-	crc/aarch64/crc64_jones_norm_pmull.S
+	crc1		.req	w3
+	crc2		.req	w4
+	xcrc1		.req	x3
+	const_adr	.req	x3
+	ptr_crc1	.req	x6
+	ptr_crc2	.req	x7
+	crc0_data0	.req	x9
+	crc0_data1	.req	x10
+	crc1_data0	.req	x11
+	crc1_data1	.req	x12
+	crc2_data0	.req	x13
+	crc2_data1	.req	x14
 
-#CRC32/CRC32C for micro-architecture
-lsrc_aarch64 += \
-	crc/aarch64/crc32_iscsi_refl_pmull.S \
-	crc/aarch64/crc32_gzip_refl_pmull.S \
-	crc/aarch64/crc32_iscsi_3crc_fold.S \
-	crc/aarch64/crc32_gzip_refl_3crc_fold.S \
-	crc/aarch64/crc32_iscsi_crc_ext.S \
-	crc/aarch64/crc32_gzip_refl_crc_ext.S \
-	crc/aarch64/crc32_mix_default.S \
-	crc/aarch64/crc32c_mix_default.S \
-	crc/aarch64/crc32_mix_neoverse_n1.S \
-	crc/aarch64/crc32c_mix_neoverse_n1.S
+	wdata		.req	w3
+	data0		.req	x3
+	data1		.req	x4
+	data2		.req	x5
+	data3		.req	x6
 
+	declare_var_vector_reg	tmp0,0
+	declare_var_vector_reg	tmp1,1
+	declare_var_vector_reg	const0,2
+	declare_var_vector_reg	const1,3
+
+/**
+	uint32_t crc32_gzip_refl(
+		uint32_t wCRC,
+		const unsigned char *BUF,
+		uint64_t LEN
+		);
+*/
+
+	.global	crc32_gzip_refl_3crc_fold
+	.type	crc32_gzip_refl_3crc_fold, %function
+crc32_gzip_refl_3crc_fold:
+	crc32_3crc_fold	crc32
+	.size	crc32_gzip_refl_3crc_fold, .-crc32_gzip_refl_3crc_fold

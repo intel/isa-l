@@ -27,31 +27,71 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
-lsrc_aarch64 += \
-	crc/aarch64/crc_multibinary_arm.S	\
-	crc/aarch64/crc_aarch64_dispatcher.c
 
-lsrc_aarch64 += \
-	crc/aarch64/crc16_t10dif_pmull.S \
-	crc/aarch64/crc16_t10dif_copy_pmull.S \
-	crc/aarch64/crc32_ieee_norm_pmull.S \
-	crc/aarch64/crc64_ecma_refl_pmull.S \
-	crc/aarch64/crc64_ecma_norm_pmull.S \
-	crc/aarch64/crc64_iso_refl_pmull.S \
-	crc/aarch64/crc64_iso_norm_pmull.S \
-	crc/aarch64/crc64_jones_refl_pmull.S \
-	crc/aarch64/crc64_jones_norm_pmull.S
+	.text
+	.align		6
+	.arch		armv8-a+crc+crypto
+#include "crc32_aarch64_common.h"
+.macro	crc32_u64	dst,src,data
+	crc32cx		\dst,\src,\data
+.endm
+.macro	crc32_u32	dst,src,data
+	crc32cw		\dst,\src,\data
+.endm
+.macro	crc32_u16	dst,src,data
+	crc32ch		\dst,\src,\data
+.endm
+.macro	crc32_u8	dst,src,data
+	crc32cb		\dst,\src,\data
+.endm
+.macro	declare_var_vector_reg name:req,reg:req
+	q\name	.req	q\reg
+	v\name	.req	v\reg
+	s\name	.req	s\reg
+	d\name	.req	d\reg
+.endm
 
-#CRC32/CRC32C for micro-architecture
-lsrc_aarch64 += \
-	crc/aarch64/crc32_iscsi_refl_pmull.S \
-	crc/aarch64/crc32_gzip_refl_pmull.S \
-	crc/aarch64/crc32_iscsi_3crc_fold.S \
-	crc/aarch64/crc32_gzip_refl_3crc_fold.S \
-	crc/aarch64/crc32_iscsi_crc_ext.S \
-	crc/aarch64/crc32_gzip_refl_crc_ext.S \
-	crc/aarch64/crc32_mix_default.S \
-	crc/aarch64/crc32c_mix_default.S \
-	crc/aarch64/crc32_mix_neoverse_n1.S \
-	crc/aarch64/crc32c_mix_neoverse_n1.S
+	BUF		.req	x0
+	LEN		.req	x1
+	wCRC		.req	w2
+	crc0		.req	w2
+	crc1		.req	w3
+	crc2		.req	w4
+	xcrc0		.req	x2
+	xcrc1		.req	x3
+	const_adr	.req	x3
+	ptr_crc0	.req	x0
+	ptr_crc1	.req	x6
+	ptr_crc2	.req	x7
+	crc0_data0	.req	x9
+	crc0_data1	.req	x10
+	crc1_data0	.req	x11
+	crc1_data1	.req	x12
+	crc2_data0	.req	x13
+	crc2_data1	.req	x14
 
+	wdata		.req	w3
+	data0		.req	x3
+	data1		.req	x4
+	data2		.req	x5
+	data3		.req	x6
+
+	declare_var_vector_reg	tmp0,0
+	declare_var_vector_reg	tmp1,1
+	declare_var_vector_reg	const0,2
+	declare_var_vector_reg	const1,3
+
+/**
+	unsigned int crc32_iscsi(
+		unsigned char *BUF,
+		int LEN,
+		unsigned int wCRC
+	);
+
+*/
+
+	.global	crc32_iscsi_3crc_fold
+	.type	crc32_iscsi_3crc_fold, %function
+crc32_iscsi_3crc_fold:
+	crc32_3crc_fold		crc32c
+	.size	crc32_iscsi_3crc_fold, .-crc32_iscsi_3crc_fold
