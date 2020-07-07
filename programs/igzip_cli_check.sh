@@ -77,6 +77,22 @@ cat $TEST_FILE | $IGZIP | $IGZIP -d | $DIFF $TEST_FILE - || ret=1
 cat $TEST_FILE | $IGZIP - | $IGZIP -d - | $DIFF $TEST_FILE - || ret=1
 pass_check $ret "Piping compression and decompression"
 
+# Test multiple concatenated gzip files
+ret=0
+(for i in `seq 3`; do $IGZIP -c $TEST_FILE ; done) | $IGZIP -t || ret=1
+pass_check $ret "Multiple gzip concatenated files"
+
+if command -V md5sum >/dev/null 2>&1; then
+    sum1=$((for i in `seq 15`; do $IGZIP -c $TEST_FILE; done) |  $IGZIP -cd | md5sum)
+    sum2=$((for i in `seq 15`; do cat $TEST_FILE; done) | md5sum)
+    [[ "$sum1" == "$sum2" ]] && ret=0 || ret=1
+    pass_check $ret "Multiple large gzip concat test"
+    clear_dir
+else
+    echo "Skip:  Multiple large gzip concat test"
+fi
+
+
 #Test outifle options
 $IGZIP $TEST_FILE -o $file2$ds && $IGZIP $file2$ds -d -o $file1 && \
     test -f $file2$ds && test -f $file1 && $DIFF $TEST_FILE $file1

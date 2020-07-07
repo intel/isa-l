@@ -817,6 +817,7 @@ int decompress_file(void)
 	int suffix_index = 0;
 	uint32_t file_time;
 
+	// Allocate mem and setup to hold gzip header info
 	if (infile_name_len == stdin_file_name_len &&
 	    infile_name != NULL &&
 	    memcmp(infile_name, stdin_file_name, infile_name_len) == 0) {
@@ -884,6 +885,7 @@ int decompress_file(void)
 	state.next_in = inbuf;
 	state.avail_in = fread_safe(state.next_in, 1, inbuf_size, in, infile_name);
 
+	// Actually read and save the header info
 	ret = isal_read_gzip_header(&state, &gz_hdr);
 	if (ret != ISAL_DECOMP_OK) {
 		log_print(ERROR, "igzip: Error invalid gzip header found for file %s\n",
@@ -915,6 +917,7 @@ int decompress_file(void)
 			goto decompress_file_cleanup;
 	}
 
+	// Start reading in compressed data and decompress
 	do {
 		if (state.avail_in == 0) {
 			state.next_in = inbuf;
@@ -936,7 +939,55 @@ int decompress_file(void)
 		if (out != NULL)
 			fwrite_safe(outbuf, 1, state.next_out - outbuf, out, outfile_name);
 
-	} while (!feof(in) || state.avail_out == 0);
+	} while (state.block_state != ISAL_BLOCK_FINISH	// while not done
+		 && (!feof(in) || state.avail_out == 0)	// and work to do
+	    );
+
+	// Add the following to look for and decode additional concatenated files
+	if (!feof(in) && state.avail_in == 0) {
+		state.next_in = inbuf;
+		state.avail_in = fread_safe(state.next_in, 1, inbuf_size, in, infile_name);
+	}
+
+	while (state.avail_in > 0 && state.next_in[0] == 31) {
+		// Look for magic numbers for gzip header. Follows the gzread() decision
+		// whether to treat as trailing junk
+		if (state.avail_in > 1 && state.next_in[1] != 139)
+			break;
+
+		isal_inflate_reset(&state);
+		state.crc_flag = ISAL_GZIP;	// Let isal_inflate() process extra headers
+		do {
+			if (state.avail_in == 0 && !feof(in)) {
+				state.next_in = inbuf;
+				state.avail_in =
+				    fread_safe(state.next_in, 1, inbuf_size, in, infile_name);
+			}
+
+			state.next_out = outbuf;
+			state.avail_out = outbuf_size;
+
+			ret = isal_inflate(&state);
+			if (ret != ISAL_DECOMP_OK) {
+				log_print(ERROR,
+					  "igzip: Error while decompressing extra concatenated"
+					  "gzip files on %s\n", infile_name);
+				goto decompress_file_cleanup;
+			}
+
+			if (out != NULL)
+				fwrite_safe(outbuf, 1, state.next_out - outbuf, out,
+					    outfile_name);
+
+		} while (state.block_state != ISAL_BLOCK_FINISH
+			 && (!feof(in) || state.avail_out == 0));
+
+		if (!feof(in) && state.avail_in == 0) {
+			state.next_in = inbuf;
+			state.avail_in =
+			    fread_safe(state.next_in, 1, inbuf_size, in, infile_name);
+		}
+	}
 
 	if (state.block_state != ISAL_BLOCK_FINISH)
 		log_print(ERROR, "igzip: Error %s does not contain a complete gzip file\n",
