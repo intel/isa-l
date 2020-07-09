@@ -1749,6 +1749,7 @@ void isal_inflate_reset(struct inflate_state *state)
 	state->write_overflow_len = 0;
 	state->copy_overflow_length = 0;
 	state->copy_overflow_distance = 0;
+	state->wrapper_flag = 0;
 	state->tmp_in_size = 0;
 	state->tmp_out_processed = 0;
 	state->tmp_out_valid = 0;
@@ -1786,21 +1787,24 @@ static inline uint32_t fixed_size_read(struct inflate_state *state,
 }
 
 static inline uint32_t buffer_header_copy(struct inflate_state *state, uint32_t in_len,
-					  uint8_t * buf, uint32_t buf_len, uint32_t buf_error)
+					  uint8_t * buf, uint32_t buffer_len, uint32_t offset,
+					  uint32_t buf_error)
 {
 	uint32_t len = in_len;
+	uint32_t buf_len = buffer_len - offset;
+
 	if (len > state->avail_in)
 		len = state->avail_in;
 
 	if (buf != NULL && buf_len < len) {
-		memcpy(buf, state->next_in, buf_len);
+		memcpy(&buf[offset], state->next_in, buf_len);
 		state->next_in += buf_len;
 		state->avail_in -= buf_len;
 		state->count = in_len - buf_len;
 		return buf_error;
 	} else {
 		if (buf != NULL)
-			memcpy(buf, state->next_in, len);
+			memcpy(&buf[offset], state->next_in, len);
 		state->next_in += len;
 		state->avail_in -= len;
 		state->count = in_len - len;
@@ -1813,9 +1817,10 @@ static inline uint32_t buffer_header_copy(struct inflate_state *state, uint32_t 
 }
 
 static inline uint32_t string_header_copy(struct inflate_state *state,
-					  char *str_buf, uint32_t str_len, uint32_t str_error)
+					  char *str_buf, uint32_t str_len,
+					  uint32_t offset, uint32_t str_error)
 {
-	uint32_t len, max_len = str_len;
+	uint32_t len, max_len = str_len - offset;
 
 	if (max_len > state->avail_in || str_buf == NULL)
 		max_len = state->avail_in;
@@ -1823,13 +1828,13 @@ static inline uint32_t string_header_copy(struct inflate_state *state,
 	len = strnlen((char *)state->next_in, max_len);
 
 	if (str_buf != NULL)
-		memcpy(str_buf, state->next_in, len);
+		memcpy(&str_buf[offset], state->next_in, len);
 
 	state->next_in += len;
 	state->avail_in -= len;
 	state->count += len;
 
-	if (str_buf != NULL && len == str_len)
+	if (str_buf != NULL && len == (str_len - offset))
 		return str_error;
 	else if (state->avail_in <= 0)
 		return ISAL_END_INPUT;
@@ -2002,9 +2007,9 @@ int isal_read_gzip_header(struct inflate_state *state, struct isal_gzip_header *
 	case ISAL_GZIP_EXTRA:
 			offset = gz_hdr->extra_len - count;
 			ret =
-			    buffer_header_copy(state, count, gz_hdr->extra + offset,
-					       gz_hdr->extra_buf_len - offset,
-					       ISAL_EXTRA_OVERFLOW);
+			    buffer_header_copy(state, count, gz_hdr->extra,
+					       gz_hdr->extra_buf_len,
+					       offset, ISAL_EXTRA_OVERFLOW);
 
 			if (ret) {
 				state->block_state = ISAL_GZIP_EXTRA;
@@ -2017,9 +2022,9 @@ int isal_read_gzip_header(struct inflate_state *state, struct isal_gzip_header *
 		if (flags & NAME_FLAG) {
 	case ISAL_GZIP_NAME:
 			offset = state->count;
-			ret = string_header_copy(state, gz_hdr->name + offset,
-						 gz_hdr->name_buf_len - offset,
-						 ISAL_NAME_OVERFLOW);
+			ret = string_header_copy(state, gz_hdr->name,
+						 gz_hdr->name_buf_len,
+						 offset, ISAL_NAME_OVERFLOW);
 			if (ret) {
 				state->block_state = ISAL_GZIP_NAME;
 				break;
@@ -2029,9 +2034,9 @@ int isal_read_gzip_header(struct inflate_state *state, struct isal_gzip_header *
 		if (flags & COMMENT_FLAG) {
 	case ISAL_GZIP_COMMENT:
 			offset = state->count;
-			ret = string_header_copy(state, gz_hdr->comment + offset,
-						 gz_hdr->comment_buf_len - offset,
-						 ISAL_COMMENT_OVERFLOW);
+			ret = string_header_copy(state, gz_hdr->comment,
+						 gz_hdr->comment_buf_len,
+						 offset, ISAL_COMMENT_OVERFLOW);
 			if (ret) {
 				state->block_state = ISAL_GZIP_COMMENT;
 				break;
@@ -2147,11 +2152,12 @@ int isal_inflate_stateless(struct inflate_state *state)
 
 	if (state->crc_flag == IGZIP_GZIP) {
 		struct isal_gzip_header gz_hdr;
+		isal_gzip_header_init(&gz_hdr);
 		ret = isal_read_gzip_header(state, &gz_hdr);
 		if (ret)
 			return ret;
 	} else if (state->crc_flag == IGZIP_ZLIB) {
-		struct isal_zlib_header z_hdr;
+		struct isal_zlib_header z_hdr = { 0 };
 		ret = isal_read_zlib_header(state, &z_hdr);
 		if (ret)
 			return ret;
@@ -2219,13 +2225,14 @@ int isal_inflate(struct inflate_state *state)
 
 	if (!state->wrapper_flag && state->crc_flag == IGZIP_GZIP) {
 		struct isal_gzip_header gz_hdr;
+		isal_gzip_header_init(&gz_hdr);
 		ret = isal_read_gzip_header(state, &gz_hdr);
 		if (ret < 0)
 			return ret;
 		else if (ret > 0)
 			return ISAL_DECOMP_OK;
 	} else if (!state->wrapper_flag && state->crc_flag == IGZIP_ZLIB) {
-		struct isal_zlib_header z_hdr;
+		struct isal_zlib_header z_hdr = { 0 };
 		ret = isal_read_zlib_header(state, &z_hdr);
 		if (ret < 0)
 			return ret;
