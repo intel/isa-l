@@ -170,6 +170,11 @@ msg+=$'Custom hufftable build: Pass\n'
 
 $MAKE -f Makefile.unx clean
 
+test_start "nmake_file_consistency"
+$MAKE -f Makefile.unx test_nmake_file
+test_end "nmake_file_consistency" $?
+msg+=$'Nmake file consistency: Pass\n'
+
 # noarch build
 test_start "noarch_build"
 time $MAKE -f Makefile.unx -j $cpus arch=noarch $build_opt

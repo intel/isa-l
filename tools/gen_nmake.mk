@@ -1,11 +1,18 @@
+# Regenerate nmake file from makefiles or check its consistency
+
+test_nmake_file: tst.nmake
+	@diff -u Makefile.nmake tst.nmake || (echo Potential nmake consistency issue; $(RM) tst.nmake; false;)
+	@echo No nmake consistency issues
+	@$(RM) tst.nmake
+
 FORCE:
-Makefile.nmake: FORCE
+Makefile.nmake tst.nmake: FORCE
 	@echo Regenerating $@
 	@echo '########################################################################' > $@
 	@cat LICENSE | sed -e 's/^/#/ ' >> $@
 	@echo '########################################################################' >> $@
 	@echo ''			>> $@
-	@echo '# This file can be auto-regenerated with $$make -f Makefile.unx $@' >> $@
+	@echo '# This file can be auto-regenerated with $$make -f Makefile.unx Makefile.nmake' >> $@
 	@echo ''			>> $@
 	@echo -n 'objs =' >> $@
 	@$(foreach o, $(subst /,\\,$(objs:.o=.obj)), printf " %s\n\t%s" \\ $(o) >> $@; )
