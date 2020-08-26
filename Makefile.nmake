@@ -119,6 +119,7 @@ objs = \
 	bin\crc32_ieee_by16_10.obj \
 	bin\crc32_iscsi_01.obj \
 	bin\crc32_iscsi_00.obj \
+	bin\crc32_iscsi_by16_10.obj \
 	bin\crc_multibinary.obj \
 	bin\crc64_multibinary.obj \
 	bin\crc64_ecma_refl_by8.obj \
