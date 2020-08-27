@@ -171,7 +171,7 @@ msg+=$'Custom hufftable build: Pass\n'
 $MAKE -f Makefile.unx clean
 
 test_start "nmake_file_consistency"
-$MAKE -f Makefile.unx test_nmake_file
+$MAKE -f Makefile.unx host_cpu="x86_64" test_nmake_file
 test_end "nmake_file_consistency" $?
 msg+=$'Nmake file consistency: Pass\n'
 
