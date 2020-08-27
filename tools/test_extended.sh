@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-
+# disable shellcheck from https://www.shellcheck.net/
+# shellcheck disable=SC1090,SC2034,SC2046,SC2089,SC2090,SC2146,SC2086
+# shellcheck disable=SC2155,SC2004,SC2006,SC2209
 # Extended tests: Run a few more options other than make check
 
 set -xe #exit on fail
@@ -170,10 +172,12 @@ msg+=$'Custom hufftable build: Pass\n'
 
 $MAKE -f Makefile.unx clean
 
-test_start "nmake_file_consistency"
-$MAKE -f Makefile.unx test_nmake_file
-test_end "nmake_file_consistency" $?
-msg+=$'Nmake file consistency: Pass\n'
+if [ $(uname -m) == "x86_64" ];then
+	test_start "nmake_file_consistency"
+	$MAKE -f Makefile.unx test_nmake_file
+	test_end "nmake_file_consistency" $?
+	msg+=$'Nmake file consistency: Pass\n'
+fi
 
 # noarch build
 test_start "noarch_build"
