@@ -314,6 +314,7 @@ struct isal_mod_hist {
 #define IGZIP_NO_HIST 0
 #define IGZIP_HIST 1
 #define IGZIP_DICT_HIST 2
+#define IGZIP_DICT_HASH_SET 3
 
 /** @brief Holds Bit Buffer information*/
 struct BitBuf2 {
@@ -684,6 +685,58 @@ void isal_deflate_stateless_init(struct isal_zstream *stream);
  *          ISAL_INVALID_STATE (dictionary could not be set)
  */
 int isal_deflate_set_dict(struct isal_zstream *stream, uint8_t *dict, uint32_t dict_len);
+
+/** @brief Structure for holding processed dictionary information */
+
+struct isal_dict {
+	uint32_t params;
+	uint32_t level;
+	uint32_t hist_size;
+	uint32_t hash_size;
+	uint8_t history[ISAL_DEF_HIST_SIZE];
+	uint16_t hashtable[IGZIP_LVL3_HASH_SIZE];
+};
+
+/**
+ * @brief Process dictionary to reuse later
+ *
+ * Processes a dictionary so that the generated output can be reused to reset a
+ * new deflate stream more quickly than isal_deflate_set_dict() alone. This
+ * function is paired with isal_deflate_reset_dict() when using the same
+ * dictionary on multiple deflate objects. The stream.level must be set prior to
+ * calling this function to process the dictionary correctly. If the dictionary
+ * is longer than IGZIP_HIST_SIZE, only the last IGZIP_HIST_SIZE bytes will be
+ * used.
+ *
+ * @param stream Structure holding state information on the compression streams.
+ * @param dict_str: Structure to hold processed dictionary info to reuse later.
+ * @param dict: Array containing dictionary to use.
+ * @param dict_len: Length of dict.
+ * @returns COMP_OK,
+ *          ISAL_INVALID_STATE (dictionary could not be processed)
+ */
+int isal_deflate_process_dict(struct isal_zstream *stream, struct isal_dict *dict_str,
+			uint8_t *dict, uint32_t dict_len);
+
+/**
+ * @brief Reset compression dictionary to use
+ *
+ * Similar to isal_deflate_set_dict() but on pre-processed dictionary
+ * data. Pairing with isal_deflate_process_dict() can reduce the processing time
+ * on subsequent compression with dictionary especially on small files.
+ *
+ * Like isal_deflate_set_dict(), this function is to be called after
+ * isal_deflate_init, or after completing a SYNC_FLUSH or FULL_FLUSH and before
+ * the next call do isal_deflate. Changing compression level between dictionary
+ * process and reset will cause return of ISAL_INVALID_STATE.
+ *
+ * @param stream Structure holding state information on the compression streams.
+ * @param dict_str: Structure with pre-processed dictionary info.
+ * @returns COMP_OK,
+ *          ISAL_INVALID_STATE or other (dictionary could not be reset)
+ */
+int isal_deflate_reset_dict(struct isal_zstream *stream, struct isal_dict *dict_str);
+
 
 /**
  * @brief Fast data (deflate) compression for storage applications.

@@ -113,3 +113,5 @@ isal_write_zlib_header          @108
 isal_zero_detect                @109
 isal_gzip_header_init           @110
 isal_adler32                    @111
+isal_deflate_process_dict       @112
+isal_deflate_reset_dict         @113

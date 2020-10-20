@@ -109,17 +109,21 @@ int usage(void)
 void deflate_perf(struct isal_zstream *stream, uint8_t * inbuf, size_t infile_size,
 		  size_t inbuf_size, uint8_t * outbuf, size_t outbuf_size, int level,
 		  uint8_t * level_buf, int level_size, uint32_t hist_bits, uint8_t * dictbuf,
-		  size_t dictfile_size, struct isal_hufftables *hufftables_custom)
+		  size_t dictfile_size, struct isal_dict *dict_str,
+		  struct isal_hufftables *hufftables_custom)
 {
 	int avail_in;
 	isal_deflate_init(stream);
-	if (dictbuf != NULL)
-		isal_deflate_set_dict(stream, dictbuf, dictfile_size);
-	stream->end_of_stream = 0;
-	stream->flush = NO_FLUSH;
 	stream->level = level;
 	stream->level_buf = level_buf;
 	stream->level_buf_size = level_size;
+
+	if (COMP_OK != isal_deflate_reset_dict(stream, dict_str))
+		if (dictbuf != NULL)
+			isal_deflate_set_dict(stream, dictbuf, dictfile_size);
+
+	stream->end_of_stream = 0;
+	stream->flush = NO_FLUSH;
 	stream->next_out = outbuf;
 	stream->avail_out = outbuf_size;
 	stream->next_in = inbuf;
@@ -285,16 +289,20 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
+	struct isal_dict dict_str;
+	stream.level = level;
+	isal_deflate_process_dict(&stream, &dict_str, dictbuf, dictfile_size);
+
 	struct perf start;
 	if (time > 0) {
 		BENCHMARK(&start, time,
 			  deflate_perf(&stream, inbuf, infile_size, inbuf_size, outbuf,
 				       outbuf_size, level, level_buf, level_size, hist_bits,
-				       dictbuf, dictfile_size, NULL));
+				       dictbuf, dictfile_size, &dict_str, NULL));
 	} else {
 		deflate_perf(&stream, inbuf, infile_size, inbuf_size, outbuf, outbuf_size,
 			     level, level_buf, level_size, hist_bits, dictbuf,
-			     dictfile_size, NULL);
+			     dictfile_size, &dict_str, NULL);
 	}
 	if (stream.avail_in != 0) {
 		fprintf(stderr, "Could not compress all of inbuf\n");
@@ -313,7 +321,7 @@ int main(int argc, char *argv[])
 
 		deflate_perf(&stream, inbuf, infile_size, inbuf_size, outbuf, outbuf_size,
 			     level, level_buf, level_size, hist_bits, dictbuf,
-			     dictfile_size, &hufftables_custom);
+			     dictfile_size, &dict_str, &hufftables_custom);
 
 		printf(" ratio_custom=%3.1f%%", 100.0 * stream.total_out / infile_size);
 	}

@@ -1241,6 +1241,94 @@ void isal_deflate_hash(struct isal_zstream *stream, uint8_t * dict, uint32_t dic
 	stream->internal_state.has_hist = IGZIP_HIST;
 }
 
+int isal_deflate_process_dict(struct isal_zstream *stream, struct isal_dict *dict,
+			      uint8_t * dict_data, uint32_t dict_len)
+{
+	if ((dict->level > ISAL_DEF_MAX_LEVEL)
+	    || (dict_len == 0)
+	    || (dict == NULL))
+		return ISAL_INVALID_STATE;
+
+	if (dict_len > IGZIP_HIST_SIZE) {
+		dict_data = dict_data + dict_len - IGZIP_HIST_SIZE;
+		dict_len = IGZIP_HIST_SIZE;
+	}
+
+	dict->level = stream->level;
+	dict->hist_size = dict_len;
+	memcpy(dict->history, dict_data, dict_len);
+	memset(dict->hashtable, -1, sizeof(dict->hashtable));
+
+	switch (stream->level) {
+	case 3:
+		dict->hash_size = IGZIP_LVL3_HASH_SIZE;
+		isal_deflate_hash_lvl3(dict->hashtable, LVL3_HASH_MASK,
+				       0, dict_data, dict_len);
+		break;
+
+	case 2:
+		dict->hash_size = IGZIP_LVL2_HASH_SIZE;
+		isal_deflate_hash_lvl2(dict->hashtable, LVL2_HASH_MASK,
+				       0, dict_data, dict_len);
+		break;
+	case 1:
+		dict->hash_size = IGZIP_LVL1_HASH_SIZE;
+		isal_deflate_hash_lvl1(dict->hashtable, LVL1_HASH_MASK,
+				       0, dict_data, dict_len);
+		break;
+	default:
+		dict->hash_size = IGZIP_LVL0_HASH_SIZE;
+		isal_deflate_hash_lvl0(dict->hashtable, LVL0_HASH_MASK,
+				       0, dict_data, dict_len);
+	}
+	return COMP_OK;
+}
+
+int isal_deflate_reset_dict(struct isal_zstream *stream, struct isal_dict *dict)
+{
+	struct isal_zstate *state = &stream->internal_state;
+	struct level_buf *level_buf = (struct level_buf *)stream->level_buf;
+	int ret;
+
+	if ((state->state != ZSTATE_NEW_HDR)
+	    || (state->b_bytes_processed != state->b_bytes_valid)
+	    || (dict->level != stream->level)
+	    || (dict->hist_size == 0)
+	    || (dict->hist_size > IGZIP_HIST_SIZE)
+	    || (dict->hash_size > IGZIP_LVL3_HASH_SIZE))
+		return ISAL_INVALID_STATE;
+
+	ret = check_level_req(stream);
+	if (ret)
+		return ret;
+
+	memcpy(state->buffer, dict->history, dict->hist_size);
+	state->b_bytes_processed = dict->hist_size;
+	state->b_bytes_valid = dict->hist_size;
+	state->has_hist = IGZIP_DICT_HASH_SET;
+
+	switch (stream->level) {
+	case 3:
+		memcpy(level_buf->lvl3.hash_table, dict->hashtable,
+		       sizeof(level_buf->lvl3.hash_table));
+		break;
+
+	case 2:
+		memcpy(level_buf->lvl2.hash_table, dict->hashtable,
+		       sizeof(level_buf->lvl2.hash_table));
+		break;
+	case 1:
+		memcpy(level_buf->lvl1.hash_table, dict->hashtable,
+		       sizeof(level_buf->lvl1.hash_table));
+		break;
+	default:
+		memcpy(stream->internal_state.head, dict->hashtable,
+		       sizeof(stream->internal_state.head));
+	}
+
+	return COMP_OK;
+}
+
 int isal_deflate_set_dict(struct isal_zstream *stream, uint8_t * dict, uint32_t dict_len)
 {
 	struct isal_zstate *state = &stream->internal_state;
@@ -1465,6 +1553,9 @@ int isal_deflate(struct isal_zstream *stream)
 		set_dist_mask(stream);
 		set_hash_mask(stream);
 		isal_deflate_hash(stream, state->buffer, state->b_bytes_processed);
+	} else if (state->has_hist == IGZIP_DICT_HASH_SET) {
+		set_dist_mask(stream);
+		set_hash_mask(stream);
 	}
 
 	in_size = stream->avail_in + buffered_size;
