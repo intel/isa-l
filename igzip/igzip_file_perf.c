@@ -98,7 +98,7 @@ int usage(void)
 		"  -h        help\n"
 		"  -X        use compression level X with 0 <= X <= 1\n"
 		"  -b <size> input buffer size, 0 buffers all the input\n"
-		"  -i <time> time in seconds to benchmark (at least 1)\n"
+		"  -i <time> time in seconds to benchmark (at least 0)\n"
 		"  -o <file> output file for compresed data\n"
 		"  -d <file> dictionary file used by compression\n"
 		"  -w <size> log base 2 size of history window, between 8 and 15\n");
@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'i':
 			time = atoi(optarg);
-			if (time < 1)
+			if (time < 0)
 				usage();
 			break;
 		case 'b':
@@ -286,10 +286,16 @@ int main(int argc, char *argv[])
 	}
 
 	struct perf start;
-	BENCHMARK(&start, time,
-		  deflate_perf(&stream, inbuf, infile_size, inbuf_size, outbuf, outbuf_size,
-			       level, level_buf, level_size, hist_bits, dictbuf,
-			       dictfile_size, NULL));
+	if (time > 0) {
+		BENCHMARK(&start, time,
+			  deflate_perf(&stream, inbuf, infile_size, inbuf_size, outbuf,
+				       outbuf_size, level, level_buf, level_size, hist_bits,
+				       dictbuf, dictfile_size, NULL));
+	} else {
+		deflate_perf(&stream, inbuf, infile_size, inbuf_size, outbuf, outbuf_size,
+			     level, level_buf, level_size, hist_bits, dictbuf,
+			     dictfile_size, NULL);
+	}
 	if (stream.avail_in != 0) {
 		fprintf(stderr, "Could not compress all of inbuf\n");
 		exit(0);
