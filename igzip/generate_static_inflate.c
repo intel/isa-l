@@ -35,6 +35,7 @@
 #include "igzip_lib.h"
 
 #define STATIC_INFLATE_FILE "static_inflate.h"
+#define DOUBLE_SYM_THRESH (4 * 1024)
 
 extern struct isal_hufftables hufftables_default;
 
@@ -118,12 +119,18 @@ int main(int argc, char *argv[])
 	struct inflate_state state;
 	FILE *file;
 	uint8_t static_deflate_hdr = 3;
-	uint8_t tmp_space[8];
+	uint8_t tmp_space[8], *in_buf;
+
+	if (NULL == (in_buf = malloc(DOUBLE_SYM_THRESH + 1))) {
+		printf("Can not allocote memory\n");
+		return 1;
+	}
 
 	isal_inflate_init(&state);
 
-	state.next_in = &static_deflate_hdr;
-	state.avail_in = sizeof(static_deflate_hdr);
+	memcpy(in_buf, &static_deflate_hdr, sizeof(static_deflate_hdr));
+	state.next_in = in_buf;
+	state.avail_in = DOUBLE_SYM_THRESH + 1;
 	state.next_out = tmp_space;
 	state.avail_out = sizeof(tmp_space);
 
@@ -165,8 +172,10 @@ int main(int argc, char *argv[])
 
 	isal_inflate_init(&state);
 
-	state.next_in = (uint8_t *) & hufftables_default.deflate_hdr;
-	state.avail_in = sizeof(hufftables_default.deflate_hdr);
+	memcpy(in_buf, &hufftables_default.deflate_hdr,
+	       sizeof(hufftables_default.deflate_hdr));
+	state.next_in = in_buf;
+	state.avail_in = DOUBLE_SYM_THRESH + 1;
 	state.next_out = tmp_space;
 	state.avail_out = sizeof(tmp_space);
 
@@ -191,6 +200,6 @@ int main(int argc, char *argv[])
 	fprintf(file, "};\n\n");
 
 	fclose(file);
-
+	free(in_buf);
 	return 0;
 }
