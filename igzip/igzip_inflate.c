@@ -53,6 +53,7 @@
 #endif
 
 extern int decode_huffman_code_block_stateless(struct inflate_state *, uint8_t * start_out);
+extern struct isal_hufftables hufftables_default;	/* For known header detection */
 
 #define LARGE_SHORT_SYM_LEN 25
 #define LARGE_SHORT_SYM_MASK ((1 << LARGE_SHORT_SYM_LEN) - 1)
@@ -932,6 +933,76 @@ static void inline make_inflate_huff_code_header(struct inflate_huff_code_small 
 	}
 }
 
+static int header_matches_pregen(struct inflate_state *state)
+{
+#ifndef ISAL_STATIC_INFLATE_TABLE
+	return 0;
+#else
+	uint8_t *in, *hdr;
+	uint32_t in_end_bits, hdr_end_bits;
+	uint32_t bytes_read_in, header_len, last_bits, last_bit_mask;
+	uint64_t bits_read_mask;
+	uint64_t hdr_stash, in_stash;
+	const uint32_t bits_read_prior = 3;	// Have read bfinal(1) and btype(2)
+
+	/* Check if stashed read_in_bytes match header */
+	hdr = &(hufftables_default.deflate_hdr[0]);
+	bits_read_mask = (1ull << state->read_in_length) - 1;
+	hdr_stash = (*((uint64_t *) hdr) >> bits_read_prior) & bits_read_mask;
+	in_stash = state->read_in & bits_read_mask;
+
+	if (hdr_stash != in_stash)
+		return 0;
+
+	/* Check if input is byte aligned */
+	if ((state->read_in_length + bits_read_prior) % 8)
+		return 0;
+
+	/* Check if header bulk is the same */
+	in = state->next_in;
+	bytes_read_in = (state->read_in_length + bits_read_prior) / 8;
+	header_len = hufftables_default.deflate_hdr_count;
+
+	if (memcmp(in, &hdr[bytes_read_in], header_len - bytes_read_in))
+		return 0;
+
+	/* If there are any last/end bits to the header check them too */
+	last_bits = hufftables_default.deflate_hdr_extra_bits;
+	last_bit_mask = (1 << last_bits) - 1;
+
+	if (0 == last_bits) {
+		state->next_in += header_len - bytes_read_in;
+		state->avail_in -= header_len - bytes_read_in;
+		state->read_in_length = 0;
+		state->read_in = 0;
+		return 1;
+	}
+
+	in_end_bits = in[header_len - bytes_read_in] & last_bit_mask;
+	hdr_end_bits = hdr[header_len] & last_bit_mask;
+	if (in_end_bits == hdr_end_bits) {
+		state->next_in += header_len - bytes_read_in;
+		state->avail_in -= header_len - bytes_read_in;
+		state->read_in_length = 0;
+		state->read_in = 0;
+		inflate_in_read_bits(state, last_bits);
+		return 1;
+	}
+
+	return 0;
+#endif // ISAL_STATIC_INFLATE_TABLE
+}
+
+static int setup_pregen_header(struct inflate_state *state)
+{
+#ifdef ISAL_STATIC_INFLATE_TABLE
+	memcpy(&state->lit_huff_code, &pregen_lit_huff_code, sizeof(pregen_lit_huff_code));
+	memcpy(&state->dist_huff_code, &pregen_dist_huff_code, sizeof(pregen_dist_huff_code));
+	state->block_state = ISAL_BLOCK_CODED;
+#endif // ISAL_STATIC_INFLATE_TABLE
+	return 0;
+}
+
 /* Sets the inflate_huff_codes in state to be the huffcodes corresponding to the
  * deflate static header */
 static int inline setup_static_header(struct inflate_state *state)
@@ -1189,6 +1260,11 @@ static int inline setup_dynamic_header(struct inflate_state *state)
 		0x10, 0x11, 0x12, 0x00, 0x08, 0x07, 0x09, 0x06,
 		0x0a, 0x05, 0x0b, 0x04, 0x0c, 0x03, 0x0d, 0x02, 0x0e, 0x01, 0x0f
 	};
+
+	/* If you are given a whole header and it matches the pregen header */
+	if (state->avail_in > (hufftables_default.deflate_hdr_count + sizeof(uint64_t))
+	    && header_matches_pregen(state))
+		return setup_pregen_header(state);
 
 	if (state->bfinal && state->avail_in <= SINGLE_SYM_THRESH) {
 		multisym = SINGLE_SYM_FLAG;
