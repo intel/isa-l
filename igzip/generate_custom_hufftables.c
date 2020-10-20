@@ -349,7 +349,9 @@ int main(int argc, char *argv[])
 	struct isal_zstream tmp_stream;
 	FILE *file = NULL;
 	FILE *dict_file = NULL;
+	FILE *hist_file = NULL;
 	long int dict_file_length = 0;
+	long int hist_file_length = 0;
 	uint8_t *dict_stream = NULL;
 
 	if (argc == 1) {
@@ -384,7 +386,28 @@ int main(int argc, char *argv[])
 		free(dict_stream);
 	}
 
-	memset(&histogram, 0, sizeof(histogram));	/* Initialize histograms. */
+	if ((argc > argi + 1) && argv[argi][0] == '-' && argv[argi][1] == 'h') {
+		hist_file = fopen(argv[argi + 1], "r+");
+		fseek(hist_file, 0, SEEK_END);
+		hist_file_length = ftell(hist_file);
+		fseek(hist_file, 0, SEEK_SET);
+		hist_file_length -= ftell(hist_file);
+		if (hist_file_length > sizeof(histogram)) {
+			printf("Histogram file too long\n");
+			return 1;
+		}
+		if (fread(&histogram, 1, hist_file_length, hist_file) != hist_file_length) {
+			printf("Error occurred when reading history file");
+			fclose(hist_file);
+			return 1;
+		}
+		fseek(hist_file, 0, SEEK_SET);
+
+		printf("Read %ld bytes of history file %s\n", hist_file_length,
+		       argv[argi + 1]);
+		argi += 2;
+	} else
+		memset(&histogram, 0, sizeof(histogram));	/* Initialize histograms. */
 
 	while (argi < argc) {
 		printf("Processing %s\n", argv[argi]);
@@ -448,5 +471,10 @@ int main(int argc, char *argv[])
 
 	fclose(file);
 
+	if (hist_file) {
+		int len = fwrite(&histogram, 1, sizeof(histogram), hist_file);
+		printf("wrote %d bytes of histogram file\n", len);
+		fclose(hist_file);
+	}
 	return 0;
 }
