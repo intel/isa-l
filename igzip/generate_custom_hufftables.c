@@ -64,6 +64,9 @@
 #include <stdlib.h>
 #include "igzip_lib.h"
 
+#include "huff_codes.h"
+#include "huffman.h"
+
 /*These max code lengths are limited by how the data is stored in
  * hufftables.asm. The deflate standard max is 15.*/
 
@@ -233,25 +236,159 @@ void fprint_header(FILE * output_file)
 	fprintf(output_file, "const uint32_t zlib_trl_bytes = %d;\n", ZLIB_TRAILER_SIZE);
 }
 
+static uint32_t convert_dist_to_dist_sym(uint32_t dist)
+{
+	assert(dist <= 32768 && dist > 0);
+	if (dist <= 32768) {
+		uint32_t msb = dist > 4 ? bsr(dist - 1) - 2 : 0;
+		return (msb * 2) + ((dist - 1) >> msb);
+	} else {
+		return ~0;
+	}
+}
+
+/**
+ * @brief  Returns the deflate symbol value for a repeat length.
+ */
+static uint32_t convert_length_to_len_sym(uint32_t length)
+{
+	assert(length > 2 && length < 259);
+
+	/* Based on tables on page 11 in RFC 1951 */
+	if (length < 11)
+		return 257 + length - 3;
+	else if (length < 19)
+		return 261 + (length - 3) / 2;
+	else if (length < 35)
+		return 265 + (length - 3) / 4;
+	else if (length < 67)
+		return 269 + (length - 3) / 8;
+	else if (length < 131)
+		return 273 + (length - 3) / 16;
+	else if (length < 258)
+		return 277 + (length - 3) / 32;
+	else
+		return 285;
+}
+
+void isal_update_histogram_dict(uint8_t * start_stream, int dict_length, int length,
+				struct isal_huff_histogram *histogram)
+{
+	uint32_t literal = 0, hash;
+	uint16_t seen, *last_seen = histogram->hash_table;
+	uint8_t *current, *end_stream, *next_hash, *end, *end_dict;
+	uint32_t match_length;
+	uint32_t dist;
+	uint64_t *lit_len_histogram = histogram->lit_len_histogram;
+	uint64_t *dist_histogram = histogram->dist_histogram;
+
+	if (length <= 0)
+		return;
+
+	end_stream = start_stream + dict_length + length;
+	end_dict = start_stream + dict_length;
+
+	memset(last_seen, 0, sizeof(histogram->hash_table));	/* Initialize last_seen to be 0. */
+
+	for (current = start_stream; current < end_dict - 4; current++) {
+		literal = load_u32(current);
+		hash = compute_hash(literal) & LVL0_HASH_MASK;
+		last_seen[hash] = (current - start_stream) & 0xFFFF;
+	}
+
+	for (current = start_stream + dict_length; current < end_stream - 3; current++) {
+		literal = load_u32(current);
+		hash = compute_hash(literal) & LVL0_HASH_MASK;
+		seen = last_seen[hash];
+		last_seen[hash] = (current - start_stream) & 0xFFFF;
+		dist = (current - start_stream - seen) & 0xFFFF;
+		if (dist - 1 < D - 1) {
+			assert(start_stream <= current - dist);
+			match_length =
+			    compare258(current - dist, current, end_stream - current);
+			if (match_length >= SHORTEST_MATCH) {
+				next_hash = current;
+#ifdef ISAL_LIMIT_HASH_UPDATE
+				end = next_hash + 3;
+#else
+				end = next_hash + match_length;
+#endif
+				if (end > end_stream - 3)
+					end = end_stream - 3;
+				next_hash++;
+				for (; next_hash < end; next_hash++) {
+					literal = load_u32(next_hash);
+					hash = compute_hash(literal) & LVL0_HASH_MASK;
+					last_seen[hash] = (next_hash - start_stream) & 0xFFFF;
+				}
+
+				dist_histogram[convert_dist_to_dist_sym(dist)] += 1;
+				lit_len_histogram[convert_length_to_len_sym(match_length)] +=
+				    1;
+				current += match_length - 1;
+				continue;
+			}
+		}
+		lit_len_histogram[literal & 0xFF] += 1;
+	}
+
+	for (; current < end_stream; current++)
+		lit_len_histogram[*current] += 1;
+
+	lit_len_histogram[256] += 1;
+	return;
+}
+
 int main(int argc, char *argv[])
 {
 	long int file_length;
+	int argi = 1;
 	uint8_t *stream = NULL;
 	struct isal_hufftables hufftables;
 	struct isal_huff_histogram histogram;
 	struct isal_zstream tmp_stream;
-	FILE *file;
+	FILE *file = NULL;
+	FILE *dict_file = NULL;
+	long int dict_file_length = 0;
+	uint8_t *dict_stream = NULL;
 
 	if (argc == 1) {
 		printf("Error, no input file.\n");
 		return 1;
 	}
 
+	if (argc > 3 && argv[1][0] == '-' && argv[1][1] == 'd') {
+		dict_file = fopen(argv[2], "r");
+
+		fseek(dict_file, 0, SEEK_END);
+		dict_file_length = ftell(dict_file);
+		fseek(dict_file, 0, SEEK_SET);
+		dict_file_length -= ftell(dict_file);
+		dict_stream = malloc(dict_file_length);
+		if (dict_stream == NULL) {
+			printf("Failed to allocate memory to read in dictionary file\n");
+			fclose(dict_file);
+			return 1;
+		}
+		if (fread(dict_stream, 1, dict_file_length, dict_file) != dict_file_length) {
+			printf("Error occurred when reading dictionary file");
+			fclose(dict_file);
+			free(dict_stream);
+			return 1;
+		}
+		isal_update_histogram(dict_stream, dict_file_length, &histogram);
+
+		printf("Read %ld bytes of dictionary file %s\n", dict_file_length, argv[2]);
+		argi += 2;
+		fclose(dict_file);
+		free(dict_stream);
+	}
+
 	memset(&histogram, 0, sizeof(histogram));	/* Initialize histograms. */
 
-	while (argc > 1) {
-		printf("Processing %s\n", argv[argc - 1]);
-		file = fopen(argv[argc - 1], "r");
+	while (argi < argc) {
+		printf("Processing %s\n", argv[argi]);
+		file = fopen(argv[argi], "r");
 		if (file == NULL) {
 			printf("Error opening file\n");
 			return 1;
@@ -260,13 +397,16 @@ int main(int argc, char *argv[])
 		file_length = ftell(file);
 		fseek(file, 0, SEEK_SET);
 		file_length -= ftell(file);
-		stream = malloc(file_length);
+		stream = malloc(file_length + dict_file_length);
 		if (stream == NULL) {
 			printf("Failed to allocate memory to read in file\n");
 			fclose(file);
 			return 1;
 		}
-		if (fread(stream, 1, file_length, file) != file_length) {
+		if (dict_file_length > 0)
+			memcpy(stream, dict_stream, dict_file_length);
+
+		if (fread(&stream[dict_file_length], 1, file_length, file) != file_length) {
 			printf("Error occurred when reading file");
 			fclose(file);
 			free(stream);
@@ -275,11 +415,15 @@ int main(int argc, char *argv[])
 
 		/* Create a histogram of frequency of symbols found in stream to
 		 * generate the huffman tree.*/
-		isal_update_histogram(stream, file_length, &histogram);
+		if (0 == dict_file_length)
+			isal_update_histogram(stream, file_length, &histogram);
+		else
+			isal_update_histogram_dict(stream, dict_file_length, file_length,
+						   &histogram);
 
 		fclose(file);
 		free(stream);
-		argc--;
+		argi++;
 	}
 
 	isal_create_hufftables(&hufftables, &histogram);
