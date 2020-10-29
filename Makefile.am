@@ -140,6 +140,7 @@ endif
 
 CCAS = $(as_filter)
 EXTRA_DIST += tools/yasm-filter.sh tools/nasm-filter.sh
+EXTRA_DIST += tools/yasm-cet-filter.sh tools/nasm-cet-filter.sh
 
 AM_CFLAGS = ${my_CFLAGS} ${INCLUDE} $(src_include) ${D}
 if CPU_AARCH64
