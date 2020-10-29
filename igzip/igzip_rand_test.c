@@ -1097,6 +1097,7 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	uint32_t reset_test_flag = 0;
 	uint8_t tmp_symbol;
 	int no_mod = 0;
+	struct isal_dict dict_str;
 
 	log_print("Starting Compress Multi Pass\n");
 
@@ -1147,8 +1148,14 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	if (reset_test_flag)
 		isal_deflate_reset(stream);
 
-	if (dict != NULL)
-		isal_deflate_set_dict(stream, dict, dict_len);
+	if (dict != NULL) {
+		if (rand() % 2 == 0)
+			isal_deflate_set_dict(stream, dict, dict_len);
+		else {
+			isal_deflate_process_dict(stream, &dict_str, dict, dict_len);
+			isal_deflate_reset_dict(stream, &dict_str);
+		}
+	}
 
 	while (1) {
 		loop_count++;
@@ -1288,6 +1295,7 @@ int compress_single_pass(uint8_t * data, uint32_t data_size, uint8_t * compresse
 	uint8_t *level_buf = NULL;
 	struct isal_hufftables *huff_tmp;
 	uint32_t reset_test_flag = 0;
+	struct isal_dict dict_str;
 
 	log_print("Starting Compress Single Pass\n");
 
@@ -1335,8 +1343,14 @@ int compress_single_pass(uint8_t * data, uint32_t data_size, uint8_t * compresse
 	if (reset_test_flag)
 		isal_deflate_reset(&stream);
 
-	if (dict != NULL)
-		isal_deflate_set_dict(&stream, dict, dict_len);
+	if (dict != NULL) {
+		if (rand() % 2 == 0)
+			isal_deflate_set_dict(&stream, dict, dict_len);
+		else {
+			isal_deflate_process_dict(&stream, &dict_str, dict, dict_len);
+			isal_deflate_reset_dict(&stream, &dict_str);
+		}
+	}
 
 	ret =
 	    isal_deflate_with_checks(&stream, data_size, *compressed_size, data, data_size,
