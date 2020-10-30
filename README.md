@@ -62,6 +62,8 @@ On Windows use nmake to build dll and static lib:
 
     nmake -f Makefile.nmake
 
+or see [details on setting up environment here](doc/build.md).
+
 ### Other make targets
 Other targets include:
 * `make check` : create and run tests
