@@ -1244,9 +1244,9 @@ void isal_deflate_hash(struct isal_zstream *stream, uint8_t * dict, uint32_t dic
 int isal_deflate_process_dict(struct isal_zstream *stream, struct isal_dict *dict,
 			      uint8_t * dict_data, uint32_t dict_len)
 {
-	if ((dict->level > ISAL_DEF_MAX_LEVEL)
+	if ((dict == NULL)
 	    || (dict_len == 0)
-	    || (dict == NULL))
+	    || (dict->level > ISAL_DEF_MAX_LEVEL))
 		return ISAL_INVALID_STATE;
 
 	if (dict_len > IGZIP_HIST_SIZE) {
