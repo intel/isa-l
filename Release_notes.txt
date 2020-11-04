@@ -1,4 +1,4 @@
-v2.29 Intel Intelligent Storage Acceleration Library Release Notes
+v2.30 Intel Intelligent Storage Acceleration Library Release Notes
 ==================================================================
 
 RELEASE NOTE CONTENTS
@@ -15,6 +15,11 @@ RELEASE NOTE CONTENTS
 
 2. FIXED ISSUES
 ---------------
+v2.30
+
+* Intel CET support.
+* Windows nasm support fix.
+
 v2.28
 
 * Fix documentation on gf_vect_mad(). Min length listed as 32 instead of
@@ -109,6 +114,22 @@ v2.10
 
 3. CHANGE LOG & FEATURES ADDED
 ------------------------------
+v2.30
+
+* Igzip compression enhancements.
+  - New functions for dictionary acceleration. Split dictionary processing and
+    resetting can greatly accelerate the performance of compressing many small
+    files with a dictionary.
+  - New static level 0 header decode tables. Accelerates decompressing small
+    files that are level 0 compressed by skipping the known header parsing.
+  - New feature for igzip cli tool: support for concatenated .gz files. On
+    decompression, igzip will process a series of independent, concatenated .gz
+    files into one output stream.
+
+* CRC Improvements
+  - New vclmul version of crc32_iscsi().
+  - Updates for aarch64.
+
 v2.29
 
 * CRC Improvements
