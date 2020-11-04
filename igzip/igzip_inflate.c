@@ -943,12 +943,12 @@ static int header_matches_pregen(struct inflate_state *state)
 	uint32_t bytes_read_in, header_len, last_bits, last_bit_mask;
 	uint64_t bits_read_mask;
 	uint64_t hdr_stash, in_stash;
-	const uint32_t bits_read_prior = 3;	// Have read bfinal(1) and btype(2)
+	const uint64_t bits_read_prior = 3;	// Have read bfinal(1) and btype(2)
 
 	/* Check if stashed read_in_bytes match header */
 	hdr = &(hufftables_default.deflate_hdr[0]);
 	bits_read_mask = (1ull << state->read_in_length) - 1;
-	hdr_stash = (*((uint64_t *) hdr) >> bits_read_prior) & bits_read_mask;
+	hdr_stash = (load_u64(hdr) >> bits_read_prior) & bits_read_mask;
 	in_stash = state->read_in & bits_read_mask;
 
 	if (hdr_stash != in_stash)
