@@ -192,6 +192,7 @@
 .endm
 
 #else /* __ASSEMBLY__ */
+#include <stdint.h>
 #include <sys/auxv.h>
 
 

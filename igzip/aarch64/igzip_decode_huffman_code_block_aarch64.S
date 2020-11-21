@@ -208,7 +208,7 @@ declare Macros
 	lsl	temp,temp,x_read_in_length
 	orr	read_in,read_in,temp
 	add	read_in_length,read_in_length,8
-	uxtw	read_in_length,read_in_length
+	uxtw	x_read_in_length,read_in_length
 
 .endm
 
