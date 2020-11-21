@@ -26,6 +26,13 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
+
+#if defined(__MACH__)
+	#define cdecl(s) _##s
+#else
+	#define cdecl(s) s
+#endif
+
 	.arch armv8-a+crc
 	.text
 	.align	2
@@ -46,8 +53,10 @@ declare Macros
 
 
 
-	.global	isal_deflate_hash_aarch64
+	.global	cdecl(isal_deflate_hash_aarch64)
+#ifndef __MACH__
 	.type	isal_deflate_hash_aarch64, %function
+#endif
 /*
 	void isal_deflate_hash_aarch64(uint16_t * hash_table, uint32_t hash_mask,
 			    uint32_t current_index, uint8_t * dict, uint32_t dict_len)
@@ -58,14 +67,14 @@ declare Macros
 	declare_generic_reg	dict,		3,x
 	declare_generic_reg	dict_len,	4,w
 
-	declare_generic_reg 	next_in		3,x
-	declare_generic_reg 	end_in		6,x
-	declare_generic_reg 	ind		5,w
-	declare_generic_reg 	hash		2,w
-	declare_generic_reg 	literal		2,w
+	declare_generic_reg 	next_in,		3,x
+	declare_generic_reg 	end_in,		6,x
+	declare_generic_reg 	ind,		5,w
+	declare_generic_reg 	hash,		2,w
+	declare_generic_reg 	literal,		2,w
 #define SHORTEST_MATCH #4
 
-isal_deflate_hash_aarch64:
+cdecl(isal_deflate_hash_aarch64):
 	sub     ind, current_index, dict_len
 	and	ind,ind,0xffff
 
@@ -92,4 +101,6 @@ loop_start:
 exit_func:
 
 	ret
+#ifndef __MACH__
 	.size	isal_deflate_hash_aarch64, .-isal_deflate_hash_aarch64
+#endif

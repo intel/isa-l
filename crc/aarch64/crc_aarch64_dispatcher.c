@@ -30,37 +30,41 @@
 
 DEFINE_INTERFACE_DISPATCHER(crc16_t10dif)
 {
+#ifndef __MACH__
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc16_t10dif_pmull);
-
+#endif
 	return PROVIDER_BASIC(crc16_t10dif);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc16_t10dif_copy)
 {
+#ifndef __MACH__
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc16_t10dif_copy_pmull);
-
+#endif
 	return PROVIDER_BASIC(crc16_t10dif_copy);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc32_ieee)
 {
+#ifndef __MACH__
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_PMULL) {
 		return PROVIDER_INFO(crc32_ieee_norm_pmull);
 	}
-
+#endif
 	return PROVIDER_BASIC(crc32_ieee);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc32_iscsi)
 {
+#ifndef __MACH__
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_CRC32) {
 		switch (get_micro_arch_id()) {
@@ -77,12 +81,14 @@ DEFINE_INTERFACE_DISPATCHER(crc32_iscsi)
 	if (auxval & HWCAP_PMULL) {
 		return PROVIDER_INFO(crc32_iscsi_refl_pmull);
 	}
+#endif
 	return PROVIDER_BASIC(crc32_iscsi);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc32_gzip_refl)
 {
+#ifndef __MACH__
 	unsigned long auxval = getauxval(AT_HWCAP);
 
 	if (auxval & HWCAP_CRC32) {
@@ -99,68 +105,74 @@ DEFINE_INTERFACE_DISPATCHER(crc32_gzip_refl)
 
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc32_gzip_refl_pmull);
-
+#endif
 	return PROVIDER_BASIC(crc32_gzip_refl);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc64_ecma_refl)
 {
+#ifndef __MACH__
 	unsigned long auxval = getauxval(AT_HWCAP);
 
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc64_ecma_refl_pmull);
-
+#endif
 	return PROVIDER_BASIC(crc64_ecma_refl);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc64_ecma_norm)
 {
+#ifndef __MACH__
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc64_ecma_norm_pmull);
-
+#endif
 	return PROVIDER_BASIC(crc64_ecma_norm);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc64_iso_refl)
 {
+#ifndef __MACH__
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc64_iso_refl_pmull);
-
+#endif
 	return PROVIDER_BASIC(crc64_iso_refl);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc64_iso_norm)
 {
+#ifndef __MACH__
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc64_iso_norm_pmull);
-
+#endif
 	return PROVIDER_BASIC(crc64_iso_norm);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc64_jones_refl)
 {
+#ifndef __MACH__
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc64_jones_refl_pmull);
-
+#endif
 	return PROVIDER_BASIC(crc64_jones_refl);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc64_jones_norm)
 {
+#ifndef __MACH__
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc64_jones_norm_pmull);
-
+#endif
 	return PROVIDER_BASIC(crc64_jones_norm);
 
 }

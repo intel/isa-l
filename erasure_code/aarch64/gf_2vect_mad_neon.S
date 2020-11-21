@@ -26,11 +26,18 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
+#if defined(__MACH__)
+	#define cdecl(s) _##s
+#else
+	#define cdecl(s) s
+#endif
+
 .text
 
-.global gf_2vect_mad_neon
+.global cdecl(gf_2vect_mad_neon)
+#ifndef __MACH__
 .type gf_2vect_mad_neon, %function
-
+#endif
 
 /* arguments */
 x_len		.req	x0
@@ -125,7 +132,7 @@ v_data_lo	.req	v17
 v_data_hi	.req	v18
 
 
-gf_2vect_mad_neon:
+cdecl(gf_2vect_mad_neon):
 	/* less than 16 bytes, return_fail */
 	cmp	x_len, #16
 	blt	.return_fail
@@ -394,7 +401,7 @@ gf_2vect_mad_neon:
 	mov	w_ret, #1
 	ret
 
-.section .data
+.data
 .balign 8
 const_tbl:
 	.dword 0x0000000000000000, 0x0000000000000000

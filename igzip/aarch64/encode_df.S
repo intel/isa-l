@@ -27,6 +27,12 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
+#if defined(__MACH__)
+	#define cdecl(s) _##s
+#else
+	#define cdecl(s) s
+#endif
+
 	.arch armv8-a+crc
 	.text
 	.align	2
@@ -46,8 +52,10 @@ declare Macros
 	x_\name		.req	x\reg
 .endm
 
-	.global	encode_deflate_icf_aarch64
+	.global	cdecl(encode_deflate_icf_aarch64)
+#ifndef __MACH__
 	.type	encode_deflate_icf_aarch64, %function
+#endif
 
 /*
 	struct deflate_icf *encode_deflate_icf_base(struct deflate_icf *next_in,
@@ -86,7 +94,7 @@ declare Macros
 .equ	offset_m_out_buf, 16
 .equ	offset_m_out_end, 24
 
-encode_deflate_icf_aarch64:
+cdecl(encode_deflate_icf_aarch64):
 	cmp	next_in, end_in
 	bcs	.done
 
@@ -156,4 +164,6 @@ encode_deflate_icf_aarch64:
 
 .done:
 	ret
+#ifndef __MACH__
 	.size	encode_deflate_icf_aarch64, .-encode_deflate_icf_aarch64
+#endif

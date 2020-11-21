@@ -31,7 +31,12 @@
 #ifndef __aarch64__
 #error "This file is for aarch64 only"
 #endif
+#ifndef __MACH__
 #include <asm/hwcap.h>
+#define cdecl(s) s
+#else
+#define cdecl(s) _##s
+#endif
 #ifdef __ASSEMBLY__
 /**
  * # mbin_interface : the wrapper layer for isal-l api
@@ -48,17 +53,18 @@
  * 	4. The dispather should return the right function pointer , revision and a string information .
  **/
 .macro mbin_interface name:req
-	.extern \name\()_dispatcher
-	.section        .data
+	.extern cdecl(\name\()_dispatcher)
+	.data
 	.balign 8
-	.global \name\()_dispatcher_info
+	.global cdecl(\name\()_dispatcher_info)
+#ifndef __MACH__
 	.type   \name\()_dispatcher_info,%object
-
-	\name\()_dispatcher_info:
+#endif
+	cdecl(\name\()_dispatcher_info):
 		.quad   \name\()_mbinit         //func_entry
-
+#ifndef __MACH__
 	.size   \name\()_dispatcher_info,. - \name\()_dispatcher_info
-
+#endif
 	.balign 8
 	.text
 	\name\()_mbinit:
@@ -108,7 +114,7 @@
 		 */
 
 
-		bl \name\()_dispatcher
+		bl cdecl(\name\()_dispatcher)
 		//restore temp/indirect result registers
 		ldp	x8,  x9,  [sp,    16]
 		.cfi_restore 8
@@ -150,16 +156,24 @@
 		.cfi_def_cfa_offset 0
 		.cfi_endproc
 
-	.global \name
+	.global cdecl(\name)
+#ifndef __MACH__
 	.type \name,%function
+#endif
 	.align  2
-	\name\():
+	cdecl(\name\()):
+#ifndef __MACH__
 		adrp    x9, :got:\name\()_dispatcher_info
 		ldr     x9, [x9, #:got_lo12:\name\()_dispatcher_info]
+#else
+		adrp    x9, :got:cdecl(\name\()_dispatcher_info)@PAGE
+		ldr     x9, [x9, #:got_lo12:cdecl(\name\()_dispatcher_info)@PAGEOFF]
+#endif
 		ldr     x10,[x9]
 		br      x10
+#ifndef __MACH__
 	.size \name,. - \name
-
+#endif
 .endm
 
 /**
@@ -168,32 +182,39 @@
  */
 .macro mbin_interface_base name:req, base:req
 	.extern \base
-	.section        .data
+	.data
 	.balign 8
-	.global \name\()_dispatcher_info
+	.global cdecl(\name\()_dispatcher_info)
+#ifndef __MACH__
 	.type   \name\()_dispatcher_info,%object
-
-	\name\()_dispatcher_info:
+#endif
+	cdecl(\name\()_dispatcher_info):
 		.quad   \base         //func_entry
+#ifndef __MACH__
 	.size   \name\()_dispatcher_info,. - \name\()_dispatcher_info
-
+#endif
 	.balign 8
 	.text
 	.global \name
+#ifndef __MACH__
 	.type \name,%function
+#endif
 	.align  2
 	\name\():
-		adrp    x9, :got:\name\()_dispatcher_info
-		ldr     x9, [x9, #:got_lo12:\name\()_dispatcher_info]
+		adrp    x9, :got:cdecl(_\name\()_dispatcher_info)
+		ldr     x9, [x9, #:got_lo12:cdecl(_\name\()_dispatcher_info)]
 		ldr     x10,[x9]
 		br      x10
+#ifndef __MACH__
 	.size \name,. - \name
-
+#endif
 .endm
 
 #else /* __ASSEMBLY__ */
+#include <stdint.h>
+#ifndef __MACH__
 #include <sys/auxv.h>
-
+#endif
 
 
 #define DEFINE_INTERFACE_DISPATCHER(name)                               \
@@ -292,16 +313,19 @@
  *   won't be as expected.
  *
  * References:
- * -  [CPU Feature detection](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/arm64/cpu-feature-registers.rst?h=v5.5)
- *
+ #ifdef __MACH__ -  [CPU Feature detection](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/arm64/cpu-feature-registers.rst?h=v5.5)
+ #endif*
+ 
  */
 static inline uint32_t get_micro_arch_id(void)
 {
 	uint32_t id=CPU_IMPLEMENTER_RESERVE;
+#ifndef __MACH__
 	if ((getauxval(AT_HWCAP) & HWCAP_CPUID)) {
 		/** Here will trap into kernel space */
 		asm("mrs %0, MIDR_EL1 " : "=r" (id));
 	}
+#endif
 	return id&0xff00fff0;
 }
 

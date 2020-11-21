@@ -33,12 +33,14 @@
 	.arch armv8-a+crypto
 	.text
 	.align	3
-	.global	\name
+	.global	cdecl(\name)
+#ifndef __MACH__
 	.type	\name, %function
+#endif
 
 /* uint64_t crc64_norm_func(uint64_t seed, const uint8_t * buf, uint64_t len) */
 
-\name\():
+cdecl(\name\()):
 	mvn	x_seed, x_seed
 	mov	x_counter, 0
 	cmp	x_len, (FOLD_SIZE-1)
@@ -48,10 +50,17 @@
 	cmp	x_len, x_counter
 	bls	.done
 
+#ifndef __MACH__
 	adrp	x_tmp, .lanchor_crc_tab
 	add	x_buf_iter, x_buf, x_counter
 	add	x_buf, x_buf, x_len
 	add	x_crc_tab_addr, x_tmp, :lo12:.lanchor_crc_tab
+#else
+	adrp	x_tmp, .lanchor_crc_tab@PAGE
+	add	x_buf_iter, x_buf, x_counter
+	add	x_buf, x_buf, x_len
+	add	x_crc_tab_addr, x_tmp, :lo12:.lanchor_crc_tab@PAGEOFF
+#endif
 
 	.align 3
 .loop_crc_tab:
@@ -119,9 +128,12 @@
 
 	b	.crc_tab_pre
 
+#ifndef __MACH__
 	.size	\name, .-\name
-
 	.section .rodata.cst16,"aM",@progbits,16
+#else
+	.section __DATA,data
+#endif
 	.align  4
 .shuffle_data:
 	.byte   15, 14, 13, 12, 11, 10, 9, 8

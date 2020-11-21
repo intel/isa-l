@@ -90,8 +90,12 @@
 
 */
 
-	.global	crc32_iscsi_3crc_fold
+	.global	cdecl(crc32_iscsi_3crc_fold)
+#ifndef __MACH__
 	.type	crc32_iscsi_3crc_fold, %function
-crc32_iscsi_3crc_fold:
+#endif
+cdecl(crc32_iscsi_3crc_fold):
 	crc32_3crc_fold		crc32c
+#ifndef __MACH__
 	.size	crc32_iscsi_3crc_fold, .-crc32_iscsi_3crc_fold
+#endif

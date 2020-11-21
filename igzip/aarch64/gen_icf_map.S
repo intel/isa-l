@@ -26,6 +26,13 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
+
+#if defined(__MACH__)
+	#define cdecl(s) _##s
+#else
+	#define cdecl(s) s
+#endif
+
 	.arch armv8-a+crc+crypto
 	.text
 	.align	2
@@ -62,8 +69,10 @@ declare Macros
 .endm
 
 	.align	2
-	.global	gen_icf_map_h1_aarch64
+	.global	cdecl(gen_icf_map_h1_aarch64)
+#ifndef __MACH__
 	.type	gen_icf_map_h1_aarch64, %function
+#endif
 
 	/* arguments */
 	declare_generic_reg	stream_param,			0,x
@@ -137,7 +146,7 @@ uint64_t gen_icf_map_h1_base(struct isal_zstream *stream,
 			     struct deflate_icf *matches_icf_lookup, uint64_t input_size)
 */
 
-gen_icf_map_h1_aarch64:
+cdecl(gen_icf_map_h1_aarch64):
 	cmp	input_size_param, (ISAL_LOOK_AHEAD-1) // 287
 	bls	.fast_exit
 	stp	x29, x30, [sp, -16]!
@@ -231,7 +240,7 @@ gen_icf_map_h1_aarch64:
 	and	w_tmp2, w_tmp2, hist_size
 	add	dist, w_tmp2, 1
 	ldr	x_tmp0, [next_in]
-	sub	x_tmp1, next_in, x_dist, uxtw
+	sub	x_tmp1, next_in, x_dist, uxtx
 	ldr	x_tmp1, [x_tmp1]
 	eor	x_tmp0, x_tmp1, x_tmp0
 	tzbytecnt	param0,param1
@@ -263,4 +272,6 @@ gen_icf_map_h1_aarch64:
 .fast_exit:
 	mov	ret_val, 0
 	ret
+#ifndef __MACH__
 	.size	gen_icf_map_h1_aarch64, .-gen_icf_map_h1_aarch64
+#endif

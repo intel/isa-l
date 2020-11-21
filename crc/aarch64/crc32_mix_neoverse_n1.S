@@ -62,9 +62,12 @@
 	CRC		.req	x0
 	wCRC		.req	w0
 	.align		6
-	.global		crc32_mix_neoverse_n1
+	.global		cdecl(crc32_mix_neoverse_n1)
+#ifndef __MACH__
 	.type		crc32_mix_neoverse_n1, %function
-crc32_mix_neoverse_n1:
+#endif
+cdecl(crc32_mix_neoverse_n1):
 	crc32_common_mix	crc32
+#ifndef __MACH__
 	.size		crc32_mix_neoverse_n1, .-crc32_mix_neoverse_n1
-
+#endif

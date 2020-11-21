@@ -27,10 +27,18 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
+#if defined(__MACH__)
+	#define cdecl(s) _##s
+#else
+	#define cdecl(s) s
+#endif
+
 .text
 
-.global xor_check_neon
+.global cdecl(xor_check_neon)
+#ifndef __MACH__
 .type xor_check_neon, %function
+#endif
 
 /* int xor_check_neon(int vects, int len, void **src) */
 
@@ -76,7 +84,7 @@ w_xor		.req	w11
  *  src_ptr_end -->
  */
 
-xor_check_neon:
+cdecl(xor_check_neon):
 	add	x_src_ptr_end, x_src, x_vects, lsl #3
 	ldr	x_src0, [x_src]
 	add	x_src0_end, x_src0, x_len

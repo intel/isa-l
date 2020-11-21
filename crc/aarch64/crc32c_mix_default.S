@@ -49,46 +49,62 @@
 
 #include "crc32_mix_default_common.S"
 
-	.global	crc32c_mix_default
+	.global	cdecl(crc32c_mix_default)
+#ifndef __MACH__
 	.type	crc32c_mix_default, %function
-crc32c_mix_default:
+#endif
+cdecl(crc32c_mix_default):
 	mov	w3, w2
 	sxtw	x2, w1
 	mov	x1, x0
 	mov	w0, w3
 	crc32_mix_main_default
+#ifndef __MACH__
 	.size	crc32c_mix_default, .-crc32c_mix_default
-
 	.section	.rodata
+#else
+  .section _DATA,data
+#endif
+
 	.align	4
 	.set	lanchor_crc32,. + 0
 
+#ifndef __MACH__
 	.type	k1k2, %object
 	.size	k1k2, 16
+#endif
 k1k2:
 	.xword	0x00740eef02
 	.xword	0x009e4addf8
 
+#ifndef __MACH__
 	.type	k3k4, %object
 	.size	k3k4, 16
+#endif
 k3k4:
 	.xword	0x00f20c0dfe
 	.xword	0x014cd00bd6
 
+#ifndef __MACH__
 	.type	k5k0, %object
 	.size	k5k0, 16
+#endif
 k5k0:
 	.xword	0x00dd45aab8
 	.xword	0
 
+#ifndef __MACH__
 	.type	poly, %object
 	.size	poly, 16
+#endif
 poly:
 	.xword	0x0105ec76f0
 	.xword	0x00dea713f1
 
+#ifndef __MACH__
 	.type	crc32_const, %object
 	.size	crc32_const, 48
+#endif
 crc32_const:
 	.xword	0x9ef68d35
 	.xword	0
@@ -100,8 +116,10 @@ crc32_const:
 	.align	4
 	.set	.lanchor_mask,. + 0
 
+#ifndef __MACH__
 	.type	mask, %object
 	.size	mask, 16
+#endif
 mask:
 	.word	-1
 	.word	0

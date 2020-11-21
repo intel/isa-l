@@ -64,11 +64,18 @@
 .equ	br_high_b3, 0xad93
 
 	.text
+#ifndef __MACH__
 	.section	.rodata
+#else
+	.section __DATA,data
+#endif
 	.align	4
 	.set	.lanchor_crc_tab,. + 0
+#ifndef __MACH__
 	.type	crc64_tab, %object
 	.size	crc64_tab, 2048
+#endif
+
 crc64_tab:
 	.xword 0x0000000000000000, 0xad93d23594c935a9
 	.xword 0xf6b4765ebd5b5efb, 0x5b27a46b29926b52

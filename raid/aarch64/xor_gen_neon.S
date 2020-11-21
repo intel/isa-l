@@ -27,10 +27,18 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
+#if defined(__MACH__)
+	#define cdecl(s) _##s
+#else
+	#define cdecl(s) s
+#endif
+
 .text
 
-.global xor_gen_neon
+.global cdecl(xor_gen_neon)
+#ifndef __MACH__
 .type xor_gen_neon, %function
+#endif
 
 /* int xor_gen_neon(int vects, int len, void **src) */
 
@@ -78,7 +86,7 @@ x_dst_ptr	.req	x11
  *                 +----------+            +------------------+
  */
 
-xor_gen_neon:
+cdecl(xor_gen_neon):
 	add	x_dst_ptr, x_src, x_vects, lsl #3
 	ldr	x_dst, [x_dst_ptr, #-8]!
 	ldr	x_src0, [x_src]
