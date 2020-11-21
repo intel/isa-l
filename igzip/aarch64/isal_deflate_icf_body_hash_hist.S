@@ -26,6 +26,9 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
+
+#include "../include/aarch64_label.h"
+
 	.arch armv8-a+crc
 	.text
 	.align	2
@@ -45,8 +48,10 @@ declare Macros
 	x_\name		.req	x\reg
 .endm
 
-	.global	isal_deflate_icf_body_hash_hist_aarch64
+	.global	cdecl(isal_deflate_icf_body_hash_hist_aarch64)
+#ifndef __APPLE__
 	.type	isal_deflate_icf_body_hash_hist_aarch64, %function
+#endif
 /*
 void isal_deflate_icf_body_hash_hist_base(struct isal_zstream *stream);
 */
@@ -126,7 +131,7 @@ void isal_deflate_icf_body_hash_hist_base(struct isal_zstream *stream);
 	declare_generic_reg	tmp0,		4,x
 	declare_generic_reg	tmp1,		5,x
 
-isal_deflate_icf_body_hash_hist_aarch64:
+cdecl(isal_deflate_icf_body_hash_hist_aarch64):
 	stp	x29, x30, [sp, -80]!
 	add	x29, sp, 0
 	str	x24, [sp, 56]
@@ -360,5 +365,6 @@ isal_deflate_icf_body_hash_hist_aarch64:
 	ldr	x24, [sp, 56]
 	ldp	x29, x30, [sp], 80
 	ret
-
+#ifndef __APPLE__
 	.size	isal_deflate_icf_body_hash_hist_aarch64, .-isal_deflate_icf_body_hash_hist_aarch64
+#endif

@@ -27,6 +27,8 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
+#include "../include/aarch64_label.h"
+
 .text
 .arch armv8-a
 
@@ -36,10 +38,12 @@
 // input: n -> x1
 // output: -> x0 (true or false)
 
-.global mem_zero_detect_neon
+.global cdecl(mem_zero_detect_neon)
+#ifndef __APPLE__
 .type mem_zero_detect_neon, %function
+#endif
 
-mem_zero_detect_neon:
+cdecl(mem_zero_detect_neon):
 	cmp	x1, #(16*24-1)
 	b.ls	.loop_16x24_end
 

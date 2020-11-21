@@ -26,6 +26,9 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
+
+#include "../include/aarch64_label.h"
+
 	.arch armv8-a+crc
 	.text
 	.align	2
@@ -63,17 +66,24 @@ declare Macros
 .endm
 
 .macro convert_length_to_len_sym length:req,length_out:req,tmp0:req
+#ifndef __APPLE__
         adrp    x_\tmp0, .len_to_code_tab_lanchor
         add     x_\tmp0, x_\tmp0, :lo12:.len_to_code_tab_lanchor
+#else
+        adrp    x_\tmp0, .len_to_code_tab_lanchor@PAGE
+        add     x_\tmp0, x_\tmp0, .len_to_code_tab_lanchor@PAGEOFF
+#endif
         ldr     w_\length_out, [x_\tmp0, w_\length, uxtw 2]
         add     w_\length_out, w_\length_out, 256
 .endm
 
-        .section        .rodata
+ASM_DEF_RODATA
         .align  4
 .len_to_code_tab_lanchor = . + 0
+#ifndef __APPLE__
         .type   len_to_code_tab, %object
         .size   len_to_code_tab, 1056
+#endif
 len_to_code_tab:
         .word 0x00, 0x00, 0x00
         .word 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
@@ -111,9 +121,11 @@ len_to_code_tab:
         .word 0x00, 0x00, 0x00, 0x00, 0x00
 
 	.text
-	.global	isal_update_histogram_aarch64
+	.global	cdecl(isal_update_histogram_aarch64)
 	.arch armv8-a+crc
+#ifndef __APPLE__
 	.type	isal_update_histogram_aarch64, %function
+#endif
 
 /*
 void isal_update_histogram_aarch64(uint8_t * start_stream, int length,
@@ -157,7 +169,7 @@ void isal_update_histogram_aarch64(uint8_t * start_stream, int length,
 .equ	hash_offset, (dist_offset + 8*DIST_LEN)    // 2528
 .equ	hash_table_size, (8*1024*2)                // 16384
 
-isal_update_histogram_aarch64:
+cdecl(isal_update_histogram_aarch64):
 	cmp	w_length, 0
 	ble	.done
 
@@ -176,7 +188,7 @@ isal_update_histogram_aarch64:
 	mov	x0, last_seen
 	mov	w1, 0
 	mov	x2, hash_table_size
-	bl	memset
+	bl	cdecl(memset)
 
 	cmp	current, loop_end_iter
 	bcs	.loop_end
@@ -308,4 +320,6 @@ isal_update_histogram_aarch64:
 	.align 2
 .done:
 	ret
+#ifndef __APPLE__
 	.size	isal_update_histogram_aarch64, .-isal_update_histogram_aarch64
+#endif

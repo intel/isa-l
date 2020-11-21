@@ -60,11 +60,14 @@
 .equ	br_high_b3, 0x2b59
 
 	.text
-	.section	.rodata
+ASM_DEF_RODATA
 	.align	4
 	.set	.lanchor_crc_tab,. + 0
+#ifndef __APPLE__
 	.type	crc64_tab, %object
 	.size	crc64_tab, 2048
+#endif
+
 crc64_tab:
 	.xword 0x0000000000000000, 0x7ad870c830358979
 	.xword 0xf5b0e190606b12f2, 0x8f689158505e9b8b

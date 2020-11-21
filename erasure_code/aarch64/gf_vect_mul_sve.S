@@ -30,8 +30,12 @@
 .align		6
 .arch		armv8-a+sve
 
-.global gf_vect_mul_sve
+#include "../include/aarch64_label.h"
+
+.global cdecl(gf_vect_mul_sve)
+#ifndef __APPLE__
 .type gf_vect_mul_sve, %function
+#endif
 
 /* Refer to include/gf_vect_mul.h
  *
@@ -72,7 +76,7 @@ z_gft1_hi	.req	z7
 q_gft1_lo	.req	q6
 q_gft1_hi	.req	q7
 
-gf_vect_mul_sve:
+cdecl(gf_vect_mul_sve):
 	/* less than 32 bytes, return_fail */
 	cmp	x_len, #32
 	blt	.return_fail

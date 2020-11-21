@@ -30,37 +30,50 @@
 
 DEFINE_INTERFACE_DISPATCHER(crc16_t10dif)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc16_t10dif_pmull);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_PMULL_KEY))
+		return PROVIDER_INFO(crc16_t10dif_pmull);
+#endif
 	return PROVIDER_BASIC(crc16_t10dif);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc16_t10dif_copy)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc16_t10dif_copy_pmull);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_PMULL_KEY))
+		return PROVIDER_INFO(crc16_t10dif_copy_pmull);
+#endif
 	return PROVIDER_BASIC(crc16_t10dif_copy);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc32_ieee)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_PMULL) {
 		return PROVIDER_INFO(crc32_ieee_norm_pmull);
 	}
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_PMULL_KEY))
+		return PROVIDER_INFO(crc32_ieee_norm_pmull);
+#endif
 	return PROVIDER_BASIC(crc32_ieee);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc32_iscsi)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_CRC32) {
 		switch (get_micro_arch_id()) {
@@ -77,12 +90,19 @@ DEFINE_INTERFACE_DISPATCHER(crc32_iscsi)
 	if (auxval & HWCAP_PMULL) {
 		return PROVIDER_INFO(crc32_iscsi_refl_pmull);
 	}
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_CRC32_KEY))
+		return PROVIDER_INFO(crc32_iscsi_3crc_fold);
+	if (sysctlEnabled(SYSCTL_PMULL_KEY))
+		return PROVIDER_INFO(crc32_iscsi_refl_pmull);
+#endif
 	return PROVIDER_BASIC(crc32_iscsi);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc32_gzip_refl)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 
 	if (auxval & HWCAP_CRC32) {
@@ -99,68 +119,97 @@ DEFINE_INTERFACE_DISPATCHER(crc32_gzip_refl)
 
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc32_gzip_refl_pmull);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_CRC32_KEY))
+		return PROVIDER_INFO(crc32_gzip_refl_3crc_fold);
+	if (sysctlEnabled(SYSCTL_PMULL_KEY))
+		return PROVIDER_INFO(crc32_gzip_refl_pmull);
+#endif
 	return PROVIDER_BASIC(crc32_gzip_refl);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc64_ecma_refl)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc64_ecma_refl_pmull);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_PMULL_KEY))
+		return PROVIDER_INFO(crc64_ecma_refl_pmull);
+#endif
 	return PROVIDER_BASIC(crc64_ecma_refl);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc64_ecma_norm)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc64_ecma_norm_pmull);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_PMULL_KEY))
+		return PROVIDER_INFO(crc64_ecma_norm_pmull);
+#endif
 	return PROVIDER_BASIC(crc64_ecma_norm);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc64_iso_refl)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc64_iso_refl_pmull);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_PMULL_KEY))
+		return PROVIDER_INFO(crc64_iso_refl_pmull);
+#endif
 	return PROVIDER_BASIC(crc64_iso_refl);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc64_iso_norm)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc64_iso_norm_pmull);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_PMULL_KEY))
+		return PROVIDER_INFO(crc64_iso_norm_pmull);
+#endif
 	return PROVIDER_BASIC(crc64_iso_norm);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc64_jones_refl)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc64_jones_refl_pmull);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_PMULL_KEY))
+		return PROVIDER_INFO(crc64_jones_refl_pmull);
+#endif
 	return PROVIDER_BASIC(crc64_jones_refl);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(crc64_jones_norm)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_PMULL)
 		return PROVIDER_INFO(crc64_jones_norm_pmull);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_PMULL_KEY))
+		return PROVIDER_INFO(crc64_jones_norm_pmull);
+#endif
 	return PROVIDER_BASIC(crc64_jones_norm);
 
 }

@@ -30,9 +30,12 @@
 .align		6
 .arch		armv8-a+sve
 
+#include "../include/aarch64_label.h"
 
-.global gf_vect_mad_sve
+.global cdecl(gf_vect_mad_sve)
+#ifndef __APPLE__
 .type gf_vect_mad_sve, %function
+#endif
 
 /* gf_vect_mad_sve(int len, int vec, int vec_i, unsigned char *gftbls,
 			     unsigned char *src, unsigned char *dest);
@@ -68,7 +71,7 @@ z_gft1_hi	.req	z7
 q_gft1_lo	.req	q6
 q_gft1_hi	.req	q7
 
-gf_vect_mad_sve:
+cdecl(gf_vect_mad_sve):
 	/* less than 16 bytes, return_fail */
 	cmp	x_len, #16
 	blt	.return_fail

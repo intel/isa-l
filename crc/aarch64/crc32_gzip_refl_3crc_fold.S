@@ -88,8 +88,12 @@
 		);
 */
 
-	.global	crc32_gzip_refl_3crc_fold
+	.global	cdecl(crc32_gzip_refl_3crc_fold)
+#ifndef __APPLE__
 	.type	crc32_gzip_refl_3crc_fold, %function
-crc32_gzip_refl_3crc_fold:
+#endif
+cdecl(crc32_gzip_refl_3crc_fold):
 	crc32_3crc_fold	crc32
+#ifndef __APPLE__
 	.size	crc32_gzip_refl_3crc_fold, .-crc32_gzip_refl_3crc_fold
+#endif

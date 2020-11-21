@@ -27,10 +27,13 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-.text
-.global gf_6vect_mad_neon
-.type gf_6vect_mad_neon, %function
+#include "../include/aarch64_label.h"
 
+.text
+.global cdecl(gf_6vect_mad_neon)
+#ifndef __APPLE__
+.type gf_6vect_mad_neon, %function
+#endif
 
 /* arguments */
 x_len		.req	x0
@@ -166,7 +169,7 @@ q_data		.req	q21
 v_data_lo	.req	v22
 v_data_hi	.req	v23
 
-gf_6vect_mad_neon:
+cdecl(gf_6vect_mad_neon):
 	/* less than 16 bytes, return_fail */
 	cmp	x_len, #16
 	blt	.return_fail
@@ -526,8 +529,13 @@ gf_6vect_mad_neon:
 	sub	x_dest5, x_dest5, x_tmp
 	sub	x_dest6, x_dest6, x_tmp
 
+#ifndef __APPLE__
 	adrp	x_const, const_tbl
 	add	x_const, x_const, :lo12:const_tbl
+#else
+	adrp	x_const, const_tbl@PAGE
+	add	x_const, x_const, const_tbl@PAGEOFF
+#endif
 	sub	x_const, x_const, x_tmp
 	ldr	q_tmp, [x_const, #16]
 
@@ -603,7 +611,7 @@ gf_6vect_mad_neon:
 	mov	w_ret, #1
 	ret
 
-.section .rodata
+ASM_DEF_RODATA
 .balign 8
 const_tbl:
 	.dword 0x0000000000000000, 0x0000000000000000

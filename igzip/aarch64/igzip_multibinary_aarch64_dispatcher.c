@@ -30,86 +30,121 @@
 
 DEFINE_INTERFACE_DISPATCHER(isal_adler32)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_ASIMD)
 		return PROVIDER_INFO(adler32_neon);
-
+#elif defined(__APPLE__)
+	return PROVIDER_INFO(adler32_neon);
+#endif
 	return PROVIDER_BASIC(adler32);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(isal_deflate_body)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 
 	if (auxval & HWCAP_CRC32)
 		return PROVIDER_INFO(isal_deflate_body_aarch64);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_CRC32_KEY))
+		return PROVIDER_INFO(isal_deflate_body_aarch64);
+#endif
 	return PROVIDER_BASIC(isal_deflate_body);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(isal_deflate_finish)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_CRC32)
 		return PROVIDER_INFO(isal_deflate_finish_aarch64);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_CRC32_KEY))
+		return PROVIDER_INFO(isal_deflate_finish_aarch64);
+#endif
 	return PROVIDER_BASIC(isal_deflate_finish);
 
 }
 
 DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_body_lvl1)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_CRC32)
 		return PROVIDER_INFO(isal_deflate_icf_body_hash_hist_aarch64);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_CRC32_KEY))
+		return PROVIDER_INFO(isal_deflate_icf_body_hash_hist_aarch64);
+#endif
 	return PROVIDER_BASIC(isal_deflate_icf_body_hash_hist);
 }
 
 DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_finish_lvl1)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_CRC32)
 		return PROVIDER_INFO(isal_deflate_icf_finish_hash_hist_aarch64);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_CRC32_KEY))
+		return PROVIDER_INFO(isal_deflate_icf_body_hash_hist_aarch64);
+#endif
 	return PROVIDER_BASIC(isal_deflate_icf_finish_hash_hist);
 }
 
 DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_body_lvl2)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_CRC32)
 		return PROVIDER_INFO(isal_deflate_icf_body_hash_hist_aarch64);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_CRC32_KEY))
+		return PROVIDER_INFO(isal_deflate_icf_body_hash_hist_aarch64);
+#endif
 	return PROVIDER_BASIC(isal_deflate_icf_body_hash_hist);
 }
 
 DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_finish_lvl2)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_CRC32)
 		return PROVIDER_INFO(isal_deflate_icf_finish_hash_hist_aarch64);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_CRC32_KEY))
+		return PROVIDER_INFO(isal_deflate_icf_finish_hash_hist_aarch64);
+#endif
 	return PROVIDER_BASIC(isal_deflate_icf_finish_hash_hist);
 }
 
 DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_body_lvl3)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_CRC32)
 		return PROVIDER_INFO(icf_body_hash1_fillgreedy_lazy);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_CRC32_KEY))
+		return PROVIDER_INFO(icf_body_hash1_fillgreedy_lazy);
+#endif
 	return PROVIDER_INFO(icf_body_hash1_fillgreedy_lazy);
 }
 
 DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_finish_lvl3)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_CRC32)
 		return PROVIDER_INFO(isal_deflate_icf_finish_hash_map_base);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_CRC32_KEY))
+		return PROVIDER_INFO(isal_deflate_icf_finish_hash_map_base);
+#endif
 	return PROVIDER_BASIC(isal_deflate_icf_finish_hash_map);
 }
 
@@ -125,64 +160,92 @@ DEFINE_INTERFACE_DISPATCHER(encode_deflate_icf)
 
 DEFINE_INTERFACE_DISPATCHER(isal_update_histogram)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_CRC32)
 		return PROVIDER_INFO(isal_update_histogram_aarch64);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_CRC32_KEY))
+		return PROVIDER_INFO(isal_update_histogram_aarch64);
+#endif
 	return PROVIDER_BASIC(isal_update_histogram);
 }
 
 DEFINE_INTERFACE_DISPATCHER(gen_icf_map_lh1)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_CRC32) {
 		return PROVIDER_INFO(gen_icf_map_h1_aarch64);
 	}
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_CRC32_KEY))
+		return PROVIDER_INFO(gen_icf_map_h1_aarch64);
+#endif
 	return PROVIDER_BASIC(gen_icf_map_h1);
 }
 
 DEFINE_INTERFACE_DISPATCHER(isal_deflate_hash_lvl0)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_CRC32)
 		return PROVIDER_INFO(isal_deflate_hash_aarch64);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_CRC32_KEY))
+		return PROVIDER_INFO(isal_deflate_hash_aarch64);
+#endif
 	return PROVIDER_BASIC(isal_deflate_hash);
 }
 
 DEFINE_INTERFACE_DISPATCHER(isal_deflate_hash_lvl1)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_CRC32)
 		return PROVIDER_INFO(isal_deflate_hash_aarch64);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_CRC32_KEY))
+		return PROVIDER_INFO(isal_deflate_hash_aarch64);
+#endif
 	return PROVIDER_BASIC(isal_deflate_hash);
 }
 
 DEFINE_INTERFACE_DISPATCHER(isal_deflate_hash_lvl2)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_CRC32)
 		return PROVIDER_INFO(isal_deflate_hash_aarch64);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_CRC32_KEY))
+		return PROVIDER_INFO(isal_deflate_hash_aarch64);
+#endif
 	return PROVIDER_BASIC(isal_deflate_hash);
 }
 
 DEFINE_INTERFACE_DISPATCHER(isal_deflate_hash_lvl3)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_CRC32)
 		return PROVIDER_INFO(isal_deflate_hash_aarch64);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_CRC32_KEY))
+		return PROVIDER_INFO(isal_deflate_hash_aarch64);
+#endif
 	return PROVIDER_BASIC(isal_deflate_hash);
 }
 
 DEFINE_INTERFACE_DISPATCHER(decode_huffman_code_block_stateless)
 {
+#if defined(__linux__)
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_CRC32)
 		return PROVIDER_INFO(decode_huffman_code_block_stateless_aarch64);
-
+#elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_CRC32_KEY))
+		return PROVIDER_INFO(decode_huffman_code_block_stateless_aarch64);
+#endif
 	return PROVIDER_BASIC(decode_huffman_code_block_stateless);
 }

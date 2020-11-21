@@ -27,6 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
+#include "../include/aarch64_label.h"
 
 .macro	declare_var_vector_reg name:req,reg:req
 	\name\()_q	.req	q\reg
@@ -429,4 +430,3 @@ start_final:
 .endif
 	ret
 .endm
-

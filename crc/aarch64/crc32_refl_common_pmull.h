@@ -33,12 +33,14 @@
 	.arch armv8-a+crypto
 	.text
 	.align	3
-	.global	\name
+	.global	cdecl(\name)
+#ifndef __APPLE__
 	.type	\name, %function
+#endif
 
 /* uint32_t crc32_refl_func(uint32_t seed, uint8_t * buf, uint64_t len) */
 
-\name\():
+cdecl(\name\()):
 	mvn	w_seed, w_seed
 	mov	x_counter, 0
 	cmp	x_len, (FOLD_SIZE - 1)
@@ -48,10 +50,17 @@
 	cmp	x_len, x_counter
 	bls	.done
 
+#ifndef __APPLE__
 	adrp	x_tmp, .lanchor_crc_tab
 	add	x_buf_iter, x_buf, x_counter
 	add	x_buf, x_buf, x_len
 	add	x_crc_tab_addr, x_tmp, :lo12:.lanchor_crc_tab
+#else
+	adrp	x_tmp, .lanchor_crc_tab@PAGE
+	add	x_buf_iter, x_buf, x_counter
+	add	x_buf, x_buf, x_len
+	add	x_crc_tab_addr, x_tmp, .lanchor_crc_tab@PAGEOFF
+#endif
 
 	.align 3
 .loop_crc_tab:
@@ -121,6 +130,7 @@
 	umov	w_seed, v_tmp_high.s[1]
 
 	b	.crc_tab_pre
-
+#ifndef __APPLE__
 	.size	\name, .-\name
+#endif
 .endm
