@@ -75,7 +75,7 @@ declare Macros
         add     x_\tmp0, x_\tmp0, :lo12:.len_to_code_tab_lanchor
 #else
         adrp    x_\tmp0, .len_to_code_tab_lanchor@PAGE
-        add     x_\tmp0, x_\tmp0, :lo12:.len_to_code_tab_lanchor@PAGEOFF
+        add     x_\tmp0, x_\tmp0, .len_to_code_tab_lanchor@PAGEOFF
 #endif
         ldr     w_\length_out, [x_\tmp0, w_\length, uxtw 2]
         add     w_\length_out, w_\length_out, 256

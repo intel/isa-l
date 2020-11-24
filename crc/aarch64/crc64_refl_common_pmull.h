@@ -33,7 +33,7 @@
 	.arch armv8-a+crypto
 	.text
 	.align	3
-	.global	\name
+	.global	cdecl(\name)
 #ifndef __MACH__
 	.type	\name, %function
 #endif
@@ -59,7 +59,7 @@ cdecl(\name\()):
 	adrp	x_tmp, .lanchor_crc_tab@PAGE
 	add	x_buf_iter, x_buf, x_counter
 	add	x_buf, x_buf, x_len
-	add	x_crc_tab_addr, x_tmp, :lo12:.lanchor_crc_tab@PAGEOFF
+	add	x_crc_tab_addr, x_tmp, .lanchor_crc_tab@PAGEOFF
 #endif
 
 	.align 3

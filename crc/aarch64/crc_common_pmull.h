@@ -137,7 +137,7 @@
 	ldr	q_shuffle, [x_tmp, #:lo12:.shuffle_data]
 #else
 	adrp	x_tmp, .shuffle_data@PAGE
-	ldr	q_shuffle, [x_tmp, #:lo12:.shuffle_data@PAGEOFF]
+	ldr	q_shuffle, [x_tmp, #.shuffle_data@PAGEOFF]
 #endif
 
 	ldr	q_x0_tmp, [x_buf]

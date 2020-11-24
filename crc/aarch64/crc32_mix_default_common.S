@@ -245,7 +245,7 @@
 #ifndef __MACH__
 	ldr		q_a0, [x_pconst, #:lo12:lanchor_crc32] // k1k2
 #else
-	ldr		q_a0, [x_pconst, #:lo12:lanchor_crc32@PAGEOFF] // k1k2
+	ldr		q_a0, [x_pconst, #lanchor_crc32@PAGEOFF] // k1k2
 #endif
 
 	crc32_u64	w_crc0, w_crc0, x_data_crc0
@@ -279,7 +279,7 @@
 #ifndef __MACH__
 	add		x_pconst, x_pconst, :lo12:lanchor_crc32
 #else
-	add		x_pconst, x_pconst, :lo12:lanchor_crc32@PAGEOFF
+	add		x_pconst, x_pconst, lanchor_crc32@PAGEOFF
 #endif
 
 	ldr		x_data_crc0, [x_buf, 976]
@@ -355,7 +355,7 @@
 #ifndef __MACH__
 	ldr		q_neon_tmp3, [x_tmp, #:lo12:.lanchor_mask]
 #else
-	ldr		q_neon_tmp3, [x_tmp, #:lo12:.lanchor_mask@PAGEOFF]
+	ldr		q_neon_tmp3, [x_tmp, #.lanchor_mask@PAGEOFF]
 #endif
 
 	crc32_u64	w_crc0, w_crc0, x_data_crc0

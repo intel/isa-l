@@ -95,7 +95,7 @@ cdecl(crc16_t10dif_pmull):
 	sxtw	x_counter, w_counter
 	adrp	x_crc16tab, .LANCHOR0@PAGE
 	sub	x_buf, x_buf, x_counter
-	add	x_crc16tab, x_crc16tab, :lo12:.LANCHOR0@PAGEOFF
+	add	x_crc16tab, x_crc16tab, .LANCHOR0@PAGEOFF
 #endif
 
 	.align 2
@@ -156,7 +156,7 @@ v_tmp3			.req	v16
 	ldr	q7, [x_tmp, :lo12:.shuffle_mask_lanchor]
 #else
 	adrp	x_tmp, .shuffle_mask_lanchor@PAGE
-	ldr	q7, [x_tmp, :lo12:.shuffle_mask_lanchor@PAGEOFF]
+	ldr	q7, [x_tmp, .shuffle_mask_lanchor@PAGEOFF]
 #endif
 
 	tbl	v_tmp1.16b, {v_x0.16b}, v7.16b

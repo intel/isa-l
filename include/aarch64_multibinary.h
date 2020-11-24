@@ -166,8 +166,8 @@
 		adrp    x9, :got:\name\()_dispatcher_info
 		ldr     x9, [x9, #:got_lo12:\name\()_dispatcher_info]
 #else
-		adrp    x9, :got:cdecl(\name\()_dispatcher_info)@PAGE
-		ldr     x9, [x9, #:got_lo12:cdecl(\name\()_dispatcher_info)@PAGEOFF]
+		adrp    x9, cdecl(\name\()_dispatcher_info)@GOTPAGE
+		ldr     x9, [x9, #cdecl(\name\()_dispatcher_info)@GOTPAGEOFF]
 #endif
 		ldr     x10,[x9]
 		br      x10
@@ -195,14 +195,19 @@
 #endif
 	.balign 8
 	.text
-	.global \name
+	.global cdecl(\name)
 #ifndef __MACH__
 	.type \name,%function
 #endif
 	.align  2
-	\name\():
+	cdecl(\name\()):
+#ifndef __MACH__
 		adrp    x9, :got:cdecl(_\name\()_dispatcher_info)
 		ldr     x9, [x9, #:got_lo12:cdecl(_\name\()_dispatcher_info)]
+#else
+		adrp    x9, cdecl(_\name\()_dispatcher_info)@GOTPAGE
+		ldr     x9, [x9, #cdecl(_\name\()_dispatcher_info)@GOTPAGEOFF]
+#endif
 		ldr     x10,[x9]
 		br      x10
 #ifndef __MACH__

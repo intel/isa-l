@@ -120,7 +120,7 @@ cdecl(set_long_icf_fg_aarch64):
 #else
   adrp	x1, .data_dist_start@PAGE
 	mov	x2, DIST_START_SIZE // 128
-	add	x1, x1, :lo12:.data_dist_start@PAGEOFF
+	add	x1, x1, .data_dist_start@PAGEOFF
 	mov	x0, dist_start
 #endif
 	bl	cdecl(memcpy)
