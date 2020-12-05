@@ -318,9 +318,8 @@
  *   won't be as expected.
  *
  * References:
- #ifdef __MACH__ -  [CPU Feature detection](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/arm64/cpu-feature-registers.rst?h=v5.5)
- #endif*
- 
+ * -  [CPU Feature detection](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/arm64/cpu-feature-registers.rst?h=v5.5)
+ *
  */
 static inline uint32_t get_micro_arch_id(void)
 {

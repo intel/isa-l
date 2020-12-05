@@ -121,7 +121,7 @@ start_struct inflate_state
 end_struct inflate_state
 
 .set _lit_huff_code_short_code_lookup , _lit_huff_code+_short_code_lookup_large
-.set _lit_huff_code_long_code_lookup , _lit_huff_code+_long_code_lookup_lar
+.set _lit_huff_code_long_code_lookup , _lit_huff_code+_long_code_lookup_large
 .set _dist_huff_code_short_code_lookup , _dist_huff_code+_short_code_lookup_small
 .set _dist_huff_code_long_code_lookup , _dist_huff_code+_long_code_lookup_small
 .set ISAL_BLOCK_NEW_HDR , 0
