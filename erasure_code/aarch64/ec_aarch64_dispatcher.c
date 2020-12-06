@@ -30,7 +30,7 @@
 
 DEFINE_INTERFACE_DISPATCHER(gf_vect_dot_prod)
 {
-#ifndef __MACH__
+#ifndef __APPLE__
 	if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
 		return PROVIDER_INFO(gf_vect_dot_prod_neon);
 #elif defined(__aarch64__)
@@ -42,7 +42,7 @@ DEFINE_INTERFACE_DISPATCHER(gf_vect_dot_prod)
 
 DEFINE_INTERFACE_DISPATCHER(gf_vect_mad)
 {
-#ifndef __MACH__
+#ifndef __APPLE__
 	if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
 		return PROVIDER_INFO(gf_vect_mad_neon);
 #elif defined(__aarch64__)
@@ -54,7 +54,7 @@ DEFINE_INTERFACE_DISPATCHER(gf_vect_mad)
 
 DEFINE_INTERFACE_DISPATCHER(ec_encode_data)
 {
-#ifndef __MACH__
+#ifndef __APPLE__
 	if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
 		return PROVIDER_INFO(ec_encode_data_neon);
 #elif defined(__aarch64__)
@@ -66,7 +66,7 @@ DEFINE_INTERFACE_DISPATCHER(ec_encode_data)
 
 DEFINE_INTERFACE_DISPATCHER(ec_encode_data_update)
 {
-#ifndef __MACH__
+#ifndef __APPLE__
 	if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
 		return PROVIDER_INFO(ec_encode_data_update_neon);
 #elif defined(__aarch64__)
@@ -78,7 +78,7 @@ DEFINE_INTERFACE_DISPATCHER(ec_encode_data_update)
 
 DEFINE_INTERFACE_DISPATCHER(gf_vect_mul)
 {
-#ifndef __MACH__
+#ifndef __APPLE__
 	if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
 		return PROVIDER_INFO(gf_vect_mul_neon);
 #elif defined(__aarch64__)

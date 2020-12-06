@@ -30,7 +30,7 @@
 
 DEFINE_INTERFACE_DISPATCHER(xor_gen)
 {
-#ifndef __MACH__
+#ifndef __APPLE__
 	if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
 		return PROVIDER_INFO(xor_gen_neon);
 #elif defined(__aarch64__)
@@ -42,7 +42,7 @@ DEFINE_INTERFACE_DISPATCHER(xor_gen)
 
 DEFINE_INTERFACE_DISPATCHER(xor_check)
 {
-#ifndef __MACH__
+#ifndef __APPLE__
 	if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
 		return PROVIDER_INFO(xor_check_neon);
 #elif defined(__aarch64__)
@@ -54,7 +54,7 @@ DEFINE_INTERFACE_DISPATCHER(xor_check)
 
 DEFINE_INTERFACE_DISPATCHER(pq_gen)
 {
-#ifndef __MACH__
+#ifndef __APPLE__
 	if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
 		return PROVIDER_INFO(pq_gen_neon);
 #elif defined(__aarch64__)
@@ -66,7 +66,7 @@ DEFINE_INTERFACE_DISPATCHER(pq_gen)
 
 DEFINE_INTERFACE_DISPATCHER(pq_check)
 {
-#ifndef __MACH__
+#ifndef __APPLE__
 	if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
 		return PROVIDER_INFO(pq_check_neon);
 #elif defined(__aarch64__)

@@ -27,7 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#if defined(__MACH__)
+#if defined(__APPLE__)
 	#define cdecl(s) _##s
 #else
 	#define cdecl(s) s
@@ -53,7 +53,7 @@ declare Macros
 .endm
 
 	.global	cdecl(isal_deflate_icf_body_hash_hist_aarch64)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	isal_deflate_icf_body_hash_hist_aarch64, %function
 #endif
 /*
@@ -369,6 +369,6 @@ cdecl(isal_deflate_icf_body_hash_hist_aarch64):
 	ldr	x24, [sp, 56]
 	ldp	x29, x30, [sp], 80
 	ret
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	isal_deflate_icf_body_hash_hist_aarch64, .-isal_deflate_icf_body_hash_hist_aarch64
 #endif

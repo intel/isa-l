@@ -27,7 +27,7 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
-#if defined(__MACH__)
+#if defined(__APPLE__)
 	#define cdecl(s) _##s
 #else
 	#define cdecl(s) s
@@ -36,7 +36,7 @@
 .text
 
 .global cdecl(pq_check_neon)
-#ifndef __MACH__
+#ifndef __APPLE__
 .type pq_check_neon, %function
 #endif
 

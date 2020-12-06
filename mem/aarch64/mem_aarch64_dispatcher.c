@@ -30,7 +30,7 @@
 
 DEFINE_INTERFACE_DISPATCHER(isal_zero_detect)
 {
-#ifndef __MACH__
+#ifndef __APPLE__
 	unsigned long auxval = getauxval(AT_HWCAP);
 	if (auxval & HWCAP_ASIMD)
 		return PROVIDER_INFO(mem_zero_detect_neon);

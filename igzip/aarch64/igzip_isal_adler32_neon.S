@@ -27,7 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#if defined(__MACH__)
+#if defined(__APPLE__)
 	#define cdecl(s) _##s
 #else
 	#define cdecl(s) s
@@ -64,7 +64,7 @@ Arguements list
 	start	.req	x1
 	length	.req	x2
 	.global	cdecl(adler32_neon)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	adler32_neon, %function
 #endif
 cdecl(adler32_neon):
@@ -103,7 +103,7 @@ local variables
 	lsr	adler1, adler32, 16
 
 	lsr	loop_cnt,length,5
-#ifndef __MACH__
+#ifndef __APPLE__
 	adrp 	x3,factors
 	add  	x3,x3,:lo12:factors
 #else
@@ -181,7 +181,7 @@ end_func:
 	orr w0,adler0,adler1,lsl 16
 	ret
 
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	adler32_neon, .-adler32_neon
 	.section	.rodata.cst16,"aM",@progbits,16
 #else

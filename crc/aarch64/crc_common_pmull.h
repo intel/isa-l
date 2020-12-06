@@ -27,7 +27,7 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
-#if defined(__MACH__)
+#if defined(__APPLE__)
 	#define cdecl(s) _##s
 #else
 	#define cdecl(s) s
@@ -132,7 +132,7 @@
 .endm
 
 .macro crc_norm_load_first_block
-#ifndef __MACH__
+#ifndef __APPLE__
 	adrp	x_tmp, .shuffle_data
 	ldr	q_shuffle, [x_tmp, #:lo12:.shuffle_data]
 #else

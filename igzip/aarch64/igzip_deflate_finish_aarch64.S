@@ -27,7 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#if defined(__MACH__)
+#if defined(__APPLE__)
 	#define cdecl(s) _##s
 #else
 	#define cdecl(s) s
@@ -82,7 +82,7 @@ skip_has_hist:
 .endm
 	.global	cdecl(isal_deflate_finish_aarch64)
 	.arch armv8-a+crc
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	isal_deflate_finish_aarch64, %function
 #endif
 /*
@@ -269,6 +269,6 @@ update_state_exit:
 	update_state	stream,start_in,next_in,end_in,m_out_buf,m_out_start,tmp0,tmp1
 	pop_stack
 	ret
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	isal_deflate_finish_aarch64, .-isal_deflate_finish_aarch64
 #endif

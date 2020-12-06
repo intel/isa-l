@@ -34,7 +34,7 @@
 	.text
 	.align	3
 	.global	cdecl(\name)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	\name, %function
 #endif
 
@@ -50,7 +50,7 @@ cdecl(\name\()):
 	cmp	x_len, x_counter
 	bls	.done
 
-#ifndef __MACH__
+#ifndef __APPLE__
 	adrp	x_tmp, .lanchor_crc_tab
 	add	x_buf_iter, x_buf, x_counter
 	add	x_buf, x_buf, x_len
@@ -130,7 +130,7 @@ cdecl(\name\()):
 	umov	x_crc_ret, v_tmp_low.d[1]
 
 	b	.crc_tab_pre
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	\name, .-\name
 #endif
 .endm

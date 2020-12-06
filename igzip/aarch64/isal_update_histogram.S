@@ -27,7 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#if defined(__MACH__)
+#if defined(__APPLE__)
 	#define cdecl(s) _##s
 #else
 	#define cdecl(s) s
@@ -70,7 +70,7 @@ declare Macros
 .endm
 
 .macro convert_length_to_len_sym length:req,length_out:req,tmp0:req
-#ifndef __MACH__
+#ifndef __APPLE__
         adrp    x_\tmp0, .len_to_code_tab_lanchor
         add     x_\tmp0, x_\tmp0, :lo12:.len_to_code_tab_lanchor
 #else
@@ -81,14 +81,14 @@ declare Macros
         add     w_\length_out, w_\length_out, 256
 .endm
 
-#ifndef __MACH__
+#ifndef __APPLE__
         .section        .rodata
 #else
         .section        __DATA,data
 #endif
         .align  4
 .len_to_code_tab_lanchor = . + 0
-#ifndef __MACH__
+#ifndef __APPLE__
         .type   len_to_code_tab, %object
         .size   len_to_code_tab, 1056
 #endif
@@ -131,7 +131,7 @@ len_to_code_tab:
 	.text
 	.global	cdecl(isal_update_histogram_aarch64)
 	.arch armv8-a+crc
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	isal_update_histogram_aarch64, %function
 #endif
 
@@ -328,6 +328,6 @@ cdecl(isal_update_histogram_aarch64):
 	.align 2
 .done:
 	ret
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	isal_update_histogram_aarch64, .-isal_update_histogram_aarch64
 #endif

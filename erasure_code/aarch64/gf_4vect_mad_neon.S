@@ -26,7 +26,7 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
-#if defined(__MACH__)
+#if defined(__APPLE__)
 	#define cdecl(s) _##s
 #else
 	#define cdecl(s) s
@@ -35,7 +35,7 @@
 .text
 
 .global cdecl(gf_4vect_mad_neon)
-#ifndef __MACH__
+#ifndef __APPLE__
 .type gf_4vect_mad_neon, %function
 #endif
 

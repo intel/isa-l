@@ -27,7 +27,7 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
-#if defined(__MACH__)
+#if defined(__APPLE__)
 	#define cdecl(s) _##s
 #else
 	#define cdecl(s) s
@@ -37,7 +37,7 @@
 	.text
 	.align	3
 	.global	cdecl(crc16_t10dif_pmull)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	crc16_t10dif_pmull, %function
 #endif
 
@@ -86,7 +86,7 @@ cdecl(crc16_t10dif_pmull):
 	cmp	x_len, x_tmp
 	bls	.end
 
-#ifndef __MACH__
+#ifndef __APPLE__
 	sxtw	x_counter, w_counter
 	adrp	x_crc16tab, .LANCHOR0
 	sub	x_buf, x_buf, x_counter
@@ -151,7 +151,7 @@ v_tmp3			.req	v16
 	ldr	q_x2, [x_buf, 32]
 	ldr	q_x3, [x_buf, 48]
 
-#ifndef __MACH__
+#ifndef __APPLE__
 	adrp	x_tmp, .shuffle_mask_lanchor
 	ldr	q7, [x_tmp, :lo12:.shuffle_mask_lanchor]
 #else
@@ -373,7 +373,7 @@ v_br1			.req	v5
 	ubfx	x0, x0, 16, 16
 	b	.crc_table_loop_pre
 
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	crc16_t10dif_pmull, .-crc16_t10dif_pmull
 	.section	.rodata
 #else
@@ -382,7 +382,7 @@ v_br1			.req	v5
 
 	.align	4
 .shuffle_mask_lanchor = . + 0
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	shuffle_mask, %object
 	.size	shuffle_mask, 16
 #endif
@@ -392,7 +392,7 @@ shuffle_mask:
 
 	.align	4
 .LANCHOR0 = . + 0
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	crc16tab, %object
 	.size	crc16tab, 512
 #endif

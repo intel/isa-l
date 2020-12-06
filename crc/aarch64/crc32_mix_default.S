@@ -52,12 +52,12 @@
 #include "crc32_mix_default_common.S"
 
 	.global	cdecl(crc32_mix_default)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	crc32_mix_default, %function
 #endif
 cdecl(crc32_mix_default):
 	crc32_mix_main_default
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	crc32_mix_default, .-crc32_mix_default
 	.section	.rodata
 #else
@@ -66,7 +66,7 @@ cdecl(crc32_mix_default):
 	.align	4
 	.set	lanchor_crc32,. + 0
 
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	k1k2, %object
 	.size	k1k2, 16
 #endif
@@ -74,7 +74,7 @@ k1k2:
 	.xword	0x0154442bd4
 	.xword	0x01c6e41596
 
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	k3k4, %object
 	.size	k3k4, 16
 #endif
@@ -82,7 +82,7 @@ k3k4:
 	.xword	0x01751997d0
 	.xword	0x00ccaa009e
 
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	k5k0, %object
 	.size	k5k0, 16
 #endif
@@ -90,7 +90,7 @@ k5k0:
 	.xword	0x0163cd6124
 	.xword	0
 
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	poly, %object
 	.size	poly, 16
 #endif
@@ -98,7 +98,7 @@ poly:
 	.xword	0x01db710641
 	.xword	0x01f7011641
 
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	crc32_const, %object
 	.size	crc32_const, 48
 #endif
@@ -113,7 +113,7 @@ crc32_const:
 	.align	4
 	.set	.lanchor_mask,. + 0
 
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	mask, %object
 	.size	mask, 16
 #endif

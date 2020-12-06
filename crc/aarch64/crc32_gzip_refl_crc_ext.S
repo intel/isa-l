@@ -60,11 +60,11 @@
 	 *              uint64_t LEN,uint32_t wCRC);
 	 */
 	.global	cdecl(crc32_gzip_refl_crc_ext)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	crc32_gzip_refl_crc_ext, %function
 #endif
 cdecl(crc32_gzip_refl_crc_ext):
 	crc32_hw_common	crc32
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	crc32_gzip_refl_crc_ext, .-crc32_gzip_refl_crc_ext
 #endif

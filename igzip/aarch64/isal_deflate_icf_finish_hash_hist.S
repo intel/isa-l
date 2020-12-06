@@ -27,7 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#if defined(__MACH__)
+#if defined(__APPLE__)
 	#define cdecl(s) _##s
 #else
 	#define cdecl(s) s
@@ -136,7 +136,7 @@ void isal_deflate_icf_finish_hash_hist_aarch64(struct isal_zstream *stream);
 	declare_generic_reg	tmp3,			28,x
 
 	.align	2
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	write_deflate_icf_constprop, %function
 #endif
 write_deflate_icf_constprop:
@@ -150,12 +150,12 @@ write_deflate_icf_constprop:
 	ubfx	x1, x1, 16, 3
 	strh	w1, [x0, 2]
 	ret
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	write_deflate_icf_constprop, .-write_deflate_icf_constprop
 #endif
 
 	.align	2
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	write_deflate_icf, %function
 #endif
 write_deflate_icf:
@@ -169,12 +169,12 @@ write_deflate_icf:
 	bfi	w1, w3, 3, 13
 	strh	w1, [x0, 2]
 	ret
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	write_deflate_icf, .-write_deflate_icf
 #endif
 
 	.align	2
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	update_state, %function
 #endif
 update_state:
@@ -196,13 +196,13 @@ update_state:
 	str	x5, [x4, 4688]
 	str	x6, [x4, 4696]
 	ret
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	update_state, .-update_state
 #endif
 
 	.align	2
 	.global	cdecl(isal_deflate_icf_finish_hash_hist_aarch64)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	isal_deflate_icf_finish_hash_hist_aarch64, %function
 #endif
 cdecl(isal_deflate_icf_finish_hash_hist_aarch64):
@@ -414,6 +414,6 @@ cdecl(isal_deflate_icf_finish_hash_hist_aarch64):
 	str	w1, [stream, offset_state_state] // 84
 .done:
 	ret
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	isal_deflate_icf_finish_hash_hist_aarch64, .-isal_deflate_icf_finish_hash_hist_aarch64
 #endif

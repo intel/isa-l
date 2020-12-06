@@ -31,7 +31,7 @@
 #ifndef __aarch64__
 #error "This file is for aarch64 only"
 #endif
-#ifndef __MACH__
+#ifndef __APPLE__
 #include <asm/hwcap.h>
 #define cdecl(s) s
 #else
@@ -57,12 +57,12 @@
 	.data
 	.balign 8
 	.global cdecl(\name\()_dispatcher_info)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type   \name\()_dispatcher_info,%object
 #endif
 	cdecl(\name\()_dispatcher_info):
 		.quad   \name\()_mbinit         //func_entry
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size   \name\()_dispatcher_info,. - \name\()_dispatcher_info
 #endif
 	.balign 8
@@ -157,12 +157,12 @@
 		.cfi_endproc
 
 	.global cdecl(\name)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type \name,%function
 #endif
 	.align  2
 	cdecl(\name\()):
-#ifndef __MACH__
+#ifndef __APPLE__
 		adrp    x9, :got:\name\()_dispatcher_info
 		ldr     x9, [x9, #:got_lo12:\name\()_dispatcher_info]
 #else
@@ -171,7 +171,7 @@
 #endif
 		ldr     x10,[x9]
 		br      x10
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size \name,. - \name
 #endif
 .endm
@@ -185,23 +185,23 @@
 	.data
 	.balign 8
 	.global cdecl(\name\()_dispatcher_info)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type   \name\()_dispatcher_info,%object
 #endif
 	cdecl(\name\()_dispatcher_info):
 		.quad   \base         //func_entry
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size   \name\()_dispatcher_info,. - \name\()_dispatcher_info
 #endif
 	.balign 8
 	.text
 	.global cdecl(\name)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type \name,%function
 #endif
 	.align  2
 	cdecl(\name\()):
-#ifndef __MACH__
+#ifndef __APPLE__
 		adrp    x9, :got:cdecl(_\name\()_dispatcher_info)
 		ldr     x9, [x9, #:got_lo12:cdecl(_\name\()_dispatcher_info)]
 #else
@@ -210,14 +210,14 @@
 #endif
 		ldr     x10,[x9]
 		br      x10
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size \name,. - \name
 #endif
 .endm
 
 #else /* __ASSEMBLY__ */
 #include <stdint.h>
-#ifndef __MACH__
+#ifndef __APPLE__
 #include <sys/auxv.h>
 #endif
 
@@ -324,7 +324,7 @@
 static inline uint32_t get_micro_arch_id(void)
 {
 	uint32_t id=CPU_IMPLEMENTER_RESERVE;
-#ifndef __MACH__
+#ifndef __APPLE__
 	if ((getauxval(AT_HWCAP) & HWCAP_CPUID)) {
 		/** Here will trap into kernel space */
 		asm("mrs %0, MIDR_EL1 " : "=r" (id));

@@ -27,7 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#if defined(__MACH__)
+#if defined(__APPLE__)
 	#define cdecl(s) _##s
 #else
 	#define cdecl(s) s
@@ -56,7 +56,7 @@ declare Macros
 	.text
 	.align	2
 	.global	cdecl(set_long_icf_fg_aarch64)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	set_long_icf_fg_aarch64, %function
 #endif
 
@@ -112,7 +112,7 @@ cdecl(set_long_icf_fg_aarch64):
 	add	end_in, next_in_param, input_size_param
 	mov	match_lookup, match_lookup_param
 
-#ifndef __MACH__
+#ifndef __APPLE__
 	adrp	x1, .data_dist_start
 	mov	x2, DIST_START_SIZE // 128
 	add	x1, x1, :lo12:.data_dist_start
@@ -198,7 +198,7 @@ cdecl(set_long_icf_fg_aarch64):
 	ldr	x23, [sp, 48]
 	ldp	x29, x30, [sp], 192
 	ret
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	set_long_icf_fg_aarch64, .-set_long_icf_fg_aarch64
 	.section	.rodata
 #else

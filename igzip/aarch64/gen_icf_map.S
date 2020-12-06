@@ -27,7 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#if defined(__MACH__)
+#if defined(__APPLE__)
 	#define cdecl(s) _##s
 #else
 	#define cdecl(s) s
@@ -70,7 +70,7 @@ declare Macros
 
 	.align	2
 	.global	cdecl(gen_icf_map_h1_aarch64)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	gen_icf_map_h1_aarch64, %function
 #endif
 
@@ -272,6 +272,6 @@ cdecl(gen_icf_map_h1_aarch64):
 .fast_exit:
 	mov	ret_val, 0
 	ret
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	gen_icf_map_h1_aarch64, .-gen_icf_map_h1_aarch64
 #endif

@@ -48,14 +48,14 @@
 
 	.text
 
-#ifndef __MACH__
+#ifndef __APPLE__
 	.section	.rodata
 #else
   .section	__DATA,data
 #endif
 	.align	4
 	.set	.lanchor_crc_tab,. + 0
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	crc32_table_iscsi_refl, %object
 	.size	crc32_table_iscsi_refl, 1024
 #endif

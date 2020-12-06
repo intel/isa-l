@@ -27,7 +27,7 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
-#if defined(__MACH__)
+#if defined(__APPLE__)
 	#define cdecl(s) _##s
 #else
 	#define cdecl(s) s
@@ -43,7 +43,7 @@
 // output: -> x0 (true or false)
 
 .global cdecl(mem_zero_detect_neon)
-#ifndef __MACH__
+#ifndef __APPLE__
 .type mem_zero_detect_neon, %function
 #endif
 

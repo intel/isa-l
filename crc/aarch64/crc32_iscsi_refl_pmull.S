@@ -36,7 +36,7 @@ crc32_refl_func crc32_iscsi_refl_pmull_internal
 	.text
 	.align 3
 	.global	cdecl(crc32_iscsi_refl_pmull)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	crc32_iscsi_refl_pmull, %function
 #endif
 cdecl(crc32_iscsi_refl_pmull):

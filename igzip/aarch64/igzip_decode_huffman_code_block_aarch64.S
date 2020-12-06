@@ -27,7 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#if defined(__MACH__)
+#if defined(__APPLE__)
 	#define cdecl(s) _##s
 #else
 	#define cdecl(s) s
@@ -264,7 +264,7 @@ declare Macros
 
 
 	.global	cdecl(decode_huffman_code_block_stateless_aarch64)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	decode_huffman_code_block_stateless_aarch64, %function
 #endif
 /*
@@ -332,7 +332,7 @@ cdecl(decode_huffman_code_block_stateless_aarch64):
 	ldp	write_overflow_lits,write_overflow_len,[block_state_adr,_write_overflow_lits-_block_state]
 
 	//init rfc_table
-#ifndef __MACH__
+#ifndef __APPLE__
 	adrp	rfc_table,rfc_lookup_table
 	add	rfc_table,rfc_table,:lo12:rfc_lookup_table
 #else
@@ -675,7 +675,7 @@ byte_copy_loop:
 	strb	w_arg0, [next_out],1
 	bne	byte_copy_loop
 	b	decompress_data_end
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	decode_huffman_code_block_stateless_aarch64, .-decode_huffman_code_block_stateless_aarch64
 	.type	rfc_lookup_table, %object
 #endif
@@ -702,6 +702,6 @@ rfc_lookup_table:
 	.short	0x0101, 0x0181, 0x0201, 0x0301, 0x0401, 0x0601, 0x0801, 0x0c01
 	.short	0x1001, 0x1801, 0x2001, 0x3001, 0x4001, 0x6001, 0x0000, 0x0000
 #endif
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	rfc_lookup_table, . - rfc_lookup_table
 #endif

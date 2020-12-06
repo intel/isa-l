@@ -27,7 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#if defined(__MACH__)
+#if defined(__APPLE__)
 	#define cdecl(s) _##s
 #else
 	#define cdecl(s) s
@@ -213,7 +213,7 @@
 	fmov		s_a1, w_crc
 	movi		v_neon_tmp.4s, 0
 
-#ifndef __MACH__
+#ifndef __APPLE__
 	adrp		x_pconst, lanchor_crc32
 	add		x_buf_tmp, x_buf, 64
 #else
@@ -242,7 +242,7 @@
 	ldr		x_data_crc2, [x_buf, 1544]
 
 	eor		v_a1.16b, v_a1.16b, v_neon_tmp.16b
-#ifndef __MACH__
+#ifndef __APPLE__
 	ldr		q_a0, [x_pconst, #:lo12:lanchor_crc32] // k1k2
 #else
 	ldr		q_a0, [x_pconst, #lanchor_crc32@PAGEOFF] // k1k2
@@ -276,7 +276,7 @@
 // loop end
 
 // PMULL: fold into 128-bits
-#ifndef __MACH__
+#ifndef __APPLE__
 	add		x_pconst, x_pconst, :lo12:lanchor_crc32
 #else
 	add		x_pconst, x_pconst, lanchor_crc32@PAGEOFF
@@ -340,7 +340,7 @@
 
 	movi		v_neon_zero.4s, 0
 	ldr		q_k5k0, [x_pconst, offset_k5k0] // k5k0
-#ifndef __MACH__
+#ifndef __APPLE__
 	adrp		x_tmp, .lanchor_mask
 #else
 	adrp		x_tmp, .lanchor_mask@PAGE
@@ -352,7 +352,7 @@
 
 	ext		v_a1.16b, v_a1.16b, v_neon_zero.16b, #8
 	eor		v_a1.16b, v_a2.16b, v_a1.16b
-#ifndef __MACH__
+#ifndef __APPLE__
 	ldr		q_neon_tmp3, [x_tmp, #:lo12:.lanchor_mask]
 #else
 	ldr		q_neon_tmp3, [x_tmp, #.lanchor_mask@PAGEOFF]

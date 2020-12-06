@@ -27,7 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#if defined(__MACH__)
+#if defined(__APPLE__)
 	#define cdecl(s) _##s
 #else
 	#define cdecl(s) s
@@ -80,7 +80,7 @@ skip_has_hist:
 
 
 	.global	cdecl(isal_deflate_body_aarch64)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	isal_deflate_body_aarch64, %function
 #endif
 /*
@@ -267,6 +267,6 @@ exit_save_state:
 	mov	w_tmp0 , ZSTATE_FLUSH_READ_BUFFER
 	str	w_tmp0, [stream, _internal_state+_state]
 	b	exit_ret
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	isal_deflate_body_aarch64, .-isal_deflate_body_aarch64
 #endif

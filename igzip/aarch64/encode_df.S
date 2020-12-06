@@ -27,7 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#if defined(__MACH__)
+#if defined(__APPLE__)
 	#define cdecl(s) _##s
 #else
 	#define cdecl(s) s
@@ -53,7 +53,7 @@ declare Macros
 .endm
 
 	.global	cdecl(encode_deflate_icf_aarch64)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	encode_deflate_icf_aarch64, %function
 #endif
 
@@ -164,6 +164,6 @@ cdecl(encode_deflate_icf_aarch64):
 
 .done:
 	ret
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	encode_deflate_icf_aarch64, .-encode_deflate_icf_aarch64
 #endif

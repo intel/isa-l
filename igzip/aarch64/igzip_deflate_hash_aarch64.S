@@ -27,7 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#if defined(__MACH__)
+#if defined(__APPLE__)
 	#define cdecl(s) _##s
 #else
 	#define cdecl(s) s
@@ -54,7 +54,7 @@ declare Macros
 
 
 	.global	cdecl(isal_deflate_hash_aarch64)
-#ifndef __MACH__
+#ifndef __APPLE__
 	.type	isal_deflate_hash_aarch64, %function
 #endif
 /*
@@ -101,6 +101,6 @@ loop_start:
 exit_func:
 
 	ret
-#ifndef __MACH__
+#ifndef __APPLE__
 	.size	isal_deflate_hash_aarch64, .-isal_deflate_hash_aarch64
 #endif
