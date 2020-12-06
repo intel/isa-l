@@ -217,8 +217,17 @@
 
 #else /* __ASSEMBLY__ */
 #include <stdint.h>
-#ifndef __APPLE__
+#if defined(__linux__)
 #include <sys/auxv.h>
+#elif defined(__APPLE__)
+#include <sys/sysctl.h>
+#include <stddef.h>
+static inline int sysctlEnabled(const char* name){
+	int enabled;
+	size_t size = sizeof(enabled);
+	int status = sysctlbyname(name, &enabled, &size, NULL, 0);
+	return status ? 0 : enabled;
+}
 #endif
 
 
