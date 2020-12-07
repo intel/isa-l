@@ -1549,7 +1549,8 @@ static int read_header_stateful(struct inflate_state *state)
 		bytes_read = state->next_in - state->tmp_in_buffer - state->tmp_in_size;
 		if (bytes_read < 0)
 			bytes_read = 0;
-		state->next_in = next_in_start + bytes_read;
+		if (next_in_start)
+			state->next_in = next_in_start + bytes_read;
 		state->avail_in = avail_in_start - bytes_read;
 	}
 
@@ -1561,7 +1562,8 @@ static int read_header_stateful(struct inflate_state *state)
 		       avail_in_start);
 		state->tmp_in_size += avail_in_start;
 		state->avail_in = 0;
-		state->next_in = next_in_start + avail_in_start;
+		if (next_in_start)
+			state->next_in = next_in_start + avail_in_start;
 		state->block_state = ISAL_BLOCK_HDR;
 	} else
 		state->tmp_in_size = 0;
@@ -1615,14 +1617,16 @@ static int inline decode_literal_block(struct inflate_state *state)
 			len = 0;
 		}
 	}
-	memcpy(state->next_out, state->next_in, len);
+	if (state->next_out) {
+		memcpy(state->next_out, state->next_in, len);
 
-	state->next_out += len;
-	state->avail_out -= len;
-	state->total_out += len;
-	state->next_in += len;
-	state->avail_in -= len;
-	state->type0_block_len -= len;
+		state->next_out += len;
+		state->avail_out -= len;
+		state->total_out += len;
+		state->next_in += len;
+		state->avail_in -= len;
+		state->type0_block_len -= len;
+	}
 
 	if (state->avail_in + bytes == 0 && state->block_state != ISAL_BLOCK_INPUT_DONE)
 		return ISAL_END_INPUT;
@@ -1840,7 +1844,8 @@ static inline uint32_t fixed_size_read(struct inflate_state *state,
 		memcpy(state->tmp_in_buffer + tmp_in_size, state->next_in, state->avail_in);
 		tmp_in_size += state->avail_in;
 		state->tmp_in_size = tmp_in_size;
-		state->next_in += state->avail_in;
+		if (state->next_in)
+			state->next_in += state->avail_in;
 		state->avail_in = 0;
 
 		return ISAL_END_INPUT;
@@ -2399,12 +2404,13 @@ int isal_inflate(struct inflate_state *state)
 		if (copy_size > avail_out)
 			copy_size = avail_out;
 
-		memcpy(state->next_out,
-		       &state->tmp_out_buffer[state->tmp_out_processed], copy_size);
-
-		state->tmp_out_processed += copy_size;
-		state->avail_out -= copy_size;
-		state->next_out += copy_size;
+		if (state->next_out) {
+			memcpy(state->next_out,
+			       &state->tmp_out_buffer[state->tmp_out_processed], copy_size);
+			state->tmp_out_processed += copy_size;
+			state->avail_out -= copy_size;
+			state->next_out += copy_size;
+		}
 
 		if (ret == ISAL_INVALID_LOOKBACK || ret == ISAL_INVALID_BLOCK
 		    || ret == ISAL_INVALID_SYMBOL) {

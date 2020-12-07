@@ -375,7 +375,7 @@ static void create_icf_block_hdr(struct isal_zstream *stream, uint8_t * start_in
 	struct BitBuf2 write_buf_tmp;
 	uint32_t out_size = stream->avail_out;
 	uint32_t avail_output, block_start_offset;
-	uint8_t *end_out = stream->next_out + out_size;
+	uint8_t *end_out = stream->next_out ? stream->next_out + out_size : 0;
 	uint64_t cur_in_processed;
 	uint64_t bit_count;
 	uint64_t block_in_size = state->block_end - state->block_next;
@@ -1919,11 +1919,12 @@ static void write_header(struct isal_zstream *stream, uint8_t * deflate_hdr,
 			*stream->next_out ^= 1;
 			state->has_eob_hdr = !state->has_eob_hdr;
 		}
-
-		stream->next_out += count;
-		stream->avail_out -= count;
-		stream->total_out += count;
-		state->count += count;
+		if (stream->next_out) {
+			stream->next_out += count;
+			stream->avail_out -= count;
+			stream->total_out += count;
+			state->count += count;
+		}
 
 		count = deflate_hdr_count - state->count;
 	} else if (toggle_end_of_stream && deflate_hdr_count == 0) {

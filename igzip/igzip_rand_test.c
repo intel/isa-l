@@ -772,7 +772,9 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 		     state->total_out);
 
 		if (state->block_state == ISAL_BLOCK_FINISH || ret != 0) {
-			memcpy(uncompress_buf + uncomp_processed, uncomp_tmp, uncomp_tmp_size);
+			if (uncompress_buf)
+				memcpy(uncompress_buf + uncomp_processed, uncomp_tmp,
+				       uncomp_tmp_size);
 			*uncompress_len = state->total_out;
 			break;
 		}

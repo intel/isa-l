@@ -83,7 +83,7 @@ fi
 
 # Std makefile build perf tests
 test_start "extended_perf_test"
-time $MAKE -f Makefile.unx -j $cpus perfs
+time $MAKE -f Makefile.unx -j $cpus perfs $build_opt
 test_end "extended_perf_test" $?
 msg+=$'Std makefile build perf: Pass\n'
 
@@ -159,7 +159,7 @@ msg+=$'Examples run: Pass\n'
 test_start "generate_custom_hufftables"
 ./generate_custom_hufftables $in_file
 $MAKE -f Makefile.unx clean
-$MAKE -f Makefile.unx -j $cpus D="NO_STATIC_INFLATE_H" checks
+$MAKE -f Makefile.unx -j $cpus D="NO_STATIC_INFLATE_H" checks $build_opt
 ./igzip_rand_test $in_file
 rm -rf hufftables_c.c
 test_end "generate_custom_hufftables" $?
