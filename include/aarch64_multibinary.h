@@ -295,9 +295,9 @@
  * -  [CPU Feature detection](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/arm64/cpu-feature-registers.rst?h=v5.5)
  *
  */
-static inline uint32_t get_micro_arch_id(void)
+static inline uint64_t get_micro_arch_id(void)
 {
-	uint32_t id=CPU_IMPLEMENTER_RESERVE;
+	uint64_t id=CPU_IMPLEMENTER_RESERVE;
 	if ((getauxval(AT_HWCAP) & HWCAP_CPUID)) {
 		/** Here will trap into kernel space */
 		asm("mrs %0, MIDR_EL1 " : "=r" (id));
