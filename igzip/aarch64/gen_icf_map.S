@@ -231,7 +231,7 @@ gen_icf_map_h1_aarch64:
 	and	w_tmp2, w_tmp2, hist_size
 	add	dist, w_tmp2, 1
 	ldr	x_tmp0, [next_in]
-	sub	x_tmp1, next_in, x_dist, uxtw
+	sub	x_tmp1, next_in, w_dist, uxtw
 	ldr	x_tmp1, [x_tmp1]
 	eor	x_tmp0, x_tmp1, x_tmp0
 	tzbytecnt	param0,param1

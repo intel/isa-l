@@ -26,6 +26,7 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
+
 	.arch armv8-a
 	.text
 	.align	2
@@ -36,20 +37,22 @@
 
 #define ENABLE_TBL_INSTRUCTION	1
 
-#define FIELD(name,size,align) \
-	.set _FIELD_OFFSET,(_FIELD_OFFSET + (align) - 1) & (~ ((align)-1)); \
-	.equ name,_FIELD_OFFSET ;					\
-	.set _FIELD_OFFSET,_FIELD_OFFSET + size;			\
-	.if align > _STRUCT_ALIGN;					\
-		.set _STRUCT_ALIGN, align;				\
-	.endif;
-
-#define START_STRUCT(name) .set _FIELD_OFFSET,0;.set _STRUCT_ALIGN,0;
-
-#define END_STRUCT(name)    .set _##name##_size , _FIELD_OFFSET;\
-			    .set _##name##_align,_STRUCT_ALIGN
-
-#define CONST(name,value)  .equ name,value
+.macro start_struct name:req
+	.set _FIELD_OFFSET,0
+	.set _STRUCT_ALIGN,0
+.endm
+.macro end_struct name:req
+	.set _\name\()_size,_FIELD_OFFSET
+	.set _\name\()_align,_STRUCT_ALIGN
+.endm
+.macro field name:req, size:req, align:req
+	.set _FIELD_OFFSET,(_FIELD_OFFSET + (\align) - 1) & (~ ((\align)-1))
+	.set \name,_FIELD_OFFSET
+	.set _FIELD_OFFSET,_FIELD_OFFSET + \size
+	.if \align > _STRUCT_ALIGN
+		.set _STRUCT_ALIGN, \align
+	.endif
+.endm
 
 #define ISAL_DECODE_LONG_BITS 12
 #define ISAL_DECODE_SHORT_BITS 10
@@ -73,55 +76,54 @@
 
 
 // inflate_huff_code
-START_STRUCT( inflate_huff_code_large )
+start_struct inflate_huff_code_large
 	//	 name	size	align
-	FIELD ( _short_code_lookup_large,	LARGE_SHORT_CODE_SIZE*(1<<(ISAL_DECODE_LONG_BITS)),	LARGE_LONG_CODE_SIZE )
-	FIELD ( _long_code_lookup_large,	LARGE_LONG_CODE_SIZE*MAX_LONG_CODE_LARGE,	LARGE_SHORT_CODE_SIZE )
-END_STRUCT(inflate_huff_code_large)
+	field _short_code_lookup_large,	LARGE_SHORT_CODE_SIZE*(1<<(ISAL_DECODE_LONG_BITS)),	LARGE_LONG_CODE_SIZE
+	field _long_code_lookup_large,	LARGE_LONG_CODE_SIZE*MAX_LONG_CODE_LARGE,	LARGE_SHORT_CODE_SIZE
+end_struct inflate_huff_code_large
 
 // inflate_huff_code
-START_STRUCT( inflate_huff_code_small )
+start_struct inflate_huff_code_small
 	//	 name	size	align
-	FIELD ( _short_code_lookup_small,	SMALL_SHORT_CODE_SIZE*(1<<(ISAL_DECODE_SHORT_BITS)),	SMALL_LONG_CODE_SIZE )
-	FIELD ( _long_code_lookup_small,	SMALL_LONG_CODE_SIZE*MAX_LONG_CODE_SMALL,	SMALL_SHORT_CODE_SIZE )
-END_STRUCT(inflate_huff_code_small)
-
+	field _short_code_lookup_small,	SMALL_SHORT_CODE_SIZE*(1<<(ISAL_DECODE_SHORT_BITS)),	SMALL_LONG_CODE_SIZE
+	field _long_code_lookup_small,	SMALL_LONG_CODE_SIZE*MAX_LONG_CODE_SMALL,	SMALL_SHORT_CODE_SIZE
+end_struct inflate_huff_code_small
 
 // inflate_state
-START_STRUCT( inflate_state )
+start_struct inflate_state
 	//	 name	size	align
-	FIELD ( _next_out,	8,	8 )
-	FIELD ( _avail_out,	4,	4 )
-	FIELD ( _total_out,	4,	4 )
-	FIELD ( _next_in,	8,	8 )
-	FIELD ( _read_in,	8,	8 )
-	FIELD ( _avail_in,	4,	4 )
-	FIELD ( _read_in_length,	4,	4 )
-	FIELD ( _lit_huff_code,	_inflate_huff_code_large_size,	_inflate_huff_code_large_align )
-	FIELD ( _dist_huff_code,	_inflate_huff_code_small_size,	_inflate_huff_code_small_align )
-	FIELD ( _block_state,	4,	4 )
-	FIELD ( _dict_length,	4,	4 )
-	FIELD ( _bfinal,	4,	4 )
-	FIELD ( _crc_flag,	4,	4 )
-	FIELD ( _crc,	4,	4 )
-	FIELD ( _hist_bits,	4,	4 )
-	FIELD ( _type0_block_len,	4,	4 )
-	FIELD ( _write_overflow_lits,	4,	4 )
-	FIELD ( _write_overflow_len,	4,	4 )
-	FIELD ( _copy_overflow_len,	4,	4 )
-	FIELD ( _copy_overflow_dist,	4,	4 )
-END_STRUCT(inflate_state)
+	field _next_out,	8,	8
+	field _avail_out,	4,	4
+	field _total_out,	4,	4
+	field _next_in,	8,	8
+	field _read_in,	8,	8
+	field _avail_in,	4,	4
+	field _read_in_length,	4,	4
+	field _lit_huff_code,	_inflate_huff_code_large_size,	_inflate_huff_code_large_align
+	field _dist_huff_code,	_inflate_huff_code_small_size,	_inflate_huff_code_small_align
+	field _block_state,	4,	4
+	field _dict_length,	4,	4
+	field _bfinal,	4,	4
+	field _crc_flag,	4,	4
+	field _crc,	4,	4
+	field _hist_bits,	4,	4
+	field _type0_block_len,	4,	4
+	field _write_overflow_lits,	4,	4
+	field _write_overflow_len,	4,	4
+	field _copy_overflow_len,	4,	4
+	field _copy_overflow_dist,	4,	4
+end_struct inflate_state
 
-CONST( _lit_huff_code_short_code_lookup , _lit_huff_code+_short_code_lookup_large )
-CONST( _lit_huff_code_long_code_lookup , _lit_huff_code+_long_code_lookup_large )
-CONST( _dist_huff_code_short_code_lookup , _dist_huff_code+_short_code_lookup_small )
-CONST( _dist_huff_code_long_code_lookup , _dist_huff_code+_long_code_lookup_small )
-CONST( ISAL_BLOCK_NEW_HDR , 0 )
-CONST( ISAL_BLOCK_HDR , 1 )
-CONST( ISAL_BLOCK_TYPE0 , 2 )
-CONST( ISAL_BLOCK_CODED , 3 )
-CONST( ISAL_BLOCK_INPUT_DONE , 4 )
-CONST( ISAL_BLOCK_FINISH , 5 )
+.set _lit_huff_code_short_code_lookup , _lit_huff_code+_short_code_lookup_large
+.set _lit_huff_code_long_code_lookup , _lit_huff_code+_long_code_lookup_large
+.set _dist_huff_code_short_code_lookup , _dist_huff_code+_short_code_lookup_small
+.set _dist_huff_code_long_code_lookup , _dist_huff_code+_long_code_lookup_small
+.set ISAL_BLOCK_NEW_HDR , 0
+.set ISAL_BLOCK_HDR , 1
+.set ISAL_BLOCK_TYPE0 , 2
+.set ISAL_BLOCK_CODED , 3
+.set ISAL_BLOCK_INPUT_DONE , 4
+.set ISAL_BLOCK_FINISH , 5
 
 /* Inflate Return values */
 #define ISAL_DECOMP_OK 0	/* No errors encountered while decompressing */
@@ -208,7 +210,7 @@ declare Macros
 	lsl	temp,temp,x_read_in_length
 	orr	read_in,read_in,temp
 	add	read_in_length,read_in_length,8
-	uxtw	read_in_length,read_in_length
+	uxtw	x_read_in_length,read_in_length
 
 .endm
 
@@ -262,9 +264,9 @@ declare Macros
 				struct inflate_state *state,
 				uint8_t * start_out)
 */
-	declare_generic_reg	arg0		0, x
-	declare_generic_reg	arg1		1, x
-	declare_generic_reg	arg2		2, x
+	declare_generic_reg	arg0,		0, x
+	declare_generic_reg	arg1,		1, x
+	declare_generic_reg	arg2,		2, x
 
 	declare_generic_reg	state,		11,x
 	declare_generic_reg	start_out,	18,x
@@ -328,7 +330,6 @@ decode_huffman_code_block_stateless_aarch64:
 	ld1	{v1.16b,v2.16b,v3.16b},[rfc_table]
 	add	rfc_table,rfc_table,48
 	ld1	{v4.16b-v7.16b},[rfc_table]
-
 #endif
 
 	/*
@@ -661,7 +662,6 @@ byte_copy_loop:
 	bne	byte_copy_loop
 	b	decompress_data_end
 	.size	decode_huffman_code_block_stateless_aarch64, .-decode_huffman_code_block_stateless_aarch64
-
 	.type	rfc_lookup_table, %object
 
 rfc_lookup_table:
