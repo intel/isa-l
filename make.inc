@@ -192,7 +192,7 @@ ASFLAGS += -DAS_FEATURE_LEVEL=$(as_feature_level) $(D_HAVE_AS_KNOWS_AVX512_y)
 
 
 # Check for pthreads
-have_threads ?= $(shell printf "\#include <pthread.h>\nint main(void){return 0;}\n" | $(CC) -x c - -o /dev/null -lpthread && echo y )
+have_threads ?= $(shell printf "int main(void){return 0;}\n" | $(CC) -x c - -o /dev/null -lpthread && echo y )
 THREAD_LD_$(have_threads) := -lpthread
 THREAD_CFLAGS_$(have_threads) := -DHAVE_THREADS
 
