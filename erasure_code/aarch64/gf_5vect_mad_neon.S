@@ -463,7 +463,8 @@ gf_5vect_mad_neon:
 	sub	x_dest4, x_dest4, x_tmp
 	sub	x_dest5, x_dest5, x_tmp
 
-	ldr	x_const, =const_tbl
+	adrp	x_const, const_tbl
+	add	x_const, x_const, :lo12:const_tbl
 	sub	x_const, x_const, x_tmp
 	ldr	q_tmp, [x_const, #16]
 
@@ -527,7 +528,7 @@ gf_5vect_mad_neon:
 	mov	w_ret, #1
 	ret
 
-.section .data
+.section .rodata
 .balign 8
 const_tbl:
 	.dword 0x0000000000000000, 0x0000000000000000
