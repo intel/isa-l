@@ -47,6 +47,9 @@ int pq_gen_base(int vects, int len, void **array)
 	unsigned long **src = (unsigned long **)array;
 	int blocks = len / sizeof(long);
 
+	if (vects < 4)
+		return 1;	// Must have at least 2 src and 2 dest
+
 	for (i = 0; i < blocks; i++) {
 		q = p = src[vects - 3][i];
 
@@ -68,6 +71,9 @@ int pq_check_base(int vects, int len, void **array)
 	int i, j;
 	unsigned char p, q, s;
 	unsigned char **src = (unsigned char **)array;
+
+	if (vects < 4)
+		return 1;	// Must have at least 2 src and 2 dest
 
 	for (i = 0; i < len; i++) {
 		q = p = src[vects - 3][i];
@@ -94,6 +100,9 @@ int xor_gen_base(int vects, int len, void **array)
 	unsigned char parity;
 	unsigned char **src = (unsigned char **)array;
 
+	if (vects < 3)
+		return 1;	// Must have at least 2 src and 1 dest
+
 	for (i = 0; i < len; i++) {
 		parity = src[0][i];
 		for (j = 1; j < vects - 1; j++)
@@ -112,6 +121,9 @@ int xor_check_base(int vects, int len, void **array)
 
 	unsigned char parity;
 	unsigned char **src = (unsigned char **)array;
+
+	if (vects < 2)
+		return 1;	// Must have at least 2 src
 
 	for (i = 0; i < len; i++) {
 		parity = 0;
