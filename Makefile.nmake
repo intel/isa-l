@@ -175,8 +175,8 @@ CC         = cl
 AS         = nasm
 
 lib: bin static dll
-static: bin isa-l_static.lib
-dll: bin isa-l.dll
+static: bin isa-l_static.lib isa-l.h
+dll: bin isa-l.dll isa-l.h
 
 bin: ; -mkdir $@
 
@@ -302,6 +302,30 @@ progs = \
 progs: lib $(progs)
 igzip.exe: programs\igzip_cli.obj
 	link /out:$@ $(LINKFLAGS) isa-l.lib $?
+
+isa-l.h:
+	@echo /**>> $@
+	@echo *  @file isa-l.h>> $@
+	@echo *  @brief Include for ISA-L library>> $@
+	@echo */>> $@
+	@echo.>> $@
+	@echo #ifndef _ISAL_H_>> $@
+	@echo #define _ISAL_H_>> $@
+	@echo.>> $@
+	@echo #define ISAL_MAJOR_VERSION 2 >> $@
+	@echo #define ISAL_MINOR_VERSION 30 >> $@
+	@echo #define ISAL_PATCH_VERSION 0 >> $@
+	@echo #define ISAL_MAKE_VERSION(maj, min, patch)  ((maj) * 0x10000 + (min) * 0x100 + (patch))>> $@
+	@echo #define ISAL_VERSION ISAL_MAKE_VERSION(ISAL_MAJOR_VERSION, ISAL_MINOR_VERSION, ISAL_PATCH_VERSION)>> $@
+	@echo.>> $@
+	@echo #include ^<isa-l/crc.h^>>> $@
+	@echo #include ^<isa-l/crc64.h^>>> $@
+	@echo #include ^<isa-l/erasure_code.h^>>> $@
+	@echo #include ^<isa-l/gf_vect_mul.h^>>> $@
+	@echo #include ^<isa-l/igzip_lib.h^>>> $@
+	@echo #include ^<isa-l/mem_routines.h^>>> $@
+	@echo #include ^<isa-l/raid.h^>>> $@
+	@echo #endif //_ISAL_H_>> $@
 
 clean:
 	-if exist *.obj del *.obj

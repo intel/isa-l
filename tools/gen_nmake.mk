@@ -31,8 +31,8 @@ Makefile.nmake tst.nmake: FORCE
 	@echo 'AS         = nasm'		>> $@
 	@echo ''			>> $@
 	@echo 'lib: bin static dll'	>> $@
-	@echo 'static: bin isa-l_static.lib'	>> $@
-	@echo 'dll: bin isa-l.dll'	>> $@
+	@echo 'static: bin isa-l_static.lib isa-l.h'	>> $@
+	@echo 'dll: bin isa-l.dll isa-l.h'	>> $@
 	@echo ''			>> $@
 	@echo 'bin: ; -mkdir $$@'	>> $@
 	@echo ''			>> $@
@@ -96,6 +96,24 @@ endif
 	@echo 'progs: lib $$(progs)'	>> $@
 	@$(foreach p, $(notdir $(bin_PROGRAMS)), \
 		printf "%s.exe: %s\n\tlink /out:\$$@ \$$(LINKFLAGS) isa-l.lib \$$?\n" $(p) $(subst /,\\,$(programs_$(p)_SOURCES:.c=.obj)) >> $@; )
+	@echo ''			>> $@
+	@echo 'isa-l.h:'		>> $@
+	@echo '	@echo /**>> $$@' >> $@
+	@echo '	@echo *  @file isa-l.h>> $$@' >> $@
+	@echo '	@echo *  @brief Include for ISA-L library>> $$@' >> $@
+	@echo '	@echo */>> $$@' >> $@
+	@echo '	@echo.>> $$@' >> $@
+	@echo '	@echo #ifndef _ISAL_H_>> $$@' >> $@
+	@echo '	@echo #define _ISAL_H_>> $$@' >> $@
+	@echo '	@echo.>> $$@' >> $@
+	@echo '#define.ISAL_MAJOR_VERSION.${version}' |  ${AWK} -F . '{print "\t@echo", $$1, $$2, $$3, ">> $$@"}' >> $@
+	@echo '#define.ISAL_MINOR_VERSION.${version}' |  ${AWK} -F . '{print "\t@echo", $$1, $$2, $$4, ">> $$@"}' >> $@
+	@echo '#define.ISAL_PATCH_VERSION.${version}' |  ${AWK} -F . '{print "\t@echo", $$1, $$2, $$5, ">> $$@"}' >> $@
+	@echo '	@echo #define ISAL_MAKE_VERSION(maj, min, patch)  ((maj) * 0x10000 + (min) * 0x100 + (patch))>> $$@' >> $@
+	@echo '	@echo #define ISAL_VERSION ISAL_MAKE_VERSION(ISAL_MAJOR_VERSION, ISAL_MINOR_VERSION, ISAL_PATCH_VERSION)>> $$@' >> $@
+	@echo '	@echo.>> $$@' >> $@
+	@for unit in $(sort $(extern_hdrs)); do echo "	@echo #include ^<isa-l/$$unit^>>> \$$@" | sed -e 's;include/;;' >> $@; done
+	@echo '	@echo #endif //_ISAL_H_>> $$@' >> $@
 	@echo ''			>> $@
 	@echo 'clean:'					>> $@
 	@echo '	-if exist *.obj del *.obj'		>> $@
