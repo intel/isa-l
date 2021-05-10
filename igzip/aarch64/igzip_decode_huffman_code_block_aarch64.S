@@ -339,7 +339,6 @@ cdecl(decode_huffman_code_block_stateless_aarch64):
 	ld1	{v1.16b,v2.16b,v3.16b},[rfc_table]
 	add	rfc_table,rfc_table,48
 	ld1	{v4.16b-v7.16b},[rfc_table]
-
 #endif
 
 	/*
