@@ -213,8 +213,8 @@
 	adrp		x_pconst, lanchor_crc32
 	add		x_buf_tmp, x_buf, 64
 #else
-  adrp		x_pconst, lanchor_crc32@PAGE
-  add		x_buf_tmp, x_buf, 64
+	adrp		x_pconst, lanchor_crc32@PAGE
+ 	add		x_buf_tmp, x_buf, 64
 #endif
 
 	ldr		x_data_crc0, [x_buf, 512]

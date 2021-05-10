@@ -103,8 +103,8 @@ local variables
 	adrp 	x3,factors
 	add  	x3,x3,:lo12:factors
 #else
-  adrp 	x3,factors@PAGE
-  add  	x3,x3,factors@PAGEOFF
+	adrp 	x3,factors@PAGE
+	add  	x3,x3,factors@PAGEOFF
 #endif
 	ld1 	{factor0_v.16b-factor1_v.16b},[x3]
 

@@ -332,7 +332,7 @@ cdecl(decode_huffman_code_block_stateless_aarch64):
 	adrp	rfc_table,rfc_lookup_table
 	add	rfc_table,rfc_table,:lo12:rfc_lookup_table
 #else
-  adrp	rfc_table,rfc_lookup_table@PAGE
+	adrp	rfc_table,rfc_lookup_table@PAGE
 	add	rfc_table,rfc_table,rfc_lookup_table@PAGEOFF
 #endif
 #if ENABLE_TBL_INSTRUCTION
