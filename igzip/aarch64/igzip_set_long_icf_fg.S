@@ -198,7 +198,7 @@ cdecl(set_long_icf_fg_aarch64):
 	.size	set_long_icf_fg_aarch64, .-set_long_icf_fg_aarch64
 	.section	.rodata
 #else
-  .section __DATA,data
+	.section	__TEXT,__const
 #endif
 	.align	3
 	.set	.data_dist_start,. + 0

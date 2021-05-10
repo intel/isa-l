@@ -392,7 +392,7 @@ v_br1	.req	v5
 	.size	crc16_t10dif_copy_pmull, .-crc16_t10dif_copy_pmull
 	.section .rodata
 #else
-  .section __DATA,data
+	.section __TEXT,__const
 #endif
 
 	.align	4

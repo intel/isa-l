@@ -61,7 +61,7 @@ cdecl(crc32_mix_default):
 	.size	crc32_mix_default, .-crc32_mix_default
 	.section	.rodata
 #else
-  .section __DATA,data
+	.section	__TEXT,__const
 #endif
 	.align	4
 	.set	lanchor_crc32,. + 0

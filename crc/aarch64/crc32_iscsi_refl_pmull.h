@@ -51,7 +51,7 @@
 #ifndef __APPLE__
 	.section	.rodata
 #else
-  .section	__DATA,data
+	.section	__TEXT,__const
 #endif
 	.align	4
 	.set	.lanchor_crc_tab,. + 0

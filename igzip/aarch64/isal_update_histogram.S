@@ -80,7 +80,7 @@ declare Macros
 #ifndef __APPLE__
         .section        .rodata
 #else
-        .section        __DATA,data
+        .section        __TEXT,__const
 #endif
         .align  4
 .len_to_code_tab_lanchor = . + 0

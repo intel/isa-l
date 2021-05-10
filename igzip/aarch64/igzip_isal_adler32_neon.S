@@ -181,7 +181,7 @@ end_func:
 	.size	adler32_neon, .-adler32_neon
 	.section	.rodata.cst16,"aM",@progbits,16
 #else
-  .section __DATA,data
+	.section	__TEXT,__const
 #endif
 	.align	4
 factors:

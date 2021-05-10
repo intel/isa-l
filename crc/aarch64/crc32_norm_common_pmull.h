@@ -137,7 +137,7 @@ cdecl(\name\()):
 	.size	\name, .-\name
 	.section	.rodata.cst16,"aM",@progbits,16
 #else
-	.section __DATA,data
+	.section	__TEXT,__const
 #endif
 	.align	4
 .shuffle_data:

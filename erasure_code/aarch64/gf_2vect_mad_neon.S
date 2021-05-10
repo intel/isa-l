@@ -398,7 +398,11 @@ cdecl(gf_2vect_mad_neon):
 	mov	w_ret, #1
 	ret
 
-.data
+#ifndef __APPLE__
+	.section .rodata
+#else
+	.section __TEXT,__const
+#endif
 .balign 8
 const_tbl:
 	.dword 0x0000000000000000, 0x0000000000000000
