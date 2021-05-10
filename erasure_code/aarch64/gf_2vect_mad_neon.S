@@ -364,8 +364,13 @@ cdecl(gf_2vect_mad_neon):
 	sub	x_dest1, x_dest1, x_tmp
 	sub	x_dest2, x_dest2, x_tmp
 
+#ifndef __APPLE__
 	adrp	x_const, const_tbl
 	add	x_const, x_const, :lo12:const_tbl
+#else
+	adrp	x_const, const_tbl@PAGE
+	add	x_const, x_const, const_tbl@PAGEOFF
+#endif
 	sub	x_const, x_const, x_tmp
 	ldr	q_tmp, [x_const, #16]
 
