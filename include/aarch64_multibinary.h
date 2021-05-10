@@ -33,10 +33,8 @@
 #endif
 #ifndef __APPLE__
 #include <asm/hwcap.h>
-#define cdecl(s) s
-#else
-#define cdecl(s) _##s
 #endif
+#include "aarch64_label.h"
 #ifdef __ASSEMBLY__
 /**
  * # mbin_interface : the wrapper layer for isal-l api
