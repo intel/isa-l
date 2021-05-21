@@ -4,10 +4,16 @@ matrix:
   include:
     ### OS X
     - os: osx
+      osx_image: xcode12.5
+      addons:
+        homebrew:
+          packages:
+            - nasm
       env: C_COMPILER=clang
 
     ### linux gcc and format check
-    - dist: xenial
+    - os: linux
+      dist: bionic
       addons:
         apt:
           packages:
@@ -21,58 +27,41 @@ matrix:
       env: C_COMPILER=gcc
 
     ### linux clang
-    - dist: xenial
+    - os: linux
+      dist: bionic
       addons:
         apt:
           packages:
             - nasm
       env: C_COMPILER=clang
 
-    ### linux newer clang
-    - dist: trusty
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-trusty-4.0
-          packages:
-            - clang-4.0
-      env: C_COMPILER=clang-4.0
-
     ### linux older gcc
-    - dist: trusty
+    - os: linux
+      dist: xenial
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
           packages:
             - g++-4.7
+            - nasm
       env: C_COMPILER=gcc-4.7
-
-    ### linux newer gcc
-    - dist: trusty
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-6
-      env: C_COMPILER=gcc-6
 
     ### arm64: gcc-5.4
     - os: linux
-      dist: xenial
+      dist: bionic
       arch: arm64
       env: C_COMPILER=gcc
 
     ### arm64: gcc-5.4 extended tests
     - os: linux
-      dist: xenial
+      dist: bionic
       arch: arm64
       env: TEST_TYPE=ext
 
     ### linux extended tests
-    - dist: xenial
+    - os: linux
+      dist: xenial
       addons:
         apt:
           sources:
@@ -90,9 +79,6 @@ before_install:
 
 before_script:
   - if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get -q update; fi
-  - if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get install yasm; fi
-  - if [ $TRAVIS_OS_NAME = osx ]; then brew update; fi
-  - if [ $TRAVIS_OS_NAME = osx ]; then brew install yasm; fi
 
 script:
   - if [ -n "${CC}" ]; then $CC --version; fi
