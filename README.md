@@ -33,8 +33,8 @@ Building ISA-L
 * Optional: Building with autotools requires autoconf/automake packages.
 
 x86_64:
-* Assembler: nasm v2.11.01 or later (nasm v2.13 or better suggested for building in AVX512 support)
-  or yasm version 1.2.0 or later.
+* Assembler: nasm. Version 2.15 or later suggested (other versions of nasm and
+  yasm may build but with limited function [support.](doc/build.md)
 * Compiler: gcc, clang, icc or VC compiler.
 
 aarch64:
