@@ -231,6 +231,9 @@ ex = \
 	ec_simple_example.exe \
 	ec_piggyback_example.exe
 
+{examples\ec}.c.obj:
+	$(CC) $(CFLAGS) /c -Fo$@ $?
+
 ex: lib $(ex)
 
 $(ex): $(@B).obj

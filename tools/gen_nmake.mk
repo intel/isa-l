@@ -55,6 +55,8 @@ ifneq (,$(examples))
 	@$(foreach ex, $(notdir $(examples)), printf " %s\n\t%s.exe" \\ $(ex) >> $@; )
 	@echo ''			>> $@
 	@echo ''			>> $@
+	@$(foreach d, $(subst /,\\, $(sort $(patsubst %/,%,$(filter examples/%,$(dir $(examples)))))), \
+		printf "{%s}.c.obj:\n\t\$$(CC) \$$(CFLAGS) /c -Fo\$$@ \$$?\n\n" $(d) >> $@; )
 	@echo 'ex: lib $$(ex)'		>> $@
 	@echo ''			>> $@
 	@echo '$$(ex): $$(@B).obj'	>> $@
