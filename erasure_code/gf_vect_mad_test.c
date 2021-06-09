@@ -31,7 +31,7 @@
 #include <stdlib.h>
 #include <string.h>		// for memset, memcmp
 #include "erasure_code.h"
-#include "types.h"
+#include "test.h"
 
 #ifndef ALIGN_SIZE
 # define ALIGN_SIZE 32

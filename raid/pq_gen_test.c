@@ -33,7 +33,7 @@
 #include<stdlib.h>
 #include<limits.h>
 #include "raid.h"
-#include "types.h"
+#include "test.h"
 
 #define TEST_SOURCES 16
 #define TEST_LEN     1024

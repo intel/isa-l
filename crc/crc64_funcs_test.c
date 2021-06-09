@@ -32,8 +32,8 @@
 #include <string.h>
 #include <stdint.h>
 #include "crc64.h"
-#include "types.h"
 #include "crc64_ref.h"
+#include "test.h"
 
 #ifndef TEST_SEED
 # define TEST_SEED 0x1234

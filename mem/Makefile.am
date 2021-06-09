@@ -40,8 +40,7 @@ lsrc_x86_64 += 	mem/mem_zero_detect_avx.asm \
 
 extern_hdrs +=	include/mem_routines.h
 
-other_src   +=  include/test.h \
-		include/types.h
+other_src   +=  include/test.h
 
 check_tests  +=  mem/mem_zero_detect_test
 

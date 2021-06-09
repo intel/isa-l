@@ -17,7 +17,7 @@ INPUT                  = isa-l.h \
 			 doc/test.md \
 			 doc/build.md
 
-EXCLUDE                = include/test.h include/types.h include/unaligned.h
+EXCLUDE                = include/test.h include/unaligned.h
 EXCLUDE_PATTERNS       = */include/*_multibinary.h
 EXAMPLE_PATH           = . crc raid erasure_code igzip
 PAPER_TYPE             = letter
