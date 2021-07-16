@@ -64,126 +64,105 @@
 
 %define src arg0
 %define	len arg1
-%define ptr arg2
-%define pos return
+%define tmp0 arg2
+%define tmp1 arg3
 
+%use smartalign
+ALIGNMODE P6
 default rel
 
 [bits 64]
 section .text
-
-align 16
+;rdi src, rsi, len
+align 16	; maximize mu-ops cache usage
 mk_global  mem_zero_detect_avx, function
 func(mem_zero_detect_avx)
 	FUNC_SAVE
-	mov	pos, 0
-	sub	len, 4*32
-	jle	.mem_z_small_block
+	cmp	len, 127
+	jbe	.mem_z_small_block
+	; check the first 128 bytes
+	vmovdqu ymm0, [src]
+	vpor	ymm0, ymm0, [src+32]
+	vmovdqu	ymm1, [src+64]
+	vpor	ymm1, ymm1, [src+96]
+	vpor	ymm0, ymm0, ymm1
+	mov	DWORD(tmp0), DWORD(len)
+	and	DWORD(tmp0), 127
+	add	src, tmp0
+	xor	eax, eax
+	shr	len, 7	; len/128
+	setz	al
+	xor	DWORD(tmp0), DWORD(tmp0)
+	vptest	ymm0, ymm0
+	setnz	BYTE(tmp0) ; found a byte !=0
+	add	eax, DWORD(tmp0) ; jump if (edx OR eax) !=0, use add for macrofusion
+	jnz .return
 
+align 16
 .mem_z_loop:
-	vmovdqu	ymm0, [src+pos]
-	vmovdqu	ymm1, [src+pos+1*32]
-	vmovdqu	ymm2, [src+pos+2*32]
-	vmovdqu	ymm3, [src+pos+3*32]
+	xor	DWORD(tmp1), DWORD(tmp1)
+	sub	len, 1
+	setz	BYTE(tmp1)
+	vmovdqu	ymm0, [src]
+	vpor	ymm0, ymm0,[src+32]
+	vmovdqu	ymm1, [src+64]
+	vpor	ymm1, ymm1, [src+96]
+	vpor	ymm0, ymm0, ymm1
+	add	src, 128
+	xor	DWORD(tmp0), DWORD(tmp0)
 	vptest	ymm0, ymm0
-	jnz	.return_fail
-	vptest	ymm1, ymm1
-	jnz	.return_fail
-	vptest	ymm2, ymm2
-	jnz	.return_fail
-	vptest	ymm3, ymm3
-	jnz	.return_fail
-	add	pos, 4*32
-	cmp	pos, len
-	jl	.mem_z_loop
+	setnz	BYTE(tmp0)
+	add	DWORD(tmp1), DWORD(tmp0)
+	jz	.mem_z_loop
 
-.mem_z_last_block:
-	vmovdqu	ymm0, [src+len]
-	vmovdqu	ymm1, [src+len+1*32]
-	vmovdqu	ymm2, [src+len+2*32]
-	vmovdqu	ymm3, [src+len+3*32]
-	vptest	ymm0, ymm0
-	jnz	.return_fail
-	vptest	ymm1, ymm1
-	jnz	.return_fail
-	vptest	ymm2, ymm2
-	jnz	.return_fail
-	vptest	ymm3, ymm3
-	jnz	.return_fail
-
-.return_pass:
-	mov	return, 0
+.return:
+	xor	eax, eax
+	test	tmp0, tmp0
+	setnz	al
 	FUNC_RESTORE
 	ret
 
 
+align 16
 .mem_z_small_block:
-	add	len, 4*32
-	cmp	len, 2*32
-	jl	.mem_z_lt64
-	vmovdqu	ymm0, [src]
-	vmovdqu	ymm1, [src+32]
-	vmovdqu	ymm2, [src+len-2*32]
-	vmovdqu	ymm3, [src+len-1*32]
-	vptest	ymm0, ymm0
-	jnz	.return_fail
-	vptest	ymm1, ymm1
-	jnz	.return_fail
-	vptest	ymm2, ymm2
-	jnz	.return_fail
-	vptest	ymm3, ymm3
-	jnz	.return_fail
-	jmp	.return_pass
+	;len < 128
+	xor	DWORD(tmp0), DWORD(tmp0)
+	movzx	DWORD(tmp1), BYTE(len)
+	cmp	DWORD(len), 16
+	jbe     .mem_z_small_check_zero
+	;17 < len < 128
+	shr	DWORD(len), 4
+	xor	eax, eax ; alignment
+.mem_z_small_block_loop:
+	xor	eax, eax
+	mov	tmp0, [src]
+	or	tmp0, [src+8]
+	sub	DWORD(len), 1
+	setz	al
+	add	src, 16
+	add	rax, tmp0
+	jz	.mem_z_small_block_loop
+	
+	test	tmp0, tmp0
+	jnz	.return
+	movzx	DWORD(len), BYTE(tmp1)
+	and	DWORD(len), 15
 
-.mem_z_lt64:
-	cmp	len, 32
-	jl	.mem_z_lt32
-	vmovdqu	ymm0, [src]
-	vmovdqu	ymm1, [src+len-32]
-	vptest	ymm0, ymm0
-	jnz	.return_fail
-	vptest	ymm1, ymm1
-	jnz	.return_fail
-	jmp	.return_pass
-
-
-.mem_z_lt32:
-	cmp	len, 16
-	jl	.mem_z_lt16
-	vmovdqu	xmm0, [src]
-	vmovdqu	xmm1, [src+len-16]
-	vptest	xmm0, xmm0
-	jnz	.return_fail
-	vptest	xmm1, xmm1
-	jnz	.return_fail
-	jmp	.return_pass
-
-
-.mem_z_lt16:
-	cmp	len, 8
-	jl	.mem_z_lt8
-	mov	tmp, [src]
-	mov	tmp3,[src+len-8]
-	or	tmp, tmp3
-	test	tmp, tmp
-	jnz	.return_fail
-	jmp	.return_pass
-
-.mem_z_lt8:
-	cmp	len, 0
-	je	.return_pass
-.mem_z_1byte_loop:
-	mov	tmpb, [src+pos]
-	cmp	tmpb, 0
-	jnz	.return_fail
-	add	pos, 1
-	cmp	pos, len
-	jl	.mem_z_1byte_loop
-	jmp	.return_pass
-
-.return_fail:
-	mov	return, 1
-	FUNC_RESTORE
+.mem_z_small_check_zero:
+	xor	DWORD(tmp0), DWORD(tmp0)
+	test	DWORD(len), DWORD(len)
+	jz	.return
+.mem_z_small_byte_loop:
+	movzx	eax, byte [src]
+	add	src, 1
+	or	DWORD(tmp0), eax
+	sub	DWORD(len), 1
+	jnz	.mem_z_small_byte_loop
+	xor	eax, eax
+	test	BYTE(tmp0), BYTE(tmp0)
+	setnz	al
 	ret
+
+
 
 endproc_frame
