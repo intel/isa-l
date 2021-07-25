@@ -73,45 +73,47 @@ default rel
 
 [bits 64]
 section .text
-;rdi src, rsi, len
-align 16	; maximize mu-ops cache usage
+align 32	; maximize mu-ops cache usage
 mk_global  mem_zero_detect_avx, function
 func(mem_zero_detect_avx)
 	FUNC_SAVE
 	cmp	len, 127
 	jbe	.mem_z_small_block
 	; check the first 128 bytes
+	vpxor	xmm2, xmm2, xmm2
 	vmovdqu ymm0, [src]
 	vpor	ymm0, ymm0, [src+32]
 	vmovdqu	ymm1, [src+64]
 	vpor	ymm1, ymm1, [src+96]
 	vpor	ymm0, ymm0, ymm1
-	mov	DWORD(tmp0), DWORD(len)
-	and	DWORD(tmp0), 127
-	add	src, tmp0
+	vpcmpeqb ymm0, ymm2, ymm0
+	vpmovmskb DWORD(tmp0), ymm0
+	not	DWORD(tmp0)
+	mov	DWORD(tmp1), DWORD(len)
+	and	DWORD(tmp1), 127
+	add	src, tmp1
 	xor	eax, eax
 	shr	len, 7	; len/128
-	setz	al
-	xor	DWORD(tmp0), DWORD(tmp0)
-	vptest	ymm0, ymm0
-	setnz	BYTE(tmp0) ; found a byte !=0
+	test	len, len; break partial flag stall
+	setz	al	; if len < 128, eax != 0
 	add	eax, DWORD(tmp0) ; jump if (edx OR eax) !=0, use add for macrofusion
 	jnz .return
+	xor	eax, eax
 
 align 16
 .mem_z_loop:
-	xor	DWORD(tmp1), DWORD(tmp1)
-	sub	len, 1
-	setz	BYTE(tmp1)
 	vmovdqu	ymm0, [src]
 	vpor	ymm0, ymm0,[src+32]
 	vmovdqu	ymm1, [src+64]
 	vpor	ymm1, ymm1, [src+96]
-	vpor	ymm0, ymm0, ymm1
 	add	src, 128
-	xor	DWORD(tmp0), DWORD(tmp0)
-	vptest	ymm0, ymm0
-	setnz	BYTE(tmp0)
+	xor	DWORD(tmp1), DWORD(tmp1)
+	sub	len, 1
+	setz	BYTE(tmp1)
+	vpor	ymm0, ymm0, ymm1
+	vpcmpeqb ymm0, ymm2, ymm0
+	vpmovmskb DWORD(tmp0), ymm0
+	not	DWORD(tmp0)
 	add	DWORD(tmp1), DWORD(tmp0)
 	jz	.mem_z_loop
 
@@ -129,7 +131,7 @@ align 16
 	xor	DWORD(tmp0), DWORD(tmp0)
 	movzx	DWORD(tmp1), BYTE(len)
 	cmp	DWORD(len), 16
-	jbe     .mem_z_small_check_zero
+	jb     .mem_z_small_check_zero
 	;17 < len < 128
 	shr	DWORD(len), 4
 	xor	eax, eax ; alignment
@@ -144,25 +146,23 @@ align 16
 	jz	.mem_z_small_block_loop
 	
 	test	tmp0, tmp0
-	jnz	.return
+	jnz	.return_small
 	movzx	DWORD(len), BYTE(tmp1)
-	and	DWORD(len), 15
 
 .mem_z_small_check_zero:
 	xor	DWORD(tmp0), DWORD(tmp0)
-	test	DWORD(len), DWORD(len)
-	jz	.return
+	and	DWORD(len), 15
+	jz	.return_small
 .mem_z_small_byte_loop:
 	movzx	eax, byte [src]
 	add	src, 1
 	or	DWORD(tmp0), eax
 	sub	DWORD(len), 1
 	jnz	.mem_z_small_byte_loop
+.return_small:
 	xor	eax, eax
-	test	BYTE(tmp0), BYTE(tmp0)
+	test	tmp0, tmp0
 	setnz	al
 	ret
-
-
 
 endproc_frame
