@@ -1706,10 +1706,42 @@ int isal_deflate(struct isal_zstream *stream)
 	return ret;
 }
 
+// Helper function to avoid code duplication.
+static void _zlib_header_in_buffer(struct isal_zstream *stream, uint8_t * buffer)
+{
+	uint8_t hist_bits, info, level, cmf, flg;
+	uint8_t dict_flag = 0;
+
+	if (stream->hist_bits == 0)	// default hist_bits
+		hist_bits = ISAL_DEF_MAX_HIST_BITS;
+	else
+		hist_bits = stream->hist_bits;
+	if (hist_bits > 8)
+		info = hist_bits - 8;
+	else
+		info = 0;	// For low window sizes ensure correct cmf flag.
+	if (stream->level == 0)
+		level = 0;	// Fastest algorithm
+	else
+		level = 1;	// ISA-L levels 1-3 are fast algorithms.
+
+	cmf = DEFLATE_METHOD | (info << 4);
+	flg = (level << 6) | dict_flag;
+	flg += 31 - ((256 * cmf + flg) % 31);
+	buffer[0] = cmf;
+	buffer[1] = flg;
+	return;
+}
+
 static int write_stream_header_stateless(struct isal_zstream *stream)
 {
 	uint32_t hdr_bytes;
-	const uint8_t *hdr;
+	// Create a 10-byte buffer. Since the gzip header is almost fixed (9 of 10
+	// bytes are fixed) use it to initialize the buffer.
+	uint8_t buffer[10] = {
+		0x1f, 0x8b, 0x08, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0xff
+	};
 	uint32_t next_flag;
 
 	if (stream->internal_state.has_wrap_hdr)
@@ -1717,12 +1749,12 @@ static int write_stream_header_stateless(struct isal_zstream *stream)
 
 	if (stream->gzip_flag == IGZIP_ZLIB) {
 		hdr_bytes = zlib_hdr_bytes;
-		hdr = zlib_hdr;
+		_zlib_header_in_buffer(stream, buffer);
 		next_flag = IGZIP_ZLIB_NO_HDR;
-
 	} else {
 		hdr_bytes = gzip_hdr_bytes;
-		hdr = gzip_hdr;
+		if (stream->level == 0)
+			buffer[8] = 0x04;	// Fastest algorithm in xfl flag
 		next_flag = IGZIP_GZIP_NO_HDR;
 	}
 
@@ -1732,7 +1764,7 @@ static int write_stream_header_stateless(struct isal_zstream *stream)
 	stream->avail_out -= hdr_bytes;
 	stream->total_out += hdr_bytes;
 
-	memcpy(stream->next_out, hdr, hdr_bytes);
+	memcpy(stream->next_out, buffer, hdr_bytes);
 
 	stream->next_out += hdr_bytes;
 	stream->internal_state.has_wrap_hdr = 1;
@@ -1746,17 +1778,23 @@ static void write_stream_header(struct isal_zstream *stream)
 	struct isal_zstate *state = &stream->internal_state;
 	int bytes_to_write;
 	uint32_t hdr_bytes;
-	const uint8_t *hdr;
+	// Create a 10-byte buffer. Since the gzip header is almost fixed (9 of 10
+	// bytes are fixed) use it to initialize the buffer.
+	uint8_t buffer[10] = {
+		0x1f, 0x8b, 0x08, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0xff
+	};
 
 	if (stream->internal_state.has_wrap_hdr)
 		return;
 
 	if (stream->gzip_flag == IGZIP_ZLIB) {
 		hdr_bytes = zlib_hdr_bytes;
-		hdr = zlib_hdr;
+		_zlib_header_in_buffer(stream, buffer);
 	} else {
+		if (stream->level == 0)
+			buffer[8] = 0x04;	// Fastest algorithm in xfl flag
 		hdr_bytes = gzip_hdr_bytes;
-		hdr = gzip_hdr;
 	}
 
 	bytes_to_write = hdr_bytes;
@@ -1765,7 +1803,7 @@ static void write_stream_header(struct isal_zstream *stream)
 	if (bytes_to_write > stream->avail_out)
 		bytes_to_write = stream->avail_out;
 
-	memcpy(stream->next_out, hdr + state->count, bytes_to_write);
+	memcpy(stream->next_out, buffer + state->count, bytes_to_write);
 	state->count += bytes_to_write;
 
 	if (state->count == hdr_bytes) {
