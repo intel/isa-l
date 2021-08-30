@@ -2278,12 +2278,16 @@ int isal_inflate_stateless(struct inflate_state *state)
 
 		case ISAL_ZLIB_NO_HDR:
 			finalize_adler32(state);
+			check_zlib_checksum(state);
 			break;
 
 		case ISAL_GZIP:
 		case ISAL_GZIP_NO_HDR_VER:
 			ret = check_gzip_checksum(state);
 			break;
+		case ISAL_GZIP_NO_HDR:
+		    check_gzip_checksum(state);
+		    break;
 		}
 	}
 
@@ -2325,9 +2329,15 @@ int isal_inflate(struct inflate_state *state)
 		case ISAL_ZLIB_NO_HDR_VER:
 			ret = check_zlib_checksum(state);
 			break;
+        case ISAL_ZLIB_NO_HDR:
+			check_zlib_checksum(state);
+			break;
 		case ISAL_GZIP:
 		case ISAL_GZIP_NO_HDR_VER:
 			ret = check_gzip_checksum(state);
+			break;
+		case ISAL_GZIP_NO_HDR:
+			check_gzip_checksum(state);
 			break;
 		}
 
@@ -2504,11 +2514,15 @@ int isal_inflate(struct inflate_state *state)
 
 			case ISAL_ZLIB_NO_HDR:
 				finalize_adler32(state);
+				check_zlib_checksum(state);
 				break;
 
 			case ISAL_GZIP:
 			case ISAL_GZIP_NO_HDR_VER:
 				ret = check_gzip_checksum(state);
+				break;
+            case ISAL_GZIP_NO_HDR:
+				check_gzip_checksum(state);
 				break;
 			}
 		}
