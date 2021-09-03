@@ -185,10 +185,19 @@ isa-l_static.lib: $(objs)
 $?
 <<
 
+!IF [rc] == 0
+isa-l.dll: isa-l.res
+!ELSE
+!MESSAGE Optionally install rc to set file version info
+!ENDIF
+
 isa-l.dll: $(objs)
 	link -out:$@ -dll -def:isa-l.def $(LINKFLAGS) @<<
 $?
 <<
+
+isa-l.res: isa-l.h
+	rc /fo $@ isa-l.rc
 
 {erasure_code}.c.obj:
 	$(CC) $(CFLAGS) /c -Fo$@ $?
@@ -321,6 +330,7 @@ isa-l.h:
 	@echo #define ISAL_MAKE_VERSION(maj, min, patch)  ((maj) * 0x10000 + (min) * 0x100 + (patch))>> $@
 	@echo #define ISAL_VERSION ISAL_MAKE_VERSION(ISAL_MAJOR_VERSION, ISAL_MINOR_VERSION, ISAL_PATCH_VERSION)>> $@
 	@echo.>> $@
+	@echo #ifndef RC_INVOKED>> $@
 	@echo #include ^<isa-l/crc.h^>>> $@
 	@echo #include ^<isa-l/crc64.h^>>> $@
 	@echo #include ^<isa-l/erasure_code.h^>>> $@
@@ -328,6 +338,7 @@ isa-l.h:
 	@echo #include ^<isa-l/igzip_lib.h^>>> $@
 	@echo #include ^<isa-l/mem_routines.h^>>> $@
 	@echo #include ^<isa-l/raid.h^>>> $@
+	@echo #endif // RC_INVOKED>> $@
 	@echo #endif //_ISAL_H_>> $@
 
 clean:
@@ -339,6 +350,7 @@ clean:
 	-if exist isa-l.lib del isa-l.lib
 	-if exist isa-l.dll del isa-l.dll
 	-if exist isa-l.exp del isa-l.exp
+	-if exist isa-l.res del isa-l.res
 
 zlib.lib:
 igzip_perf.exe:  zlib.lib

@@ -41,10 +41,19 @@ Makefile.nmake tst.nmake: FORCE
 	@echo '$$?'			>> $@
 	@echo '<<'			>> $@
 	@echo ''			>> $@
+	@echo '!IF [rc] == 0'		>> $@
+	@echo 'isa-l.dll: isa-l.res'	>> $@
+	@echo '!ELSE'			>> $@
+	@echo '!MESSAGE Optionally install rc to set file version info' >> $@
+	@echo '!ENDIF'			>> $@
+	@echo ''			>> $@
 	@echo 'isa-l.dll: $$(objs)'	>> $@
 	@echo '	link -out:$$@ -dll -def:isa-l.def $$(LINKFLAGS) @<<'	>> $@
 	@echo '$$?'			>> $@
 	@echo '<<'			>> $@
+	@echo ''			>> $@
+	@echo 'isa-l.res: isa-l.h'	>> $@
+	@echo '	rc /fo $$@ isa-l.rc'	>> $@
 	@echo ''			>> $@
 	@$(foreach b, $(units), \
 		printf "{%s}.c.obj:\n\t\$$(CC) \$$(CFLAGS) /c -Fo\$$@ \$$?\n{%s}.asm.obj:\n\t\$$(AS) \$$(AFLAGS) -o \$$@ \$$?\n\n" $(b) $(b) >> $@; )
@@ -114,7 +123,9 @@ endif
 	@echo '	@echo #define ISAL_MAKE_VERSION(maj, min, patch)  ((maj) * 0x10000 + (min) * 0x100 + (patch))>> $$@' >> $@
 	@echo '	@echo #define ISAL_VERSION ISAL_MAKE_VERSION(ISAL_MAJOR_VERSION, ISAL_MINOR_VERSION, ISAL_PATCH_VERSION)>> $$@' >> $@
 	@echo '	@echo.>> $$@' >> $@
+	@echo '	@echo #ifndef RC_INVOKED>> $$@' >> $@
 	@for unit in $(sort $(extern_hdrs)); do echo "	@echo #include ^<isa-l/$$unit^>>> \$$@" | sed -e 's;include/;;' >> $@; done
+	@echo '	@echo #endif // RC_INVOKED>> $$@' >> $@
 	@echo '	@echo #endif //_ISAL_H_>> $$@' >> $@
 	@echo ''			>> $@
 	@echo 'clean:'					>> $@
@@ -126,6 +137,7 @@ endif
 	@echo '	-if exist isa-l.lib del isa-l.lib'	>> $@
 	@echo '	-if exist isa-l.dll del isa-l.dll'	>> $@
 	@echo '	-if exist isa-l.exp del isa-l.exp'	>> $@
+	@echo '	-if exist isa-l.res del isa-l.res'	>> $@
 	@echo ''		>> $@
 	$(if $(findstring igzip,$(units)),@echo 'zlib.lib:'	>> $@ )
 	@cat $(foreach unit,$(units), $(unit)/Makefile.am)  | sed  \
