@@ -73,6 +73,19 @@ int main(int argc, char *argv[])
 	}
 	putchar('.');
 
+	// Test to help memory checkers
+	for (i = 1; i < 2345; i++) {
+		uint8_t *newbuf = (uint8_t *) malloc(i);
+		memset(newbuf, 0, i);
+		failures = isal_zero_detect(newbuf, i);
+		if (failures) {
+			printf("Fail alloc test\n");
+			free(newbuf);
+			return failures;
+		}
+		free(newbuf);
+	}
+
 	// Test small buffers
 	for (i = 0; i < TEST_LEN; i++) {
 		failures |= isal_zero_detect(buf, i);
@@ -221,6 +234,7 @@ int main(int argc, char *argv[])
 	putchar('.');
 	fflush(0);
 
+	aligned_free(buf);
 	printf(failures == 0 ? " Pass\n" : " Fail\n");
 	return failures;
 }
