@@ -7,6 +7,7 @@ pkginclude_HEADERS = include/test.h
 noinst_LTLIBRARIES =
 bin_PROGRAMS =
 INCLUDE = -I $(srcdir)/include/
+D =
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libisal.pc

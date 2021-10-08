@@ -33,10 +33,11 @@
 default rel
 [bits 64]
 
+extern mem_zero_detect_avx2
 extern mem_zero_detect_avx
 extern mem_zero_detect_sse
 extern mem_zero_detect_base
 
 mbin_interface isal_zero_detect
 
-mbin_dispatch_init5 isal_zero_detect, mem_zero_detect_base, mem_zero_detect_sse, mem_zero_detect_avx, mem_zero_detect_avx
+mbin_dispatch_init5 isal_zero_detect, mem_zero_detect_base, mem_zero_detect_sse, mem_zero_detect_avx, mem_zero_detect_avx2

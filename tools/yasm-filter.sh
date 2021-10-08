@@ -10,6 +10,11 @@ while [ -n "$*" ]; do
 	    shift
 	    shift
 	    ;;
+	-isysroot | -iframeworkwithsysroot | -iwithsysroot | -framework )
+	    # Unsupported options with arg
+	    shift
+	    shift
+	    ;;
 	-I* | -i* | --prefix* )
 	    # Supported options without arg
 	    options="$options $1"

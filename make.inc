@@ -113,6 +113,7 @@ ifeq ($(shell uname),Darwin)
   STRIP_gcc  =
 endif
 
+D :=
 INCLUDE   = $(patsubst %,-I%/,$(subst :, ,$(VPATH)))
 CFLAGS   = $(CFLAGS_$(arch)) $(CFLAGS_$(CC)) $(DEBUG) -O2 $(DEFINES) $(INCLUDE)
 ASFLAGS  = $(ASFLAGS_$(arch)) $(ASFLAGS_$(CC)) $(DEBUG_$(AS)) $(DEFINES) $(INCLUDE)
