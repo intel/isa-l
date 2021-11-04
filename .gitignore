@@ -26,3 +26,7 @@ isa-l.h
 /libisal.la
 libisal.pc
 programs/igzip
+
+# Test programs
+*perf*
+*test*
