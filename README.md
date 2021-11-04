@@ -33,6 +33,7 @@ Building ISA-L
 
 * Make: GNU 'make' or 'nmake' (Windows).
 * Optional: Building with autotools requires autoconf/automake packages.
+* Optional: Manual generation requires help2man package.
 
 x86_64:
 * Assembler: nasm. Version 2.15 or later suggested (other versions of nasm and
