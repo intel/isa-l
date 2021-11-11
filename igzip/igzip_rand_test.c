@@ -546,7 +546,7 @@ int inflate_stateless_pass(uint8_t * compress_buf, uint64_t compress_len,
 
 			if (!ret)
 				ret =
-				    check_gzip_trl(load_u64(state.next_in - offset),
+				    check_gzip_trl(load_le_u64(state.next_in - offset),
 						   state.crc, uncompress_buf, *uncompress_len);
 			else if (ret == ISAL_INCORRECT_CHECKSUM)
 				ret = INCORRECT_GZIP_TRAILER;
@@ -558,7 +558,7 @@ int inflate_stateless_pass(uint8_t * compress_buf, uint64_t compress_len,
 
 			if (!ret)
 				ret =
-				    check_zlib_trl(load_u32(state.next_in - offset),
+				    check_zlib_trl(load_le_u32(state.next_in - offset),
 						   state.crc, uncompress_buf, *uncompress_len);
 			else if (ret == ISAL_INCORRECT_CHECKSUM)
 				ret = INCORRECT_ZLIB_TRAILER;
@@ -743,6 +743,7 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 					printf("Failed to allocate memory\n");
 					return MALLOC_FAILED;
 				}
+				memset(uncomp_tmp, 0, uncomp_tmp_size);
 
 				state->avail_out = uncomp_tmp_size;
 				state->next_out = uncomp_tmp;
@@ -802,7 +803,7 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 				    || gzip_flag == IGZIP_GZIP)
 					compress_len -= gzip_trl_bytes;
 				ret =
-				    check_gzip_trl(load_u64(compress_buf + compress_len),
+				    check_gzip_trl(load_le_u64(compress_buf + compress_len),
 						   state->crc, uncompress_buf,
 						   *uncompress_len);
 			} else if (gzip_flag == IGZIP_ZLIB_NO_HDR) {
@@ -810,7 +811,7 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 				    || gzip_flag == ISAL_ZLIB_NO_HDR_VER)
 					compress_len -= zlib_trl_bytes;
 				ret =
-				    check_zlib_trl(load_u32(compress_buf + compress_len),
+				    check_zlib_trl(load_le_u32(compress_buf + compress_len),
 						   state->crc, uncompress_buf,
 						   *uncompress_len);
 			}
@@ -1152,6 +1153,7 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 		if (rand() % 2 == 0)
 			isal_deflate_set_dict(stream, dict, dict_len);
 		else {
+			memset(&dict_str, 0, sizeof(dict_str));
 			isal_deflate_process_dict(stream, &dict_str, dict, dict_len);
 			isal_deflate_reset_dict(stream, &dict_str);
 		}
@@ -1347,6 +1349,7 @@ int compress_single_pass(uint8_t * data, uint32_t data_size, uint8_t * compresse
 		if (rand() % 2 == 0)
 			isal_deflate_set_dict(&stream, dict, dict_len);
 		else {
+			memset(&dict_str, 0, sizeof(dict_str));
 			isal_deflate_process_dict(&stream, &dict_str, dict, dict_len);
 			isal_deflate_reset_dict(&stream, &dict_str);
 		}

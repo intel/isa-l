@@ -39,7 +39,7 @@ int mem_zero_detect_base(void *buf, size_t n)
 	// Check buffer in native machine width comparisons
 	while (n >= sizeof(uintmax_t)) {
 		n -= sizeof(uintmax_t);
-		if (load_umax(c) != 0)
+		if (load_le_umax(c) != 0)
 			return -1;
 		c += sizeof(uintmax_t);
 	}
@@ -53,12 +53,12 @@ int mem_zero_detect_base(void *buf, size_t n)
 	case 5:
 		a |= *c++;	// fall through to case 4
 	case 4:
-		a |= load_u32(c);
+		a |= load_le_u32(c);
 		break;
 	case 3:
 		a |= *c++;	// fall through to case 2
 	case 2:
-		a |= load_u16(c);
+		a |= load_le_u16(c);
 		break;
 	case 1:
 		a |= *c;

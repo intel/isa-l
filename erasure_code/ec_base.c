@@ -171,7 +171,7 @@ void gf_vect_mul_init(unsigned char c, unsigned char *tbl)
 	unsigned char c4 = (c2 << 1) ^ ((c2 & 0x80) ? 0x1d : 0);	//Mult by GF{2}
 	unsigned char c8 = (c4 << 1) ^ ((c4 & 0x80) ? 0x1d : 0);	//Mult by GF{2}
 
-#if __WORDSIZE == 64 || _WIN64 || __x86_64__
+#if (__WORDSIZE == 64 || _WIN64 || __x86_64__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 	unsigned long long v1, v2, v4, v8, *t;
 	unsigned long long v10, v20, v40, v80;
 	unsigned char c17, c18, c20, c24;

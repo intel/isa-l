@@ -118,9 +118,9 @@ int LLVMFuzzerTestOneInput(const uint8_t * data, size_t size)
 	int trailer_idx = cstate.total_out - trailer_size[wrapper_type];
 
 	if (wrapper_type == IGZIP_GZIP || wrapper_type == IGZIP_GZIP_NO_HDR)
-		crc = load_u32(&isal_cmp_buf[trailer_idx]);
+		crc = load_le_u32(&isal_cmp_buf[trailer_idx]);
 	else if (wrapper_type == IGZIP_ZLIB || wrapper_type == IGZIP_ZLIB_NO_HDR)
-		crc = bswap_32(load_u32(&isal_cmp_buf[trailer_idx]));
+		crc = load_be_u32(&isal_cmp_buf[trailer_idx]);
 
 	assert(istate.crc == crc);
 	free(isal_cmp_buf);

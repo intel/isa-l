@@ -74,12 +74,12 @@ uint32_t build_huff_tree(struct heap_tree *heap_space, uint64_t heap_size, uint6
 
 		heapify(heap, heap_size, 1);
 
-		store_u16((uint8_t *) & heap[node_ptr], h1);
-		store_u16((uint8_t *) & heap[node_ptr - 1], h2);
+		store_native_u16_to_u64(&heap[node_ptr], h1);
+		store_native_u16_to_u64(&heap[node_ptr - 1], h2);
 		node_ptr -= 2;
 
 	}
 	h1 = heap[1];
-	store_u16((uint8_t *) & heap[node_ptr], h1);
+	store_native_u16_to_u64(&heap[node_ptr], h1);
 	return node_ptr;
 }
