@@ -42,4 +42,19 @@ lsrc_aarch64 += \
 		erasure_code/aarch64/gf_5vect_mad_neon.S \
 		erasure_code/aarch64/gf_6vect_mad_neon.S \
 		erasure_code/aarch64/gf_vect_mul_neon.S \
+		erasure_code/aarch64/gf_vect_mad_sve.S \
+		erasure_code/aarch64/gf_2vect_mad_sve.S \
+		erasure_code/aarch64/gf_3vect_mad_sve.S \
+		erasure_code/aarch64/gf_4vect_mad_sve.S \
+		erasure_code/aarch64/gf_5vect_mad_sve.S \
+		erasure_code/aarch64/gf_6vect_mad_sve.S \
+		erasure_code/aarch64/gf_vect_dot_prod_sve.S \
+		erasure_code/aarch64/gf_2vect_dot_prod_sve.S \
+		erasure_code/aarch64/gf_3vect_dot_prod_sve.S \
+		erasure_code/aarch64/gf_4vect_dot_prod_sve.S \
+		erasure_code/aarch64/gf_5vect_dot_prod_sve.S \
+		erasure_code/aarch64/gf_6vect_dot_prod_sve.S \
+		erasure_code/aarch64/gf_7vect_dot_prod_sve.S \
+		erasure_code/aarch64/gf_8vect_dot_prod_sve.S \
+		erasure_code/aarch64/gf_vect_mul_sve.S \
 		erasure_code/aarch64/ec_multibinary_arm.S
