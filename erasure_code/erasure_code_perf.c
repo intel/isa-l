@@ -43,7 +43,7 @@
 # ifndef TEST_CUSTOM
 // Uncached test.  Pull from large mem base.
 #  define TEST_SOURCES 32
-#  define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
+#  define GT_L3_CACHE  512*1024*1024	/* some number > last level cache */
 #  define TEST_LEN(m)  ((GT_L3_CACHE / m) & ~(64-1))
 #  define TEST_TYPE_STR "_cold"
 # else
@@ -107,10 +107,10 @@ int main(int argc, char *argv[])
 	struct perf start;
 
 	// Pick test parameters
-	m = 14;
-	k = 10;
-	nerrs = 4;
-	const u8 err_list[] = { 2, 4, 5, 7 };
+	m = 11;
+	k = 8;
+	nerrs = 3;
+	const u8 err_list[] = { 2, 4, 5 };
 
 	printf("erasure_code_perf: %dx%d %d\n", m, TEST_LEN(m), nerrs);
 
@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
 
 	// Start encode test
 	ec_encode_perf(m, k, a, g_tbls, buffs, &start);
-	printf("erasure_code_encode" TEST_TYPE_STR ": ");
+	printf("erasure_code_encode" TEST_TYPE_STR ": iterations=%lld : ", start.iterations);
 	perf_print(start, (long long)(TEST_LEN(m)) * (m));
 
 	// Start decode test
@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	printf("erasure_code_decode" TEST_TYPE_STR ": ");
+	printf("erasure_code_decode" TEST_TYPE_STR ": iterations=%lld : ", start.iterations);
 	perf_print(start, (long long)(TEST_LEN(m)) * (k + nerrs));
 
 	printf("done all: Pass\n");

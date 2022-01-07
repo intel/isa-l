@@ -283,7 +283,7 @@ static inline void perf_print(struct perf p, double unit_count) {
 	long long total_units = p.iterations * unit_count;
 	long long usecs = (long long)(get_time_elapsed(&p) * 1000000);
 
-	printf("runtime = %10lld usecs", usecs);
+	printf("runtime = %10lld usecs, runtime per ite. = %10lld usecs", usecs, (long long)(usecs / p.iterations));
 	if (total_units != 0) {
 		printf(", bandwidth %lld MB in %.4f sec = %.2f MB/s",
 		       total_units / (1000000), get_time_elapsed(&p),
