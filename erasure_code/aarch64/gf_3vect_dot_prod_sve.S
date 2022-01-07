@@ -52,8 +52,6 @@ x_ptr		.req	x6
 x_pos		.req	x7
 
 x_tbl1		.req	x8
-x_tbl2		.req	x9
-x_tbl3		.req	x10
 x_dest1		.req	x11
 x_dest2		.req	x12
 x_dest3		.req	x_dest	/* reused */
@@ -108,32 +106,21 @@ gf_3vect_dot_prod_sve:
 	mov	x_vec_i, #0			/* clear x_vec_i */
 	ldr	x_ptr, [x_src, x_vec_i]		/* x_ptr: src base addr. */
 
+	mov	x_tbl1, x_tbl			/* reset x_tbl1 */
 	mov	z_dest1.b, #0			/* clear z_dest1 */
 	mov	z_dest2.b, #0			/* clear z_dest2 */
 	mov	z_dest3.b, #0			/* clear z_dest3 */
-
-	/* gf_tbl base = (x_tbl + dest_idx * x_vec * 32) */
-	mov	x_tbl1, x_tbl			/* reset x_tbl1 */
-	add	x_tbl2, x_tbl1, x_vec, LSL #2	/* reset x_tbl2 */
-	add	x_tbl3, x_tbl2, x_vec, LSL #2	/* reset x_tbl3 */
 
 /* Loop 2: x_vec, number of source vectors (ie. data blocks) */
 .Lloopsve_vl_vects:
 	/* load src data, governed by p0 */
 	ld1b	z_src.b,  p0/z, [x_ptr, x_pos]	/* load from: src base + pos offset */
+	/* load gf_table's */
+	ldp	q_gft1_lo, q_gft1_hi, [x_tbl1], #32	/* x_tbl1 is post-added by #32 for each src vect */
+
 	/* split 4-bit lo; 4-bit hi */
 	and	z_src_lo.d, z_src.d, z_mask0f.d
 	lsr	z_src_hi.b, z_src.b, #4
-
-
-	/* gf_tbl addr: (x_tbl + dest_idx * x_vec * 32) + src_vec_idx * 32 */
-	/* load gf_table's */
-	ldp	q_gft1_lo, q_gft1_hi, [x_tbl1], #32	/* x_tbl1 is post-added by #32 for each src vect */
-	ldp	q_gft2_lo, q_gft2_hi, [x_tbl2], #32
-
-	/* prefetch */
-	prfb	pldl2keep, p0, [x_tbl1]
-	prfb	pldl2keep, p0, [x_tbl2]
 
 	/* calc for next */
 	add	x_vec_i, x_vec_i, #8		/* move x_vec_i to next */
@@ -143,18 +130,22 @@ gf_3vect_dot_prod_sve:
 	/* table indexing, ie. gf(2^8) multiplication */
 	tbl	z_gft1_lo.b, {z_gft1_lo.b}, z_src_lo.b
 	tbl	z_gft1_hi.b, {z_gft1_hi.b}, z_src_hi.b
+
+	ldp	q_gft2_lo, q_gft2_hi, [x_tbl1], #32
+	ldp	q_gft3_lo, q_gft3_hi, [x_tbl1], #32
+
 	/* exclusive or, ie. gf(2^8) add */
 	eor	z_dest1.d, z_gft1_lo.d, z_dest1.d
 	eor	z_dest1.d, z_dest1.d, z_gft1_hi.d
-
-	ldp	q_gft3_lo, q_gft3_hi, [x_tbl3], #32
-	prfb	pldl2keep, p0, [x_tbl3]
 
 	/* dest 2 */
 	tbl	z_gft2_lo.b, {z_gft2_lo.b}, z_src_lo.b
 	tbl	z_gft2_hi.b, {z_gft2_hi.b}, z_src_hi.b
 	eor	z_dest2.d, z_gft2_lo.d, z_dest2.d
 	eor	z_dest2.d, z_dest2.d, z_gft2_hi.d
+
+	/* prefetch */
+	/* prfb	pldl2keep, p0, [x_tbl1] */
 
 	/* dest 3 */
 	tbl	z_gft3_lo.b, {z_gft3_lo.b}, z_src_lo.b

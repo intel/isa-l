@@ -27,6 +27,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 #include "erasure_code.h"
+#include <string.h>
 
 /*external function*/
 extern void gf_vect_dot_prod_neon(int len, int vlen, unsigned char *gftbls,
@@ -156,12 +157,39 @@ extern void gf_5vect_mad_sve(int len, int vec, int vec_i, unsigned char *gftbls,
 extern void gf_6vect_mad_sve(int len, int vec, int vec_i, unsigned char *gftbls,
 			     unsigned char *src, unsigned char **dest);
 
+/* TODO: here to announce as static, but in the future, this should be
+ *    allocated at runtime
+ */
+#define	MAX_SRC		32
+#define	MAX_DEST	32
+unsigned char g_tbls_trans[MAX_SRC * MAX_DEST * 32];	/* 32 bytes for each (src/dest) pair */
+
 void ec_encode_data_sve(int len, int k, int rows, unsigned char *g_tbls, unsigned char **data,
 			unsigned char **coding)
 {
 	if (len < 16) {
 		ec_encode_data_base(len, k, rows, g_tbls, data, coding);
 		return;
+	}
+
+	/* transform g_tbls as src index'ed */
+	int src_idx, dest_idx;
+	double *pd = (double *)g_tbls_trans;
+	double *ps;
+	for (src_idx = 0; src_idx < k; src_idx ++) {
+		for (dest_idx = 0; dest_idx < rows; dest_idx ++) {
+			/* copy 32 bytes to   &g_tbls_trans[src_idx * rows * 32 + dest_idx * 32]
+			 *		 from &g_tbls[dest_idx * (k * 32) + src_idx * 32]
+			 */
+			/* memcpy(&g_tbls_trans[src_idx * (rows * 32) + dest_idx * 32],
+				&g_tbls[dest_idx * (k * 32) + src_idx * 32], 32);
+			 */
+			ps = (double *)&g_tbls[dest_idx * (k * 32) + src_idx * 32];
+			*pd++ =  *ps++;
+			*pd++ =  *ps++;
+			*pd++ =  *ps++;
+			*pd++ =  *ps++;
+		}
 	}
 
 	while (rows > 11) {
@@ -213,7 +241,7 @@ void ec_encode_data_sve(int len, int k, int rows, unsigned char *g_tbls, unsigne
 		gf_4vect_dot_prod_sve(len, k, g_tbls, data, coding);
 		break;
 	case 3:
-		gf_3vect_dot_prod_sve(len, k, g_tbls, data, coding);
+		gf_3vect_dot_prod_sve(len, k, (unsigned char *)g_tbls_trans, data, coding);
 		break;
 	case 2:
 		gf_2vect_dot_prod_sve(len, k, g_tbls, data, coding);
