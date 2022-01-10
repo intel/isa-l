@@ -120,7 +120,7 @@ align 16
 	xor	eax, eax
 	lea	tmp1, [rax-1]   ; 0xFFFFFF...
 	mov	DWORD(len), DWORD(tmp3)
-	and	DWORD(len), 127 ; len % 128	
+	and	DWORD(len), 127 ; len % 128
 	and	DWORD(tmp3),63  ; len % 64
 	bzhi	tmp, tmp1, tmp3; mask
 	cmp	DWORD(len), 64
