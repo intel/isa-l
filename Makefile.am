@@ -118,22 +118,11 @@ test: $(addsuffix .run,$(unit_tests))
 	@echo Completed run: $<
 
 # Support for yasm/nasm/gas
-if INTEL_CET_ENABLED
-export CET_LD=$(LD)
-endif
 if USE_YASM
-if INTEL_CET_ENABLED
-  as_filter = ${srcdir}/tools/yasm-cet-filter.sh
-else
   as_filter = ${srcdir}/tools/yasm-filter.sh
 endif
-endif
 if USE_NASM
-if INTEL_CET_ENABLED
-  as_filter = ${srcdir}/tools/nasm-cet-filter.sh
-else
   as_filter = ${srcdir}/tools/nasm-filter.sh
-endif
 endif
 if CPU_AARCH64
   as_filter = $(CC) -D__ASSEMBLY__
