@@ -43,6 +43,9 @@ fi
 if hash grep; then
     echo "Checking for dos and whitespace violations..."
     for f in $(git ls-files); do
+	if [[ $f =~ .*png ]]; then
+	    continue
+	fi
 	[ "$verbose" -gt 0 ] && echo "checking whitespace on $f"
 	if grep -q '[[:space:]]$' $f ; then
 	    echo "  File found with trailing whitespace: $f"
