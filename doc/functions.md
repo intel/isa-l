@@ -20,16 +20,16 @@ Functions pertaining to erasure codes implement a general Reed-Solomon type
 encoding for blocks of data to protect against erasure of whole blocks.
 Individual operations can be described in terms of arithmetic in the Galois
 finite field GF(2^8) with the particular field-defining primitive or reducing
-polynomial \f$ x^8 + x^4 + x^3 + x^2 + 1 \f$ (0x1d).
+polynomial $x^8 + x^4 + x^3 + x^2 + 1$ (0x1d).
 
 For example, the function ec_encode_data() will generate a set of parity blocks
-\f$P_i\f$ from the set of k source blocks \f$D_i\f$ and arbitrary encoding
-coefficients \f$a_{i,j}\f$ where each byte in P is calculated from sources as:
+$P_i$ from the set of k source blocks $D_i$ and arbitrary encoding
+coefficients $a_{i,j}$ where each byte in P is calculated from sources as:
 
-\f[ P_i = \sum_{j=1}^k a_{i,j} \cdot D_j \f]
+$P_i = \sum_{j=1}^k a_{i,j} \cdot D_j$
 
-where addition and multiplication \f$\cdot\f$ is defined in GF(2^8).  Since any
-arbitrary set of coefficients \f$a_{i,j}\f$ can be supplied, the same
+where addition and multiplication $\cdot$ is defined in GF(2^8).  Since any
+arbitrary set of coefficients $a_{i,j}$ can be supplied, the same
 fundamental function can be used for encoding blocks or decoding from blocks in
 erasure.
 
@@ -65,19 +65,19 @@ sources such that single or dual disk failures (one or two erasures) can be
 corrected.  For RAID5, a block of parity is calculated by the xor across the N
 source arrays.  Each parity byte is calculated from N sources by:
 
-\f[ P = D_0 + D_1 + ... + D_{N-1} \f]
+  $P = D_0 + D_1 + ... + D_{N-1}$
 
-where \f$D_n\f$ are elements across each source array [0-(N-1)] and + is the
+where $D_n$ are elements across each source array [0-(N-1)] and + is the
 bit-wise exclusive or (xor) operation.  Elements in GF(2^8) are implemented as
 bytes.
 
 For RAID6, two parity bytes P and Q are calculated from the source array.  P is
 calculated as in RAID5 and Q is calculated using the generator g as:
 
-\f[ Q = g^0 D_0 + g^1 D_1 + g^2 D_2 + ... + g^{N-1} D_{N-1} \f]
+  $Q = g^0 D_0 + g^1 D_1 + g^2 D_2 + ... + g^{N-1} D_{N-1}$
 
 where g is chosen as {2}, the second field element.  Multiplication and the
-field are defined using the primitive polynomial \f$ x^8 + x^4 + x^3 + x^2 + 1 \f$
+field are defined using the primitive polynomial $x^8 + x^4 + x^3 + x^2 + 1$
 (0x1d).
 
 #### RAID Usage
@@ -93,7 +93,7 @@ check using specialized instructions such as PCLMULQDQ, carry-less
 multiplication.  Generally, a CRC is the remainder in binary division of a
 message and a CRC polynomial in GF(2).
 
-\f[ CRC(M(x)) = x^{deg(P(x))} \cdot M(x) \, mod \, P(x) \f]
+  $CRC(M(x)) = x^{deg(P(x))} \cdot M(x) \, mod \, P(x)$
 
 CRC is used in many storage applications to ensure integrity of data by
 appending the CRC to a message.  Various standards choose the polynomial P and
