@@ -85,7 +85,7 @@ q_gft2_hi	.req	q18
 
 z_dest2		.req	z27
 
-gf_2vect_dot_prod_sve:
+cdecl(gf_2vect_dot_prod_sve):
 	/* less than 16 bytes, return_fail */
 	cmp	x_len, #16
 	blt	.return_fail

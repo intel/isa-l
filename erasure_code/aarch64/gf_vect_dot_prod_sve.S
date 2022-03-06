@@ -70,7 +70,7 @@ z_gft1_hi	.req	z5
 q_gft1_lo	.req	q4
 q_gft1_hi	.req	q5
 
-gf_vect_dot_prod_sve:
+cdecl(gf_vect_dot_prod_sve):
 	/* less than 16 bytes, return_fail */
 	cmp	x_len, #16
 	blt	.return_fail

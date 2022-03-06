@@ -93,7 +93,7 @@ q_gft3_hi	.req	q20
 z_dest2		.req	z27
 z_dest3		.req	z28
 
-gf_3vect_dot_prod_sve:
+cdecl(gf_3vect_dot_prod_sve):
 	/* less than 16 bytes, return_fail */
 	cmp	x_len, #16
 	blt	.return_fail

@@ -102,7 +102,7 @@ z_dest3		.req	z28
 z_dest4		.req	z29
 z_dest5		.req	z30
 
-gf_5vect_mad_sve:
+cdecl(gf_5vect_mad_sve):
 	/* less than 16 bytes, return_fail */
 	cmp	x_len, #16
 	blt	.return_fail

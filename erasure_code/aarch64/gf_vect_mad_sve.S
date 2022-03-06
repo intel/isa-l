@@ -71,7 +71,7 @@ z_gft1_hi	.req	z7
 q_gft1_lo	.req	q6
 q_gft1_hi	.req	q7
 
-gf_vect_mad_sve:
+cdecl(gf_vect_mad_sve):
 	/* less than 16 bytes, return_fail */
 	cmp	x_len, #16
 	blt	.return_fail

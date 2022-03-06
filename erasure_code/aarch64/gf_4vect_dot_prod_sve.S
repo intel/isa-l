@@ -101,7 +101,7 @@ z_dest2		.req	z27
 z_dest3		.req	z28
 z_dest4		.req	z29
 
-gf_4vect_dot_prod_sve:
+cdecl(gf_4vect_dot_prod_sve):
 	/* less than 16 bytes, return_fail */
 	cmp	x_len, #16
 	blt	.return_fail

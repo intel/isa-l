@@ -117,7 +117,7 @@ z_dest4		.req	z29
 z_dest5		.req	z30
 z_dest6		.req	z31
 
-gf_6vect_dot_prod_sve:
+cdecl(gf_6vect_dot_prod_sve):
 	/* less than 16 bytes, return_fail */
 	cmp	x_len, #16
 	blt	.return_fail
