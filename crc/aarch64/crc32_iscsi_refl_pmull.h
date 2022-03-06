@@ -48,11 +48,7 @@
 
 	.text
 
-#ifndef __APPLE__
-	.section	.rodata
-#else
-	.section	__TEXT,__const
-#endif
+ASM_DEF_RODATA
 	.align	4
 	.set	.lanchor_crc_tab,. + 0
 #ifndef __APPLE__

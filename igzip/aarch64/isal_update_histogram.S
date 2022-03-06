@@ -77,11 +77,7 @@ declare Macros
         add     w_\length_out, w_\length_out, 256
 .endm
 
-#ifndef __APPLE__
-        .section        .rodata
-#else
-        .section        __TEXT,__const
-#endif
+ASM_DEF_RODATA
         .align  4
 .len_to_code_tab_lanchor = . + 0
 #ifndef __APPLE__

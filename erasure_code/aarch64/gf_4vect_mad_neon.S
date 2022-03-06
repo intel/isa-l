@@ -457,11 +457,7 @@ cdecl(gf_4vect_mad_neon):
 	mov	w_ret, #1
 	ret
 
-#ifndef __APPLE__
-	.section .rodata
-#else
-	.section __TEXT,__const
-#endif
+ASM_DEF_RODATA
 .balign 8
 const_tbl:
 	.dword 0x0000000000000000, 0x0000000000000000

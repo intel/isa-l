@@ -390,11 +390,9 @@ v_br1	.req	v5
 	b	.crc_table_loop_pre
 #ifndef __APPLE__
 	.size	crc16_t10dif_copy_pmull, .-crc16_t10dif_copy_pmull
-	.section .rodata
-#else
-	.section __TEXT,__const
 #endif
 
+ASM_DEF_RODATA
 	.align	4
 .shuffle_mask_lanchor = . + 0
 #ifndef __APPLE__

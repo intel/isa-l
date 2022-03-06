@@ -196,10 +196,9 @@ cdecl(set_long_icf_fg_aarch64):
 	ret
 #ifndef __APPLE__
 	.size	set_long_icf_fg_aarch64, .-set_long_icf_fg_aarch64
-	.section	.rodata
-#else
-	.section	__TEXT,__const
 #endif
+
+ASM_DEF_RODATA
 	.align	3
 	.set	.data_dist_start,. + 0
 .real_data_dist_start:

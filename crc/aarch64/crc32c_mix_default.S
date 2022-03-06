@@ -61,11 +61,9 @@ cdecl(crc32c_mix_default):
 	crc32_mix_main_default
 #ifndef __APPLE__
 	.size	crc32c_mix_default, .-crc32c_mix_default
-	.section	.rodata
-#else
-  .section _DATA,data
 #endif
 
+ASM_DEF_RODATA
 	.align	4
 	.set	lanchor_crc32,. + 0
 

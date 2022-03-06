@@ -5,3 +5,9 @@
 #else
 #define cdecl(x) x
 #endif
+
+#ifdef __APPLE__
+#define ASM_DEF_RODATA .section	__TEXT,__const
+#else
+#define ASM_DEF_RODATA .section .rodata
+#endif
