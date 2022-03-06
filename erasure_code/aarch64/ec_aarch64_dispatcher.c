@@ -38,6 +38,8 @@ DEFINE_INTERFACE_DISPATCHER(gf_vect_dot_prod)
 	if (auxval & HWCAP_ASIMD)
 		return PROVIDER_INFO(gf_vect_dot_prod_neon);
 #elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_SVE_KEY))
+		return PROVIDER_INFO(gf_vect_dot_prod_sve);
 	return PROVIDER_INFO(gf_vect_dot_prod_neon);
 #endif
 	return PROVIDER_BASIC(gf_vect_dot_prod);
@@ -54,6 +56,8 @@ DEFINE_INTERFACE_DISPATCHER(gf_vect_mad)
 	if (auxval & HWCAP_ASIMD)
 		return PROVIDER_INFO(gf_vect_mad_neon);
 #elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_SVE_KEY))
+		return PROVIDER_INFO(gf_vect_mad_sve);
 	return PROVIDER_INFO(gf_vect_mad_neon);
 #endif
 	return PROVIDER_BASIC(gf_vect_mad);
@@ -70,6 +74,8 @@ DEFINE_INTERFACE_DISPATCHER(ec_encode_data)
 	if (auxval & HWCAP_ASIMD)
 		return PROVIDER_INFO(ec_encode_data_neon);
 #elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_SVE_KEY))
+		return PROVIDER_INFO(ec_encode_data_sve);
 	return PROVIDER_INFO(ec_encode_data_neon);
 #endif
 	return PROVIDER_BASIC(ec_encode_data);
@@ -86,6 +92,8 @@ DEFINE_INTERFACE_DISPATCHER(ec_encode_data_update)
 	if (auxval & HWCAP_ASIMD)
 		return PROVIDER_INFO(ec_encode_data_update_neon);
 #elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_SVE_KEY))
+		return PROVIDER_INFO(ec_encode_data_update_sve);
 	return PROVIDER_INFO(ec_encode_data_update_neon);
 #endif
 	return PROVIDER_BASIC(ec_encode_data_update);
@@ -102,6 +110,8 @@ DEFINE_INTERFACE_DISPATCHER(gf_vect_mul)
 	if (auxval & HWCAP_ASIMD)
 		return PROVIDER_INFO(gf_vect_mul_neon);
 #elif defined(__APPLE__)
+	if (sysctlEnabled(SYSCTL_SVE_KEY))
+		return PROVIDER_INFO(gf_vect_mul_sve);
 	return PROVIDER_INFO(gf_vect_mul_neon);
 #endif
 	return PROVIDER_BASIC(gf_vect_mul);

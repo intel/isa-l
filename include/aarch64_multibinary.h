@@ -31,7 +31,11 @@
 #ifndef __aarch64__
 #error "This file is for aarch64 only"
 #endif
-#ifndef __APPLE__
+#ifdef __APPLE__
+#define SYSCTL_PMULL_KEY "hw.optional.arm.FEAT_PMULL"
+#define SYSCTL_CRC32_KEY "hw.optional.armv8_crc32"
+#define SYSCTL_SVE_KEY "hw.optional.arm.FEAT_SVE"
+#else
 #include <asm/hwcap.h>
 #endif
 #include "aarch64_label.h"
