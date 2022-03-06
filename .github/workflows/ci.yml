@@ -1,0 +1,62 @@
+name: Continous integration
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+    tags:
+      - "*"
+
+jobs:
+  check_format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2.3.4
+        with:
+          fetch-depth: 2
+      - name: Install indent
+        run: sudo apt install indent
+      - name: Run format check
+        run: bash tools/check_format.sh
+
+  run_tests_unix:
+    needs: check_format
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+        assembler:
+          - nasm
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2.3.4
+      - name: Install build dependencies (Linux)
+        run: sudo apt install ${{ matrix.assembler }}
+        if: runner.os == 'Linux'
+      - name: Install build dependencies (Macos)
+        run: brew install ${{ matrix.assembler }} automake autoconf coreutils
+        if: runner.os == 'macOS'
+      - name: Build
+        run: |
+          ./autogen.sh
+          ./configure
+          bash -c 'make -j $(nproc)'
+      - name: Run tests
+        run: bash tools/test_checks.sh
+      - name: Run extended tests
+        run: bash tools/test_extended.sh
+        if: runner.os == 'Linux'  # Fails on Mac OS due to nmake consistency issue
+
+  run_tests_windows:
+    needs: check_format
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2.3.4
+      - name: Set MSVC developer prompt
+        uses: ilammy/msvc-dev-cmd@v1.6.0
+      - name: Install nasm
+        uses: ilammy/setup-nasm@v1.2.0
+      - name: Build
+        run: nmake -f Makefile.nmake

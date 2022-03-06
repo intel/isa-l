@@ -15,12 +15,14 @@ applications.  ISA-L includes:
   implementations.
 * Compression - Fast deflate-compatible data compression.
 * De-compression - Fast inflate-compatible data compression.
+* igzip - A command line application like gzip, accelerated with ISA-L.
 
 Also see:
 * [ISA-L for updates](https://github.com/intel/isa-l).
 * For crypto functions see [isa-l_crypto on github](https://github.com/intel/isa-l_crypto).
 * The [github wiki](https://github.com/intel/isa-l/wiki) including a list of
-  [distros/ports](https://github.com/intel/isa-l/wiki/Ports--Repos) offering binary packages.
+  [distros/ports](https://github.com/intel/isa-l/wiki/Ports--Repos) offering binary packages
+  as well as a list of [language bindings](https://github.com/intel/isa-l/wiki/Language-Bindings).
 * ISA-L [mailing list](https://lists.01.org/hyperkitty/list/isal@lists.01.org/).
 * [Contributing](CONTRIBUTING.md).
 
@@ -31,10 +33,11 @@ Building ISA-L
 
 * Make: GNU 'make' or 'nmake' (Windows).
 * Optional: Building with autotools requires autoconf/automake packages.
+* Optional: Manual generation requires help2man package.
 
 x86_64:
-* Assembler: nasm v2.11.01 or later (nasm v2.13 or better suggested for building in AVX512 support)
-  or yasm version 1.2.0 or later.
+* Assembler: nasm. Version 2.15 or later suggested (other versions of nasm and
+  yasm may build but with limited function [support.](doc/build.md)
 * Compiler: gcc, clang, icc or VC compiler.
 
 aarch64:

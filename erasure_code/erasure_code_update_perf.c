@@ -31,7 +31,6 @@
 #include <stdlib.h>
 #include <string.h>		// for memset, memcmp
 #include "erasure_code.h"
-#include "types.h"
 #include "test.h"
 
 //By default, test multibinary version

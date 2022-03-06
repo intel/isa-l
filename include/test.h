@@ -30,6 +30,15 @@
 #ifndef _TEST_H
 #define _TEST_H
 
+/**
+ *  @file  test.h
+ *  @brief Test helper include for common perf and test macros
+ *
+ *  This is a helper file to enable short and simple tests. Not intended for use
+ *  in library functions or production. Includes helper routines for alignment,
+ *  benchmark timing, and filesize.
+ */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -39,6 +48,29 @@ extern "C" {
 
 #ifdef _MSC_VER
 # define inline __inline
+#endif
+
+/* Make os-independent alignment attribute, alloc and free. */
+#if defined  __unix__ || defined __APPLE__
+# define DECLARE_ALIGNED(decl, alignval) decl __attribute__((aligned(alignval)))
+# define __forceinline static inline
+# define aligned_free(x) free(x)
+#else
+# ifdef __MINGW32__
+#   define DECLARE_ALIGNED(decl, alignval) decl __attribute__((aligned(alignval)))
+#   define posix_memalign(p, algn, len) (NULL == (*((char**)(p)) = (void*) _aligned_malloc(len, algn)))
+#   define aligned_free(x) _aligned_free(x)
+# else
+#   define DECLARE_ALIGNED(decl, alignval) __declspec(align(alignval)) decl
+#   define posix_memalign(p, algn, len) (NULL == (*((char**)(p)) = (void*) _aligned_malloc(len, algn)))
+#   define aligned_free(x) _aligned_free(x)
+# endif
+#endif
+
+#ifdef DEBUG
+# define DEBUG_PRINT(x) printf x
+#else
+# define DEBUG_PRINT(x) do {} while (0)
 #endif
 
 /* Decide wether to use benchmark time as an approximation or a minimum. Fewer

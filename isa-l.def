@@ -115,3 +115,4 @@ isal_gzip_header_init           @110
 isal_adler32                    @111
 isal_deflate_process_dict       @112
 isal_deflate_reset_dict         @113
+gf_inv                          @114

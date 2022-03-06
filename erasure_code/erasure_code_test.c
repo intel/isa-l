@@ -31,7 +31,7 @@
 #include <stdlib.h>
 #include <string.h>		// for memset, memcmp
 #include "erasure_code.h"
-#include "types.h"
+#include "test.h"
 
 #define TEST_LEN 8192
 #define TEST_SIZE (TEST_LEN/2)

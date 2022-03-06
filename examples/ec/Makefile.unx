@@ -1,8 +1,0 @@
-
-default: ex
-
-include ../../erasure_code/Makefile.am
-include Makefile.am
-include ../../make.inc
-
-VPATH = . ../../erasure_code ../../include

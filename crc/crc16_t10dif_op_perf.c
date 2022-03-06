@@ -64,8 +64,9 @@ struct blk_ext {
 	uint16_t crc;
 };
 
-void crc16_t10dif_copy_perf(struct blk *blks, struct blk *blkp, struct blk_ext *blks_ext,
-			    struct blk_ext *blkp_ext, uint16_t * crc)
+static void crc16_t10dif_copy_perf(struct blk *blks, struct blk *blkp,
+				   struct blk_ext *blks_ext, struct blk_ext *blkp_ext,
+				   uint16_t * crc)
 {
 	int i;
 	for (i = 0, blkp = blks, blkp_ext = blks_ext; i < NBLOCKS; i++) {
@@ -80,8 +81,8 @@ void crc16_t10dif_copy_perf(struct blk *blks, struct blk *blkp, struct blk_ext *
 int main(int argc, char *argv[])
 {
 	uint16_t crc;
-	struct blk *blks, *blkp;
-	struct blk_ext *blks_ext, *blkp_ext;
+	struct blk *blks = NULL, *blkp = NULL;
+	struct blk_ext *blks_ext = NULL, *blkp_ext = NULL;
 	struct perf start;
 
 	printf("crc16_t10dif_streaming_insert_perf:\n");

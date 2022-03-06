@@ -159,6 +159,7 @@ objs = \
 	bin\igzip_set_long_icf_fg_04.obj \
 	bin\igzip_set_long_icf_fg_06.obj \
 	bin\mem_zero_detect_avx.obj \
+	bin\mem_zero_detect_avx2.obj \
 	bin\mem_zero_detect_sse.obj \
 	bin\mem_multibinary.obj
 
@@ -175,8 +176,8 @@ CC         = cl
 AS         = nasm
 
 lib: bin static dll
-static: bin isa-l_static.lib
-dll: bin isa-l.dll
+static: bin isa-l_static.lib isa-l.h
+dll: bin isa-l.dll isa-l.h
 
 bin: ; -mkdir $@
 
@@ -185,10 +186,19 @@ isa-l_static.lib: $(objs)
 $?
 <<
 
+!IF [rc] == 0
+isa-l.dll: isa-l.res
+!ELSE
+!MESSAGE Optionally install rc to set file version info
+!ENDIF
+
 isa-l.dll: $(objs)
 	link -out:$@ -dll -def:isa-l.def $(LINKFLAGS) @<<
 $?
 <<
+
+isa-l.res: isa-l.h
+	rc /fo $@ isa-l.rc
 
 {erasure_code}.c.obj:
 	$(CC) $(CFLAGS) /c -Fo$@ $?
@@ -230,6 +240,9 @@ ex = \
 	igzip_sync_flush_example.exe \
 	ec_simple_example.exe \
 	ec_piggyback_example.exe
+
+{examples\ec}.c.obj:
+	$(CC) $(CFLAGS) /c -Fo$@ $?
 
 ex: lib $(ex)
 
@@ -303,6 +316,32 @@ progs: lib $(progs)
 igzip.exe: programs\igzip_cli.obj
 	link /out:$@ $(LINKFLAGS) isa-l.lib $?
 
+isa-l.h:
+	@echo /**>> $@
+	@echo *  @file isa-l.h>> $@
+	@echo *  @brief Include for ISA-L library>> $@
+	@echo */>> $@
+	@echo.>> $@
+	@echo #ifndef _ISAL_H_>> $@
+	@echo #define _ISAL_H_>> $@
+	@echo.>> $@
+	@echo #define ISAL_MAJOR_VERSION 2 >> $@
+	@echo #define ISAL_MINOR_VERSION 30 >> $@
+	@echo #define ISAL_PATCH_VERSION 0 >> $@
+	@echo #define ISAL_MAKE_VERSION(maj, min, patch)  ((maj) * 0x10000 + (min) * 0x100 + (patch))>> $@
+	@echo #define ISAL_VERSION ISAL_MAKE_VERSION(ISAL_MAJOR_VERSION, ISAL_MINOR_VERSION, ISAL_PATCH_VERSION)>> $@
+	@echo.>> $@
+	@echo #ifndef RC_INVOKED>> $@
+	@echo #include ^<isa-l/crc.h^>>> $@
+	@echo #include ^<isa-l/crc64.h^>>> $@
+	@echo #include ^<isa-l/erasure_code.h^>>> $@
+	@echo #include ^<isa-l/gf_vect_mul.h^>>> $@
+	@echo #include ^<isa-l/igzip_lib.h^>>> $@
+	@echo #include ^<isa-l/mem_routines.h^>>> $@
+	@echo #include ^<isa-l/raid.h^>>> $@
+	@echo #endif // RC_INVOKED>> $@
+	@echo #endif //_ISAL_H_>> $@
+
 clean:
 	-if exist *.obj del *.obj
 	-if exist bin\*.obj del bin\*.obj
@@ -312,6 +351,7 @@ clean:
 	-if exist isa-l.lib del isa-l.lib
 	-if exist isa-l.dll del isa-l.dll
 	-if exist isa-l.exp del isa-l.exp
+	-if exist isa-l.res del isa-l.res
 
 zlib.lib:
 igzip_perf.exe:  zlib.lib

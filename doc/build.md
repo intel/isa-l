@@ -1,9 +1,32 @@
 # ISA-L Build Details
 
-For x86-64 builds it is highly recommended to get an up-to-date version of
+## Build tools
+
+NASM: For x86-64 builds it is highly recommended to get an up-to-date version of
 [nasm] that can understand the latest instruction sets. Building with an older
-version is usually possible but the library may lack some function versions for
-the best performance.
+assembler version is often possible but the library may lack some function
+versions for the best performance. For example, as a minimum, nasm v2.11.01 or
+yasm 1.2.0 can be used to build a limited functionality library but it will not
+include any function versions with AVX2, AVX512, or optimizations for many
+processors before the assembler's build. The configure or make tools can run
+tests to check the assembler's knowledge of new instructions and change build
+defines. For autoconf builds, check the output of configure for full nasm
+support as it includes the following lines.
+
+    checking for nasm... yes
+    checking for modern nasm... yes
+    checking for optional nasm AVX512 support... yes
+    checking for additional nasm AVX512 support... yes
+
+If an appropriate nasm is not available from your distro, it is simple to build
+from source or download an executable from [nasm].
+
+    git clone --depth=10 https://github.com/netwide-assembler/nasm
+    cd nasm
+    ./autogen.sh
+    ./configure
+    make
+    sudo make install
 
 ## Windows Build Environment Details
 
