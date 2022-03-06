@@ -39,19 +39,6 @@
 #include "static_inflate.h"
 #endif
 
-#ifdef __FreeBSD__
-#include <sys/types.h>
-#include <sys/endian.h>
-# define bswap_32(x) bswap32(x)
-#elif defined (__APPLE__)
-#include <libkern/OSByteOrder.h>
-# define bswap_32(x) OSSwapInt32(x)
-#elif defined (__GNUC__) && !defined (__MINGW32__)
-# include <byteswap.h>
-#elif defined _WIN64
-# define bswap_32(x) _byteswap_ulong(x)
-#endif
-
 extern int decode_huffman_code_block_stateless(struct inflate_state *, uint8_t * start_out);
 extern struct isal_hufftables hufftables_default;	/* For known header detection */
 
@@ -255,7 +242,7 @@ static void inline inflate_in_load(struct inflate_state *state, int min_required
 		/* If there is enough space to load a 64 bits, load the data and use
 		 * that to fill read_in */
 		new_bytes = 8 - (state->read_in_length + 7) / 8;
-		temp = load_u64(state->next_in);
+		temp = load_le_u64(state->next_in);
 
 		state->read_in |= temp << state->read_in_length;
 		state->next_in += new_bytes;
@@ -948,7 +935,7 @@ static int header_matches_pregen(struct inflate_state *state)
 	/* Check if stashed read_in_bytes match header */
 	hdr = &(hufftables_default.deflate_hdr[0]);
 	bits_read_mask = (1ull << state->read_in_length) - 1;
-	hdr_stash = (load_u64(hdr) >> bits_read_prior) & bits_read_mask;
+	hdr_stash = (load_le_u64(hdr) >> bits_read_prior) & bits_read_mask;
 	in_stash = state->read_in & bits_read_mask;
 
 	if (hdr_stash != in_stash)
@@ -1200,7 +1187,7 @@ static uint16_t inline decode_next_header(struct inflate_state *state,
 	/* next_sym is a possible symbol decoded from next_bits. If bit 15 is 0,
 	 * next_code is a symbol. Bits 9:0 represent the symbol, and bits 14:10
 	 * represent the length of that symbols huffman code. If next_sym is not
-	 * a symbol, it provides a hint of where the large symbols containin
+	 * a symbol, it provides a hint of where the large symbols containing
 	 * this code are located. Note the hint is at largest the location the
 	 * first actual symbol in the long code list.*/
 	next_sym = huff_code->short_code_lookup[next_bits];
@@ -1574,6 +1561,7 @@ static int inline decode_literal_block(struct inflate_state *state)
 {
 	uint32_t len = state->type0_block_len;
 	uint32_t bytes = state->read_in_length / 8;
+	uint64_t read_in;
 	/* If the block is uncompressed, perform a memcopy while
 	 * updating state data */
 	state->block_state = state->bfinal ? ISAL_BLOCK_INPUT_DONE : ISAL_BLOCK_NEW_HDR;
@@ -1588,8 +1576,9 @@ static int inline decode_literal_block(struct inflate_state *state)
 		state->block_state = ISAL_BLOCK_TYPE0;
 	}
 	if (state->read_in_length) {
+		read_in = to_le64(state->read_in);
 		if (len >= bytes) {
-			memcpy(state->next_out, &state->read_in, bytes);
+			memcpy(state->next_out, &read_in, bytes);
 
 			state->next_out += bytes;
 			state->avail_out -= bytes;
@@ -1602,7 +1591,7 @@ static int inline decode_literal_block(struct inflate_state *state)
 			bytes = 0;
 
 		} else {
-			memcpy(state->next_out, &state->read_in, len);
+			memcpy(state->next_out, &read_in, len);
 
 			state->next_out += len;
 			state->avail_out -= len;
@@ -1946,8 +1935,8 @@ static int check_gzip_checksum(struct inflate_state *state)
 			byte_count = state->read_in_length / 8;
 			offset = state->read_in_length % 8;
 
-			store_u64(state->tmp_in_buffer + tmp_in_size,
-				  state->read_in >> offset);
+			store_le_u64(state->tmp_in_buffer + tmp_in_size,
+				     state->read_in >> offset);
 			state->read_in = 0;
 			state->read_in_length = 0;
 
@@ -1961,7 +1950,7 @@ static int check_gzip_checksum(struct inflate_state *state)
 			return ret;
 		}
 
-		trailer = load_u64(next_in);
+		trailer = load_le_u64(next_in);
 	}
 
 	state->block_state = ISAL_BLOCK_FINISH;
@@ -1997,8 +1986,8 @@ static int check_zlib_checksum(struct inflate_state *state)
 			byte_count = state->read_in_length / 8;
 			offset = state->read_in_length % 8;
 
-			store_u64(state->tmp_in_buffer + tmp_in_size,
-				  state->read_in >> offset);
+			store_le_u64(state->tmp_in_buffer + tmp_in_size,
+				     state->read_in >> offset);
 			state->read_in = 0;
 			state->read_in_length = 0;
 
@@ -2012,12 +2001,12 @@ static int check_zlib_checksum(struct inflate_state *state)
 			return ret;
 		}
 
-		trailer = load_u32(next_in);
+		trailer = load_le_u32(next_in);
 	}
 
 	state->block_state = ISAL_BLOCK_FINISH;
 
-	if (bswap_32(trailer) != state->crc)
+	if (isal_bswap32(trailer) != state->crc)
 		return ISAL_INCORRECT_CHECKSUM;
 	else
 		return ISAL_DECOMP_OK;
@@ -2051,7 +2040,7 @@ int isal_read_gzip_header(struct inflate_state *state, struct isal_gzip_header *
 		id2 = next_in[1];
 		cm = next_in[2];
 		flags = next_in[3];
-		gz_hdr->time = load_u32(next_in + 4);
+		gz_hdr->time = load_le_u32(next_in + 4);
 		gz_hdr->xflags = *(next_in + 8);
 		gz_hdr->os = *(next_in + 9);
 
@@ -2075,7 +2064,7 @@ int isal_read_gzip_header(struct inflate_state *state, struct isal_gzip_header *
 				break;
 			}
 
-			xlen = load_u16(next_in);
+			xlen = load_le_u16(next_in);
 			count = xlen;
 
 			gz_hdr->extra_len = xlen;
@@ -2130,7 +2119,7 @@ int isal_read_gzip_header(struct inflate_state *state, struct isal_gzip_header *
 				return ret;
 			}
 
-			if ((hcrc & 0xffff) != load_u16(next_in))
+			if ((hcrc & 0xffff) != load_le_u16(next_in))
 				return ISAL_INCORRECT_CHECKSUM;
 		}
 
@@ -2181,7 +2170,7 @@ int isal_read_zlib_header(struct inflate_state *state, struct isal_zlib_header *
 				break;
 			}
 
-			zlib_hdr->dict_id = load_u32(next_in);
+			zlib_hdr->dict_id = load_le_u32(next_in);
 		}
 
 		state->wrapper_flag = 1;
@@ -2370,7 +2359,7 @@ int isal_inflate(struct inflate_state *state)
 
 			/* Copy valid data from internal buffer into out_buffer */
 			if (state->write_overflow_len != 0) {
-				store_u32(state->next_out, state->write_overflow_lits);
+				store_le_u32(state->next_out, state->write_overflow_lits);
 				state->next_out += state->write_overflow_len;
 				state->total_out += state->write_overflow_len;
 				state->write_overflow_lits = 0;
@@ -2468,8 +2457,8 @@ int isal_inflate(struct inflate_state *state)
 
 		/* Write overflow data into tmp buffer */
 		if (state->write_overflow_len != 0) {
-			store_u32(&state->tmp_out_buffer[state->tmp_out_valid],
-				  state->write_overflow_lits);
+			store_le_u32(&state->tmp_out_buffer[state->tmp_out_valid],
+				     state->write_overflow_lits);
 			state->tmp_out_valid += state->write_overflow_len;
 			state->total_out += state->write_overflow_len;
 			state->write_overflow_lits = 0;

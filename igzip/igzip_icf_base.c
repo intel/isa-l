@@ -73,7 +73,7 @@ void isal_deflate_icf_body_hash_hist_base(struct isal_zstream *stream)
 			return;
 		}
 
-		literal = load_u32(next_in);
+		literal = load_le_u32(next_in);
 		hash = compute_hash(literal) & hash_mask;
 		dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
 		last_seen[hash] = (uint64_t) (next_in - file_start);
@@ -94,7 +94,7 @@ void isal_deflate_icf_body_hash_hist_base(struct isal_zstream *stream)
 				next_hash++;
 
 				for (; next_hash < end; next_hash++) {
-					literal = load_u32(next_hash);
+					literal = load_le_u32(next_hash);
 					hash = compute_hash(literal) & hash_mask;
 					last_seen[hash] = (uint64_t) (next_hash - file_start);
 				}
@@ -168,7 +168,7 @@ void isal_deflate_icf_finish_hash_hist_base(struct isal_zstream *stream)
 			return;
 		}
 
-		literal = load_u32(next_in);
+		literal = load_le_u32(next_in);
 		hash = compute_hash(literal) & hash_mask;
 		dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
 		last_seen[hash] = (uint64_t) (next_in - file_start);
@@ -186,7 +186,7 @@ void isal_deflate_icf_finish_hash_hist_base(struct isal_zstream *stream)
 				next_hash++;
 
 				for (; next_hash < end - 3; next_hash++) {
-					literal = load_u32(next_hash);
+					literal = load_le_u32(next_hash);
 					hash = compute_hash(literal) & hash_mask;
 					last_seen[hash] = (uint64_t) (next_hash - file_start);
 				}
@@ -278,7 +278,7 @@ void isal_deflate_icf_finish_hash_map_base(struct isal_zstream *stream)
 			return;
 		}
 
-		literal = load_u32(next_in);
+		literal = load_le_u32(next_in);
 		hash = compute_hash_mad(literal) & hash_mask;
 		dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
 		last_seen[hash] = (uint64_t) (next_in - file_start);
@@ -296,7 +296,7 @@ void isal_deflate_icf_finish_hash_map_base(struct isal_zstream *stream)
 				next_hash++;
 
 				for (; next_hash < end - 3; next_hash++) {
-					literal = load_u32(next_hash);
+					literal = load_le_u32(next_hash);
 					hash = compute_hash_mad(literal) & hash_mask;
 					last_seen[hash] = (uint64_t) (next_hash - file_start);
 				}
@@ -361,7 +361,7 @@ void isal_deflate_hash_mad_base(uint16_t * hash_table, uint32_t hash_mask,
 	uint16_t index = current_index - dict_len;
 
 	while (next_in <= end_in) {
-		literal = load_u32(next_in);
+		literal = load_le_u32(next_in);
 		hash = compute_hash_mad(literal) & hash_mask;
 		hash_table[hash] = index;
 		index++;

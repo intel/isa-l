@@ -14,6 +14,7 @@ INPUT                  = isa-l.h \
 			 README.md \
 			 CONTRIBUTING.md \
 			 Release_notes.txt \
+			 doc/functions.md \
 			 doc/test.md \
 			 doc/build.md
 
