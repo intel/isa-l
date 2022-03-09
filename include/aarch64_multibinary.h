@@ -32,9 +32,9 @@
 #error "This file is for aarch64 only"
 #endif
 #ifdef __APPLE__
-#define SYSCTL_PMULL_KEY "hw.optional.arm.FEAT_PMULL"
+#define SYSCTL_PMULL_KEY "hw.optional.arm.FEAT_PMULL" // from macOS 12 FEAT_* sysctl infos are available
 #define SYSCTL_CRC32_KEY "hw.optional.armv8_crc32"
-#define SYSCTL_SVE_KEY "hw.optional.arm.FEAT_SVE"
+#define SYSCTL_SVE_KEY "hw.optional.arm.FEAT_SVE" // this one is just a guess and need to check macOS update
 #else
 #include <asm/hwcap.h>
 #endif
