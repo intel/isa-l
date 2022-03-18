@@ -1146,7 +1146,7 @@ uint32_t isal_write_zlib_header(struct isal_zstream *stream, struct isal_zlib_he
 	out_buf[1] = flg;
 
 	if (dict_flag)
-		store_le_u32(out_buf + 2, z_hdr->dict_id);
+		store_be_u32(out_buf + 2, z_hdr->dict_id);
 
 	stream->next_out += hdr_size;
 	stream->total_out += hdr_size;
