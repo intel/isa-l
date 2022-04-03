@@ -27,6 +27,9 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+%use smartalign
+ALIGNMODE P6		; make sure nasm emits multibyte NOPs
+
 %ifndef _REG_SIZES_ASM_
 %define _REG_SIZES_ASM_
 
