@@ -99,16 +99,18 @@ func(mem_zero_detect_avx512)
 	setz	al
 	add	eax, DWORD(tmp0)
 	jnz	.mem_z_small_block
+	xor	eax, eax
+	jmp	.mem_z_loop
 
 
-align 16
+align 32
 .mem_z_loop:
 	vmovdqa64	zmm0, [src]
 	vporq	zmm0, zmm0,[src+64]
-	xor	tmp1,tmp1
+	xor	DWORD(tmp1),DWORD(tmp1)
 	sub	len, 1
 	setz	BYTE(tmp1)
-	add	src, 128
+	sub	src, -128
 	vptestmb k1, zmm0, zmm0
 	kmovq	tmp0, k1
 	add	tmp1, tmp0 ; for macrofusion.
