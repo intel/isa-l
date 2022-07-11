@@ -167,8 +167,8 @@ objs = \
 INCLUDES   = -I./ -Ierasure_code/ -Iraid/ -Icrc/ -Iigzip/ -Iprograms/ -Imem/ -Iinclude/ -Itests/fuzz/ -Iexamples/ec/
 # Modern asm feature level, consider upgrading nasm/yasm before decreasing feature_level
 FEAT_FLAGS = -DHAVE_AS_KNOWS_AVX512 -DAS_FEATURE_LEVEL=10
-CFLAGS_REL = -O2 -DNDEBUG /Z7 /MD /Gy
-CFLAGS_DBG = -Od -DDEBUG /Z7 /MDd
+CFLAGS_REL = -O2 -DNDEBUG /Z7 /Gy
+CFLAGS_DBG = -Od -DDEBUG /Z7
 LINKFLAGS  = -nologo -incremental:no -debug
 CFLAGS     = $(CFLAGS_REL) -nologo -D_USE_MATH_DEFINES $(FEAT_FLAGS) $(INCLUDES) $(D)
 AFLAGS     = -f win64 $(FEAT_FLAGS) $(INCLUDES) $(D)
