@@ -359,16 +359,3 @@ void ec_encode_data_update_avx2(int len, int k, int rows, int vec_i, unsigned ch
 
 #endif //__WORDSIZE == 64 || _WIN64 || __x86_64__
 #endif //__x86_64__  || __i386__ || _M_X64 || _M_IX86
-
-struct slver {
-	unsigned short snum;
-	unsigned char ver;
-	unsigned char core;
-};
-
-// Version info
-struct slver ec_init_tables_slver_00010068;
-struct slver ec_init_tables_slver = { 0x0068, 0x01, 0x00 };
-
-struct slver ec_encode_data_sse_slver_00020069;
-struct slver ec_encode_data_sse_slver = { 0x0069, 0x02, 0x00 };

@@ -331,21 +331,3 @@ uint32_t crc32_gzip_refl_base(uint32_t seed, uint8_t * buf, uint64_t len)
 
 	return ~crc;
 }
-
-struct slver {
-	unsigned short snum;
-	unsigned char ver;
-	unsigned char core;
-};
-
-struct slver crc32_iscsi_base_slver_0001011d;
-struct slver crc32_iscsi_base_slver = { 0x011d, 0x02, 0x00 };
-
-struct slver crc16_t10dif_base_slver_0001011e;
-struct slver crc16_t10dif_base_slver = { 0x011e, 0x02, 0x00 };
-
-struct slver crc32_ieee_base_slver_0001011f;
-struct slver crc32_ieee_base_slver = { 0x011f, 0x02, 0x00 };
-
-struct slver crc32_gzip_refl_base_slver_0000002b;
-struct slver crc32_gzip_refl_base_slver = { 0x002b, 0x00, 0x00 };

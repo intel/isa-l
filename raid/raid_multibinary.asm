@@ -135,9 +135,3 @@ xor_check_dispatch_init:
 	pop     rbx
 	pop     rax
 	ret
-
-;;;       func          	core, ver, snum
-slversion xor_gen,		00,   03,  0126
-slversion xor_check,		00,   03,  0127
-slversion pq_gen,		00,   03,  0128
-slversion pq_check,		00,   03,  0129

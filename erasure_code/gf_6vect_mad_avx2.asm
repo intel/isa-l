@@ -395,6 +395,3 @@ align 32
 constip32:
 	dq 0xf8f9fafbfcfdfeff, 0xf0f1f2f3f4f5f6f7
 	dq 0xe8e9eaebecedeeef, 0xe0e1e2e3e4e5e6e7
-
-;;;       func              core, ver, snum
-slversion gf_6vect_mad_avx2, 04,  01,  0211
