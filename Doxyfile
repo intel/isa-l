@@ -13,6 +13,7 @@ INPUT                  = isa-l.h \
 			 include \
 			 README.md \
 			 CONTRIBUTING.md \
+			 SECURITY.md \
 			 Release_notes.txt \
 			 doc/functions.md \
 			 doc/test.md \
