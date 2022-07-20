@@ -75,8 +75,6 @@ local variables
 	declare_var_vector_reg s2acc	, 3
 	declare_var_vector_reg zero	, 16
 	declare_var_vector_reg adler	, 17
-	declare_var_vector_reg back_d0	, 18
-	declare_var_vector_reg back_d1	, 19
 	declare_var_vector_reg sum2	, 20
 	declare_var_vector_reg tmp2	, 20
 
@@ -110,7 +108,6 @@ local variables
 
 	add	end,start,length
 	cbz	loop_cnt,final_accum32
-	ld1 	{back_d0_v.16b-back_d1_v.16b},[start]
 	mov 	loop_const,173
 
 	movi	v16.4s,0
@@ -128,10 +125,8 @@ great_than_32:
 	add	tmp_x,start,loop_const,lsl 5
 
 accum32_neon:
+	ld1 	{d0_v.16b-d1_v.16b},[start]
 	add	start,start,32
-	mov	d0_v.16b,back_d0_v.16b
-	mov	d1_v.16b,back_d1_v.16b
-	ld1 	{back_d0_v.16b-back_d1_v.16b},[start]
 
 	shl	tmp2_v.4s,adacc_v.4s,5
 	add	s2acc_v.4s,s2acc_v.4s,tmp2_v.4s

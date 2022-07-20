@@ -70,7 +70,7 @@ x_crc16tab		.req	x4
 x_buf_saved		.req	x0
 
 cdecl(crc16_t10dif_pmull):
-	cmp	x_len, 1023
+	cmp	x_len, 63
 	sub	sp, sp, #16
 	uxth	w_seed, w_seed
 	bhi	.crc_fold
@@ -125,6 +125,9 @@ d_x1			.req	d3
 d_x2			.req	d4
 d_x3			.req	d5
 
+q_permutation		.req	q7
+v_permutation		.req	v7
+
 // the following registers only used this part1
 d_tmp3			.req	d16
 v_tmp3			.req	v16
@@ -142,10 +145,8 @@ v_tmp3			.req	v16
 	cmp	x_counter, 63
 	add	x_buf_saved, x_buf, 64
 
-	ldr	q_x0, [x_buf]
-	ldr	q_x1, [x_buf, 16]
-	ldr	q_x2, [x_buf, 32]
-	ldr	q_x3, [x_buf, 48]
+        ldp q_x0, q_x1, [x_buf]
+        ldp q_x2, q_x3, [x_buf, 32]
 
 #ifndef __APPLE__
 	adrp	x_tmp, .shuffle_mask_lanchor
@@ -197,15 +198,10 @@ v_tmp1_x1		.req	v25
 v_tmp1_x2		.req	v26
 v_tmp1_x3		.req	v27
 
-d_p4_h			.req	d19
-v_p4_h			.req	v19
-d_p4_l			.req	d17
-v_p4_l			.req	v17
+q_fold_const		.req	q17
+v_fold_const		.req	v17
 
-	mov	x_tmp, 0x371d0000		/* p4 [1] */
-	fmov	d_p4_h, x_tmp
-	mov	x_tmp, 0x87e70000		/* p4 [0] */
-	fmov	d_p4_l, x_tmp
+        ldr q_fold_const, =0x371d00000000000087e70000;
 
 	.align 2
 .crc_fold_loop:
@@ -213,44 +209,39 @@ v_p4_l			.req	v17
 	sub	x_counter, x_counter, #64
 	cmp	x_counter, 63
 
-	dup	d_x0_h, v_x0.d[1]
-	dup	d_x1_h, v_x1.d[1]
-	dup	d_x2_h, v_x2.d[1]
-	dup	d_x3_h, v_x3.d[1]
+        ldp q_y0, q_y1, [x_buf_saved, -64]
+        ldp q_y2, q_y3, [x_buf_saved, -32]
 
-	dup	d_x0_l, v_x0.d[0]
-	dup	d_x1_l, v_x1.d[0]
-	dup	d_x2_l, v_x2.d[0]
-	dup	d_x3_l, v_x3.d[0]
+        prfm pldl2strm,  [x_buf_saved, #1024]
+        prfm pldl2strm,  [x_buf_saved, #1088]
 
-	ldr	q_y0, [x_buf_saved, -64]
-	ldr	q_y1, [x_buf_saved, -48]
-	ldr	q_y2, [x_buf_saved, -32]
-	ldr	q_y3, [x_buf_saved, -16]
+        pmull2 v_tmp1_x0.1q, v_x0.2d, v_fold_const.2d
+        pmull v_x0.1q, v_x0.1d, v_fold_const.1d
 
-	pmull	v_x0_h.1q, v_x0_h.1d, v_p4_h.1d
-	pmull	v_x0_l.1q, v_x0_l.1d, v_p4_l.1d
-	pmull	v_x1_h.1q, v_x1_h.1d, v_p4_h.1d
-	pmull	v_x1_l.1q, v_x1_l.1d, v_p4_l.1d
-	pmull	v_x2_h.1q, v_x2_h.1d, v_p4_h.1d
-	pmull	v_x2_l.1q, v_x2_l.1d, v_p4_l.1d
-	pmull	v_x3_h.1q, v_x3_h.1d, v_p4_h.1d
-	pmull	v_x3_l.1q, v_x3_l.1d, v_p4_l.1d
+        pmull2 v_tmp1_x1.1q, v_x1.2d, v_fold_const.2d
+        pmull v_x1.1q, v_x1.1d, v_fold_const.1d
 
-	tbl	v_y0.16b, {v_y0.16b}, v7.16b
-	tbl	v_y1.16b, {v_y1.16b}, v7.16b
-	tbl	v_y2.16b, {v_y2.16b}, v7.16b
-	tbl	v_y3.16b, {v_y3.16b}, v7.16b
+        pmull2 v_tmp1_x2.1q, v_x2.2d, v_fold_const.2d
+        pmull v_x2.1q, v_x2.1d, v_fold_const.1d
 
-	eor	v_tmp1_x0.16b, v_x0_h.16b, v_x0_l.16b
-	eor	v_tmp1_x1.16b, v_x1_h.16b, v_x1_l.16b
-	eor	v_tmp1_x2.16b, v_x2_h.16b, v_x2_l.16b
-	eor	v_tmp1_x3.16b, v_x3_h.16b, v_x3_l.16b
+        pmull2 v_tmp1_x3.1q, v_x3.2d, v_fold_const.2d
+        pmull v_x3.1q, v_x3.1d, v_fold_const.1d
 
-	eor	v_x0.16b, v_tmp1_x0.16b, v_y0.16b
-	eor	v_x1.16b, v_tmp1_x1.16b, v_y1.16b
-	eor	v_x2.16b, v_tmp1_x2.16b, v_y2.16b
-	eor	v_x3.16b, v_tmp1_x3.16b, v_y3.16b
+        tbl v_y0.16b, {v_y0.16b}, v_permutation.16b
+        eor v_x0.16b, v_tmp1_x0.16b, v_x0.16b
+        eor v_x0.16b, v_x0.16b, v_y0.16b
+
+        tbl v_y1.16b, {v_y1.16b}, v_permutation.16b
+        eor v_x1.16b, v_tmp1_x1.16b, v_x1.16b
+        eor v_x1.16b, v_x1.16b, v_y1.16b
+
+        tbl v_y2.16b, {v_y2.16b}, v_permutation.16b
+        eor v_x2.16b, v_tmp1_x2.16b, v_x2.16b
+        eor v_x2.16b, v_x2.16b, v_y2.16b
+
+        tbl v_y3.16b, {v_y3.16b}, v_permutation.16b
+        eor v_x3.16b, v_tmp1_x3.16b, v_x3.16b
+        eor v_x3.16b, v_x3.16b, v_y3.16b
 
 	bhi	.crc_fold_loop
 

@@ -32,6 +32,8 @@
 %include "reg_sizes.asm"
 
 default rel
+section .text
+
 %define CONCAT(a,b,c)   a %+ b %+ c
 
 ; Define threshold where buffers are considered "small" and routed to more
@@ -586,7 +588,3 @@ K_table:
 	dq 0x045cddf4e, 0x0e0ac139e
 	dq 0x1a91647f2, 0x169cf9eb0
 	dq 0x1a0f717c4, 0x0170076fa
-
-;;;       func            core, ver, snum
-slversion crc32_iscsi_01, 01,   04,  0015
-

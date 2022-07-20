@@ -234,6 +234,3 @@ align 16
 
 mask0f:
 	dq 0x0f0f0f0f0f0f0f0f, 0x0f0f0f0f0f0f0f0f
-
-;;;       func             core, ver, snum
-slversion gf_2vect_mad_sse, 00,  01,  0203

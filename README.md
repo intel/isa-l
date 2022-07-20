@@ -25,6 +25,7 @@ Also see:
   as well as a list of [language bindings](https://github.com/intel/isa-l/wiki/Language-Bindings).
 * ISA-L [mailing list](https://lists.01.org/hyperkitty/list/isal@lists.01.org/).
 * [Contributing](CONTRIBUTING.md).
+* [Security Policy](SECURITY.md).
 
 Building ISA-L
 --------------
