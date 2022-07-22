@@ -210,7 +210,13 @@ v_tmp1_x3		.req	v27
 q_fold_const		.req	q17
 v_fold_const		.req	v17
 
-        ldr q_fold_const, =0x371d00000000000087e70000;
+        ldr q_fold_const, fold_constant
+
+fold_constant:
+	.word 0x87e70000
+	.word 0x00000000
+	.word 0x371d0000
+	.word 0x00000000
 
 	.align 2
 .crc_fold_loop:
