@@ -1,3 +1,6 @@
+#ifndef __AARCH64_LABEL_H__
+#define __AARCH64_LABEL_H__
+
 #ifdef __USER_LABEL_PREFIX__
 #define CONCAT1(a, b) CONCAT2(a, b)
 #define CONCAT2(a, b) a ## b
@@ -10,4 +13,6 @@
 #define ASM_DEF_RODATA .section	__TEXT,__const
 #else
 #define ASM_DEF_RODATA .section .rodata
+#endif
+
 #endif
