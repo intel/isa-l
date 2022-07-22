@@ -650,7 +650,3 @@ pshufb_shf_table:
 ;	dq 0x060504030201008f, 0x0e0d0c0b0a090807 ; shl 1  (16-15) / shr15
 dq 0x8786858483828100, 0x8f8e8d8c8b8a8988
 dq 0x0706050403020100, 0x000e0d0c0b0a0908
-
-;;;       func        core, ver, snum
-slversion crc32_ieee_01, 01,   06,  0011
-

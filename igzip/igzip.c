@@ -94,34 +94,6 @@ static void write_header(struct isal_zstream *stream, uint8_t * deflate_hdr,
 			 uint32_t next_state, uint32_t toggle_end_of_stream);
 static void write_trailer(struct isal_zstream *stream);
 
-struct slver {
-	uint16_t snum;
-	uint8_t ver;
-	uint8_t core;
-};
-
-/* Version info */
-struct slver isal_deflate_init_slver_01030081;
-struct slver isal_deflate_init_slver = { 0x0081, 0x03, 0x01 };
-
-struct slver isal_deflate_reset_slver_0001008e;
-struct slver isal_deflate_reset_slver = { 0x008e, 0x01, 0x00 };
-
-struct slver isal_deflate_stateless_init_slver_00010084;
-struct slver isal_deflate_stateless_init_slver = { 0x0084, 0x01, 0x00 };
-
-struct slver isal_deflate_slver_01030082;
-struct slver isal_deflate_slver = { 0x0082, 0x03, 0x01 };
-
-struct slver isal_deflate_stateless_slver_01010083;
-struct slver isal_deflate_stateless_slver = { 0x0083, 0x01, 0x01 };
-
-struct slver isal_deflate_set_hufftables_slver_0001008b;
-struct slver isal_deflate_set_hufftables_slver = { 0x008b, 0x01, 0x00 };
-
-struct slver isal_deflate_set_dict_slver_0001008c;
-struct slver isal_deflate_set_dict_slver = { 0x008c, 0x01, 0x00 };
-
 /*****************************************************************/
 
 // isal_adler32_bam1 - adler with (B | A minus 1) storage

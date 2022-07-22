@@ -561,6 +561,3 @@ pshufb_shf_table:
 
 
 SHUF_MASK	dq 0x08090A0B0C0D0E0F, 0x0001020304050607
-
-;;;       func             core, ver, snum
-slversion crc32_ieee_by4, 05,   02,  0017

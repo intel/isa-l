@@ -146,7 +146,7 @@ static struct deflate_icf *compress_icf_map_g(struct isal_zstream *stream,
 	    level_buf->icf_buf_next +
 	    level_buf->icf_buf_avail_out / sizeof(struct deflate_icf);
 
-	while (matches_next < matches_end - 1 && level_buf->icf_buf_next < icf_buf_end - 1) {
+	while (matches_next + 1 < matches_end && level_buf->icf_buf_next + 1 < icf_buf_end) {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 		code = load_native_u64((uint8_t *) matches_next);
 #else

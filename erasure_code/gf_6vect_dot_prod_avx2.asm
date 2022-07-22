@@ -319,8 +319,3 @@ func(gf_6vect_dot_prod_avx2)
 	ret
 
 endproc_frame
-
-section .data
-
-;;;       func                   core, ver, snum
-slversion gf_6vect_dot_prod_avx2, 04,  04,  019a

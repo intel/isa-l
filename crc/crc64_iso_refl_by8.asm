@@ -540,6 +540,3 @@ mask2:
 dq     0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF
 mask3:
 dq     0x8080808080808080, 0x8080808080808080
-
-;;;       func        core, ver, snum
-slversion crc64_iso_refl_by8, 01,   00,  0023

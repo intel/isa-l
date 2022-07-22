@@ -253,6 +253,3 @@ section .data
 align 16
 poly:
 dq 0x1d1d1d1d1d1d1d1d, 0x1d1d1d1d1d1d1d1d
-
-;;;       func        core, ver, snum
-slversion pq_gen_sse, 00,   09,  0032

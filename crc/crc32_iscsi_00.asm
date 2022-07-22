@@ -36,6 +36,8 @@
 %include "reg_sizes.asm"
 
 default rel
+section .text
+
 ; crcB3 MACRO to implement crc32 on 3 %%bSize-byte blocks
 %macro  crcB3 3
 %define %%bSize   %1    ; 1/3 of buffer size
@@ -666,7 +668,3 @@ DD 0xd875c27e,0x051309c5,0x675423f9,0xba32e842
 DD 0xa3da7781,0x7ebcbc3a,0x1cfb9606,0xc19d5dbd
 DD 0x2f2aa980,0xf24c623b,0x900b4807,0x4d6d83bc
 DD 0x54851c7f,0x89e3d7c4,0xeba4fdf8,0x36c23643
-
-;;;       func            core, ver, snum
-slversion crc32_iscsi_00, 00,   04,  0014
-

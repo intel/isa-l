@@ -251,6 +251,3 @@ align 32
 poly:
 dq 0x1d1d1d1d1d1d1d1d, 0x1d1d1d1d1d1d1d1d
 dq 0x1d1d1d1d1d1d1d1d, 0x1d1d1d1d1d1d1d1d
-
-;;;       func        core,  ver, snum
-slversion pq_gen_avx2, 04,   03,  0041
