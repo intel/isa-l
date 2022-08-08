@@ -111,9 +111,19 @@ void gf_vect_dot_prod_mult(int len, int vlen, u8 * v, u8 ** src, u8 * dest)
 int main(void)
 {
 	int i, j;
-	u8 vec[TEST_SOURCES], dest1[TEST_LEN], dest2[TEST_LEN];
+	u8 vec[TEST_SOURCES], *dest1, *dest2;
 	u8 *matrix[TEST_SOURCES];
 	struct perf start;
+
+	dest1 = (u8 *) malloc(TEST_LEN);
+	dest2 = (u8 *) malloc(TEST_LEN);
+
+	if (NULL == dest1 || NULL == dest2) {
+		printf("buffer alloc error\n");
+		return -1;
+	}
+	memset(dest1, 0xfe, TEST_LEN);
+	memset(dest2, 0xfe, TEST_LEN);
 
 	mk_gf_field();
 	mk_gf_mul_table(gf_mul_table);
