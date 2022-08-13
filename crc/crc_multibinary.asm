@@ -320,9 +320,3 @@ mbin_dispatch_init_clmul	crc32_gzip_refl, crc32_gzip_refl_base, crc32_gzip_refl_
 
 mbin_interface			crc16_t10dif_copy
 mbin_dispatch_init_clmul	crc16_t10dif_copy, crc16_t10dif_copy_base, crc16_t10dif_copy_by4, crc16_t10dif_copy_by4_02, crc16_t10dif_copy_by4_02
-
-;;;       func            	core, ver, snum
-slversion crc16_t10dif,		00,   03,  011a
-slversion crc32_ieee,		00,   03,  011b
-slversion crc32_iscsi,		00,   03,  011c
-slversion crc32_gzip_refl,		00,   00,  002a

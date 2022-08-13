@@ -86,10 +86,3 @@ mbin_interface gf_vect_mad
  mbin_dispatch_init6 gf_vect_mad, gf_vect_mad_base, gf_vect_mad_sse, gf_vect_mad_avx, gf_vect_mad_avx2, gf_vect_mad_avx512
  mbin_dispatch_init6 gf_vect_dot_prod, gf_vect_dot_prod_base, gf_vect_dot_prod_sse, gf_vect_dot_prod_avx, gf_vect_dot_prod_avx2, gf_vect_dot_prod_avx512
 %endif
-
-;;;       func                 		core, ver, snum
-slversion ec_encode_data,		00,   06,  0133
-slversion gf_vect_mul,			00,   05,  0134
-slversion ec_encode_data_update,	00,   05,  0212
-slversion gf_vect_dot_prod,		00,   05,  0138
-slversion gf_vect_mad,			00,   04,  0213

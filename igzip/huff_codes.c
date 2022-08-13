@@ -599,22 +599,6 @@ static struct hufftables_icf static_hufftables = {
 		       {{{.code_and_extra = 0x000,.length2 = 0x0}}}}
 };
 
-struct slver {
-	uint16_t snum;
-	uint8_t ver;
-	uint8_t core;
-};
-
-/* Version info */
-struct slver isal_update_histogram_slver_00010085;
-struct slver isal_update_histogram_slver = { 0x0085, 0x01, 0x00 };
-
-struct slver isal_create_hufftables_slver_00010086;
-struct slver isal_create_hufftables_slver = { 0x0086, 0x01, 0x00 };
-
-struct slver isal_create_hufftables_subset_slver_00010087;
-struct slver isal_create_hufftables_subset_slver = { 0x0087, 0x01, 0x00 };
-
 extern uint32_t build_huff_tree(struct heap_tree *heap, uint64_t heap_size, uint64_t node_ptr);
 extern void build_heap(uint64_t * heap, uint64_t heap_size);
 

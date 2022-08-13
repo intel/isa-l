@@ -139,21 +139,3 @@ int xor_check_base(int vects, int len, void **array)
 		return len;
 	return fail;
 }
-
-struct slver {
-	unsigned short snum;
-	unsigned char ver;
-	unsigned char core;
-};
-
-struct slver pq_gen_base_slver_0001012a;
-struct slver pq_gen_base_slver = { 0x012a, 0x01, 0x00 };
-
-struct slver xor_gen_base_slver_0001012b;
-struct slver xor_gen_base_slver = { 0x012b, 0x01, 0x00 };
-
-struct slver pq_check_base_slver_0001012c;
-struct slver pq_check_base_slver = { 0x012c, 0x01, 0x00 };
-
-struct slver xor_check_base_slver_0001012d;
-struct slver xor_check_base_slver = { 0x012d, 0x01, 0x00 };

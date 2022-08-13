@@ -277,9 +277,3 @@ return_fail:
 	ret
 
 endproc_frame
-
-section .data
-
-;;;       func           core, ver, snum
-slversion xor_check_sse, 00,   03,  0031
-

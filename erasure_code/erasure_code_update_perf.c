@@ -47,22 +47,22 @@
 #define str(s) #s
 #define xstr(s) str(s)
 
-//#define CACHED_TEST
-#ifdef CACHED_TEST
+#ifndef GT_L3_CACHE
+# define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
+#endif
+
+#if !defined(COLD_TEST) && !defined(TEST_CUSTOM)
 // Cached test, loop many times over small dataset
 # define TEST_SOURCES 32
 # define TEST_LEN(m)  ((128*1024 / m) & ~(64-1))
 # define TEST_TYPE_STR "_warm"
-#else
-# ifndef TEST_CUSTOM
+#elif defined (COLD_TEST)
 // Uncached test.  Pull from large mem base.
-#  define TEST_SOURCES 32
-#  define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
-#  define TEST_LEN(m)  ((GT_L3_CACHE / m) & ~(64-1))
-#  define TEST_TYPE_STR "_cold"
-# else
-#  define TEST_TYPE_STR "_cus"
-# endif
+# define TEST_SOURCES 32
+# define TEST_LEN(m)  ((GT_L3_CACHE / m) & ~(64-1))
+# define TEST_TYPE_STR "_cold"
+#elif defined (TEST_CUSTOM)
+# define TEST_TYPE_STR "_cus"
 #endif
 
 #define MMAX TEST_SOURCES

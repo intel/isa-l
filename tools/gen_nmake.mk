@@ -21,8 +21,8 @@ Makefile.nmake tst.nmake: FORCE
 	@echo 'INCLUDES   = $(INCLUDE)'	>> $@
 	@echo '# Modern asm feature level, consider upgrading nasm/yasm before decreasing feature_level'	>> $@
 	@echo 'FEAT_FLAGS = -DHAVE_AS_KNOWS_AVX512 -DAS_FEATURE_LEVEL=10'	>> $@
-	@echo 'CFLAGS_REL = -O2 -DNDEBUG /Z7 /MD /Gy'		>> $@
-	@echo 'CFLAGS_DBG = -Od -DDEBUG /Z7 /MDd'			>> $@
+	@echo 'CFLAGS_REL = -O2 -DNDEBUG /Z7 /Gy'		>> $@
+	@echo 'CFLAGS_DBG = -Od -DDEBUG /Z7'			>> $@
 	@echo 'LINKFLAGS  = -nologo -incremental:no -debug'	>> $@
 	@echo 'CFLAGS     = $$(CFLAGS_REL) -nologo -D_USE_MATH_DEFINES $$(FEAT_FLAGS) $$(INCLUDES) $$(D)'	>> $@
 	@echo 'AFLAGS     = -f win64 $$(FEAT_FLAGS) $$(INCLUDES) $$(D)'	>> $@
