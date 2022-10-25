@@ -331,10 +331,17 @@ void ec_encode_data_update_base(int len, int k, int rows, int vec_i, unsigned ch
 	}
 }
 
-void gf_vect_mul_base(int len, unsigned char *a, unsigned char *src, unsigned char *dest)
+int gf_vect_mul_base(int len, unsigned char *a, unsigned char *src, unsigned char *dest)
 {
 	//2nd element of table array is ref value used to fill it in
 	unsigned char c = a[1];
+
+	// Len must be aligned to 32B
+	if ((len % 32) != 0) {
+		return -1;
+	}
+
 	while (len-- > 0)
 		*dest++ = gf_mul(c, *src++);
+	return 0;
 }

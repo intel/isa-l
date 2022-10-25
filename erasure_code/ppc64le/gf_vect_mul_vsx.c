@@ -19,6 +19,7 @@ void gf_vect_mul_vsx(int len, unsigned char *gftbl, unsigned char *src, unsigned
 
 	head = len % 128;
 	if (head != 0) {
+		// errors are ignored.
 		gf_vect_mul_base(head, gftbl, src, dest);
 	}
 
