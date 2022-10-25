@@ -56,6 +56,5 @@ void ec_encode_data_update(int len, int k, int rows, int vec_i, unsigned char *v
 
 int gf_vect_mul(int len, unsigned char *a, void *src, void *dest)
 {
-	gf_vect_mul_base(len, a, (unsigned char *)src, (unsigned char *)dest);
-	return 0;
+	return gf_vect_mul_base(len, a, (unsigned char *)src, (unsigned char *)dest);
 }

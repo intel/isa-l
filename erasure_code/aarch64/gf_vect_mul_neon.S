@@ -192,6 +192,8 @@ gf_vect_mul_neon:
 	ldp	d14, d15, [sp, #48]
 	add	sp, sp, #64
 	add	x_src_end, x_src_end, #128
+	cmp	x_src, x_src_end
+	beq	.return_pass
 
 .Lloop32_init:
 	sub	x_src_end, x_src_end, #32
