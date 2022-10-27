@@ -203,12 +203,6 @@ v_fold_const		.req	v17
 
         ldr q_fold_const, fold_constant
 
-fold_constant:
-	.word 0x87e70000
-	.word 0x00000000
-	.word 0x371d0000
-	.word 0x00000000
-
 	.align 2
 .crc_fold_loop:
 	add	x_buf_saved, x_buf_saved, 64
@@ -372,6 +366,11 @@ v_br1			.req	v5
 
 ASM_DEF_RODATA
 	.align	4
+fold_constant:
+	.word 0x87e70000
+	.word 0x00000000
+	.word 0x371d0000
+	.word 0x00000000
 .shuffle_mask_lanchor = . + 0
 #ifndef __APPLE__
 	.type	shuffle_mask, %object
