@@ -8,6 +8,9 @@ on:
     tags:
       - "*"
 
+permissions:
+  contents: read
+
 jobs:
   check_format:
     runs-on: ubuntu-latest
