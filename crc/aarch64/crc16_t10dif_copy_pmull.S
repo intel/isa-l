@@ -27,11 +27,15 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
+#include "../include/aarch64_label.h"
+
 	.arch armv8-a+crc+crypto
 	.text
 	.align	3
-	.global	crc16_t10dif_copy_pmull
+	.global	cdecl(crc16_t10dif_copy_pmull)
+#ifndef __APPLE__
 	.type	crc16_t10dif_copy_pmull, %function
+#endif
 
 /* uint16_t crc16_t10dif_pmull(uint16_t seed, uint8_t *buf, uint64_t len) */
 
@@ -67,7 +71,7 @@ x_crc16tab		.req	x5
 x_src_saved		.req	x0
 x_dst_saved		.req	x12
 
-crc16_t10dif_copy_pmull:
+cdecl(crc16_t10dif_copy_pmull):
 	cmp	x_len, 63
 	sub	sp, sp, #16
 	uxth	w_seed, w_seed
@@ -80,11 +84,19 @@ crc16_t10dif_copy_pmull:
 	cmp	x_len, x_tmp
 	bls	.end
 
+#ifndef __APPLE__
 	sxtw	x_counter, w_counter
 	adrp	x_crc16tab, .LANCHOR0
 	sub	x_src, x_src, x_counter
 	sub	x_dst, x_dst, x_counter
 	add	x_crc16tab, x_crc16tab, :lo12:.LANCHOR0
+#else
+	sxtw	x_counter, w_counter
+	adrp	x_crc16tab, .LANCHOR0@PAGE
+	sub	x_src, x_src, x_counter
+	sub	x_dst, x_dst, x_counter
+	add	x_crc16tab, x_crc16tab, .LANCHOR0@PAGEOFF
+#endif
 
 	.align 2
 .crc_table_loop:
@@ -145,8 +157,13 @@ v_tmp3			.req	v16
         stp q_x0, q_x1, [x_dst]
         stp q_x2, q_x3, [x_dst, 32]
 
+#ifndef __APPLE__
 	adrp	x_tmp, .shuffle_mask_lanchor
 	ldr	q_permutation, [x_tmp, :lo12:.shuffle_mask_lanchor]
+#else
+	adrp	x_tmp, .shuffle_mask_lanchor@PAGE
+	ldr	q_permutation, [x_tmp, .shuffle_mask_lanchor@PAGEOFF]
+#endif
 
 	tbl	v_tmp1.16b, {v_x0.16b}, v7.16b
 	eor	v_x0.16b, v_tmp3.16b, v_tmp1.16b
@@ -193,7 +210,7 @@ v_tmp1_x3		.req	v27
 q_fold_const		.req	q17
 v_fold_const		.req	v17
 
-        ldr q_fold_const, =0x371d00000000000087e70000;
+        ldr q_fold_const, fold_constant
 
 	.align 2
 .crc_fold_loop:
@@ -358,23 +375,32 @@ v_br1	.req	v5
 	umov	x0, v_x0.d[0]
 	ubfx	x0, x0, 16, 16
 	b	.crc_table_loop_pre
-
+#ifndef __APPLE__
 	.size	crc16_t10dif_copy_pmull, .-crc16_t10dif_copy_pmull
+#endif
 
-	.section	.rodata
-
+ASM_DEF_RODATA
 	.align	4
+fold_constant:
+	.word 0x87e70000
+	.word 0x00000000
+	.word 0x371d0000
+	.word 0x00000000
 .shuffle_mask_lanchor = . + 0
+#ifndef __APPLE__
 	.type	shuffle_mask, %object
 	.size	shuffle_mask, 16
+#endif
 shuffle_mask:
 	.byte	15, 14, 13, 12, 11, 10, 9, 8
 	.byte	7,   6,  5,  4,  3,  2, 1, 0
 
 	.align	4
 .LANCHOR0 = . + 0
+#ifndef __APPLE__
 	.type	crc16tab, %object
 	.size	crc16tab, 512
+#endif
 crc16tab:
 	.hword  0x0000, 0x8bb7, 0x9cd9, 0x176e, 0xb205, 0x39b2, 0x2edc, 0xa56b
 	.hword  0xEFBD, 0x640a, 0x7364, 0xf8d3, 0x5db8, 0xd60f, 0xc161, 0x4ad6

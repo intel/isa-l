@@ -27,10 +27,14 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
+#include "../include/aarch64_label.h"
+
 .text
 
-.global pq_gen_neon
+.global cdecl(pq_gen_neon)
+#ifndef __APPLE__
 .type pq_gen_neon, %function
+#endif
 
 /* int pq_gen_neon(int vects, int len, void **src) */
 
@@ -84,7 +88,7 @@ v_0x80		.req	v29
  *                 +----------+            +------------------+
  */
 
-pq_gen_neon:
+cdecl(pq_gen_neon):
 	sub	x_src_ptr_end, x_src, #8
 
 	sub	w_vects, w_vects, #3

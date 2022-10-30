@@ -61,7 +61,10 @@ int main(int argc, char *argv[])
 	for (i = 0; i < TEST_SIZE; i++)
 		buff1[i] = rand();
 
-	gf_vect_mul(TEST_SIZE, gf_const_tbl, buff1, buff2);
+	if (gf_vect_mul(TEST_SIZE, gf_const_tbl, buff1, buff2) != 0) {
+		printf("fail creating buff2\n");
+		return -1;
+	}
 
 	for (i = 0; i < TEST_SIZE; i++) {
 		if (gf_mul(a, buff1[i]) != buff2[i]) {
@@ -71,8 +74,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	gf_vect_mul_base(TEST_SIZE, gf_const_tbl, buff1, buff3);
-
+	if (gf_vect_mul_base(TEST_SIZE, gf_const_tbl, buff1, buff3) != 0) {
+		printf("fail fill with rand data\n");
+		return -1;
+	}
 	// Check reference function
 	for (i = 0; i < TEST_SIZE; i++) {
 		if (buff2[i] != buff3[i]) {
@@ -88,7 +93,10 @@ int main(int argc, char *argv[])
 	// Check each possible constant
 	for (a = 0; a != 255; a++) {
 		gf_vect_mul_init(a, gf_const_tbl);
-		gf_vect_mul(TEST_SIZE, gf_const_tbl, buff1, buff2);
+		if (gf_vect_mul(TEST_SIZE, gf_const_tbl, buff1, buff2) != 0) {
+			printf("fail creating buff2\n");
+			return -1;
+		}
 
 		for (i = 0; i < TEST_SIZE; i++)
 			if (gf_mul(a, buff1[i]) != buff2[i]) {
@@ -103,7 +111,10 @@ int main(int argc, char *argv[])
 	for (tsize = TEST_SIZE; tsize > 0; tsize -= 32) {
 		a = rand();
 		gf_vect_mul_init(a, gf_const_tbl);
-		gf_vect_mul(tsize, gf_const_tbl, buff1, buff2);
+		if (gf_vect_mul(tsize, gf_const_tbl, buff1, buff2) != 0) {
+			printf("fail creating buff2 (len %d)\n", tsize);
+			return -1;
+		}
 
 		for (i = 0; i < tsize; i++)
 			if (gf_mul(a, buff1[i]) != buff2[i]) {
@@ -138,8 +149,11 @@ int main(int argc, char *argv[])
 				return 1;
 			}
 
-		gf_vect_mul_base(TEST_SIZE - size, gf_const_tbl, efence_buff1, efence_buff3);
-
+		if (gf_vect_mul_base
+		    (TEST_SIZE - size, gf_const_tbl, efence_buff1, efence_buff3) != 0) {
+			printf("fail line up TEST_SIZE from end\n");
+			return -1;
+		}
 		// Check reference function
 		for (i = 0; i < TEST_SIZE - size; i++)
 			if (efence_buff2[i] != efence_buff3[i]) {
@@ -150,6 +164,16 @@ int main(int argc, char *argv[])
 			}
 
 		putchar('.');
+	}
+
+	// Test all unsupported sizes up to TEST_SIZE
+	for (size = 0; size < TEST_SIZE; size++) {
+		if (size % align != 0 && gf_vect_mul(size, gf_const_tbl, buff1, buff2) == 0) {
+			printf
+			    ("fail expecting nonzero return code for unaligned size param (%d)\n",
+			     size);
+			return 1;
+		}
 	}
 
 	printf(" done: Pass\n");

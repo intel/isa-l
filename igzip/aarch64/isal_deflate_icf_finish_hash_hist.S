@@ -26,6 +26,9 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
+
+#include "../include/aarch64_label.h"
+
 	.arch armv8-a+crc
 	.text
 
@@ -129,7 +132,9 @@ void isal_deflate_icf_finish_hash_hist_aarch64(struct isal_zstream *stream);
 	declare_generic_reg	tmp3,			28,x
 
 	.align	2
+#ifndef __APPLE__
 	.type	write_deflate_icf_constprop, %function
+#endif
 write_deflate_icf_constprop:
 	ldrh	w2, [x0]
 	mov	w3, 30
@@ -141,10 +146,14 @@ write_deflate_icf_constprop:
 	ubfx	x1, x1, 16, 3
 	strh	w1, [x0, 2]
 	ret
+#ifndef __APPLE__
 	.size	write_deflate_icf_constprop, .-write_deflate_icf_constprop
+#endif
 
 	.align	2
+#ifndef __APPLE__
 	.type	write_deflate_icf, %function
+#endif
 write_deflate_icf:
 	ldrh	w4, [x0]
 	bfi	w4, w1, 0, 10
@@ -156,10 +165,14 @@ write_deflate_icf:
 	bfi	w1, w3, 3, 13
 	strh	w1, [x0, 2]
 	ret
+#ifndef __APPLE__
 	.size	write_deflate_icf, .-write_deflate_icf
+#endif
 
 	.align	2
+#ifndef __APPLE__
 	.type	update_state, %function
+#endif
 update_state:
 	sub	x7, x2, x1
 	ldr	x4, [x0, 48]
@@ -179,12 +192,16 @@ update_state:
 	str	x5, [x4, 4688]
 	str	x6, [x4, 4696]
 	ret
+#ifndef __APPLE__
 	.size	update_state, .-update_state
+#endif
 
 	.align	2
-	.global	isal_deflate_icf_finish_hash_hist_aarch64
+	.global	cdecl(isal_deflate_icf_finish_hash_hist_aarch64)
+#ifndef __APPLE__
 	.type	isal_deflate_icf_finish_hash_hist_aarch64, %function
-isal_deflate_icf_finish_hash_hist_aarch64:
+#endif
+cdecl(isal_deflate_icf_finish_hash_hist_aarch64):
 	ldr	w_end_in, [stream, 8] // stream->avail_in
 	cbz	w_end_in, .stream_not_available
 
@@ -393,5 +410,6 @@ isal_deflate_icf_finish_hash_hist_aarch64:
 	str	w1, [stream, offset_state_state] // 84
 .done:
 	ret
-
+#ifndef __APPLE__
 	.size	isal_deflate_icf_finish_hash_hist_aarch64, .-isal_deflate_icf_finish_hash_hist_aarch64
+#endif

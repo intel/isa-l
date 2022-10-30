@@ -27,6 +27,7 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
+#include "../include/aarch64_label.h"
 #include "crc64_iso_norm_pmull.h"
 #include "crc64_norm_common_pmull.h"
 

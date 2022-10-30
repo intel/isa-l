@@ -27,6 +27,8 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
+#include "../include/aarch64_label.h"
+
 // parameters
 #define w_seed          w0
 #define x_seed          x0
@@ -126,8 +128,13 @@
 .endm
 
 .macro crc_norm_load_first_block
+#ifndef __APPLE__
 	adrp	x_tmp, .shuffle_data
 	ldr	q_shuffle, [x_tmp, #:lo12:.shuffle_data]
+#else
+	adrp	x_tmp, .shuffle_data@PAGE
+	ldr	q_shuffle, [x_tmp, #.shuffle_data@PAGEOFF]
+#endif
 
 	ldr	q_x0_tmp, [x_buf]
 	ldr	q_x1, [x_buf, 16]

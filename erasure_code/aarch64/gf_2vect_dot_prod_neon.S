@@ -27,11 +27,14 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
+#include "../include/aarch64_label.h"
+
 .text
 
-.global gf_2vect_dot_prod_neon
+.global cdecl(gf_2vect_dot_prod_neon)
+#ifndef __APPLE__
 .type gf_2vect_dot_prod_neon, %function
-
+#endif
 
 /* arguments */
 x_len		.req	x0
@@ -130,7 +133,7 @@ q_data		.req	q_p1_1
 v_data_lo	.req	v_p1_2
 v_data_hi	.req	v_p1_3
 
-gf_2vect_dot_prod_neon:
+cdecl(gf_2vect_dot_prod_neon):
 	/* less than 16 bytes, return_fail */
 	cmp	x_len, #16
 	blt	.return_fail

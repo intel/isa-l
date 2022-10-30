@@ -59,8 +59,12 @@
 	 * uint32_t crc32_gzip_refl_crc_ext(const unsigned char *BUF,
 	 *              uint64_t LEN,uint32_t wCRC);
 	 */
-	.global	crc32_gzip_refl_crc_ext
+	.global	cdecl(crc32_gzip_refl_crc_ext)
+#ifndef __APPLE__
 	.type	crc32_gzip_refl_crc_ext, %function
-crc32_gzip_refl_crc_ext:
+#endif
+cdecl(crc32_gzip_refl_crc_ext):
 	crc32_hw_common	crc32
+#ifndef __APPLE__
 	.size	crc32_gzip_refl_crc_ext, .-crc32_gzip_refl_crc_ext
+#endif

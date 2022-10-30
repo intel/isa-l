@@ -26,6 +26,9 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
+
+#include "../include/aarch64_label.h"
+
 	.arch armv8-a+crypto
 	.text
 	.align	3
@@ -56,9 +59,11 @@ Arguements list
 	adler32	.req	w0
 	start	.req	x1
 	length	.req	x2
-	.global	adler32_neon
+	.global	cdecl(adler32_neon)
+#ifndef __APPLE__
 	.type	adler32_neon, %function
-adler32_neon:
+#endif
+cdecl(adler32_neon):
 /*
 local variables
 */
@@ -92,8 +97,13 @@ local variables
 	lsr	adler1, adler32, 16
 
 	lsr	loop_cnt,length,5
+#ifndef __APPLE__
 	adrp 	x3,factors
 	add  	x3,x3,:lo12:factors
+#else
+	adrp 	x3,factors@PAGE
+	add  	x3,x3,factors@PAGEOFF
+#endif
 	ld1 	{factor0_v.16b-factor1_v.16b},[x3]
 
 	add	end,start,length
@@ -162,12 +172,15 @@ end_func:
 	orr w0,adler0,adler1,lsl 16
 	ret
 
+#ifndef __APPLE__
 	.size	adler32_neon, .-adler32_neon
 	.section	.rodata.cst16,"aM",@progbits,16
+#else
+	.section	__TEXT,__const
+#endif
 	.align	4
 factors:
 	.quad 0x191a1b1c1d1e1f20
 	.quad 0x1112131415161718
 	.quad 0x090a0b0c0d0e0f10
 	.quad 0x0102030405060708
-

@@ -3,8 +3,12 @@
 set -e
 rc=0
 verbose=0
-indent_args='-linux -l95 -cp1 -lps -il6 -ncs'
-function iver { printf "%03d%03d%03d%03d" $(echo "$@" | sed 's/GNU indent//' | tr '.' ' '); }
+# NOTE: there is a bug in GNU indent command line parse where it says, that
+#       -il6 require numeric parameter. This is because it treat it like "-i"
+#       param. Here we pass -i8 which is default for linux code style and
+#       we use long parameter name for indent label.
+indent_args='-i8 -linux -l95 -cp1 -lps -ncs --indent-label6'
+function iver { printf "%03d%03d%03d%03d" $(echo "$@" | sed 's/^.* indent//; y/./ /'); }
 
 while [ -n "$*" ]; do
     case "$1" in
@@ -25,13 +29,20 @@ if ! git rev-parse --is-inside-work-tree >& /dev/null; then
     exit 1
 fi
 
-if hash indent && [ $(iver $(indent --version)) -ge $(iver 2.2.12) ]; then
+# On FreeBSD we need to use gindent
+for indent_tool in indent gindent ''; do
+	if hash $indent_tool && [ $(iver $($indent_tool --version)) -ge $(iver 2.2.12) ]; then
+		break
+	fi
+done
+
+if [ -n "$indent_tool" ]; then
     echo "Checking C files for coding style..."
     for f in `git ls-files '*.c'`; do
 	[ "$verbose" -gt 0 ] && echo "checking style on $f"
-	if ! indent $indent_args -st $f | diff -q $f - >& /dev/null; then
+	if ! $indent_tool $indent_args -st $f | diff -q $f - >& /dev/null; then
 	    echo "  File found with formatting issues: $f"
-	    [ "$verbose" -gt 0 ] 2> /dev/null && indent $indent_args -st $f | diff -u $f -
+	    [ "$verbose" -gt 0 ] 2> /dev/null && $indent_tool $indent_args -st $f | diff -u $f -
 	    rc=1
 	fi
     done

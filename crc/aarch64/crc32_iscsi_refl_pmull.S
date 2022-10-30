@@ -27,6 +27,7 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
+#include "../include/aarch64_label.h"
 #include "crc32_iscsi_refl_pmull.h"
 #include "crc32_refl_common_pmull.h"
 
@@ -35,9 +36,11 @@ crc32_refl_func crc32_iscsi_refl_pmull_internal
 	.arch armv8-a+crc+crypto
 	.text
 	.align 3
-	.global	crc32_iscsi_refl_pmull
+	.global	cdecl(crc32_iscsi_refl_pmull)
+#ifndef __APPLE__
 	.type	crc32_iscsi_refl_pmull, %function
-crc32_iscsi_refl_pmull:
+#endif
+cdecl(crc32_iscsi_refl_pmull):
 	stp	x29, x30, [sp, -32]!
 	mov	x29, sp
 
@@ -47,7 +50,7 @@ crc32_iscsi_refl_pmull:
 	mov	w0, w7
 	mvn	w0, w0
 
-	bl	crc32_iscsi_refl_pmull_internal
+	bl	cdecl(crc32_iscsi_refl_pmull_internal)
 	mvn	w0, w0
 	ldp	x29, x30, [sp], 32
 	ret
