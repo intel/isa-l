@@ -364,13 +364,14 @@ v_br1			.req	v5
 	.size	crc16_t10dif_pmull, .-crc16_t10dif_pmull
 #endif
 
-ASM_DEF_RODATA
 	.align	4
 fold_constant:
 	.word 0x87e70000
 	.word 0x00000000
 	.word 0x371d0000
 	.word 0x00000000
+
+ASM_DEF_RODATA
 .shuffle_mask_lanchor = . + 0
 #ifndef __APPLE__
 	.type	shuffle_mask, %object
