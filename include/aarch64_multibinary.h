@@ -31,13 +31,6 @@
 #ifndef __aarch64__
 #error "This file is for aarch64 only"
 #endif
-#ifdef __APPLE__
-#define SYSCTL_PMULL_KEY "hw.optional.arm.FEAT_PMULL" // from macOS 12 FEAT_* sysctl infos are available
-#define SYSCTL_CRC32_KEY "hw.optional.armv8_crc32"
-#define SYSCTL_SVE_KEY "hw.optional.arm.FEAT_SVE" // this one is just a guess and need to check macOS update
-#else
-#include <asm/hwcap.h>
-#endif
 #include "aarch64_label.h"
 #ifdef __ASSEMBLY__
 /**
@@ -221,7 +214,11 @@
 #include <stdint.h>
 #if defined(__linux__)
 #include <sys/auxv.h>
+#include <asm/hwcap.h>
 #elif defined(__APPLE__)
+#define SYSCTL_PMULL_KEY "hw.optional.arm.FEAT_PMULL" // from macOS 12 FEAT_* sysctl infos are available
+#define SYSCTL_CRC32_KEY "hw.optional.armv8_crc32"
+#define SYSCTL_SVE_KEY "hw.optional.arm.FEAT_SVE" // this one is just a guess and need to check macOS update
 #include <sys/sysctl.h>
 #include <stddef.h>
 static inline int sysctlEnabled(const char* name){
