@@ -123,30 +123,26 @@ _fold_256_B_loop:
 	vmovdqu8	zmm3, [arg2+16*0]
 	vpshufb		zmm3, zmm3, zmm18
 	vpclmulqdq	zmm1, zmm0, zmm16, 0x00
-	vpclmulqdq	zmm2, zmm0, zmm16, 0x11
-	vpxorq		zmm0, zmm1, zmm2
-	vpxorq		zmm0, zmm0, zmm3
+	vpclmulqdq	zmm0, zmm0, zmm16, 0x11
+	vpternlogq	zmm0, zmm1, zmm3, 0x96
 
 	vmovdqu8	zmm9, [arg2+16*4]
 	vpshufb		zmm9, zmm9, zmm18
 	vpclmulqdq	zmm5, zmm4, zmm16, 0x00
-	vpclmulqdq	zmm6, zmm4, zmm16, 0x11
-	vpxorq		zmm4, zmm5, zmm6
-	vpxorq		zmm4, zmm4, zmm9
+	vpclmulqdq	zmm4, zmm4, zmm16, 0x11
+	vpternlogq	zmm4, zmm5, zmm9, 0x96
 
 	vmovdqu8	zmm11, [arg2+16*8]
 	vpshufb		zmm11, zmm11, zmm18
 	vpclmulqdq	zmm12, zmm7, zmm16, 0x00
-	vpclmulqdq	zmm13, zmm7, zmm16, 0x11
-	vpxorq		zmm7, zmm12, zmm13
-	vpxorq		zmm7, zmm7, zmm11
+	vpclmulqdq	zmm7, zmm7, zmm16, 0x11
+	vpternlogq	zmm7, zmm12, zmm11, 0x96
 
 	vmovdqu8	zmm17, [arg2+16*12]
 	vpshufb		zmm17, zmm17, zmm18
 	vpclmulqdq	zmm14, zmm8, zmm16, 0x00
-	vpclmulqdq	zmm15, zmm8, zmm16, 0x11
-	vpxorq		zmm8, zmm14, zmm15
-	vpxorq		zmm8, zmm8, zmm17
+	vpclmulqdq	zmm8, zmm8, zmm16, 0x11
+	vpternlogq	zmm8, zmm14, zmm17, 0x96
 
 	sub		arg3, 256
 	jge		_fold_256_B_loop
@@ -173,16 +169,14 @@ _fold_128_B_loop:
 	vmovdqu8	zmm8, [arg2+16*0]
 	vpshufb		zmm8, zmm8, zmm18
 	vpclmulqdq	zmm1, zmm0, zmm10, 0x00
-	vpclmulqdq	zmm2, zmm0, zmm10, 0x11
-	vpxorq		zmm0, zmm1, zmm2
-	vpxorq		zmm0, zmm0, zmm8
+	vpclmulqdq	zmm0, zmm0, zmm10, 0x11
+	vpternlogq	zmm0, zmm1, zmm8, 0x96
 
 	vmovdqu8	zmm9, [arg2+16*4]
 	vpshufb		zmm9, zmm9, zmm18
 	vpclmulqdq	zmm5, zmm4, zmm10, 0x00
-	vpclmulqdq	zmm6, zmm4, zmm10, 0x11
-	vpxorq		zmm4, zmm5, zmm6
-	vpxorq		zmm4, zmm4, zmm9
+	vpclmulqdq	zmm4, zmm4, zmm10, 0x11
+	vpternlogq	zmm4, zmm5, zmm9, 0x96
 	sub		arg3, 128
 	jge		_fold_128_B_loop
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

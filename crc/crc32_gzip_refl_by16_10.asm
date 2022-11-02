@@ -138,29 +138,21 @@ FUNCTION_NAME:
 
 .fold_256_B_loop:
 	add		arg2, 256
-	vmovdqu8	zmm3, [arg2+16*0]
 	vpclmulqdq	zmm1, zmm0, zmm16, 0x10
-	vpclmulqdq	zmm2, zmm0, zmm16, 0x01
-	vpxorq		zmm0, zmm1, zmm2
-	vpxorq		zmm0, zmm0, zmm3
+	vpclmulqdq	zmm0, zmm0, zmm16, 0x01
+	vpternlogq	zmm0, zmm1, [arg2+16*0], 0x96
 
-	vmovdqu8	zmm9, [arg2+16*4]
-	vpclmulqdq	zmm5, zmm4, zmm16, 0x10
-	vpclmulqdq	zmm6, zmm4, zmm16, 0x01
-	vpxorq		zmm4, zmm5, zmm6
-	vpxorq		zmm4, zmm4, zmm9
+	vpclmulqdq	zmm2, zmm4, zmm16, 0x10
+	vpclmulqdq	zmm4, zmm4, zmm16, 0x01
+	vpternlogq	zmm4, zmm2, [arg2+16*4], 0x96
 
-	vmovdqu8	zmm11, [arg2+16*8]
-	vpclmulqdq	zmm12, zmm7, zmm16, 0x10
-	vpclmulqdq	zmm13, zmm7, zmm16, 0x01
-	vpxorq		zmm7, zmm12, zmm13
-	vpxorq		zmm7, zmm7, zmm11
+	vpclmulqdq	zmm3, zmm7, zmm16, 0x10
+	vpclmulqdq	zmm7, zmm7, zmm16, 0x01
+	vpternlogq	zmm7, zmm3, [arg2+16*8], 0x96
 
-	vmovdqu8	zmm17, [arg2+16*12]
-	vpclmulqdq	zmm14, zmm8, zmm16, 0x10
-	vpclmulqdq	zmm15, zmm8, zmm16, 0x01
-	vpxorq		zmm8, zmm14, zmm15
-	vpxorq		zmm8, zmm8, zmm17
+	vpclmulqdq	zmm5, zmm8, zmm16, 0x10
+	vpclmulqdq	zmm8, zmm8, zmm16, 0x01
+	vpternlogq	zmm8, zmm5, [arg2+16*12], 0x96
 
 	sub		arg3, 256
 	jge     	.fold_256_B_loop
@@ -189,17 +181,13 @@ FUNCTION_NAME:
 	; fold 128B at a time. This section of the code folds 8 xmm registers in parallel
 .fold_128_B_loop:
 	add		arg2, 128
-	vmovdqu8	zmm8, [arg2+16*0]
 	vpclmulqdq	zmm2, zmm0, zmm10, 0x10
-	vpclmulqdq	zmm1, zmm0, zmm10, 0x01
-	vpxorq		zmm0, zmm2, zmm1
-	vpxorq		zmm0, zmm0, zmm8
+	vpclmulqdq	zmm0, zmm0, zmm10, 0x01
+	vpternlogq	zmm0, zmm2, [arg2+16*0], 0x96
 
-	vmovdqu8	zmm9, [arg2+16*4]
 	vpclmulqdq	zmm5, zmm4, zmm10, 0x10
-	vpclmulqdq	zmm6, zmm4, zmm10, 0x01
-	vpxorq		zmm4, zmm5, zmm6
-	vpxorq		zmm4, zmm4, zmm9
+	vpclmulqdq	zmm4, zmm4, zmm10, 0x01
+	vpternlogq	zmm4, zmm5, [arg2+16*4], 0x96
 
 	sub		arg3, 128
 	jge		.fold_128_B_loop
