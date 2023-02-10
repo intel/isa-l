@@ -109,7 +109,8 @@ CRC functions have a simple interface such as in [crc example].
 ~~~
 
 Updates with new buffers are possible with subsequent calls. No extra finalize
-step is necessary.
+step is necessary. An example of combining independent CRC values is found in
+[crc combine example].
 
 ### Compress/Inflate Functions
 
@@ -198,4 +199,5 @@ Examples:
 [ec example]: https://github.com/intel/isa-l/blob/master/examples/ec/ec_simple_example.c
 [raid example]: https://github.com/intel/isa-l/blob/master/raid/xor_example.c
 [crc example]: https://github.com/intel/isa-l/blob/master/crc/crc64_example.c
+[crc combine example]: https://github.com/intel/isa-l/blob/master/examples/crc/crc_combine_example.c
 [igzip example]: https://github.com/intel/isa-l/blob/master/igzip/igzip_example.c

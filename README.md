@@ -23,9 +23,9 @@ Also see:
 * The [github wiki](https://github.com/intel/isa-l/wiki) including a list of
   [distros/ports](https://github.com/intel/isa-l/wiki/Ports--Repos) offering binary packages
   as well as a list of [language bindings](https://github.com/intel/isa-l/wiki/Language-Bindings).
-* ISA-L [mailing list](https://lists.01.org/hyperkitty/list/isal@lists.01.org/).
 * [Contributing](CONTRIBUTING.md).
 * [Security Policy](SECURITY.md).
+* Docs on [units](doc/functions.md), [tests](doc/test.md), or [build details](doc/build.md).
 
 Building ISA-L
 --------------
@@ -38,7 +38,7 @@ Building ISA-L
 
 x86_64:
 * Assembler: nasm. Version 2.15 or later suggested (other versions of nasm and
-  yasm may build but with limited function [support.](doc/build.md)
+  yasm may build but with limited function [support](doc/build.md)).
 * Compiler: gcc, clang, icc or VC compiler.
 
 aarch64:
