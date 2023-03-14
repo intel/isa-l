@@ -1163,6 +1163,7 @@ void isal_deflate_stateless_init(struct isal_zstream *stream)
 	stream->end_of_stream = 0;
 	stream->flush = NO_FLUSH;
 	stream->gzip_flag = 0;
+	stream->hist_bits = 0;
 	stream->internal_state.has_wrap_hdr = 0;
 	stream->internal_state.state = ZSTATE_NEW_HDR;
 	return;
