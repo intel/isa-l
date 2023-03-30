@@ -10,7 +10,7 @@ applications.  ISA-L includes:
   encode/decode matrix in GF(2^8).
 * CRC - Fast implementations of cyclic redundancy check.  Six different
   polynomials supported.
-  - iscsi32, ieee32, t10dif, ecma64, iso64, jones64.
+  - iscsi32, ieee32, t10dif, ecma64, iso64, jones64, rocksoft64.
 * Raid - calculate and operate on XOR and P+Q parity found in common RAID
   implementations.
 * Compression - Fast deflate-compatible data compression.

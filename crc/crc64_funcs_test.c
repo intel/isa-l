@@ -63,7 +63,11 @@ func_case_t test_funcs[] = {
 	{"crc64_iso_refl", crc64_iso_refl, crc64_iso_refl_base, crc64_iso_refl_ref},
 	{"crc64_jones_norm", crc64_jones_norm, crc64_jones_norm_base,
 	 crc64_jones_norm_ref},
-	{"crc64_jones_refl", crc64_jones_refl, crc64_jones_refl_base, crc64_jones_refl_ref}
+	{"crc64_jones_refl", crc64_jones_refl, crc64_jones_refl_base, crc64_jones_refl_ref},
+	{"crc64_rocksoft_norm", crc64_rocksoft_norm, crc64_rocksoft_norm_base,
+	 crc64_rocksoft_norm_ref},
+	{"crc64_rocksoft_refl", crc64_rocksoft_refl, crc64_rocksoft_refl_base,
+	 crc64_rocksoft_refl_ref}
 };
 
 // Generates pseudo-random data

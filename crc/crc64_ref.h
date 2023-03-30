@@ -1,5 +1,5 @@
 /**********************************************************************
-  Copyright(c) 2011-2016 Intel Corporation All rights reserved.
+  Copyright(c) 2011-2023 Intel Corporation All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -141,6 +141,39 @@ static inline uint64_t crc64_jones_norm_ref(uint64_t seed, const uint8_t * buf, 
 	return ~rem;
 }
 
+
+// crc64_rocksoft reference function, slow crc64 from the definition.
+static inline uint64_t crc64_rocksoft_refl_ref(uint64_t seed, const uint8_t * buf, uint64_t len)
+{
+	uint64_t rem = ~seed;
+	unsigned int i, j;
+
+	uint64_t poly = 0x9a6c9329ac4bc9b5ULL;	// Rocksoft coefficients reflected
+
+	for (i = 0; i < len; i++) {
+		rem = rem ^ (uint64_t) buf[i];
+		for (j = 0; j < MAX_ITER; j++) {
+			rem = (rem & 0x1ULL ? poly : 0) ^ (rem >> 1);
+		}
+	}
+	return ~rem;
+}
+
+static inline uint64_t crc64_rocksoft_norm_ref(uint64_t seed, const uint8_t * buf, uint64_t len)
+{
+	uint64_t rem = ~seed;
+	unsigned int i, j;
+
+	uint64_t poly = 0xad93d23594c93659ULL;	// Rocksoft coefficients
+
+	for (i = 0; i < len; i++) {
+		rem = rem ^ ((uint64_t) buf[i] << 56);
+		for (j = 0; j < MAX_ITER; j++) {
+			rem = (rem & 0x8000000000000000ULL ? poly : 0) ^ (rem << 1);
+		}
+	}
+	return ~rem;
+}
 #ifdef __cplusplus
 }
 #endif
