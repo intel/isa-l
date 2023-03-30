@@ -61,32 +61,25 @@ section .text
 	%xdefine	arg3 rdx
 %endif
 
-%ifidn __OUTPUT_FORMAT__, win64
-	%define XMM_SAVE 16*2
-	%define VARIABLE_OFFSET 16*12+8
-%else
-	%define VARIABLE_OFFSET 16*2+8
-%endif
-
 align 16
 mk_global FUNCTION_NAME, function
 FUNCTION_NAME:
 	endbranch
 	not		arg1
-	sub		rsp, VARIABLE_OFFSET
-
 %ifidn __OUTPUT_FORMAT__, win64
+	sub		rsp, 16*10 + 8
+
 	; push the xmm registers into the stack to maintain
-	vmovdqa		[rsp + XMM_SAVE + 16*0], xmm6
-	vmovdqa		[rsp + XMM_SAVE + 16*1], xmm7
-	vmovdqa		[rsp + XMM_SAVE + 16*2], xmm8
-	vmovdqa		[rsp + XMM_SAVE + 16*3], xmm9
-	vmovdqa		[rsp + XMM_SAVE + 16*4], xmm10
-	vmovdqa		[rsp + XMM_SAVE + 16*5], xmm11
-	vmovdqa		[rsp + XMM_SAVE + 16*6], xmm12
-	vmovdqa		[rsp + XMM_SAVE + 16*7], xmm13
-	vmovdqa		[rsp + XMM_SAVE + 16*8], xmm14
-	vmovdqa		[rsp + XMM_SAVE + 16*9], xmm15
+	vmovdqa		[rsp + 16*0], xmm6
+	vmovdqa		[rsp + 16*1], xmm7
+	vmovdqa		[rsp + 16*2], xmm8
+	vmovdqa		[rsp + 16*3], xmm9
+	vmovdqa		[rsp + 16*4], xmm10
+	vmovdqa		[rsp + 16*5], xmm11
+	vmovdqa		[rsp + 16*6], xmm12
+	vmovdqa		[rsp + 16*7], xmm13
+	vmovdqa		[rsp + 16*8], xmm14
+	vmovdqa		[rsp + 16*9], xmm15
 %endif
 	vbroadcasti32x4 zmm18, [SHUF_MASK]
 	cmp		arg3, 256
@@ -296,18 +289,19 @@ _cleanup:
 
 
 %ifidn __OUTPUT_FORMAT__, win64
-	vmovdqa		xmm6, [rsp + XMM_SAVE + 16*0]
-	vmovdqa		xmm7, [rsp + XMM_SAVE + 16*1]
-	vmovdqa		xmm8, [rsp + XMM_SAVE + 16*2]
-	vmovdqa		xmm9, [rsp + XMM_SAVE + 16*3]
-	vmovdqa		xmm10, [rsp + XMM_SAVE + 16*4]
-	vmovdqa		xmm11, [rsp + XMM_SAVE + 16*5]
-	vmovdqa		xmm12, [rsp + XMM_SAVE + 16*6]
-	vmovdqa		xmm13, [rsp + XMM_SAVE + 16*7]
-	vmovdqa		xmm14, [rsp + XMM_SAVE + 16*8]
-	vmovdqa		xmm15, [rsp + XMM_SAVE + 16*9]
+	vmovdqa		xmm6, [rsp + 16*0]
+	vmovdqa		xmm7, [rsp + 16*1]
+	vmovdqa		xmm8, [rsp + 16*2]
+	vmovdqa		xmm9, [rsp + 16*3]
+	vmovdqa		xmm10, [rsp + 16*4]
+	vmovdqa		xmm11, [rsp + 16*5]
+	vmovdqa		xmm12, [rsp + 16*6]
+	vmovdqa		xmm13, [rsp + 16*7]
+	vmovdqa		xmm14, [rsp + 16*8]
+	vmovdqa		xmm15, [rsp + 16*9]
+
+	add		rsp, 16*10 + 8
 %endif
-	add		rsp, VARIABLE_OFFSET
 	ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -364,62 +358,16 @@ _less_than_32:
 
 align 16
 _less_than_16_left:
-	; use stack space to load data less than 16 bytes, zero-out the 16B in memory first.
-
-	vpxor	xmm1, xmm1
-	mov	r11, rsp
-	vmovdqa	[r11], xmm1
-
-	; backup the counter value
-	mov	r9, arg3
-	cmp	arg3, 8
-	jl	_less_than_8_left
-
-	; load 8 Bytes
-	mov	rax, [arg2]
-	mov	[r11], rax
-	add	r11, 8
-	sub	arg3, 8
-	add	arg2, 8
-_less_than_8_left:
-
-	cmp	arg3, 4
-	jl	_less_than_4_left
-
-	; load 4 Bytes
-	mov	eax, [arg2]
-	mov	[r11], eax
-	add	r11, 4
-	sub	arg3, 4
-	add	arg2, 4
-_less_than_4_left:
-
-	cmp	arg3, 2
-	jl	_less_than_2_left
-
-	; load 2 Bytes
-	mov	ax, [arg2]
-	mov	[r11], ax
-	add	r11, 2
-	sub	arg3, 2
-	add	arg2, 2
-_less_than_2_left:
-	cmp	arg3, 1
-	jl	_zero_left
-
-	; load 1 Byte
-	mov	al, [arg2]
-	mov	[r11], al
-
-_zero_left:
-	vmovdqa	xmm7, [rsp]
+	lea     rax, [rel byte_len_to_mask_table]
+	kmovw   k1, [rax + arg3*2]
+	vmovdqu8 xmm7{k1}{z}, [arg2]
 	vpshufb	xmm7, xmm18
 	vpxor	xmm7, xmm0	; xor the initial crc value
 
 	lea	rax, [pshufb_shf_table + 16]
-	sub	rax, r9
+	sub	rax, arg3
 
-	cmp	r9, 8
+	cmp	arg3, 8
 	jl	_end_1to7
 
 _end_8to15:
@@ -482,7 +430,6 @@ INCLUDE_CONSTS
 %endif
 
 mask1: dq 0x8080808080808080, 0x8080808080808080
-mask2: dq 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF
 mask3: dq 0x0000000000000000, 0xFFFFFFFFFFFFFFFF
 
 SHUF_MASK: dq 0x08090A0B0C0D0E0F, 0x0001020304050607
@@ -509,6 +456,13 @@ dq 0x8786858483828100, 0x8f8e8d8c8b8a8988
 dq 0x0706050403020100, 0x0f0e0d0c0b0a0908
 dq 0x8080808080808080, 0x0f0e0d0c0b0a0908
 dq 0x8080808080808080, 0x8080808080808080
+
+align 16
+byte_len_to_mask_table:
+dw      0x0000, 0x0001, 0x0003, 0x0007,
+dw      0x000f, 0x001f, 0x003f, 0x007f,
+dw      0x00ff, 0x01ff, 0x03ff, 0x07ff,
+dw      0x0fff, 0x1fff, 0x3fff, 0x7fff,
 
 
 %else  ; Assembler doesn't understand these opcodes. Add empty symbol for windows.
