@@ -36,6 +36,10 @@
 ;
 %include "reg_sizes.asm"
 
+%ifndef FUNCTION_NAME
+%define FUNCTION_NAME crc64_iso_norm_by8
+%endif
+
 %define	fetch_dist	1024
 
 [bits 64]
@@ -61,8 +65,8 @@ section .text
         %define VARIABLE_OFFSET 16*2+8
 %endif
 align 16
-mk_global 	crc64_iso_norm_by8, function
-crc64_iso_norm_by8:
+mk_global 	FUNCTION_NAME, function
+FUNCTION_NAME:
 	endbranch
 
 	not	arg1      ;~init_crc
@@ -504,6 +508,7 @@ section .data
 ; precomputed constants
 align 16
 
+%ifndef USE_CONSTS
 rk1:
 DQ 0x0000000000000145
 rk2:
@@ -544,6 +549,9 @@ rk19:
 DQ 0x0000000000011011
 rk20:
 DQ 0x00000000001ab1ab
+%else
+INCLUDE_CONSTS
+%endif
 
 mask1:
 dq 0x8080808080808080, 0x8080808080808080
