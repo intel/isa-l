@@ -33,7 +33,7 @@ Building ISA-L
 ### Prerequisites
 
 * Make: GNU 'make' or 'nmake' (Windows).
-* Optional: Building with autotools requires autoconf/automake packages.
+* Optional: Building with autotools requires autoconf/automake/libtool packages.
 * Optional: Manual generation requires help2man package.
 
 x86_64:
