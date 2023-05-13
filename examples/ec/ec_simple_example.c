@@ -182,17 +182,15 @@ int main(int argc, char *argv[])
 	if (nerrs <= 0)
 		return 0;
 
-	return part2(i, k, m, nerrs, len, ret, encode_matrix, decode_matrix, invert_matrix, temp_matrix, 
+	return part2(k, m, nerrs, len, encode_matrix, decode_matrix, invert_matrix, temp_matrix, 
 			decode_index, frag_err_list, g_tbls, frag_ptrs, recover_srcs, recover_outp);
 }
 
 int part2(
-			int i,
 			int k, 
 			int m,
 			int nerrs,
 			int len,
-			int ret,
 			u8 *encode_matrix, 
 			u8 *decode_matrix,
 			u8 *invert_matrix, 
@@ -206,7 +204,7 @@ int part2(
 	printf(" recover %d fragments\n", nerrs);
 
 	// Find a decode matrix to regenerate all erasures from remaining frags
-	ret = gf_gen_decode_matrix_simple(encode_matrix, decode_matrix,
+	int ret = gf_gen_decode_matrix_simple(encode_matrix, decode_matrix,
 					  invert_matrix, temp_matrix, decode_index,
 					  frag_err_list, nerrs, k, m);
 	if (ret != 0) {
@@ -214,7 +212,7 @@ int part2(
 		return -1;
 	}
 	// Pack recovery array pointers as list of valid fragments
-	for (i = 0; i < k; i++)
+	for (int i = 0; i < k; i++)
 		recover_srcs[i] = frag_ptrs[decode_index[i]];
 
 	// Recover data
@@ -223,7 +221,7 @@ int part2(
 
 	// Check that recovered buffers are the same as original
 	printf(" check recovery of block {");
-	for (i = 0; i < nerrs; i++) {
+	for (int i = 0; i < nerrs; i++) {
 		printf(" %d", frag_err_list[i]);
 		if (memcmp(recover_outp[i], frag_ptrs[frag_err_list[i]], len)) {
 			printf(" Fail erasure recovery %d, frag %d\n", i, frag_err_list[i]);
