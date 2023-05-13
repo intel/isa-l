@@ -116,3 +116,7 @@ isal_adler32                    @111
 isal_deflate_process_dict       @112
 isal_deflate_reset_dict         @113
 gf_inv                          @114
+crc64_rocksoft_norm_base        @115
+crc64_rocksoft_refl_base        @116
+crc64_rocksoft_norm             @117
+crc64_rocksoft_refl             @118

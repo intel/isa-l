@@ -37,6 +37,10 @@
 ;
 %include "reg_sizes.asm"
 
+%ifndef FUNCTION_NAME
+%define FUNCTION_NAME crc64_iso_refl_by8
+%endif
+
 %define	fetch_dist	1024
 
 [bits 64]
@@ -65,8 +69,8 @@ section .text
 
 
 align 16
-mk_global crc64_iso_refl_by8, function
-crc64_iso_refl_by8:
+mk_global 	FUNCTION_NAME, function
+FUNCTION_NAME:
 	endbranch
         ; uint64_t c = crc ^ 0xffffffff,ffffffffL;
 	not arg1
@@ -471,6 +475,7 @@ section .data
 align 16
 ; rk7 = floor(2^128/Q)
 ; rk8 = Q
+%ifndef USE_CONSTS
 rk1:
 DQ 0xf500000000000001
 rk2:
@@ -511,6 +516,9 @@ rk19:
 DQ 0xa011000000000001
 rk20:
 DQ 0x1b1ab00000000001
+%else
+INCLUDE_CONSTS
+%endif
 
 pshufb_shf_table:
 ; use these values for shift constants for the pshufb instruction

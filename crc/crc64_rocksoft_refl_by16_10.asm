@@ -1,5 +1,5 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;  Copyright(c) 2011-2016 Intel Corporation All rights reserved.
+;  Copyright(c) 2023 Intel Corporation All rights reserved.
 ;
 ;  Redistribution and use in source and binary forms, with or without
 ;  modification, are permitted provided that the following conditions
@@ -27,49 +27,35 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%define FUNCTION_NAME crc64_jones_norm_by8
+%define FUNCTION_NAME crc64_rocksoft_refl_by16_10
 %define USE_CONSTS
 %macro INCLUDE_CONSTS 0
-rk1:
-DQ 0x4445ed2750017038
-rk2:
-DQ 0x698b74157cfbd736
-rk3:
-DQ 0x0cfcfb5101c4b775
-rk4:
-DQ 0x65403fd47cbec866
-rk5:
-DQ 0x4445ed2750017038
-rk6:
-DQ 0x0000000000000000
-rk7:
-DQ 0xddf3eeb298be6cf8
-rk8:
-DQ 0xad93d23594c935a9
-rk9:
-DQ 0xd8dc208e2ba527b4
-rk10:
-DQ 0xf032cfec76bb2bc5
-rk11:
-DQ 0xb536044f357f4238
-rk12:
-DQ 0xfdbf104d938ba67a
-rk13:
-DQ 0xeeddad9297a843e7
-rk14:
-DQ 0x3550bce629466473
-rk15:
-DQ 0x4e501e58ca43d25e
-rk16:
-DQ 0x13c961588f27f643
-rk17:
-DQ 0x3b60d00dcb1099bc
-rk18:
-DQ 0x44bf1f468c53b9a3
-rk19:
-DQ 0x96f2236e317179ee
-rk20:
-DQ 0xf00839aa0dd64bac
+rk_1: dq 0xa043808c0f782663
+rk_2: dq 0x37ccd3e14069cabc
+rk1: dq 0x21e9761e252621ac
+rk2: dq 0xeadc41fd2ba3d420
+rk3: dq 0x5f852fb61e8d92dc
+rk4: dq 0xa1ca681e733f9c40
+rk5: dq 0x21e9761e252621ac
+rk6: dq 0x0000000000000000
+rk7: dq 0x27ecfa329aef9f77
+rk8: dq 0x34d926535897936a
+rk9: dq 0x946588403d4adcbc
+rk10: dq 0xd083dd594d96319d
+rk11: dq 0x34f5a24e22d66e90
+rk12: dq 0x3c255f5ebc414423
+rk13: dq 0x03363823e6e791e5
+rk14: dq 0x7b0ab10dd0f809fe
+rk15: dq 0x62242240ace5045a
+rk16: dq 0x0c32cdb31e18a84a
+rk17: dq 0xa3ffdc1fe8e82a8b
+rk18: dq 0xbdd7ac0ee1a4a0f0
+rk19: dq 0xe1e0bb9d45d7a44c
+rk20: dq 0xb0bc2e589204f500
+rk1_b: dq 0x21e9761e252621ac
+rk2_b: dq 0xeadc41fd2ba3d420
+	dq 0x0000000000000000
+	dq 0x0000000000000000
 %endm
 
-%include "crc64_iso_norm_by8.asm"
+%include "crc64_iso_refl_by16_10.asm"
