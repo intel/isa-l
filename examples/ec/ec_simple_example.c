@@ -72,7 +72,6 @@ int main(int argc, char *argv[])
 
 	// Coefficient matrices
 	u8 *encode_matrix;
-	u8 *decode_matrix;
 	u8 *invert_matrix;
 	u8 *temp_matrix;
 	u8 *g_tbls;
@@ -138,12 +137,11 @@ int main(int argc, char *argv[])
 
 	// Allocate coding matrices
 	encode_matrix = malloc(m * k);
-	decode_matrix = malloc(m * k);
 	invert_matrix = malloc(m * k);
 	temp_matrix = malloc(m * k);
 	g_tbls = malloc(k * p * 32);
 
-	if (encode_matrix == NULL || decode_matrix == NULL
+	if (encode_matrix == NULL
 	    || invert_matrix == NULL || temp_matrix == NULL || g_tbls == NULL) {
 		printf("Test failure! Error with malloc\n");
 		return -1;
@@ -184,7 +182,7 @@ int main(int argc, char *argv[])
 	if (nerrs <= 0)
 		return 0;
 
-	return part2(k, m, nerrs, len, encode_matrix, decode_matrix, invert_matrix, temp_matrix, 
+	return part2(k, m, nerrs, len, encode_matrix, invert_matrix, temp_matrix, 
 			decode_index, frag_err_list, g_tbls, frag_ptrs, recover_srcs, recover_outp);
 }
 
@@ -194,7 +192,6 @@ int part2(
 			int nerrs,
 			int len,
 			u8 *encode_matrix, 
-			u8 *decode_matrix,
 			u8 *invert_matrix, 
 			u8 *temp_matrix, 
 			u8 *decode_index,
@@ -204,6 +201,13 @@ int part2(
 			u8 **recover_srcs,
 			u8 **recover_outp)
 {
+	u8 *decode_matrix;
+	decode_matrix = malloc(m * k);
+
+
+
+
+
 	if (encode_matrix == NULL || decode_matrix == NULL
 	    || invert_matrix == NULL || temp_matrix == NULL || g_tbls == NULL) {
 		printf("Test failure! Error with malloc\n");
