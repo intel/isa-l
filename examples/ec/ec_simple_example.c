@@ -46,7 +46,6 @@ int usage(void)
 		"  -k <val>  Number of source fragments\n"
 		"  -p <val>  Number of parity fragments\n"
 		"  -l <val>  Length of fragments\n"
-		"  -e <val>  Simulate erasure on frag index val. Zero based. Can be repeated.\n"
 		"  -r <seed> Pick random (k, p) with seed\n");
 	exit(0);
 }
@@ -60,7 +59,7 @@ static int gf_gen_decode_matrix_simple(u8 * encode_matrix,
 
 int main(int argc, char *argv[])
 {
-	int i, j, m, c, e, ret;
+	int i, j, m, c, ret;
 	int k = 10, p = 4, len = 8 * 1024;	// Default params
 	int nerrs = 0;
 
@@ -76,7 +75,7 @@ int main(int argc, char *argv[])
 		for (i = 0; i < p; i++)
 			frag_err_list[nerrs++] = rand() % (k + p);
 
-	while ((c = getopt(argc, argv, "k:p:l:e:r:h")) != -1) {
+	while ((c = getopt(argc, argv, "k:p:l:r:h")) != -1) {
 		switch (c) {
 		case 'k':
 			k = atoi(optarg);
@@ -88,10 +87,6 @@ int main(int argc, char *argv[])
 			len = atoi(optarg);
 			if (len < 0)
 				usage();
-			break;
-		case 'e':
-			e = atoi(optarg);
-			frag_err_list[nerrs++] = e;
 			break;
 		case 'r':
 			srand(atoi(optarg));
