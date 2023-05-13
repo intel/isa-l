@@ -26,3 +26,11 @@ isa-l.h
 /libisal.la
 libisal.pc
 programs/igzip
+
+*/crc64_example
+*/crc_simple_test
+*/ec/ec_piggyback_example
+*/ec/ec_simple_example
+*/igzip_example
+*/igzip_sync_flush_example
+*/xor_example
