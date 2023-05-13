@@ -202,7 +202,14 @@ int part2(
 			u8 *g_tbls,
 			u8 **frag_ptrs,
 			u8 **recover_srcs,
-			u8 **recover_outp){
+			u8 **recover_outp)
+{
+	if (encode_matrix == NULL || decode_matrix == NULL
+	    || invert_matrix == NULL || temp_matrix == NULL || g_tbls == NULL) {
+		printf("Test failure! Error with malloc\n");
+		return -1;
+	}
+
 	printf(" recover %d fragments\n", nerrs);
 
 	// Find a decode matrix to regenerate all erasures from remaining frags
