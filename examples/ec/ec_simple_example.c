@@ -31,6 +31,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
+#include <assert.h>
+#include <sys/random.h>
 #include "erasure_code.h"	// use <isa-l.h> instead when linking against installed
 
 #define MMAX 255
