@@ -66,7 +66,6 @@ int main(int argc, char *argv[])
 
 	// Fragment buffer pointers
 	u8 *frag_ptrs[MMAX];
-	u8 *recover_srcs[KMAX];
 	u8 *recover_outp[KMAX];
 	u8 frag_err_list[MMAX];
 
@@ -177,7 +176,7 @@ int main(int argc, char *argv[])
 		return 0;
 
 	return part2(k, m, nerrs, len, encode_matrix, 
-					frag_err_list, g_tbls, frag_ptrs, recover_srcs, recover_outp);
+					frag_err_list, g_tbls, frag_ptrs, recover_outp);
 }
 
 int part2(
@@ -189,12 +188,12 @@ int part2(
 			u8 *frag_err_list,
 			u8 *g_tbls,
 			u8 **frag_ptrs,
-			u8 **recover_srcs,
 			u8 **recover_outp)
 {
 	u8 *decode_matrix;
 	u8 *invert_matrix;
 	u8 *temp_matrix;
+	u8 *recover_srcs[KMAX];
 	decode_matrix = malloc(m * k);
 	invert_matrix = malloc(m * k);
 	temp_matrix = malloc(m * k);
