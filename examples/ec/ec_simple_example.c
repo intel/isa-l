@@ -182,10 +182,27 @@ int main(int argc, char *argv[])
 	if (nerrs <= 0)
 		return 0;
 
-	return part2();
+	return part2(i, k, m, nerrs, len, ret, encode_matrix, decode_matrix, invert_matrix, temp_matrix, 
+			decode_index, frag_err_list, g_tbls, frag_ptrs, recover_srcs, recover_outp);
 }
 
-int part2(){
+int part2(
+			int i,
+			int k, 
+			int m,
+			int nerrs,
+			int len,
+			int ret,
+			u8 *encode_matrix, 
+			u8 *decode_matrix,
+			u8 *invert_matrix, 
+			u8 *temp_matrix, 
+			u8 *decode_index,
+			u8 *frag_err_list,
+			u8 *g_tbls,
+			u8 **frag_ptrs,
+			u8 **recover_srcs,
+			u8 **recover_outp){
 	printf(" recover %d fragments\n", nerrs);
 
 	// Find a decode matrix to regenerate all erasures from remaining frags
