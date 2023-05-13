@@ -182,6 +182,10 @@ int main(int argc, char *argv[])
 	if (nerrs <= 0)
 		return 0;
 
+	return part2();
+}
+
+int part2(){
 	printf(" recover %d fragments\n", nerrs);
 
 	// Find a decode matrix to regenerate all erasures from remaining frags
