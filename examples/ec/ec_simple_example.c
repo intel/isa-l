@@ -71,8 +71,10 @@ int main(int argc, char *argv[])
 	u8 frag_err_list[MMAX];
 
 	// Coefficient matrices
-	u8 *encode_matrix, *decode_matrix;
-	u8 *invert_matrix, *temp_matrix;
+	u8 *encode_matrix;
+	u8 *decode_matrix;
+	u8 *invert_matrix;
+	u8 *temp_matrix;
 	u8 *g_tbls;
 	u8 decode_index[MMAX];
 
