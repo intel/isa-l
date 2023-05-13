@@ -73,7 +73,6 @@ int main(int argc, char *argv[])
 	// Coefficient matrices
 	u8 *encode_matrix;
 	u8 *g_tbls;
-	u8 decode_index[MMAX];
 
 	if (argc == 1)
 		for (i = 0; i < p; i++)
@@ -178,7 +177,7 @@ int main(int argc, char *argv[])
 		return 0;
 
 	return part2(k, m, nerrs, len, encode_matrix, 
-			decode_index, frag_err_list, g_tbls, frag_ptrs, recover_srcs, recover_outp);
+					frag_err_list, g_tbls, frag_ptrs, recover_srcs, recover_outp);
 }
 
 int part2(
@@ -187,7 +186,6 @@ int part2(
 			int nerrs,
 			int len,
 			u8 *encode_matrix, 
-			u8 *decode_index,
 			u8 *frag_err_list,
 			u8 *g_tbls,
 			u8 **frag_ptrs,
@@ -200,6 +198,7 @@ int part2(
 	decode_matrix = malloc(m * k);
 	invert_matrix = malloc(m * k);
 	temp_matrix = malloc(m * k);
+	u8 decode_index[MMAX];
 
 
 
