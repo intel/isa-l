@@ -499,6 +499,15 @@ int main(int argc, char *argv[])
     print_matrix("Source + Parity matrix encode 2", (const u8**)frag_ptrs_encode, m, len);
     print_matrix("Source + Parity matrix encode_update", (const u8**)frag_ptrs_encode_update, m, len);
 
+    // Check that encode and encode_update produce the same results
+    printf(" check the two versions are identical ");
+    for (int row = 0; row < m; row++) {
+        if (memcmp(frag_ptrs_encode[row], frag_ptrs_encode_update[row], len)) {
+            puts("Not identical");
+            exit(-1);
+        }
+    }
+
     int nerrs = 1;
     if (exhaustive_test) {
         nerrs = 2;
