@@ -95,7 +95,7 @@ void ec_init_tables(int k, int rows, unsigned char* a, unsigned char* gftbls);
  * @returns none
  */
 
-void ec_encode_data(int len, int k, int rows, unsigned char *gftbls, unsigned char **data,
+void ec_encode_data(int len, int k, int rows, const unsigned char *gftbls, unsigned char **data,
 		    unsigned char **coding);
 
 /**
@@ -103,7 +103,7 @@ void ec_encode_data(int len, int k, int rows, unsigned char *gftbls, unsigned ch
  *
  * Baseline version of ec_encode_data() with same parameters.
  */
-void ec_encode_data_base(int len, int srcs, int dests, unsigned char *v, unsigned char **src,
+void ec_encode_data_base(int len, int srcs, int dests, const unsigned char *v, unsigned char **src,
 			 unsigned char **dest);
 
 /**

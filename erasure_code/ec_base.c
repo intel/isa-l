@@ -298,7 +298,7 @@ void gf_vect_mad_base(int len, int vec, int vec_i,
 	}
 }
 
-void ec_encode_data_base(int len, int srcs, int dests, unsigned char *v,
+void ec_encode_data_base(int len, int srcs, int dests, const unsigned char *v,
 			 unsigned char **src, unsigned char **dest)
 {
 	int i, j, l;
