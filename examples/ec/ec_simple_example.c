@@ -1,31 +1,13 @@
-/**********************************************************************
-  Copyright(c) 2011-2018 Intel Corporation All rights reserved.
+/*
+    TODO:
+        1. Load file from disk
+        2. Separate out the code into separate encoder and repairer programs
+        3. Load parity shards from disk for the recovery
+        4. Write blog post on memory requirements for encode and decode processes
 
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions
-  are met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in
-      the documentation and/or other materials provided with the
-      distribution.
-    * Neither the name of Intel Corporation nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
 
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-**********************************************************************/
+
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -243,7 +225,8 @@ int test_helper(
             const u8 *frag_err_list,
             u8 const * const * const frag_ptrs)
 {
-    u8 *recover_outp[KMAX];
+    u8 *recover_outp_encode[KMAX];
+    u8 *recover_outp_encode_update[KMAX];
     u8 *decode_matrix = malloc(m * k);
     u8 *invert_matrix = malloc(m * k);
     u8 *temp_matrix = malloc(m * k);
@@ -255,11 +238,17 @@ int test_helper(
 
     // Allocate buffers for recovered data
     for (int i = 0; i < p; i++) {
-        if (NULL == (recover_outp[i] = malloc(len))) {
-            printf("alloc error: Fail\n");
+        if (NULL == (recover_outp_encode[i] = malloc(len))) {
+            printf("alloc error 1: Fail\n");
+            return -1;
+        }
+        if (NULL == (recover_outp_encode_update[i] = malloc(len))) {
+            printf("alloc error 2: Fail\n");
             return -1;
         }
     }
+
+
 
     if (encode_matrix == NULL || decode_matrix == NULL
         || invert_matrix == NULL || temp_matrix == NULL || g_tbls == NULL) {
@@ -283,23 +272,41 @@ int test_helper(
 
     // Recover data
     ec_init_tables(k, nerrs, decode_matrix, g_tbls);
-    ec_encode_data(len, k, nerrs, g_tbls, (const u8* const *)recover_srcs, recover_outp);
+    ec_encode_data(len, k, nerrs, (const u8*)g_tbls, (const u8* const *)recover_srcs, recover_outp_encode);
+
+    for (int i = 0; i < k; i++){
+        ec_encode_data_update(len, k, nerrs, i, (const u8*)g_tbls, (const u8*)recover_srcs[i], recover_outp_encode_update);
+    }
 
 
     // Check that recovered buffers are the same as original
     printf(" check recovery of block {");
     for (int i = 0; i < nerrs; i++) {
         printf(" %d", frag_err_list[i]);
-        if (memcmp(recover_outp[i], frag_ptrs[frag_err_list[i]], len)) {
+        if (memcmp(recover_outp_encode[i], frag_ptrs[frag_err_list[i]], len)) {
             printf(" Fail erasure recovery %d, frag %d\n", i, frag_err_list[i]);
             exit(-1);
         }
     }
-    print_matrix("Recovered Matrix", (const u8**)recover_outp, nerrs, len);
+
+    // Check that buffers recovered via encode are the same as those recovered via update
+    printf(" Comparing encode vs encode_update {");
+    for (int i = 0; i < nerrs; i++) {
+        printf(" %d", frag_err_list[i]);
+        if (memcmp(recover_outp_encode_update[i], frag_ptrs[frag_err_list[i]], len)) {
+            printf(" Fail erasure recovery %d, frag %d\n", i, frag_err_list[i]);
+            exit(-1);
+        }
+    }
+
+
+    print_matrix("Recovered Matrix recover_outp_encode", (const u8**)recover_outp_encode, nerrs, len);
+    print_matrix("Recovered Matrix recover_outp_encode_update", (const u8**)recover_outp_encode_update, nerrs, len);
 
     printf(" } done all: Pass\n");
     return 0;
 }
+
 
 /*
  * Generate decode matrix from encode matrix and erasure list
@@ -496,17 +503,19 @@ int main(int argc, char *argv[])
         ec_encode_data_update(len, k, p, i, g_tbls, frag_ptrs_encode_update[i], &frag_ptrs_encode_update[k]);
     }
 
+
     print_matrix("Source + Parity matrix encode 2", (const u8**)frag_ptrs_encode, m, len);
     print_matrix("Source + Parity matrix encode_update", (const u8**)frag_ptrs_encode_update, m, len);
 
     // Check that encode and encode_update produce the same results
-    printf(" check the two versions are identical ");
+    puts("=== check the two versions are identical ==");
     for (int row = 0; row < m; row++) {
         if (memcmp(frag_ptrs_encode[row], frag_ptrs_encode_update[row], len)) {
-            puts("Not identical");
+            printf("Not identical: row %d\n", row);
             exit(-1);
         }
     }
+    puts("Identical.");
 
     int nerrs = 1;
     if (exhaustive_test) {
