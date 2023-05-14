@@ -52,12 +52,17 @@ int usage(void)
 	exit(0);
 }
 
-static int gf_gen_decode_matrix_simple(u8 * encode_matrix,
-				       u8 * decode_matrix,
-				       u8 * invert_matrix,
-				       u8 * temp_matrix,
-				       u8 * decode_index,
-				       u8 * frag_err_list, int nerrs, int k, int m);
+
+static int gf_gen_decode_matrix_simple(
+					const u8 * encode_matrix,
+				    u8 * decode_matrix,
+				    const u8 * invert_matrix,
+				    const u8 * temp_matrix,
+				    u8 * decode_index, 
+					const u8 * frag_err_list, 
+					int nerrs, 
+					int k,
+				    int m);
 
 const unsigned char generate_byte(const unsigned char upper_bound){ // generates numbers in the range [0, upper_bound] - all inclusive!
     // I have thoroughly tested this function and informally proved that it is correct to my satisfaction.
@@ -236,9 +241,9 @@ int part2(
 			int p,
 			int nerrs,
 			int len,
-			u8 *encode_matrix, 
-			u8 *g_tbls,
-			u8 **frag_ptrs)
+			const u8 *encode_matrix, 
+			const u8 *g_tbls,
+			const u8 * const *frag_ptrs)
 {
 	u8 *decode_matrix;
 	u8 *invert_matrix;
@@ -313,12 +318,16 @@ int part2(
  *
  */
 
-static int gf_gen_decode_matrix_simple(u8 * encode_matrix,
-				       u8 * decode_matrix,
-				       u8 * invert_matrix,
-				       u8 * temp_matrix,
-				       u8 * decode_index, u8 * frag_err_list, int nerrs, int k,
-				       int m)
+static int gf_gen_decode_matrix_simple(
+					const u8 * encode_matrix,
+				    u8 * decode_matrix,
+				    const u8 * invert_matrix,
+				    const u8 * temp_matrix,
+				    u8 * decode_index, 
+					const u8 * frag_err_list, 
+					int nerrs, 
+					int k,
+				    int m)
 {
 	int i, j, p, r;
 	int nsrcerrs = 0;
