@@ -42,27 +42,27 @@ typedef unsigned char u8;
 
 int usage(void)
 {
-	fprintf(stderr,
-		"Usage: ec_simple_example [options]\n"
-		"  -h        Help\n"
-		"  -k <val>  Number of source fragments\n"
-		"  -p <val>  Number of parity fragments\n"
-		"  -l <val>  Length of fragments\n"
-		"  -t <val>  Number of errors to test for\n");
-	exit(0);
+    fprintf(stderr,
+        "Usage: ec_simple_example [options]\n"
+        "  -h        Help\n"
+        "  -k <val>  Number of source fragments\n"
+        "  -p <val>  Number of parity fragments\n"
+        "  -l <val>  Length of fragments\n"
+        "  -t <val>  Number of errors to test for\n");
+    exit(0);
 }
 
 
 static int gf_gen_decode_matrix_simple(
-					const u8 * encode_matrix,
-				    u8 * decode_matrix,
-				    const u8 * invert_matrix,
-				    const u8 * temp_matrix,
-				    u8 * decode_index, 
-					const u8 * frag_err_list, 
-					int nerrs, 
-					int k,
-				    int m);
+                    const u8 * encode_matrix,
+                    u8 * decode_matrix, // output matrix, modified by function
+                    const u8 * invert_matrix,
+                    const u8 * temp_matrix,
+                    u8 * decode_index,  // output matrix, modified by function
+                    const u8 * frag_err_list, 
+                    int nerrs, 
+                    int k,
+                    int m);
 
 const unsigned char generate_byte(const unsigned char upper_bound){ // generates numbers in the range [0, upper_bound] - all inclusive!
     // I have thoroughly tested this function and informally proved that it is correct to my satisfaction.
@@ -91,7 +91,7 @@ const unsigned char generate_byte(const unsigned char upper_bound){ // generates
 
 
 void choose_without_replacement( 
-	// I've thoroughly tested this function and ensured that it works.
+    // I've thoroughly tested this function and ensured that it works.
     // this function is limited to arrays of up to 255 elements due to generate_byte, see below
     #define ELEMENT_TYPE u8
     // the #define macro is to make this function generic, so feel free to replace u8 with some other type.
@@ -99,7 +99,7 @@ void choose_without_replacement(
     ELEMENT_TYPE* output_array, // caller must allocate this, but does not need to initialize it
     int input_array_length, // number of elements in input and output array
     int output_array_length, // number of elements in input and output array
-	int m, // k + p
+    int m, // k + p
     int elements_to_pick // number of elements to randomly pick from the input array
 ){
     assert(input_array_length == output_array_length);
@@ -125,97 +125,97 @@ void choose_without_replacement(
 
 int main(int argc, char *argv[])
 {
-	int i, j, m, c, ret;
-	int k = 10, p = 4, len = 8 * 1024;	// Default params
-	int nerrs = 0;
+    int i, j, m, c, ret;
+    int k = 10, p = 4, len = 8 * 1024;	// Default params
+    int nerrs = 0;
 
-	// Fragment buffer pointers
-	u8 *frag_ptrs[MMAX];
+    // Fragment buffer pointers
+    u8 *frag_ptrs[MMAX];
 
-	// Coefficient matrices
-	u8 *encode_matrix;
-	u8 *g_tbls;
+    // Coefficient matrices
+    u8 *encode_matrix;
+    u8 *g_tbls;
 
-	while ((c = getopt(argc, argv, "k:p:l:t:h")) != -1) {
-		switch (c) {
-		case 'k':
-			k = atoi(optarg);
-			break;
-		case 'p':
-			p = atoi(optarg);
-			break;
-		case 'l':
-			len = atoi(optarg);
-			if (len < 0)
-				usage();
-			break;
-		case 't':
-			nerrs = atoi(optarg);
-			if (nerrs < 0){
-				puts("Error: Number of errors can't be negative");
-				exit(1);
-			}
-			break;
-		case 'h':
-		default:
-			usage();
-			break;
-		}
-	}
-	m = k + p;
+    while ((c = getopt(argc, argv, "k:p:l:t:h")) != -1) {
+        switch (c) {
+        case 'k':
+            k = atoi(optarg);
+            break;
+        case 'p':
+            p = atoi(optarg);
+            break;
+        case 'l':
+            len = atoi(optarg);
+            if (len < 0)
+                usage();
+            break;
+        case 't':
+            nerrs = atoi(optarg);
+            if (nerrs < 0){
+                puts("Error: Number of errors can't be negative");
+                exit(1);
+            }
+            break;
+        case 'h':
+        default:
+            usage();
+            break;
+        }
+    }
+    m = k + p;
 
-	// Check for valid parameters
-	if (m > MMAX || k > KMAX || m < 0 || p < 1 || k < 1) {
-		printf(" Input test parameter error m=%d, k=%d, p=%d, erasures=%d\n",
-		       m, k, p, nerrs);
-		usage();
-	}
-	if (nerrs > p) {
-		printf(" Number of erasures chosen exceeds power of code erasures=%d p=%d\n",
-		       nerrs, p);
-		usage();
-	}
+    // Check for valid parameters
+    if (m > MMAX || k > KMAX || m < 0 || p < 1 || k < 1) {
+        printf(" Input test parameter error m=%d, k=%d, p=%d, erasures=%d\n",
+               m, k, p, nerrs);
+        usage();
+    }
+    if (nerrs > p) {
+        printf(" Number of erasures chosen exceeds power of code erasures=%d p=%d\n",
+               nerrs, p);
+        usage();
+    }
 
-	printf("ec_simple_example:\n");
+    printf("ec_simple_example:\n");
 
-	// Allocate coding matrices
-	encode_matrix = malloc(m * k);
-	g_tbls = malloc(k * p * 32);
+    // Allocate coding matrices
+    encode_matrix = malloc(m * k);
+    g_tbls = malloc(k * p * 32);
 
-	if (encode_matrix == NULL || g_tbls == NULL) {
-		printf("Test failure! Error with malloc\n");
-		return -1;
-	}
-	// Allocate the src & parity buffers
-	for (i = 0; i < m; i++) {
-		if (NULL == (frag_ptrs[i] = malloc(len))) {
-			printf("alloc error: Fail\n");
-			return -1;
-		}
-	}
+    if (encode_matrix == NULL || g_tbls == NULL) {
+        printf("Test failure! Error with malloc\n");
+        return -1;
+    }
+    // Allocate the src & parity buffers
+    for (i = 0; i < m; i++) {
+        if (NULL == (frag_ptrs[i] = malloc(len))) {
+            printf("alloc error: Fail\n");
+            return -1;
+        }
+    }
 
-	// Fill sources with random data
-	for (i = 0; i < k; i++)
-		for (j = 0; j < len; j++)
-			frag_ptrs[i][j] = rand();
+    // Fill sources with random data
+    for (i = 0; i < k; i++)
+        for (j = 0; j < len; j++)
+            frag_ptrs[i][j] = rand();
 
-	printf(" encode (m,k,p)=(%d,%d,%d) len=%d\n", m, k, p, len);
+    printf(" encode (m,k,p)=(%d,%d,%d) len=%d\n", m, k, p, len);
 
-	// Pick an encode matrix. A Cauchy matrix is a good choice as even
-	// large k are always invertable keeping the recovery rule simple.
-	gf_gen_cauchy1_matrix(encode_matrix, m, k);
+    // Pick an encode matrix. A Cauchy matrix is a good choice as even
+    // large k are always invertable keeping the recovery rule simple.
+    gf_gen_cauchy1_matrix(encode_matrix, m, k);
 
-	// Initialize g_tbls from encode matrix
-	ec_init_tables(k, p, &encode_matrix[k * k], g_tbls);
+    // Initialize g_tbls from encode matrix
+    ec_init_tables(k, p, &encode_matrix[k * k], g_tbls);
 
-	// Generate EC parity blocks from sources
-	ec_encode_data(len, k, p, g_tbls, frag_ptrs, &frag_ptrs[k]);
+    // Generate EC parity blocks from sources
+    ec_encode_data(len, k, p, g_tbls, frag_ptrs, &frag_ptrs[k]);
 
-	if (nerrs <= 0)
-		return 0;
+    if (nerrs <= 0)
+        return 0;
 
-	return part2(k, m, p, nerrs, len, encode_matrix, 
-					g_tbls, frag_ptrs);
+    return part2(k, m, p, nerrs, len, encode_matrix, 
+                    g_tbls, frag_ptrs);
 }
 
 void print_array(
@@ -236,81 +236,81 @@ void print_array(
 }
 
 int part2(
-			int k, 
-			int m,
-			int p,
-			int nerrs,
-			int len,
-			const u8 *encode_matrix, 
-			const u8 *g_tbls,
-			const u8 * const *frag_ptrs)
+            int k, 
+            int m,
+            int p,
+            int nerrs,
+            int len,
+            const u8 *encode_matrix, 
+            const u8 *g_tbls,
+            const u8 * const *frag_ptrs)
 {
-	u8 *decode_matrix;
-	u8 *invert_matrix;
-	u8 *temp_matrix;
-	u8 *recover_srcs[KMAX];
-	u8 *recover_outp[KMAX];
-	decode_matrix = malloc(m * k);
-	invert_matrix = malloc(m * k);
-	temp_matrix = malloc(m * k);
-	u8 decode_index[MMAX];
+    u8 *decode_matrix;
+    u8 *invert_matrix;
+    u8 *temp_matrix;
+    u8 *recover_srcs[KMAX];
+    u8 *recover_outp[KMAX];
+    decode_matrix = malloc(m * k);
+    invert_matrix = malloc(m * k);
+    temp_matrix = malloc(m * k);
+    u8 decode_index[MMAX];
 
-	// Fragment buffer pointers
-	u8 frag_err_list[MMAX];
-	// Generate errors
-	u8 shard_numbers[MMAX];
-	for (int i = 0; i < MMAX; i++){
-		shard_numbers[i] = i;
-	}
-	choose_without_replacement(shard_numbers, frag_err_list, MMAX, MMAX, m, nerrs);
-	print_array("frag_err_list", frag_err_list, nerrs);
+    // Fragment buffer pointers
+    u8 frag_err_list[MMAX];
+    // Generate errors
+    u8 shard_numbers[MMAX];
+    for (int i = 0; i < MMAX; i++){
+        shard_numbers[i] = i;
+    }
+    choose_without_replacement(shard_numbers, frag_err_list, MMAX, MMAX, m, nerrs);
+    print_array("frag_err_list", frag_err_list, nerrs);
 
-	
+    
 
-	// Allocate buffers for recovered data
-	for (int i = 0; i < p; i++) {
-		if (NULL == (recover_outp[i] = malloc(len))) {
-			printf("alloc error: Fail\n");
-			return -1;
-		}
-	}
+    // Allocate buffers for recovered data
+    for (int i = 0; i < p; i++) {
+        if (NULL == (recover_outp[i] = malloc(len))) {
+            printf("alloc error: Fail\n");
+            return -1;
+        }
+    }
 
-	if (encode_matrix == NULL || decode_matrix == NULL
-	    || invert_matrix == NULL || temp_matrix == NULL || g_tbls == NULL) {
-		printf("Test failure! Error with malloc\n");
-		return -1;
-	}
+    if (encode_matrix == NULL || decode_matrix == NULL
+        || invert_matrix == NULL || temp_matrix == NULL || g_tbls == NULL) {
+        printf("Test failure! Error with malloc\n");
+        return -1;
+    }
 
-	printf(" recover %d fragments\n", nerrs);
+    printf(" recover %d fragments\n", nerrs);
 
-	// Find a decode matrix to regenerate all erasures from remaining frags
-	int ret = gf_gen_decode_matrix_simple(encode_matrix, decode_matrix,
-					  invert_matrix, temp_matrix, decode_index,
-					  frag_err_list, nerrs, k, m);
-	if (ret != 0) {
-		printf("Fail on generate decode matrix\n");
-		return -1;
-	}
-	// Pack recovery array pointers as list of valid fragments
-	for (int i = 0; i < k; i++)
-		recover_srcs[i] = frag_ptrs[decode_index[i]];
+    // Find a decode matrix to regenerate all erasures from remaining frags
+    int ret = gf_gen_decode_matrix_simple(encode_matrix, decode_matrix,
+                      invert_matrix, temp_matrix, decode_index,
+                      frag_err_list, nerrs, k, m);
+    if (ret != 0) {
+        printf("Fail on generate decode matrix\n");
+        return -1;
+    }
+    // Pack recovery array pointers as list of valid fragments
+    for (int i = 0; i < k; i++)
+        recover_srcs[i] = frag_ptrs[decode_index[i]];
 
-	// Recover data
-	ec_init_tables(k, nerrs, decode_matrix, g_tbls);
-	ec_encode_data(len, k, nerrs, g_tbls, recover_srcs, recover_outp);
+    // Recover data
+    ec_init_tables(k, nerrs, decode_matrix, g_tbls);
+    ec_encode_data(len, k, nerrs, g_tbls, recover_srcs, recover_outp);
 
-	// Check that recovered buffers are the same as original
-	printf(" check recovery of block {");
-	for (int i = 0; i < nerrs; i++) {
-		printf(" %d", frag_err_list[i]);
-		if (memcmp(recover_outp[i], frag_ptrs[frag_err_list[i]], len)) {
-			printf(" Fail erasure recovery %d, frag %d\n", i, frag_err_list[i]);
-			return -1;
-		}
-	}
+    // Check that recovered buffers are the same as original
+    printf(" check recovery of block {");
+    for (int i = 0; i < nerrs; i++) {
+        printf(" %d", frag_err_list[i]);
+        if (memcmp(recover_outp[i], frag_ptrs[frag_err_list[i]], len)) {
+            printf(" Fail erasure recovery %d, frag %d\n", i, frag_err_list[i]);
+            return -1;
+        }
+    }
 
-	printf(" } done all: Pass\n");
-	return 0;
+    printf(" } done all: Pass\n");
+    return 0;
 }
 
 /*
@@ -319,62 +319,62 @@ int part2(
  */
 
 static int gf_gen_decode_matrix_simple(
-					const u8 * encode_matrix,
-				    u8 * decode_matrix,
-				    const u8 * invert_matrix,
-				    const u8 * temp_matrix,
-				    u8 * decode_index, 
-					const u8 * frag_err_list, 
-					int nerrs, 
-					int k,
-				    int m)
+                    const u8 * encode_matrix,
+                    u8 * decode_matrix,
+                    const u8 * invert_matrix,
+                    const u8 * temp_matrix,
+                    u8 * decode_index, 
+                    const u8 * frag_err_list, 
+                    int nerrs, 
+                    int k,
+                    int m)
 {
-	int i, j, p, r;
-	int nsrcerrs = 0;
-	u8 s, *b = temp_matrix;
-	u8 frag_in_err[MMAX];
+    int i, j, p, r;
+    int nsrcerrs = 0;
+    u8 s, *b = temp_matrix;
+    u8 frag_in_err[MMAX];
 
-	memset(frag_in_err, 0, sizeof(frag_in_err));
+    memset(frag_in_err, 0, sizeof(frag_in_err));
 
-	// Order the fragments in erasure for easier sorting
-	for (i = 0; i < nerrs; i++) {
-		if (frag_err_list[i] < k)
-			nsrcerrs++;
-		frag_in_err[frag_err_list[i]] = 1;
-	}
+    // Order the fragments in erasure for easier sorting
+    for (i = 0; i < nerrs; i++) {
+        if (frag_err_list[i] < k)
+            nsrcerrs++;
+        frag_in_err[frag_err_list[i]] = 1;
+    }
 
-	// Construct b (matrix that encoded remaining frags) by removing erased rows
-	for (i = 0, r = 0; i < k; i++, r++) {
-		while (frag_in_err[r])
-			r++;
-		for (j = 0; j < k; j++)
-			b[k * i + j] = encode_matrix[k * r + j];
-		decode_index[i] = r;
-	}
+    // Construct b (matrix that encoded remaining frags) by removing erased rows
+    for (i = 0, r = 0; i < k; i++, r++) {
+        while (frag_in_err[r])
+            r++;
+        for (j = 0; j < k; j++)
+            b[k * i + j] = encode_matrix[k * r + j];
+        decode_index[i] = r;
+    }
 
-	// Invert matrix to get recovery matrix
-	if (gf_invert_matrix(b, invert_matrix, k) < 0)
-		return -1;
+    // Invert matrix to get recovery matrix
+    if (gf_invert_matrix(b, invert_matrix, k) < 0)
+        return -1;
 
-	// Get decode matrix with only wanted recovery rows
-	for (i = 0; i < nerrs; i++) {
-		if (frag_err_list[i] < k)	// A src err
-			for (j = 0; j < k; j++)
-				decode_matrix[k * i + j] =
-				    invert_matrix[k * frag_err_list[i] + j];
-	}
+    // Get decode matrix with only wanted recovery rows
+    for (i = 0; i < nerrs; i++) {
+        if (frag_err_list[i] < k)	// A src err
+            for (j = 0; j < k; j++)
+                decode_matrix[k * i + j] =
+                    invert_matrix[k * frag_err_list[i] + j];
+    }
 
-	// For non-src (parity) erasures need to multiply encode matrix * invert
-	for (p = 0; p < nerrs; p++) {
-		if (frag_err_list[p] >= k) {	// A parity err
-			for (i = 0; i < k; i++) {
-				s = 0;
-				for (j = 0; j < k; j++)
-					s ^= gf_mul(invert_matrix[j * k + i],
-						    encode_matrix[k * frag_err_list[p] + j]);
-				decode_matrix[k * p + i] = s;
-			}
-		}
-	}
-	return 0;
+    // For non-src (parity) erasures need to multiply encode matrix * invert
+    for (p = 0; p < nerrs; p++) {
+        if (frag_err_list[p] >= k) {	// A parity err
+            for (i = 0; i < k; i++) {
+                s = 0;
+                for (j = 0; j < k; j++)
+                    s ^= gf_mul(invert_matrix[j * k + i],
+                            encode_matrix[k * frag_err_list[p] + j]);
+                decode_matrix[k * p + i] = s;
+            }
+        }
+    }
+    return 0;
 }
