@@ -159,118 +159,6 @@ void choose_without_replacement(
 }
 
 
-int main(int argc, char *argv[])
-{
-    int k = 10, p = 4, len = 8;	// Default params
-    int random_test = 0;
-    int random_repeat = 1;
-    int exhaustive_test = 0;
-	char* filepath = NULL;
-
-    // Fragment buffer pointers
-    u8 *frag_ptrs[MMAX];
-
-    // Coefficient matrices
-    u8 *encode_matrix;
-    u8 *g_tbls;
-
-    int c;
-    while ((c = getopt(argc, argv, "f:k:p:l:e:r:n:h")) != -1) {
-        switch (c) {
-        case 'f':
-            filepath = strdup(optarg);
-            break;
-        case 'k':
-            k = atoi(optarg);
-            break;
-        case 'p':
-            p = atoi(optarg);
-            break;
-        case 'e':
-            exhaustive_test = atoi(optarg);
-            break;
-        case 'r':
-            random_test = atoi(optarg);
-            break;
-        case 'n':
-            random_repeat = atoi(optarg);
-            break;
-        case 'h':
-        default:
-            usage();
-            break;
-        }
-    }
-    int m = k + p;
-
-    // Check for valid parameters
-    if (m > MMAX || k > KMAX || m < 0 || p < 1 || k < 1) {
-        printf(" Input test parameter error m=%d, k=%d, p=%d\n",
-               m, k, p);
-        usage();
-    }
-    // Check for filename
-    if (NULL == filepath) {
-        puts("Error: You must specify a file to encode.");
-        exit(-1);
-    }
-
-    printf("Encoding file: %s\n", filepath);
-
-    printf("ec_simple_example:\n");
-
-    // Allocate coding matrices
-    encode_matrix = malloc(m * k);
-    g_tbls = malloc(k * p * 32);
-
-    if (encode_matrix == NULL || g_tbls == NULL) {
-        printf("Test failure! Error with malloc\n");
-        return -1;
-    }
-    // Allocate the src & parity buffers
-    for (int i = 0; i < m; i++) {
-        if (NULL == (frag_ptrs[i] = malloc(len))) {
-            printf("alloc error: Fail\n");
-            return -1;
-        }
-    }
-
-    // Fill sources with random data
-    for (int i = 0; i < k; i++)
-        for (int j = 0; j < len; j++)
-            frag_ptrs[i][j] = rand();
-
-    print_matrix("Source matrix", (const u8**)frag_ptrs, k, len);
-
-    printf(" encode (m,k,p)=(%d,%d,%d) len=%d\n", m, k, p, len);
-
-    // Pick an encode matrix. A Cauchy matrix is a good choice as even
-    // large k are always invertable keeping the recovery rule simple.
-    gf_gen_cauchy1_matrix(encode_matrix, m, k);
-
-    // Initialize g_tbls from encode matrix
-    ec_init_tables(k, p, &encode_matrix[k * k], g_tbls);
-
-    // Generate EC parity blocks from sources
-    ec_encode_data(len, k, p, g_tbls, (const u8* const *)frag_ptrs, &frag_ptrs[k]);
-
-    print_matrix("Source + Parity matrix", (const u8**)frag_ptrs, m, len);
-
-    int nerrs = 1;
-    if (exhaustive_test) {
-        nerrs = 2;
-        printf("======================== Exhaustive Testing 1 missing fragment ========================\n");
-        test_exhaustive(k, m, p, len, (const u8*)encode_matrix, (u8 const * const * const)frag_ptrs);
-    }
-
-    for (; nerrs <= random_test; nerrs++){
-        printf("======================== Random Testing %d missing fragments ========================\n", nerrs);
-        for (int j = 0; j < random_repeat; j++){
-            test_random(k, m, p, nerrs, len, (const u8*)encode_matrix, (u8 const * const * const)frag_ptrs);
-        }
-    }
-}
-
 void print_array(
     const char* name,
     const u8* array,
@@ -476,4 +364,134 @@ static int gf_gen_decode_matrix_simple(
         }
     }
     return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+int main(int argc, char *argv[])
+{
+    int k = 10, p = 4, len = 8;	// Default params
+    int random_test = 0;
+    int random_repeat = 1;
+    int exhaustive_test = 0;
+	char* filepath = NULL;
+
+    // Fragment buffer pointers
+    u8 *frag_ptrs[MMAX];
+
+    // Coefficient matrices
+    u8 *encode_matrix;
+    u8 *g_tbls;
+
+    int c;
+    while ((c = getopt(argc, argv, "f:k:p:l:e:r:n:h")) != -1) {
+        switch (c) {
+        case 'f':
+            filepath = strdup(optarg);
+            break;
+        case 'k':
+            k = atoi(optarg);
+            break;
+        case 'p':
+            p = atoi(optarg);
+            break;
+        case 'e':
+            exhaustive_test = atoi(optarg);
+            break;
+        case 'r':
+            random_test = atoi(optarg);
+            break;
+        case 'n':
+            random_repeat = atoi(optarg);
+            break;
+        case 'h':
+        default:
+            usage();
+            break;
+        }
+    }
+    int m = k + p;
+
+    // Check for valid parameters
+    if (m > MMAX || k > KMAX || m < 0 || p < 1 || k < 1) {
+        printf(" Input test parameter error m=%d, k=%d, p=%d\n",
+               m, k, p);
+        usage();
+    }
+    // Check for filename
+    if (NULL == filepath) {
+        puts("Error: You must specify a file to encode.");
+        exit(-1);
+    }
+
+    printf("Encoding file: %s\n", filepath);
+
+    printf("ec_simple_example:\n");
+
+    // Allocate coding matrices
+    encode_matrix = malloc(m * k);
+    g_tbls = malloc(k * p * 32);
+
+    if (encode_matrix == NULL || g_tbls == NULL) {
+        printf("Test failure! Error with malloc\n");
+        return -1;
+    }
+    // Allocate the src & parity buffers
+    for (int i = 0; i < m; i++) {
+        if (NULL == (frag_ptrs[i] = malloc(len))) {
+            printf("alloc error: Fail\n");
+            return -1;
+        }
+    }
+
+    // Fill sources with random data
+    for (int i = 0; i < k; i++)
+        for (int j = 0; j < len; j++)
+            frag_ptrs[i][j] = rand();
+
+    print_matrix("Source matrix", (const u8**)frag_ptrs, k, len);
+
+    printf(" encode (m,k,p)=(%d,%d,%d) len=%d\n", m, k, p, len);
+
+    // Pick an encode matrix. A Cauchy matrix is a good choice as even
+    // large k are always invertable keeping the recovery rule simple.
+    gf_gen_cauchy1_matrix(encode_matrix, m, k);
+
+    // Initialize g_tbls from encode matrix
+    ec_init_tables(k, p, &encode_matrix[k * k], g_tbls);
+
+    // Generate EC parity blocks from sources
+    ec_encode_data(len, k, p, g_tbls, (const u8* const *)frag_ptrs, &frag_ptrs[k]);
+
+    print_matrix("Source + Parity matrix", (const u8**)frag_ptrs, m, len);
+
+    int nerrs = 1;
+    if (exhaustive_test) {
+        nerrs = 2;
+        printf("======================== Exhaustive Testing 1 missing fragment ========================\n");
+        test_exhaustive(k, m, p, len, (const u8*)encode_matrix, (u8 const * const * const)frag_ptrs);
+    }
+
+    for (; nerrs <= random_test; nerrs++){
+        printf("======================== Random Testing %d missing fragments ========================\n", nerrs);
+        for (int j = 0; j < random_repeat; j++){
+            test_random(k, m, p, nerrs, len, (const u8*)encode_matrix, (u8 const * const * const)frag_ptrs);
+        }
+    }
 }
