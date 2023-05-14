@@ -331,12 +331,12 @@ int main(int argc, char *argv[])
 		// Standard encode using no assumptions on the encode matrix
 
 		// Generate EC parity blocks from sources
-		ec_encode_data(len / 2, k2, p2, g_tbls, frag_ptrs, parity_ptrs);
+		ec_encode_data(len / 2, k2, p2, g_tbls, (const u8* const *)frag_ptrs, parity_ptrs);
 
 		if (benchmark) {
 			struct perf start;
 			BENCHMARK(&start, BENCHMARK_TIME,
-				  ec_encode_data(len / 2, k2, p2, g_tbls, frag_ptrs,
+				  ec_encode_data(len / 2, k2, p2, g_tbls, (const u8* const *)frag_ptrs,
 						 parity_ptrs));
 			printf("ec_piggyback_encode_std: ");
 			perf_print(start, m2 * len / 2);
@@ -371,17 +371,17 @@ int main(int argc, char *argv[])
 		ec_init_tables(k, p, &encode_matrix_faster[k * k], g_tbls_faster);
 
 		// Generate EC parity blocks from sources
-		ec_encode_data(len / 2, k, p, g_tbls_faster, frag_ptrs, parity_ptrs);
-		ec_encode_data(len / 2, k2, p, &g_tbls[k2 * p * 32], frag_ptrs,
+		ec_encode_data(len / 2, k, p, g_tbls_faster, (const u8* const *)frag_ptrs, parity_ptrs);
+		ec_encode_data(len / 2, k2, p, &g_tbls[k2 * p * 32], (const u8* const *)frag_ptrs,
 			       &parity_ptrs[p]);
 
 		if (benchmark) {
 			struct perf start;
 			BENCHMARK(&start, BENCHMARK_TIME,
-				  ec_encode_data(len / 2, k, p, g_tbls_faster, frag_ptrs,
+				  ec_encode_data(len / 2, k, p, g_tbls_faster, (const u8* const *)frag_ptrs,
 						 parity_ptrs);
 				  ec_encode_data(len / 2, k2, p, &g_tbls[k2 * p * 32],
-						 frag_ptrs, &parity_ptrs[p]));
+						 (const u8* const *) frag_ptrs, &parity_ptrs[p]));
 			printf("ec_piggyback_encode_sparse: ");
 			perf_print(start, m2 * len / 2);
 		}
@@ -418,12 +418,12 @@ int main(int argc, char *argv[])
 
 	// Recover data
 	ec_init_tables(k2, nerrs2, decode_matrix, g_tbls);
-	ec_encode_data(len / 2, k2, nerrs2, g_tbls, recover_srcs, recover_outp);
+	ec_encode_data(len / 2, k2, nerrs2, g_tbls, (const u8* const *)recover_srcs, recover_outp);
 
 	if (benchmark) {
 		struct perf start;
 		BENCHMARK(&start, BENCHMARK_TIME,
-			  ec_encode_data(len / 2, k2, nerrs2, g_tbls, recover_srcs,
+			  ec_encode_data(len / 2, k2, nerrs2, g_tbls, (const u8* const *)recover_srcs,
 					 recover_outp));
 		printf("ec_piggyback_decode: ");
 		perf_print(start, (k2 + nerrs2) * len / 2);

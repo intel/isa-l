@@ -272,8 +272,8 @@ void gf_vect_mul_init(unsigned char c, unsigned char *tbl)
 #endif //__WORDSIZE == 64 || _WIN64 || __x86_64__
 }
 
-void gf_vect_dot_prod_base(int len, int vlen, unsigned char *v,
-			   unsigned char **src, unsigned char *dest)
+void gf_vect_dot_prod_base(int len, int vlen, const unsigned char *v,
+			   const unsigned char * const *src, unsigned char *dest)
 {
 	int i, j;
 	unsigned char s;
@@ -299,7 +299,7 @@ void gf_vect_mad_base(int len, int vec, int vec_i,
 }
 
 void ec_encode_data_base(int len, int srcs, int dests, const unsigned char *v,
-			 unsigned char **src, unsigned char **dest)
+			 const unsigned char * const *src, unsigned char **dest)
 {
 	int i, j, l;
 	unsigned char s;

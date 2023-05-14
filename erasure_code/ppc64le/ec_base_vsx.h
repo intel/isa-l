@@ -77,8 +77,8 @@ void gf_vect_mul_vsx(int len, unsigned char *gftbls, unsigned char *src, unsigne
  * @returns none
  */
 
-void gf_vect_dot_prod_vsx(int len, int vlen, unsigned char *gftbls,
-			  unsigned char **src, unsigned char *dest);
+void gf_vect_dot_prod_vsx(int len, int vlen, const unsigned char *gftbls,
+			  const unsigned char * const *src, unsigned char *dest);
 
 /**
  * @brief GF(2^8) vector dot product with two outputs. VSX version.
@@ -99,8 +99,8 @@ void gf_vect_dot_prod_vsx(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_2vect_dot_prod_vsx(int len, int vlen, unsigned char *gftbls,
-			   unsigned char **src, unsigned char **dest);
+void gf_2vect_dot_prod_vsx(int len, int vlen, const unsigned char *gftbls,
+			   const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with three outputs. VSX version.
@@ -121,8 +121,8 @@ void gf_2vect_dot_prod_vsx(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_3vect_dot_prod_vsx(int len, int vlen, unsigned char *gftbls,
-			   unsigned char **src, unsigned char **dest);
+void gf_3vect_dot_prod_vsx(int len, int vlen, const unsigned char *gftbls,
+			   const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with four outputs. VSX version.
@@ -143,8 +143,8 @@ void gf_3vect_dot_prod_vsx(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_4vect_dot_prod_vsx(int len, int vlen, unsigned char *gftbls,
-			   unsigned char **src, unsigned char **dest);
+void gf_4vect_dot_prod_vsx(int len, int vlen, const unsigned char *gftbls,
+			   const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with five outputs. VSX version.
@@ -165,8 +165,8 @@ void gf_4vect_dot_prod_vsx(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_5vect_dot_prod_vsx(int len, int vlen, unsigned char *gftbls,
-			   unsigned char **src, unsigned char **dest);
+void gf_5vect_dot_prod_vsx(int len, int vlen, const unsigned char *gftbls,
+			   const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with six outputs. VSX version.
@@ -187,8 +187,8 @@ void gf_5vect_dot_prod_vsx(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_6vect_dot_prod_vsx(int len, int vlen, unsigned char *gftbls,
-			   unsigned char **src, unsigned char **dest);
+void gf_6vect_dot_prod_vsx(int len, int vlen, const unsigned char *gftbls,
+			   const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector multiply accumulate. VSX version.

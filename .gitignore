@@ -34,3 +34,8 @@ programs/igzip
 */igzip_example
 */igzip_sync_flush_example
 */xor_example
+*/erasure_code_base_test
+*/gf_vect_dot_prod_base_test
+*/gf_vect_dot_prod_test
+*/gf_vect_mad_test
+*/gf_vect_mul_base_test

@@ -95,7 +95,7 @@ void ec_init_tables(int k, int rows, unsigned char* a, unsigned char* gftbls);
  * @returns none
  */
 
-void ec_encode_data(int len, int k, int rows, const unsigned char *gftbls, unsigned char **data,
+void ec_encode_data(int len, int k, int rows, const unsigned char *gftbls, const unsigned char * const *data,
 		    unsigned char **coding);
 
 /**
@@ -103,7 +103,7 @@ void ec_encode_data(int len, int k, int rows, const unsigned char *gftbls, unsig
  *
  * Baseline version of ec_encode_data() with same parameters.
  */
-void ec_encode_data_base(int len, int srcs, int dests, const unsigned char *v, unsigned char **src,
+void ec_encode_data_base(int len, int srcs, int dests, const unsigned char *v, const unsigned char * const *src,
 			 unsigned char **dest);
 
 /**
@@ -161,8 +161,8 @@ void ec_encode_data_update_base(int len, int k, int rows, int vec_i, unsigned ch
  */
 
 
-void gf_vect_dot_prod_base(int len, int vlen, unsigned char *gftbls,
-                        unsigned char **src, unsigned char *dest);
+void gf_vect_dot_prod_base(int len, int vlen, const unsigned char *gftbls,
+                        const unsigned char * const *src, unsigned char *dest);
 
 /**
  * @brief GF(2^8) vector dot product, runs appropriate version.
@@ -231,7 +231,7 @@ void gf_vect_mad_base(int len, int vec, int vec_i, unsigned char *v, unsigned ch
  * Arch specific version of ec_encode_data() with same parameters.
  * @requires SSE4.1
  */
-void ec_encode_data_sse(int len, int k, int rows, unsigned char *gftbls, unsigned char **data,
+void ec_encode_data_sse(int len, int k, int rows, const unsigned char *gftbls, const unsigned char * const *data,
 			unsigned char **coding);
 
 /**
@@ -240,7 +240,7 @@ void ec_encode_data_sse(int len, int k, int rows, unsigned char *gftbls, unsigne
  * Arch specific version of ec_encode_data() with same parameters.
  * @requires AVX
  */
-void ec_encode_data_avx(int len, int k, int rows, unsigned char *gftbls, unsigned char **data,
+void ec_encode_data_avx(int len, int k, int rows, const unsigned char *gftbls, const unsigned char * const *data,
 			unsigned char **coding);
 
 /**
@@ -249,7 +249,7 @@ void ec_encode_data_avx(int len, int k, int rows, unsigned char *gftbls, unsigne
  * Arch specific version of ec_encode_data() with same parameters.
  * @requires AVX2
  */
-void ec_encode_data_avx2(int len, int k, int rows, unsigned char *gftbls, unsigned char **data,
+void ec_encode_data_avx2(int len, int k, int rows, const unsigned char *gftbls, const unsigned char * const *data,
 			 unsigned char **coding);
 
 /**
@@ -300,8 +300,8 @@ void ec_encode_data_update_avx2(int len, int k, int rows, int vec_i, unsigned ch
  * @returns none
  */
 
-void gf_vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char *dest);
+void gf_vect_dot_prod_sse(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char *dest);
 
 /**
  * @brief GF(2^8) vector dot product.
@@ -321,8 +321,8 @@ void gf_vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char *dest);
+void gf_vect_dot_prod_avx(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char *dest);
 
 /**
  * @brief GF(2^8) vector dot product.
@@ -342,8 +342,8 @@ void gf_vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char *dest);
+void gf_vect_dot_prod_avx2(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char *dest);
 
 /**
  * @brief GF(2^8) vector dot product with two outputs.
@@ -364,8 +364,8 @@ void gf_vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_2vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char **dest);
+void gf_2vect_dot_prod_sse(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with two outputs.
@@ -386,8 +386,8 @@ void gf_2vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_2vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char **dest);
+void gf_2vect_dot_prod_avx(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with two outputs.
@@ -408,8 +408,8 @@ void gf_2vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_2vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char **dest);
+void gf_2vect_dot_prod_avx2(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with three outputs.
@@ -430,8 +430,8 @@ void gf_2vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_3vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char **dest);
+void gf_3vect_dot_prod_sse(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with three outputs.
@@ -452,8 +452,8 @@ void gf_3vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_3vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char **dest);
+void gf_3vect_dot_prod_avx(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with three outputs.
@@ -474,8 +474,8 @@ void gf_3vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_3vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char **dest);
+void gf_3vect_dot_prod_avx2(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with four outputs.
@@ -496,8 +496,8 @@ void gf_3vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_4vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char **dest);
+void gf_4vect_dot_prod_sse(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with four outputs.
@@ -518,8 +518,8 @@ void gf_4vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_4vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char **dest);
+void gf_4vect_dot_prod_avx(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with four outputs.
@@ -540,8 +540,8 @@ void gf_4vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_4vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char **dest);
+void gf_4vect_dot_prod_avx2(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with five outputs.
@@ -562,8 +562,8 @@ void gf_4vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_5vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char **dest);
+void gf_5vect_dot_prod_sse(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with five outputs.
@@ -584,8 +584,8 @@ void gf_5vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_5vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char **dest);
+void gf_5vect_dot_prod_avx(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with five outputs.
@@ -606,8 +606,8 @@ void gf_5vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_5vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char **dest);
+void gf_5vect_dot_prod_avx2(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with six outputs.
@@ -628,8 +628,8 @@ void gf_5vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_6vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char **dest);
+void gf_6vect_dot_prod_sse(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with six outputs.
@@ -650,8 +650,8 @@ void gf_6vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_6vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char **dest);
+void gf_6vect_dot_prod_avx(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product with six outputs.
@@ -672,8 +672,8 @@ void gf_6vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls,
  * @returns none
  */
 
-void gf_6vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls,
-			unsigned char **src, unsigned char **dest);
+void gf_6vect_dot_prod_avx2(int len, int vlen, const unsigned char *gftbls,
+			const unsigned char * const *src, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector multiply accumulate, arch specific version.

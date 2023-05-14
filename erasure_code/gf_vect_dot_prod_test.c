@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < TEST_SOURCES; i++)
 		gf_vect_mul_init(g[i], &g_tbls[i * 32]);
 
-	gf_vect_dot_prod_base(TEST_LEN, TEST_SOURCES, &g_tbls[0], buffs, dest_ref);
+	gf_vect_dot_prod_base(TEST_LEN, TEST_SOURCES, &g_tbls[0], (const u8 * const *)buffs, dest_ref);
 
 	FUNCTION_UNDER_TEST(TEST_LEN, TEST_SOURCES, g_tbls, buffs, dest);
 
@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
 		for (i = 0; i < TEST_SOURCES; i++)
 			gf_vect_mul_init(g[i], &g_tbls[i * 32]);
 
-		gf_vect_dot_prod_base(TEST_LEN, TEST_SOURCES, &g_tbls[0], buffs, dest_ref);
+		gf_vect_dot_prod_base(TEST_LEN, TEST_SOURCES, &g_tbls[0], (const u8 * const *)buffs, dest_ref);
 		FUNCTION_UNDER_TEST(TEST_LEN, TEST_SOURCES, g_tbls, buffs, dest);
 
 		if (0 != memcmp(dest_ref, dest, TEST_LEN)) {
@@ -215,7 +215,7 @@ int main(int argc, char *argv[])
 			for (i = 0; i < srcs; i++)
 				gf_vect_mul_init(g[i], &g_tbls[i * 32]);
 
-			gf_vect_dot_prod_base(TEST_LEN, srcs, &g_tbls[0], buffs, dest_ref);
+			gf_vect_dot_prod_base(TEST_LEN, srcs, &g_tbls[0], (const u8 * const *)buffs, dest_ref);
 			FUNCTION_UNDER_TEST(TEST_LEN, srcs, g_tbls, buffs, dest);
 
 			if (0 != memcmp(dest_ref, dest, TEST_LEN)) {
@@ -415,7 +415,7 @@ int main(int argc, char *argv[])
 		for (i = 0; i < TEST_SOURCES; i++)
 			gf_vect_mul_init(g[i], &g_tbls[i * 32]);
 
-		gf_vect_dot_prod_base(size, TEST_SOURCES, &g_tbls[0], efence_buffs, dest_ref);
+		gf_vect_dot_prod_base(size, TEST_SOURCES, &g_tbls[0], (const u8 * const *)efence_buffs, dest_ref);
 		FUNCTION_UNDER_TEST(size, TEST_SOURCES, g_tbls, efence_buffs, dest);
 
 		if (0 != memcmp(dest_ref, dest, size)) {
@@ -458,7 +458,7 @@ int main(int argc, char *argv[])
 		for (i = 0; i < srcs; i++)
 			gf_vect_mul_init(g[i], &g_tbls[i * 32]);
 
-		gf_vect_dot_prod_base(size, srcs, &g_tbls[0], ubuffs, dest_ref);
+		gf_vect_dot_prod_base(size, srcs, &g_tbls[0], (const u8 * const *)ubuffs, dest_ref);
 
 		FUNCTION_UNDER_TEST(size, srcs, g_tbls, ubuffs, udest_ptr);
 
@@ -504,7 +504,7 @@ int main(int argc, char *argv[])
 		for (i = 0; i < srcs; i++)
 			gf_vect_mul_init(g[i], &g_tbls[i * 32]);
 
-		gf_vect_dot_prod_base(size, srcs, &g_tbls[0], buffs, dest_ref);
+		gf_vect_dot_prod_base(size, srcs, &g_tbls[0], (const u8 * const *)buffs, dest_ref);
 
 		FUNCTION_UNDER_TEST(size, srcs, g_tbls, buffs, dest);
 

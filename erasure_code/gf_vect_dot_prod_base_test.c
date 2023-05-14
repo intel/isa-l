@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
 		for (j = 0; j < k; j++)
 			gf_vect_mul_init(a[k * i + j], &g_tbls[j * 32]);
 
-		gf_vect_dot_prod_base(TEST_LEN, k, g_tbls, buffs, buffs[i]);
+		gf_vect_dot_prod_base(TEST_LEN, k, g_tbls, (const u8 * const *)buffs, buffs[i]);
 	}
 
 	// Random buffers in erasure
@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
 		for (j = 0; j < k; j++)
 			gf_vect_mul_init(d[k * src_err_list[i] + j], &g_tbls[j * 32]);
 
-		gf_vect_dot_prod_base(TEST_LEN, k, g_tbls, recov, temp_buff);
+		gf_vect_dot_prod_base(TEST_LEN, k, g_tbls, (const u8 * const *)recov, temp_buff);
 
 		if (0 != memcmp(temp_buff, buffs[src_err_list[i]], TEST_LEN)) {
 			printf("Fail error recovery (%d, %d, %d)\n", m, k, nerrs);
@@ -220,7 +220,7 @@ int main(int argc, char *argv[])
 			for (j = 0; j < k; j++)
 				gf_vect_mul_init(a[k * i + j], &g_tbls[j * 32]);
 
-			gf_vect_dot_prod_base(TEST_LEN, k, g_tbls, buffs, buffs[i]);
+			gf_vect_dot_prod_base(TEST_LEN, k, g_tbls, (const u8 * const *)buffs, buffs[i]);
 		}
 
 		// Random errors
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
 			for (j = 0; j < k; j++)
 				gf_vect_mul_init(d[k * src_err_list[i] + j], &g_tbls[j * 32]);
 
-			gf_vect_dot_prod_base(TEST_LEN, k, g_tbls, recov, temp_buff);
+			gf_vect_dot_prod_base(TEST_LEN, k, g_tbls, (const u8 * const *)recov, temp_buff);
 
 			if (0 != memcmp(temp_buff, buffs[src_err_list[i]], TEST_LEN)) {
 				printf("Fail error recovery (%d, %d, %d) - ", m, k, nerrs);

@@ -30,7 +30,7 @@
 #include "erasure_code.h"
 
 #if __x86_64__  || __i386__ || _M_X64 || _M_IX86
-void ec_encode_data_sse(int len, int k, int rows, unsigned char *g_tbls, unsigned char **data,
+void ec_encode_data_sse(int len, int k, int rows, const unsigned char *g_tbls, const unsigned char * const *data,
 			unsigned char **coding)
 {
 
@@ -67,7 +67,7 @@ void ec_encode_data_sse(int len, int k, int rows, unsigned char *g_tbls, unsigne
 
 }
 
-void ec_encode_data_avx(int len, int k, int rows, unsigned char *g_tbls, unsigned char **data,
+void ec_encode_data_avx(int len, int k, int rows, const unsigned char *g_tbls, const unsigned char * const *data,
 			unsigned char **coding)
 {
 	if (len < 16) {
@@ -103,7 +103,7 @@ void ec_encode_data_avx(int len, int k, int rows, unsigned char *g_tbls, unsigne
 
 }
 
-void ec_encode_data_avx2(int len, int k, int rows, unsigned char *g_tbls, unsigned char **data,
+void ec_encode_data_avx2(int len, int k, int rows, const unsigned char *g_tbls, const unsigned char * const *data,
 			 unsigned char **coding)
 {
 
@@ -142,33 +142,33 @@ void ec_encode_data_avx2(int len, int k, int rows, unsigned char *g_tbls, unsign
 
 #ifdef HAVE_AS_KNOWS_AVX512
 
-extern int gf_vect_dot_prod_avx512(int len, int k, unsigned char *g_tbls, unsigned char **data,
+extern int gf_vect_dot_prod_avx512(int len, int k, const unsigned char *g_tbls, const unsigned char * const *data,
 				   unsigned char *dest);
-extern int gf_2vect_dot_prod_avx512(int len, int k, unsigned char *g_tbls,
-				    unsigned char **data, unsigned char **coding);
-extern int gf_3vect_dot_prod_avx512(int len, int k, unsigned char *g_tbls,
-				    unsigned char **data, unsigned char **coding);
-extern int gf_4vect_dot_prod_avx512(int len, int k, unsigned char *g_tbls,
-				    unsigned char **data, unsigned char **coding);
-extern int gf_5vect_dot_prod_avx512(int len, int k, unsigned char *g_tbls,
-				    unsigned char **data, unsigned char **coding);
-extern int gf_6vect_dot_prod_avx512(int len, int k, unsigned char *g_tbls,
-				    unsigned char **data, unsigned char **coding);
-extern void gf_vect_mad_avx512(int len, int vec, int vec_i, unsigned char *gftbls,
+extern int gf_2vect_dot_prod_avx512(int len, int k, const unsigned char *g_tbls,
+				    const unsigned char * const *data, unsigned char **coding);
+extern int gf_3vect_dot_prod_avx512(int len, int k, const unsigned char *g_tbls,
+				    const unsigned char * const *data, unsigned char **coding);
+extern int gf_4vect_dot_prod_avx512(int len, int k, const unsigned char *g_tbls,
+				    const unsigned char * const *data, unsigned char **coding);
+extern int gf_5vect_dot_prod_avx512(int len, int k, const unsigned char *g_tbls,
+				    const unsigned char * const *data, unsigned char **coding);
+extern int gf_6vect_dot_prod_avx512(int len, int k, const unsigned char *g_tbls,
+				    const unsigned char * const *data, unsigned char **coding);
+extern void gf_vect_mad_avx512(int len, int vec, int vec_i, const unsigned char *gftbls,
 			       unsigned char *src, unsigned char *dest);
-extern void gf_2vect_mad_avx512(int len, int vec, int vec_i, unsigned char *gftbls,
+extern void gf_2vect_mad_avx512(int len, int vec, int vec_i, const unsigned char *gftbls,
 				unsigned char *src, unsigned char **dest);
-extern void gf_3vect_mad_avx512(int len, int vec, int vec_i, unsigned char *gftbls,
+extern void gf_3vect_mad_avx512(int len, int vec, int vec_i, const unsigned char *gftbls,
 				unsigned char *src, unsigned char **dest);
-extern void gf_4vect_mad_avx512(int len, int vec, int vec_i, unsigned char *gftbls,
+extern void gf_4vect_mad_avx512(int len, int vec, int vec_i, const unsigned char *gftbls,
 				unsigned char *src, unsigned char **dest);
-extern void gf_5vect_mad_avx512(int len, int vec, int vec_i, unsigned char *gftbls,
+extern void gf_5vect_mad_avx512(int len, int vec, int vec_i, const unsigned char *gftbls,
 				unsigned char *src, unsigned char **dest);
-extern void gf_6vect_mad_avx512(int len, int vec, int vec_i, unsigned char *gftbls,
+extern void gf_6vect_mad_avx512(int len, int vec, int vec_i, const unsigned char *gftbls,
 				unsigned char *src, unsigned char **dest);
 
-void ec_encode_data_avx512(int len, int k, int rows, unsigned char *g_tbls,
-			   unsigned char **data, unsigned char **coding)
+void ec_encode_data_avx512(int len, int k, int rows, const unsigned char *g_tbls,
+			   const unsigned char * const *data, unsigned char **coding)
 {
 
 	if (len < 64) {

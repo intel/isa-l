@@ -209,7 +209,7 @@ int main(int argc, char *argv[])
 
 	for (i = 0; i < vector; i++)
 		gf_vect_dot_prod_base(TEST_LEN, TEST_SOURCES, &g_tbls[i * 32 * TEST_SOURCES],
-				      buffs, dest_ref[i]);
+				      (const u8 * const *)buffs, dest_ref[i]);
 
 	for (i = 0; i < vector; i++)
 		memset(dest_ptrs[i], 0, TEST_LEN);
@@ -267,7 +267,7 @@ int main(int argc, char *argv[])
 
 		for (i = 0; i < vector; i++)
 			gf_vect_dot_prod_base(TEST_LEN, TEST_SOURCES,
-					      &g_tbls[i * 32 * TEST_SOURCES], buffs,
+					      &g_tbls[i * 32 * TEST_SOURCES], (const u8 * const *)buffs,
 					      dest_ref[i]);
 
 		for (i = 0; i < vector; i++)
@@ -313,7 +313,7 @@ int main(int argc, char *argv[])
 
 			for (i = 0; i < vector; i++)
 				gf_vect_dot_prod_base(TEST_LEN, srcs, &g_tbls[i * 32 * srcs],
-						      buffs, dest_ref[i]);
+						      (const u8 * const *)buffs, dest_ref[i]);
 
 			for (i = 0; i < vector; i++)
 				memset(dest_ptrs[i], 0, TEST_LEN);
@@ -363,7 +363,7 @@ int main(int argc, char *argv[])
 
 		for (i = 0; i < vector; i++)
 			gf_vect_dot_prod_base(size, TEST_SOURCES,
-					      &g_tbls[i * 32 * TEST_SOURCES], efence_buffs,
+					      &g_tbls[i * 32 * TEST_SOURCES], (const u8 * const *)efence_buffs,
 					      dest_ref[i]);
 
 		for (i = 0; i < vector; i++)
@@ -422,7 +422,7 @@ int main(int argc, char *argv[])
 			}
 
 		for (i = 0; i < vector; i++)
-			gf_vect_dot_prod_base(size, srcs, &g_tbls[i * 32 * srcs], ubuffs,
+			gf_vect_dot_prod_base(size, srcs, &g_tbls[i * 32 * srcs], (const u8 * const *)ubuffs,
 					      dest_ref[i]);
 
 		for (i = 0; i < srcs; i++) {
@@ -484,7 +484,7 @@ int main(int argc, char *argv[])
 
 		for (i = 0; i < vector; i++)
 			gf_vect_dot_prod_base(size, TEST_SOURCES,
-					      &g_tbls[i * 32 * TEST_SOURCES], buffs,
+					      &g_tbls[i * 32 * TEST_SOURCES], (const u8 * const *)buffs,
 					      dest_ref[i]);
 
 		for (i = 0; i < TEST_SOURCES; i++) {

@@ -29,8 +29,8 @@
 
 #include "erasure_code.h"
 
-void gf_vect_dot_prod(int len, int vlen, unsigned char *v,
-		      unsigned char **src, unsigned char *dest)
+void gf_vect_dot_prod(int len, int vlen, const unsigned char *v,
+		      const unsigned char * const *src, unsigned char *dest)
 {
 	gf_vect_dot_prod_base(len, vlen, v, src, dest);
 }
@@ -43,7 +43,7 @@ void gf_vect_mad(int len, int vec, int vec_i,
 }
 
 void ec_encode_data(int len, int srcs, int dests, const unsigned char *v,
-		    unsigned char **src, unsigned char **dest)
+		  unsigned char const * const *src, unsigned char **dest)
 {
 	ec_encode_data_base(len, srcs, dests, v, src, dest);
 }
