@@ -315,8 +315,8 @@ void ec_encode_data_base(int len, int srcs, int dests, const unsigned char *v,
 	}
 }
 
-void ec_encode_data_update_base(int len, int k, int rows, int vec_i, unsigned char *v,
-				unsigned char *data, unsigned char **dest)
+void ec_encode_data_update_base(int len, int k, int rows, int vec_i, const unsigned char *v,
+				const unsigned char *data, unsigned char **dest)
 {
 	int i, l;
 	unsigned char s;

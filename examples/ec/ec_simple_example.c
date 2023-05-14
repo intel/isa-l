@@ -32,6 +32,7 @@
 #include <string.h>
 #include <getopt.h>
 #include <assert.h>
+#include <time.h>
 #include <sys/random.h>
 #include "erasure_code.h"	// use <isa-l.h> instead when linking against installed
 
@@ -386,6 +387,7 @@ static int gf_gen_decode_matrix_simple(
 
 int main(int argc, char *argv[])
 {
+    srand(time(NULL));
     int k = 10, p = 4, len = 8;	// Default params
     int random_test = 0;
     int random_repeat = 1;
@@ -393,7 +395,9 @@ int main(int argc, char *argv[])
 	char* filepath = NULL;
 
     // Fragment buffer pointers
-    u8 *frag_ptrs[MMAX];
+    u8 *frag_ptrs_encode[MMAX];
+    u8 *frag_ptrs_encode_update[MMAX];
+
 
     // Coefficient matrices
     u8 *encode_matrix;
@@ -454,18 +458,25 @@ int main(int argc, char *argv[])
     }
     // Allocate the src & parity buffers
     for (int i = 0; i < m; i++) {
-        if (NULL == (frag_ptrs[i] = malloc(len))) {
-            printf("alloc error: Fail\n");
+        if (NULL == (frag_ptrs_encode[i] = malloc(len))) {
+            printf("alloc 1 error: Fail\n");
+            return -1;
+        }
+        if (NULL == (frag_ptrs_encode_update[i] = malloc(len))) {
+            printf("alloc 2 error: Fail\n");
             return -1;
         }
     }
 
     // Fill sources with random data
     for (int i = 0; i < k; i++)
-        for (int j = 0; j < len; j++)
-            frag_ptrs[i][j] = rand();
+        for (int j = 0; j < len; j++){
+            frag_ptrs_encode[i][j] = rand();
+            frag_ptrs_encode_update[i][j] = frag_ptrs_encode[i][j];
+        }
 
-    print_matrix("Source matrix", (const u8**)frag_ptrs, k, len);
+    print_matrix("Source matrix 1", (const u8**)frag_ptrs_encode, k, len);
+    print_matrix("Source matrix 2", (const u8**)frag_ptrs_encode_update, k, len);
 
     printf(" encode (m,k,p)=(%d,%d,%d) len=%d\n", m, k, p, len);
 
@@ -477,21 +488,30 @@ int main(int argc, char *argv[])
     ec_init_tables(k, p, &encode_matrix[k * k], g_tbls);
 
     // Generate EC parity blocks from sources
-    ec_encode_data(len, k, p, g_tbls, (const u8* const *)frag_ptrs, &frag_ptrs[k]);
+    ec_encode_data(len, k, p, g_tbls, (const u8* const *)frag_ptrs_encode, &frag_ptrs_encode[k]);
+    print_matrix("Source + Parity matrix encode 1", (const u8**)frag_ptrs_encode, m, len);
 
-    print_matrix("Source + Parity matrix", (const u8**)frag_ptrs, m, len);
+    // Generate EC parity blocks using progressive encoding
+    for (int i = 0; i < k; i++){
+        ec_encode_data_update(len, k, p, i, g_tbls, frag_ptrs_encode_update[i], &frag_ptrs_encode_update[k]);
+    }
+
+    print_matrix("Source + Parity matrix encode 2", (const u8**)frag_ptrs_encode, m, len);
+    print_matrix("Source + Parity matrix encode_update", (const u8**)frag_ptrs_encode_update, m, len);
 
     int nerrs = 1;
     if (exhaustive_test) {
         nerrs = 2;
         printf("======================== Exhaustive Testing 1 missing fragment ========================\n");
-        test_exhaustive(k, m, p, len, (const u8*)encode_matrix, (u8 const * const * const)frag_ptrs);
+        test_exhaustive(k, m, p, len, (const u8*)encode_matrix, (u8 const * const * const)frag_ptrs_encode);
+        test_exhaustive(k, m, p, len, (const u8*)encode_matrix, (u8 const * const * const)frag_ptrs_encode_update);
     }
 
     for (; nerrs <= random_test; nerrs++){
         printf("======================== Random Testing %d missing fragments ========================\n", nerrs);
         for (int j = 0; j < random_repeat; j++){
-            test_random(k, m, p, nerrs, len, (const u8*)encode_matrix, (u8 const * const * const)frag_ptrs);
+            test_random(k, m, p, nerrs, len, (const u8*)encode_matrix, (u8 const * const * const)frag_ptrs_encode);
+            test_random(k, m, p, nerrs, len, (const u8*)encode_matrix, (u8 const * const * const)frag_ptrs_encode_update);
         }
     }
 }

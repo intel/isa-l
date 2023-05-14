@@ -128,8 +128,8 @@ void ec_encode_data_base(int len, int srcs, int dests, const unsigned char *v, c
  * @param coding Array of pointers to coded output buffers.
  * @returns none
  */
-void ec_encode_data_update(int len, int k, int rows, int vec_i, unsigned char *g_tbls,
-			   unsigned char *data, unsigned char **coding);
+void ec_encode_data_update(int len, int k, int rows, int vec_i, const unsigned char *g_tbls,
+			   const unsigned char *data, unsigned char **coding);
 
 /**
  * @brief Generate update for encode or decode of erasure codes from single source.
@@ -137,8 +137,8 @@ void ec_encode_data_update(int len, int k, int rows, int vec_i, unsigned char *g
  * Baseline version of ec_encode_data_update().
  */
 
-void ec_encode_data_update_base(int len, int k, int rows, int vec_i, unsigned char *v,
-				unsigned char *data, unsigned char **dest);
+void ec_encode_data_update_base(int len, int k, int rows, int vec_i, const unsigned char *v,
+				const unsigned char *data, unsigned char **dest);
 
 /**
  * @brief GF(2^8) vector dot product, runs baseline version.

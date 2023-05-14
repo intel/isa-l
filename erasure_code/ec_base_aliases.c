@@ -48,8 +48,8 @@ void ec_encode_data(int len, int srcs, int dests, const unsigned char *v,
 	ec_encode_data_base(len, srcs, dests, v, src, dest);
 }
 
-void ec_encode_data_update(int len, int k, int rows, int vec_i, unsigned char *v,
-			   unsigned char *data, unsigned char **dest)
+void ec_encode_data_update(int len, int k, int rows, int vec_i, const unsigned char *v,
+			   const unsigned char *data, unsigned char **dest)
 {
 	ec_encode_data_update_base(len, k, rows, vec_i, v, data, dest);
 }
