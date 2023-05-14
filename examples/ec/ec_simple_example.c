@@ -240,6 +240,7 @@ int main(int argc, char *argv[])
     // Generate EC parity blocks from sources
     ec_encode_data(len, k, p, g_tbls, (const u8* const *)frag_ptrs, &frag_ptrs[k]);
 
+
     int nerrs = 1;
     if (exhaustive_test) {
         nerrs = 2;
@@ -332,7 +333,7 @@ int test_helper(
     invert_matrix = malloc(m * k);
     temp_matrix = malloc(m * k);
     u8 decode_index[MMAX];
-    u8 *recover_srcs[KMAX];
+    const u8 * recover_srcs[KMAX];
     
     u8 *g_tbls = malloc(k * p * 32);
 
@@ -362,7 +363,7 @@ int test_helper(
     }
     // Pack recovery array pointers as list of valid fragments
     for (int i = 0; i < k; i++)
-        recover_srcs[i] = (u8*) frag_ptrs[decode_index[i]]; // we know that ec_encode_data doesn't modify the data...
+        recover_srcs[i] = frag_ptrs[decode_index[i]]; // we know that ec_encode_data doesn't modify the data...
 
     // Recover data
     ec_init_tables(k, nerrs, decode_matrix, g_tbls);
