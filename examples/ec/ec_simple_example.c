@@ -45,9 +45,9 @@ int usage(void)
     fprintf(stderr,
         "Usage: ec_simple_example [options]\n"
         "  -h        Help\n"
+        "  -f <val>  Path to file to encode\n"
         "  -k <val>  Number of source fragments\n"
         "  -p <val>  Number of parity fragments\n"
-        "  -l <val>  Length of fragments\n"
         "  -e <val>  Exhaustive testing for 1 missing fragment\n"
         "  -r <val>  Randomly test up to r missing fragments\n"
         "  -n <val>  Number of times to repeat each random test\n");
@@ -93,6 +93,12 @@ int test_helper(
             const u8 *encode_matrix,
             const u8 *frag_err_list,
             u8 const * const * const frag_ptrs);
+
+void print_matrix(
+    const char* name,
+    const u8** matrix,
+    int rows,
+    int cols);
 
 const unsigned char generate_byte(const unsigned char upper_bound){ // generates numbers in the range [0, upper_bound] - all inclusive!
     // I have thoroughly tested this function and informally proved that it is correct to my satisfaction.
@@ -155,10 +161,11 @@ void choose_without_replacement(
 
 int main(int argc, char *argv[])
 {
-    int k = 10, p = 4, len = 8 * 1024;	// Default params
+    int k = 10, p = 4, len = 8;	// Default params
     int random_test = 0;
     int random_repeat = 1;
     int exhaustive_test = 0;
+	char* filepath = NULL;
 
     // Fragment buffer pointers
     u8 *frag_ptrs[MMAX];
@@ -168,18 +175,16 @@ int main(int argc, char *argv[])
     u8 *g_tbls;
 
     int c;
-    while ((c = getopt(argc, argv, "k:p:l:e:r:n:h")) != -1) {
+    while ((c = getopt(argc, argv, "f:k:p:l:e:r:n:h")) != -1) {
         switch (c) {
+        case 'f':
+            filepath = strdup(optarg);
+            break;
         case 'k':
             k = atoi(optarg);
             break;
         case 'p':
             p = atoi(optarg);
-            break;
-        case 'l':
-            len = atoi(optarg);
-            if (len < 0)
-                usage();
             break;
         case 'e':
             exhaustive_test = atoi(optarg);
@@ -204,6 +209,13 @@ int main(int argc, char *argv[])
                m, k, p);
         usage();
     }
+    // Check for filename
+    if (NULL == filepath) {
+        puts("Error: You must specify a file to encode.");
+        exit(-1);
+    }
+
+    printf("Encoding file: %s\n", filepath);
 
     printf("ec_simple_example:\n");
 
@@ -228,6 +240,8 @@ int main(int argc, char *argv[])
         for (int j = 0; j < len; j++)
             frag_ptrs[i][j] = rand();
 
+    print_matrix("Source matrix", (const u8**)frag_ptrs, k, len);
+
     printf(" encode (m,k,p)=(%d,%d,%d) len=%d\n", m, k, p, len);
 
     // Pick an encode matrix. A Cauchy matrix is a good choice as even
@@ -240,6 +254,7 @@ int main(int argc, char *argv[])
     // Generate EC parity blocks from sources
     ec_encode_data(len, k, p, g_tbls, (const u8* const *)frag_ptrs, &frag_ptrs[k]);
 
+    print_matrix("Source + Parity matrix", (const u8**)frag_ptrs, m, len);
 
     int nerrs = 1;
     if (exhaustive_test) {
@@ -271,6 +286,20 @@ void print_array(
     }
     printf("%u", array[num_elements-1]);
     printf("]\n");
+}
+
+void print_matrix(
+    const char* name,
+    const u8** matrix,
+    int rows,
+    int cols
+){
+    printf("=== Begin Matrix %s ===\n", name);
+    for (int i = 0; i < rows; i++){
+        printf("Row %d", i);
+        print_array("", matrix[i], cols);
+    }
+    printf("=== End Matrix ===\n");
 }
 
 
@@ -325,18 +354,15 @@ int test_helper(
             const u8 *frag_err_list,
             u8 const * const * const frag_ptrs)
 {
-    u8 *decode_matrix;
-    u8 *invert_matrix;
-    u8 *temp_matrix;
     u8 *recover_outp[KMAX];
-    decode_matrix = malloc(m * k);
-    invert_matrix = malloc(m * k);
-    temp_matrix = malloc(m * k);
+    u8 *decode_matrix = malloc(m * k);
+    u8 *invert_matrix = malloc(m * k);
+    u8 *temp_matrix = malloc(m * k);
+    u8 *g_tbls = malloc(k * p * 32);
     u8 decode_index[MMAX];
     const u8 * recover_srcs[KMAX];
     
     
-    u8 *g_tbls = malloc(k * p * 32);
 
     // Allocate buffers for recovered data
     for (int i = 0; i < p; i++) {
@@ -380,6 +406,7 @@ int test_helper(
             exit(-1);
         }
     }
+    print_matrix("Recovered Matrix", (const u8**)recover_outp, nerrs, len);
 
     printf(" } done all: Pass\n");
     return 0;
