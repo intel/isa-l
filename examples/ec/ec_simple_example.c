@@ -245,13 +245,13 @@ int main(int argc, char *argv[])
     if (exhaustive_test) {
         nerrs = 2;
         printf("======================== Exhaustive Testing 1 missing fragment ========================\n");
-        test_exhaustive(k, m, p, len, encode_matrix, (u8 const * const * const)frag_ptrs);
+        test_exhaustive(k, m, p, len, (const u8*)encode_matrix, (u8 const * const * const)frag_ptrs);
     }
 
     for (; nerrs <= random_test; nerrs++){
         printf("======================== Random Testing %d missing fragments ========================\n", nerrs);
         for (int j = 0; j < random_repeat; j++){
-            test_random(k, m, p, nerrs, len, encode_matrix, (u8 const * const * const)frag_ptrs);
+            test_random(k, m, p, nerrs, len, (const u8*)encode_matrix, (u8 const * const * const)frag_ptrs);
         }
     }
 }
@@ -334,6 +334,7 @@ int test_helper(
     temp_matrix = malloc(m * k);
     u8 decode_index[MMAX];
     const u8 * recover_srcs[KMAX];
+    
     
     u8 *g_tbls = malloc(k * p * 32);
 

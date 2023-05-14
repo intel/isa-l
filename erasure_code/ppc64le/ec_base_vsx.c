@@ -14,8 +14,8 @@ void gf_vect_mad(int len, int vec, int vec_i, unsigned char *v,
 
 }
 
-void ec_encode_data(int len, int srcs, int dests, unsigned char *v,
-		    unsigned char **src, unsigned char **dest)
+void ec_encode_data(int len, int srcs, int dests, const unsigned char *v,
+		    const unsigned char * const *src, unsigned char **dest)
 {
 	if (len < 64) {
 		ec_encode_data_base(len, srcs, dests, v, src, dest);
