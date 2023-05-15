@@ -9,6 +9,7 @@
 
 */
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,6 +18,12 @@
 #include <time.h>
 #include <sys/random.h>
 #include "erasure_code.h"	// use <isa-l.h> instead when linking against installed
+
+#include "cutils.h"
+
+
+
+
 
 #define MMAX 255
 #define KMAX 255
@@ -532,4 +539,8 @@ int main(int argc, char *argv[])
             test_random(k, m, p, nerrs, len, (const u8*)encode_matrix, (u8 const * const * const)frag_ptrs_encode_update);
         }
     }
+
+
+
+    func1();
 }
