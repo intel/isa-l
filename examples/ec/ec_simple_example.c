@@ -47,9 +47,9 @@ int usage(void)
 
 static int gf_gen_decode_matrix_simple(
                     const u8 * encode_matrix,
+                    const u8 * frag_err_list,
                     u8 * decode_matrix, // output matrix, modified by function
                     u8 * decode_index,  // output matrix, modified by function
-                    const u8 * frag_err_list,
                     int nerrs,
                     int k,
                     int m);
@@ -262,9 +262,9 @@ int test_helper(
     printf(" recover %d fragments\n", nerrs);
 
     // Find a decode matrix to regenerate all erasures from remaining frags
-    int ret = gf_gen_decode_matrix_simple(encode_matrix, decode_matrix,
-                      decode_index,
-                      frag_err_list, nerrs, k, m);
+    int ret = gf_gen_decode_matrix_simple(encode_matrix, frag_err_list, 
+                                            decode_matrix, decode_index,
+                                            nerrs, k, m);
     if (ret != 0) {
         printf("Fail on generate decode matrix\n");
         exit(-1);
@@ -318,9 +318,9 @@ int test_helper(
 
 static int gf_gen_decode_matrix_simple(
                     const u8 * encode_matrix,
+                    const u8 * frag_err_list,
                     u8 * decode_matrix, // output matrix, modified by function
                     u8 * decode_index,  // output matrix, modified by function
-                    const u8 * frag_err_list,
                     int nerrs,
                     int k,
                     int m)
