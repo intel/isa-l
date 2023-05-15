@@ -333,6 +333,10 @@ static int gf_gen_decode_matrix_simple(
     u8 s;
 
     memset(frag_in_err, 0, sizeof(frag_in_err));
+    if (temp_matrix == NULL || invert_matrix == NULL) {
+        printf("Error! Failed to allocate temp or invert matrix\n");
+        return -1;
+    }
 
     // Order the fragments in erasure for easier sorting
     for (i = 0; i < nerrs; i++) {
