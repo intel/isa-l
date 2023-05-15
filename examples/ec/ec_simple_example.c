@@ -48,7 +48,6 @@ int usage(void)
 static int gf_gen_decode_matrix_simple(
                     const u8 * encode_matrix,
                     u8 * decode_matrix, // output matrix, modified by function
-                    u8 * invert_matrix,
                     u8 * decode_index,  // output matrix, modified by function
                     const u8 * frag_err_list,
                     int nerrs,
@@ -234,7 +233,6 @@ int test_helper(
     u8 *recover_outp_encode[KMAX];
     u8 *recover_outp_encode_update[KMAX];
     u8 *decode_matrix = malloc(m * k);
-    u8 *invert_matrix = malloc(m * k);
     u8 *g_tbls = malloc(k * p * 32);
     u8 decode_index[MMAX];
     const u8 * recover_srcs[KMAX];
@@ -256,7 +254,7 @@ int test_helper(
 
 
     if (encode_matrix == NULL || decode_matrix == NULL
-        || invert_matrix == NULL || g_tbls == NULL) {
+        || g_tbls == NULL) {
         printf("Test failure! Error with malloc\n");
         return -1;
     }
@@ -265,7 +263,7 @@ int test_helper(
 
     // Find a decode matrix to regenerate all erasures from remaining frags
     int ret = gf_gen_decode_matrix_simple(encode_matrix, decode_matrix,
-                      invert_matrix, decode_index,
+                      decode_index,
                       frag_err_list, nerrs, k, m);
     if (ret != 0) {
         printf("Fail on generate decode matrix\n");
@@ -321,7 +319,6 @@ int test_helper(
 static int gf_gen_decode_matrix_simple(
                     const u8 * encode_matrix,
                     u8 * decode_matrix, // output matrix, modified by function
-                    u8 * invert_matrix,
                     u8 * decode_index,  // output matrix, modified by function
                     const u8 * frag_err_list,
                     int nerrs,
@@ -330,6 +327,7 @@ static int gf_gen_decode_matrix_simple(
 {
     u8 frag_in_err[MMAX];
     u8 *temp_matrix = malloc(m * k);    
+    u8 *invert_matrix = malloc(m * k);
     int i, j, p, r;
     int nsrcerrs = 0;
     u8 s;
