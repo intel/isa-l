@@ -41,7 +41,7 @@ progs=
 
 # Include units
 
-include cutils/Makefile.am
+include eccmaker/Makefile.am
 include erasure_code/Makefile.am
 include raid/Makefile.am
 include crc/Makefile.am
