@@ -4,6 +4,9 @@
 
 /*
  * Generate decode matrix from encode matrix and erasure list
+ * 
+ * Note: This function is not thread safe because it uses a static variable to allocate memory only once
+ * 
  *
  */
 
@@ -16,18 +19,31 @@ int gf_gen_decode_matrix_simple(
                     int k,
                     int m)
 {
+    // These are preserved between function calls so they must all be static
+    static int first_run = 1;
+    static u8 *temp_matrix = NULL;
+    static u8 *invert_matrix = NULL;
+    if (first_run == 1) { // first run, so allocate the memory just for the first time
+        first_run = 0;
+        temp_matrix = malloc(m * k); // allocated only once
+        invert_matrix = malloc(m * k); // allocated only once
+        puts("============================================ Allocating memory for temp matrix and invert matrix");
+    }
+    if (temp_matrix == NULL || invert_matrix == NULL) {
+        printf("Error! Failed to allocate temp or invert matrix\n");
+        exit(-1);
+    }
+
+
+
+
+
     u8 frag_in_err[MMAX];
-    u8 *temp_matrix = malloc(m * k);    
-    u8 *invert_matrix = malloc(m * k);
-    int i, j, p, r;
+    int i, j, r;
     int nsrcerrs = 0;
     u8 s;
 
     memset(frag_in_err, 0, sizeof(frag_in_err));
-    if (temp_matrix == NULL || invert_matrix == NULL) {
-        printf("Error! Failed to allocate temp or invert matrix\n");
-        return -1;
-    }
 
     // Order the fragments in erasure for easier sorting
     for (i = 0; i < nerrs; i++) {
@@ -58,7 +74,7 @@ int gf_gen_decode_matrix_simple(
     }
 
     // For non-src (parity) erasures need to multiply encode matrix * invert
-    for (p = 0; p < nerrs; p++) {
+    for (int p = 0; p < nerrs; p++) {
         if (frag_err_list[p] >= k) {	// A parity err
             for (i = 0; i < k; i++) {
                 s = 0;
