@@ -125,8 +125,8 @@ cdecl(\name\()):
 
 	ext	v_tmp_low.16b, v_br_low.16b, v_tmp_low.16b, #8
 
-	eor	v_tmp_low.16b, v_tmp_low.16b, v_tmp_high.16b
-	eor	v_tmp_low.16b, v_tmp_low.16b, v_x3.16b
+	eor	v_tmp_low.16b, v_tmp_high.16b, v_tmp_low.16b
+	eor	v_tmp_low.16b, v_x3.16b, v_tmp_low.16b
 	umov	x_crc_ret, v_tmp_low.d[1]
 
 	b	.crc_tab_pre
