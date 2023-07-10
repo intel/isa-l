@@ -204,14 +204,16 @@
 	pmull	v_x2.1q, v_x2.1d, v_p4.1d
 	pmull	v_x3.1q, v_x3.1d, v_p4.1d
 
-	eor	v_x0.16b, v_x0.16b, v_x0_high.16b
-	eor	v_x1.16b, v_x1.16b, v_x1_high.16b
-	eor	v_x2.16b, v_x2.16b, v_x2_high.16b
-	eor	v_x3.16b, v_x3.16b, v_x3_high.16b
-
+	eor	v_x0.16b, v_x0_high.16b, v_x0.16b
 	eor	v_x0.16b, v_x0.16b, v_y0.16b
+
+	eor	v_x1.16b, v_x1_high.16b, v_x1.16b
 	eor	v_x1.16b, v_x1.16b, v_y1.16b
+
+	eor	v_x2.16b, v_x2_high.16b, v_x2.16b
 	eor	v_x2.16b, v_x2.16b, v_y2.16b
+
+	eor	v_x3.16b, v_x3_high.16b, v_x3.16b
 	eor	v_x3.16b, v_x3.16b, v_y3.16b
 	bne	.clmul_loop
 .endm
