@@ -183,6 +183,13 @@ platform features. All functions also have base functions, written in portable
 C, which the multibinary function will call if none of the required instruction
 sets are enabled.
 
+### Threading
+
+All ISA-L library functions are single threaded but reentrant and thread-safe
+making it easy for users to incorporate with any threading library. The igzip
+command line utility has threaded compression but not built by default. To add
+to an automake build do `$ make D="-DHAVE_THREADS"`.
+
 ### Included Tests and Utilities
 
 ISA-L source [repo] includes unit tests, performance tests and other utilities.
