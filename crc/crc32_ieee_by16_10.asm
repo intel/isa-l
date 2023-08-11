@@ -73,34 +73,27 @@ section .text
 	%xdefine	arg1_low32 edi
 %endif
 
-%define TMP 16*0
-%ifidn __OUTPUT_FORMAT__, win64
-	%define XMM_SAVE 16*2
-	%define VARIABLE_OFFSET 16*12+8
-%else
-	%define VARIABLE_OFFSET 16*2+8
-%endif
-
 align 16
 mk_global FUNCTION_NAME, function
 FUNCTION_NAME:
 	endbranch
 
 	not		arg1_low32
-	sub		rsp, VARIABLE_OFFSET
 
 %ifidn __OUTPUT_FORMAT__, win64
+	sub		rsp, (16*10 + 8)
+
 	; push the xmm registers into the stack to maintain
-	vmovdqa		[rsp + XMM_SAVE + 16*0], xmm6
-	vmovdqa		[rsp + XMM_SAVE + 16*1], xmm7
-	vmovdqa		[rsp + XMM_SAVE + 16*2], xmm8
-	vmovdqa		[rsp + XMM_SAVE + 16*3], xmm9
-	vmovdqa		[rsp + XMM_SAVE + 16*4], xmm10
-	vmovdqa		[rsp + XMM_SAVE + 16*5], xmm11
-	vmovdqa		[rsp + XMM_SAVE + 16*6], xmm12
-	vmovdqa		[rsp + XMM_SAVE + 16*7], xmm13
-	vmovdqa		[rsp + XMM_SAVE + 16*8], xmm14
-	vmovdqa		[rsp + XMM_SAVE + 16*9], xmm15
+	vmovdqa		[rsp + 16*0], xmm6
+	vmovdqa		[rsp + 16*1], xmm7
+	vmovdqa		[rsp + 16*2], xmm8
+	vmovdqa		[rsp + 16*3], xmm9
+	vmovdqa		[rsp + 16*4], xmm10
+	vmovdqa		[rsp + 16*5], xmm11
+	vmovdqa		[rsp + 16*6], xmm12
+	vmovdqa		[rsp + 16*7], xmm13
+	vmovdqa		[rsp + 16*8], xmm14
+	vmovdqa		[rsp + 16*9], xmm15
 %endif
 
 	vbroadcasti32x4 zmm18, [SHUF_MASK]
@@ -269,7 +262,7 @@ FUNCTION_NAME:
 
 	; get rid of the extra data that was loaded before
 	; load the shift constant
-	lea		rax, [pshufb_shf_table + 16]
+	lea		rax, [rel pshufb_shf_table + 16]
 	sub		rax, arg3
 	vmovdqu		xmm0, [rax]
 
@@ -280,8 +273,7 @@ FUNCTION_NAME:
 
 	vpclmulqdq	xmm8, xmm7, xmm10, 0x11
 	vpclmulqdq	xmm7, xmm7, xmm10, 0x00
-	vpxor		xmm7, xmm8
-	vpxor		xmm7, xmm1
+        vpternlogq      xmm7, xmm8, xmm1, 0x96
 
 .128_done:
 	; compute crc of a 128-bit value
@@ -294,8 +286,7 @@ FUNCTION_NAME:
 	vpxor		xmm7, xmm0
 
 	;32b fold
-	vmovdqa		xmm0, xmm7
-	vpand		xmm0, [mask2]
+	vpand		xmm0, xmm7, [mask2]
 	vpsrldq		xmm7, 12
 	vpclmulqdq	xmm7, xmm10, 0x10
 	vpxor		xmm7, xmm0
@@ -317,18 +308,18 @@ FUNCTION_NAME:
 
 
 %ifidn __OUTPUT_FORMAT__, win64
-	vmovdqa		xmm6, [rsp + XMM_SAVE + 16*0]
-	vmovdqa		xmm7, [rsp + XMM_SAVE + 16*1]
-	vmovdqa		xmm8, [rsp + XMM_SAVE + 16*2]
-	vmovdqa		xmm9, [rsp + XMM_SAVE + 16*3]
-	vmovdqa		xmm10, [rsp + XMM_SAVE + 16*4]
-	vmovdqa		xmm11, [rsp + XMM_SAVE + 16*5]
-	vmovdqa		xmm12, [rsp + XMM_SAVE + 16*6]
-	vmovdqa		xmm13, [rsp + XMM_SAVE + 16*7]
-	vmovdqa		xmm14, [rsp + XMM_SAVE + 16*8]
-	vmovdqa		xmm15, [rsp + XMM_SAVE + 16*9]
+	vmovdqa		xmm6, [rsp + 16*0]
+	vmovdqa		xmm7, [rsp + 16*1]
+	vmovdqa		xmm8, [rsp + 16*2]
+	vmovdqa		xmm9, [rsp + 16*3]
+	vmovdqa		xmm10, [rsp + 16*4]
+	vmovdqa		xmm11, [rsp + 16*5]
+	vmovdqa		xmm12, [rsp + 16*6]
+	vmovdqa		xmm13, [rsp + 16*7]
+	vmovdqa		xmm14, [rsp + 16*8]
+	vmovdqa		xmm15, [rsp + 16*9]
+	add		rsp, (16*10 + 8)
 %endif
-	add		rsp, VARIABLE_OFFSET
 	ret
 
 
@@ -386,126 +377,38 @@ align 16
 
 align 16
 .less_than_16_left:
-	; use stack space to load data less than 16 bytes, zero-out the 16B in memory first.
+        xor     r10, r10
+        bts     r10, arg3
+        dec     r10
+        kmovw   k2, r10w
+        vmovdqu8 xmm7{k2}{z}, [arg2]
+	vpshufb	xmm7, xmm18		; byte-reflect the plaintext
 
-	vpxor	xmm1, xmm1
-	mov	r11, rsp
-	vmovdqa	[r11], xmm1
-
-	cmp	arg3, 4
-	jl	.only_less_than_4
-
-	; backup the counter value
-	mov	r9, arg3
-	cmp	arg3, 8
-	jl	.less_than_8_left
-
-	; load 8 Bytes
-	mov	rax, [arg2]
-	mov	[r11], rax
-	add	r11, 8
-	sub	arg3, 8
-	add	arg2, 8
-.less_than_8_left:
-
-	cmp	arg3, 4
-	jl	.less_than_4_left
-
-	; load 4 Bytes
-	mov	eax, [arg2]
-	mov	[r11], eax
-	add	r11, 4
-	sub	arg3, 4
-	add	arg2, 4
-.less_than_4_left:
-
-	cmp	arg3, 2
-	jl	.less_than_2_left
-
-	; load 2 Bytes
-	mov	ax, [arg2]
-	mov	[r11], ax
-	add	r11, 2
-	sub	arg3, 2
-	add	arg2, 2
-.less_than_2_left:
-	cmp	arg3, 1
-	jl	.zero_left
-
-	; load 1 Byte
-	mov	al, [arg2]
-	mov	[r11], al
-
-.zero_left:
-	vmovdqa	xmm7, [rsp]
-	vpshufb	xmm7, xmm18
 	vpxor	xmm7, xmm0	; xor the initial crc value
 
-	lea	rax, [pshufb_shf_table + 16]
-	sub	rax, r9
+	cmp	arg3, 4
+	jb	.only_less_than_4
+
+	lea	rax, [rel pshufb_shf_table + 16]
+	sub	rax, arg3
 	vmovdqu	xmm0, [rax]
 	vpxor	xmm0, [mask1]
 
 	vpshufb	xmm7,xmm0
 	jmp	.128_done
-
-align 16
+.only_less_than_4:
+        lea     r11, [rel pshufb_shift_table + 3]
+        sub     r11, arg3
+        vmovdqu	xmm0, [r11]
+        vpshufb	xmm7, xmm0
+        jmp	.barrett
+align 32
 .exact_16_left:
 	vmovdqu	xmm7, [arg2]
-	vpshufb	xmm7, xmm18
+        vpshufb xmm7, xmm18
 	vpxor	xmm7, xmm0      ; xor the initial crc value
+
 	jmp	.128_done
-
-.only_less_than_4:
-	cmp	arg3, 3
-	jl	.only_less_than_3
-
-	; load 3 Bytes
-	mov	al, [arg2]
-	mov	[r11], al
-
-	mov	al, [arg2+1]
-	mov	[r11+1], al
-
-	mov	al, [arg2+2]
-	mov	[r11+2], al
-
-	vmovdqa	xmm7, [rsp]
-	vpshufb	xmm7, xmm18
-	vpxor	xmm7, xmm0	; xor the initial crc value
-
-	vpsrldq	xmm7, 5
-	jmp	.barrett
-
-.only_less_than_3:
-	cmp	arg3, 2
-	jl	.only_less_than_2
-
-	; load 2 Bytes
-	mov	al, [arg2]
-	mov	[r11], al
-
-	mov	al, [arg2+1]
-	mov	[r11+1], al
-
-	vmovdqa	xmm7, [rsp]
-	vpshufb	xmm7, xmm18
-	vpxor	xmm7, xmm0	; xor the initial crc value
-
-	vpsrldq	xmm7, 6
-	jmp	.barrett
-
-.only_less_than_2:
-	; load 1 Byte
-	mov	al, [arg2]
-	mov	[r11], al
-
-	vmovdqa	xmm7, [rsp]
-	vpshufb	xmm7, xmm18
-	vpxor	xmm7, xmm0      ; xor the initial crc value
-
-	vpsrldq	xmm7, 7
-	jmp	.barrett
 
 section .data
 align 32
@@ -542,6 +445,13 @@ rk_2b: dq 0x17d3315d00000000
 %else
 INCLUDE_CONSTS
 %endif
+
+align 16
+pshufb_shift_table:
+        ;; use these values to shift data for the pshufb instruction
+        db 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,
+        db 0x0C, 0x0D, 0x0E, 0x0F, 0xFF, 0xFF, 0xFF, 0xFF
+        db 0xFF, 0xFF
 
 mask1: dq 0x8080808080808080, 0x8080808080808080
 mask2: dq 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF

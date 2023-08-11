@@ -73,32 +73,24 @@ section .text
 	%xdefine	arg1_low32 edx
 %endif
 
-%define TMP 16*0
-%ifidn __OUTPUT_FORMAT__, win64
-	%define XMM_SAVE 16*2
-	%define VARIABLE_OFFSET 16*12+8
-%else
-	%define VARIABLE_OFFSET 16*2+8
-%endif
-
 align 16
 mk_global FUNCTION_NAME, function
 FUNCTION_NAME:
 	endbranch
-	sub		rsp, VARIABLE_OFFSET
-
 %ifidn __OUTPUT_FORMAT__, win64
+	sub		rsp, (16*10 + 8)
+
 	; push the xmm registers into the stack to maintain
-	vmovdqa		[rsp + XMM_SAVE + 16*0], xmm6
-	vmovdqa		[rsp + XMM_SAVE + 16*1], xmm7
-	vmovdqa		[rsp + XMM_SAVE + 16*2], xmm8
-	vmovdqa		[rsp + XMM_SAVE + 16*3], xmm9
-	vmovdqa		[rsp + XMM_SAVE + 16*4], xmm10
-	vmovdqa		[rsp + XMM_SAVE + 16*5], xmm11
-	vmovdqa		[rsp + XMM_SAVE + 16*6], xmm12
-	vmovdqa		[rsp + XMM_SAVE + 16*7], xmm13
-	vmovdqa		[rsp + XMM_SAVE + 16*8], xmm14
-	vmovdqa		[rsp + XMM_SAVE + 16*9], xmm15
+	vmovdqa		[rsp +  16*0], xmm6
+	vmovdqa		[rsp + 16*1], xmm7
+	vmovdqa		[rsp + 16*2], xmm8
+	vmovdqa		[rsp + 16*3], xmm9
+	vmovdqa		[rsp + 16*4], xmm10
+	vmovdqa		[rsp + 16*5], xmm11
+	vmovdqa		[rsp + 16*6], xmm12
+	vmovdqa		[rsp + 16*7], xmm13
+	vmovdqa		[rsp + 16*8], xmm14
+	vmovdqa		[rsp + 16*9], xmm15
 %endif
 
 	; check if smaller than 256B
@@ -216,9 +208,7 @@ FUNCTION_NAME:
 .16B_reduction_loop:
 	vpclmulqdq	xmm8, xmm7, xmm10, 0x1
 	vpclmulqdq	xmm7, xmm7, xmm10, 0x10
-	vpxor		xmm7, xmm8
-	vmovdqu		xmm0, [arg2]
-	vpxor		xmm7, xmm0
+        vpternlogq      xmm7, xmm8, [arg2], 0x96
 	add		arg2, 16
 	sub		arg3, 16
 	; instead of a cmp instruction, we utilize the flags with the jge instruction
@@ -245,7 +235,7 @@ FUNCTION_NAME:
 
 	; get rid of the extra data that was loaded before
 	; load the shift constant
-	lea		rax, [pshufb_shf_table]
+	lea		rax, [rel pshufb_shf_table]
 	add		rax, arg3
 	vmovdqu		xmm0, [rax]
 
@@ -257,57 +247,32 @@ FUNCTION_NAME:
 	;;;;;;;;;;
 	vpclmulqdq	xmm8, xmm7, xmm10, 0x1
 	vpclmulqdq	xmm7, xmm7, xmm10, 0x10
-	vpxor		xmm7, xmm8
-	vpxor		xmm7, xmm2
+        vpternlogq      xmm7, xmm8, xmm2, 0x96
 
 .128_done:
 	; compute crc of a 128-bit value
-	vmovdqa		xmm10, [rk5]
-	vmovdqa		xmm0, xmm7
-
-	;64b fold
-	vpclmulqdq	xmm7, xmm10, 0
-	vpsrldq		xmm0, 8
-	vpxor		xmm7, xmm0
-
-	;32b fold
-	vmovdqa		xmm0, xmm7
-	vpslldq		xmm7, 4
-	vpclmulqdq	xmm7, xmm10, 0x10
-	vpxor		xmm7, xmm0
-
-
-	;barrett reduction
-.barrett:
-	vpand		xmm7, [mask2]
-	vmovdqa		xmm1, xmm7
-	vmovdqa		xmm2, xmm7
-	vmovdqa		xmm10, [rk7]
-
-	vpclmulqdq	xmm7, xmm10, 0
-	vpxor		xmm7, xmm2
-	vpand		xmm7, [mask]
-	vmovdqa		xmm2, xmm7
-	vpclmulqdq	xmm7, xmm10, 0x10
-	vpxor		xmm7, xmm2
-	vpxor		xmm7, xmm1
-	vpextrd		eax, xmm7, 2
+        xor             rax, rax
+        vmovq           r11, xmm7
+        crc32           rax, r11
+        vpextrq         r11, xmm7, 1
+        crc32           rax, r11
 
 .cleanup:
 
 %ifidn __OUTPUT_FORMAT__, win64
-	vmovdqa		xmm6, [rsp + XMM_SAVE + 16*0]
-	vmovdqa		xmm7, [rsp + XMM_SAVE + 16*1]
-	vmovdqa		xmm8, [rsp + XMM_SAVE + 16*2]
-	vmovdqa		xmm9, [rsp + XMM_SAVE + 16*3]
-	vmovdqa		xmm10, [rsp + XMM_SAVE + 16*4]
-	vmovdqa		xmm11, [rsp + XMM_SAVE + 16*5]
-	vmovdqa		xmm12, [rsp + XMM_SAVE + 16*6]
-	vmovdqa		xmm13, [rsp + XMM_SAVE + 16*7]
-	vmovdqa		xmm14, [rsp + XMM_SAVE + 16*8]
-	vmovdqa		xmm15, [rsp + XMM_SAVE + 16*9]
+	vmovdqa		xmm6, [rsp + 16*0]
+	vmovdqa		xmm7, [rsp + 16*1]
+	vmovdqa		xmm8, [rsp + 16*2]
+	vmovdqa		xmm9, [rsp + 16*3]
+	vmovdqa		xmm10, [rsp + 16*4]
+	vmovdqa		xmm11, [rsp + 16*5]
+	vmovdqa		xmm12, [rsp + 16*6]
+	vmovdqa		xmm13, [rsp + 16*7]
+	vmovdqa		xmm14, [rsp + 16*8]
+	vmovdqa		xmm15, [rsp + 16*9]
+
+	add		rsp, (16*10 + 8)
 %endif
-	add		rsp, VARIABLE_OFFSET
 	ret
 
 
@@ -361,62 +326,19 @@ align 16
 
 align 16
 .less_than_16_left:
-	; use stack space to load data less than 16 bytes, zero-out the 16B in memory first.
-
-	vpxor	xmm1, xmm1
-	mov	r11, rsp
-	vmovdqa	[r11], xmm1
-
 	cmp	arg3, 4
 	jl	.only_less_than_4
 
-	; backup the counter value
-	mov	r9, arg3
-	cmp	arg3, 8
-	jl	.less_than_8_left
+        xor     r10, r10
+        bts     r10, arg3
+        dec     r10
+        kmovw   k2, r10w
+        vmovdqu8 xmm7{k2}{z}, [arg2]
 
-	; load 8 Bytes
-	mov	rax, [arg2]
-	mov	[r11], rax
-	add	r11, 8
-	sub	arg3, 8
-	add	arg2, 8
-.less_than_8_left:
-
-	cmp	arg3, 4
-	jl	.less_than_4_left
-
-	; load 4 Bytes
-	mov	eax, [arg2]
-	mov	[r11], eax
-	add	r11, 4
-	sub	arg3, 4
-	add	arg2, 4
-.less_than_4_left:
-
-	cmp	arg3, 2
-	jl	.less_than_2_left
-
-	; load 2 Bytes
-	mov	ax, [arg2]
-	mov	[r11], ax
-	add	r11, 2
-	sub	arg3, 2
-	add	arg2, 2
-.less_than_2_left:
-	cmp	arg3, 1
-	jl	.zero_left
-
-	; load 1 Byte
-	mov	al, [arg2]
-	mov	[r11], al
-
-.zero_left:
-	vmovdqa	xmm7, [rsp]
 	vpxor	xmm7, xmm0	; xor the initial crc value
 
-	lea	rax,[pshufb_shf_table]
-	vmovdqu	xmm0, [rax + r9]
+	lea	rax, [rel pshufb_shf_table]
+	vmovdqu	xmm0, [rax + arg3]
 	vpshufb	xmm7,xmm0
 	jmp	.128_done
 
@@ -427,52 +349,23 @@ align 16
 	jmp	.128_done
 
 .only_less_than_4:
-	cmp	arg3, 3
-	jl	.only_less_than_3
-
-	; load 3 Bytes
-	mov	al, [arg2]
-	mov	[r11], al
-
-	mov	al, [arg2+1]
-	mov	[r11+1], al
-
-	mov	al, [arg2+2]
-	mov	[r11+2], al
-
-	vmovdqa	xmm7, [rsp]
-	vpxor	xmm7, xmm0	; xor the initial crc value
-
-	vpslldq	xmm7, 5
-	jmp	.barrett
-
-.only_less_than_3:
+        mov     eax, arg1_low32
 	cmp	arg3, 2
-	jl	.only_less_than_2
+	jb	.only_1_left
+        je      .only_2_left
 
-	; load 2 Bytes
-	mov	al, [arg2]
-	mov	[r11], al
+        ; 3 bytes left
+        crc32   eax, word [arg2]
+        crc32   eax, byte [arg2 + 2]
+        jmp     .cleanup
 
-	mov	al, [arg2+1]
-	mov	[r11+1], al
+.only_2_left:
+        crc32   eax, word [arg2]
+        jmp     .cleanup
 
-	vmovdqa	xmm7, [rsp]
-	vpxor	xmm7, xmm0	; xor the initial crc value
-
-	vpslldq	xmm7, 6
-	jmp	.barrett
-
-.only_less_than_2:
-	; load 1 Byte
-	mov	al, [arg2]
-	mov	[r11], al
-
-	vmovdqa	xmm7, [rsp]
-	vpxor	xmm7, xmm0      ; xor the initial crc value
-
-	vpslldq	xmm7, 7
-	jmp	.barrett
+.only_1_left:
+        crc32   eax, byte [arg2]
+        jmp     .cleanup
 
 section .data
 align 32
