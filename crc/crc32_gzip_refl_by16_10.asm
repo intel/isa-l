@@ -129,6 +129,7 @@ FUNCTION_NAME:
 	vbroadcasti32x4 zmm16, [rk_1]	;zmm16 has rk-1 and rk-2
 	sub		arg3, 256
 
+align 16
 .fold_256_B_loop:
 	add		arg2, 256
 	vpclmulqdq	zmm1, zmm0, zmm16, 0x10
@@ -164,14 +165,13 @@ FUNCTION_NAME:
 	vmovdqa32	zmm4, zmm8
 
 	add		arg3, 128
-	jmp		.fold_128_B_register
-
-
+	jmp		.less_than_128_B
 
 	; at this section of the code, there is 128*x+y (0<=y<128) bytes of buffer. The fold_128_B_loop
 	; loop will fold 128B at a time until we have 128+y Bytes of buffer
 
 	; fold 128B at a time. This section of the code folds 8 xmm registers in parallel
+align 16
 .fold_128_B_loop:
 	add		arg2, 128
 	vpclmulqdq	zmm2, zmm0, zmm10, 0x10
@@ -187,9 +187,27 @@ FUNCTION_NAME:
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 	add		arg2, 128
-	; at this point, the buffer pointer is pointing at the last y Bytes of the buffer, where 0 <= y < 128
-	; the 128B of folded data is in 8 of the xmm registers: xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
+align 16
+.less_than_128_B:
+        ;; At this point, the buffer pointer is pointing at the last
+        ;; y bytes of the buffer, where 0 <= y < 128.
+        ;; The 128 bytes of folded data is in 2 of the zmm registers:
+        ;;     zmm0 and zmm4
 
+        cmp             arg3, -64
+        jl              .fold_128_B_register
+
+        vbroadcasti32x4 zmm10, [rk15]
+        ;; If there are still 64 bytes left, folds from 128 bytes to 64 bytes
+        ;; and handles the next 64 bytes
+        vpclmulqdq      zmm2, zmm0, zmm10, 0x10
+        vpclmulqdq      zmm0, zmm0, zmm10, 0x01
+        vpternlogq      zmm0, zmm2, zmm4, 0x96
+        add             arg3, 128
+
+        jmp             .fold_64B_loop
+
+align 16
 .fold_128_B_register:
 	; fold the 8 128b parts into 1 xmm register with different constants
 	vmovdqu8	zmm16, [rk9]		; multiply by rk9-rk16
@@ -218,6 +236,7 @@ FUNCTION_NAME:
 	; we can fold 16 bytes at a time if y>=16
 	; continue folding 16B at a time
 
+align 16
 .16B_reduction_loop:
 	vpclmulqdq	xmm8, xmm7, xmm10, 0x1
 	vpclmulqdq	xmm7, xmm7, xmm10, 0x10
@@ -233,6 +252,7 @@ FUNCTION_NAME:
 	;first, we reduce the data in the xmm7 register
 
 
+align 16
 .final_reduction_for_128:
 	add		arg3, 16
 	je		.128_done
@@ -241,6 +261,7 @@ FUNCTION_NAME:
 	; since we know that there was data before the pointer, we can offset
 	; the input pointer before the actual point, to receive exactly 16 bytes.
 	; after that the registers need to be adjusted.
+align 16
 .get_last_two_xmms:
 
 	vmovdqa		xmm2, xmm7
@@ -262,6 +283,7 @@ FUNCTION_NAME:
 	vpclmulqdq	xmm7, xmm7, xmm10, 0x10
         vpternlogq      xmm7, xmm8, xmm2, 0x96
 
+align 16
 .128_done:
 	; compute crc of a 128-bit value
 	vmovdqa		xmm10, [rk5]
@@ -280,6 +302,7 @@ FUNCTION_NAME:
 
 
 	;barrett reduction
+align 16
 .barrett:
 	vpand		xmm7, [mask2]
 	vmovdqa		xmm1, xmm7
@@ -293,6 +316,7 @@ FUNCTION_NAME:
         vpternlogq      xmm7, xmm2, xmm1, 0x96
 	vpextrd		eax, xmm7, 2
 
+align 16
 .cleanup:
 	not		eax
 
@@ -326,19 +350,69 @@ align 16
 	cmp	arg3, 32
 	jl	.less_than_32
 
-	; if there is, load the constants
-	vmovdqa	xmm10, [rk1]    ; rk1 and rk2 in xmm10
+	vmovd	xmm1, arg1_low32	; get the initial crc value	; if there is, load the constants
 
-	vmovd	xmm0, arg1_low32	; get the initial crc value
+	cmp	arg3, 64
+	jl	.less_than_64
+
+        ;; receive the initial 64B data, xor the initial crc value
+        vmovdqu8        zmm0, [arg2]
+        vpxorq          zmm0, zmm1
+        add             arg2, 64
+        sub             arg3, 64
+
+        cmp             arg3, 64
+        jb              .reduce_64B
+
+        vbroadcasti32x4 zmm10, [rk15]
+
+align 16
+.fold_64B_loop:
+        vmovdqu8        zmm4, [arg2]
+        vpclmulqdq      zmm2, zmm0, zmm10, 0x10
+        vpclmulqdq      zmm0, zmm0, zmm10, 0x01
+        vpternlogq      zmm0, zmm2, zmm4, 0x96
+
+        add             arg2, 64
+        sub             arg3, 64
+
+        cmp             arg3, 64
+        jge             .fold_64B_loop
+
+align 16
+.reduce_64B:
+        ; Reduce from 64 bytes to 16 bytes
+	vmovdqu8	zmm11, [rk17]
+	vpclmulqdq	zmm1, zmm0, zmm11, 0x01
+	vpclmulqdq	zmm2, zmm0, zmm11, 0x10
+	vextracti64x2	xmm7, zmm0, 3		; save last that has no multiplicand
+        vpternlogq      zmm1, zmm2, zmm7, 0x96
+
+	vmovdqa		xmm10, [rk_1b] ; Needed later in reduction loop
+
+	vshufi64x2      zmm8, zmm1, zmm1, 0x4e ; Swap 1,0,3,2 - 01 00 11 10
+	vpxorq          ymm8, ymm8, ymm1
+	vextracti64x2   xmm5, ymm8, 1
+	vpxorq          xmm7, xmm5, xmm8
+
+        sub             arg3, 16
+        jns             .16B_reduction_loop ; At least 16 bytes of data to digest
+        jmp             .final_reduction_for_128
+
+align 16
+.less_than_64:
+	;; if there is, load the constants
+	vmovdqa	xmm10, [rk_1b]
+
 	vmovdqu	xmm7, [arg2]		; load the plaintext
-	vpxor	xmm7, xmm0
+	vpxor	xmm7, xmm1              ; xmm1 already has initial crc value
 
-	; update the buffer pointer
+	;; update the buffer pointer
 	add	arg2, 16
 
-	; update the counter. subtract 32 instead of 16 to save one instruction from the loop
+        ;; update the counter
+        ;; - subtract 32 instead of 16 to save one instruction from the loop
 	sub	arg3, 32
-
 	jmp	.16B_reduction_loop
 
 
@@ -386,6 +460,7 @@ align 16
 	vpxor	xmm7, xmm0      ; xor the initial crc value
 	jmp	.128_done
 
+align 16
 .only_less_than_4:
         lea     r11, [rel pshufb_shift_table]
         vmovdqu	xmm0, [r11 + arg3]
