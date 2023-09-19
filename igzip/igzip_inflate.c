@@ -1607,7 +1607,7 @@ int decode_huffman_code_block_stateless_base(struct inflate_state *state, uint8_
 	uint16_t next_lit;
 	uint8_t next_dist;
 	uint32_t repeat_length;
-	uint32_t look_back_dist;
+	uint32_t look_back_dist = 0;
 	uint64_t read_in_tmp;
 	int32_t read_in_length_tmp;
 	uint8_t *next_in_tmp, *next_out_tmp;
