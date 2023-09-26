@@ -28,10 +28,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Optimized xor of N source vectors using SSE
-;;; int xor_gen_sse(int vects, int len, void **array)
+;;; int xor_check_sse(int vects, int len, void **array)
 
-;;; Generates xor parity vector from N (vects-1) sources in array of pointers
-;;; (**array).  Last pointer is the dest.
+;;; Checks that array has XOR parity sum of 0 across all vectors in **array.
 ;;; Vectors must be aligned to 16 bytes.  Length can be any value.
 
 %include "reg_sizes.asm"
