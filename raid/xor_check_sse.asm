@@ -188,12 +188,12 @@ next_vect:
 	;; End of vects, chech that all parity regs = 0
 	mov	tmp, vec		;Back to last vector
 	por	xmm0, xmm1
+	por	xmm2, xmm3
+	por	xmm4, xmm5
+	por	xmm6, xmm7
 	por	xmm0, xmm2
-	por	xmm0, xmm3
+	por	xmm4, xmm6
 	por	xmm0, xmm4
-	por	xmm0, xmm5
-	por	xmm0, xmm6
-	por	xmm0, xmm7
 	ptest	xmm0, xmm0
 	jnz	return_fail
 
