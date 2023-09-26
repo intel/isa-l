@@ -140,7 +140,6 @@ len_aligned_32bytes:
 
 loop48:
 	mov	ptr, [arg2+8+vec*8]	;Get address of P parity vector
-	mov	tmp, [arg2+(2*8)+vec*8]	;Get address of Q parity vector
 	XLDR	xp1, [ptr+pos]		;Initialize xp1 with P1 src
 	XLDR	xp2, [ptr+pos+16]	;Initialize xp2 with P2 src + 16B ahead
 	XLDR	xp3, [ptr+pos+32]	;Initialize xp3 with P2 src + 32B ahead
