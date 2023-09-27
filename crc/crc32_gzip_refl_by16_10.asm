@@ -441,7 +441,7 @@ align 16
         xor     r10, r10
         bts     r10, arg3
         dec     r10
-        kmovw   k2, r10w
+        kmovw   k2, r10d
         vmovdqu8 xmm7{k2}{z}, [arg2]
 
 	vpxor	xmm7, xmm0	; xor the initial crc value
