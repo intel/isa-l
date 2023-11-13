@@ -29,10 +29,12 @@
 
 #include <limits.h>
 #include <string.h>		// for memset
+#include <stdint.h>
+
 #include "erasure_code.h"
 #include "ec_base.h"		// for GF tables
 
-void ec_init_tables(int k, int rows, unsigned char *a, unsigned char *g_tbls)
+void ec_init_tables_base(int k, int rows, unsigned char *a, unsigned char *g_tbls)
 {
 	int i, j;
 
