@@ -74,6 +74,14 @@ extern "C" {
 void ec_init_tables(int k, int rows, unsigned char* a, unsigned char* gftbls);
 
 /**
+ * @brief Initialize tables for fast Erasure Code encode and decode, runs baseline version.
+ *
+ * Baseline version of ec_encode_data() with same parameters.
+ */
+
+void ec_init_tables_base(int k, int rows, unsigned char* a, unsigned char* gftbls);
+
+/**
  * @brief Generate or decode erasure codes on blocks of data, runs appropriate version.
  *
  * Given a list of source data blocks, generate one or multiple blocks of

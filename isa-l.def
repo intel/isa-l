@@ -120,3 +120,4 @@ crc64_rocksoft_norm_base        @115
 crc64_rocksoft_refl_base        @116
 crc64_rocksoft_norm             @117
 crc64_rocksoft_refl             @118
+ec_init_tables_base             @119
