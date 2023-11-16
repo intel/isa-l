@@ -166,6 +166,24 @@ test_end "generate_custom_hufftables" $?
 
 msg+=$'Custom hufftable build: Pass\n'
 
+# Test NO_NT_LDST
+test_start "no_nt_ldst"
+$MAKE -f Makefile.unx clean
+$MAKE -f Makefile.unx -j $cpus D="NO_NT_LDST" checks
+test_end "no_nt_ldst" $?
+
+# Test EC_ALIGNED_ADDR
+test_start "ec_aligned_address"
+$MAKE -f Makefile.unx clean
+$MAKE -f Makefile.unx -j $cpus D="EC_ALIGNED_ADDR" checks
+test_end "ec_aligned_address" $?
+
+# Test EC_ALIGNED_ADDR & NO_NT_LDST
+test_start "ec_aligned_addres_no_nt_ldsts"
+$MAKE -f Makefile.unx clean
+$MAKE -f Makefile.unx -j $cpus D="EC_ALIGNED_ADDR NO_NT_LDST" checks
+test_end "ec_aligned_address_no_nt_ldst" $?
+
 $MAKE -f Makefile.unx clean
 
 test_start "nmake_file_consistency"
