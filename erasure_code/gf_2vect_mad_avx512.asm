@@ -118,8 +118,8 @@
 %else
 ;;; Use Non-temporal load/stor
  %ifdef NO_NT_LDST
-  %define XLDR vmovdqa
-  %define XSTR vmovdqa
+  %define XLDR vmovdqa64
+  %define XSTR vmovdqa64
  %else
   %define XLDR vmovntdqa
   %define XSTR vmovntdq
