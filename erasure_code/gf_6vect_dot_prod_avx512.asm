@@ -44,8 +44,6 @@
  %define arg5  r9
 
  %define tmp   r11
- %define tmp.w r11d
- %define tmp.b r11b
  %define tmp2  r10
  %define tmp3  r13		; must be saved and restored
  %define tmp4  r12		; must be saved and restored
@@ -56,23 +54,26 @@
  %define return rax
  %define PS     8
  %define LOG_PS 3
+ %define stack_size  6*8
 
  %define func(x) x: endbranch
  %macro FUNC_SAVE 0
-	push	r12
-	push	r13
-	push	r14
-	push	r15
-	push	rbp
-	push	rbx
+	sub	rsp, stack_size
+	mov	[rsp + 0*8], r12
+	mov	[rsp + 1*8], r13
+	mov	[rsp + 2*8], r14
+	mov	[rsp + 3*8], r15
+	mov	[rsp + 4*8], rbp
+	mov	[rsp + 5*8], rbx
  %endmacro
  %macro FUNC_RESTORE 0
-	pop	rbx
-	pop	rbp
-	pop	r15
-	pop	r14
-	pop	r13
-	pop	r12
+	mov	r12,  [rsp + 0*8]
+	mov	r13,  [rsp + 1*8]
+	mov	r14,  [rsp + 2*8]
+	mov	r15,  [rsp + 3*8]
+	mov	rbp,  [rsp + 4*8]
+	mov	rbx,  [rsp + 5*8]
+	add	rsp, stack_size
  %endmacro
 %endif
 
@@ -85,8 +86,6 @@
  %define arg4   r12 		; must be saved, loaded and restored
  %define arg5   r15 		; must be saved and restored
  %define tmp    r11
- %define tmp.w  r11d
- %define tmp.b  r11b
  %define tmp2   r10
  %define tmp3   r13		; must be saved and restored
  %define tmp4   r14		; must be saved and restored

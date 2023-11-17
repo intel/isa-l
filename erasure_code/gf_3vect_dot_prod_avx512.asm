@@ -44,8 +44,6 @@
  %define arg5  r9
 
  %define tmp   r11
- %define tmp.w r11d
- %define tmp.b r11b
  %define tmp2  r10
  %define tmp3  r13		; must be saved and restored
  %define tmp4  r12		; must be saved and restored
@@ -73,15 +71,13 @@
  %define arg4   r12 		; must be saved, loaded and restored
  %define arg5   r15 		; must be saved and restored
  %define tmp    r11
- %define tmp.w  r11d
- %define tmp.b  r11b
  %define tmp2   r10
  %define tmp3   r13		; must be saved and restored
  %define tmp4   r14		; must be saved and restored
  %define return rax
  %define PS     8
  %define LOG_PS 3
- %define stack_size  9*16 + 5*8		; must be an odd multiple of 8
+ %define stack_size  6*16 + 5*8		; must be an odd multiple of 8
  %define arg(x)      [rsp + stack_size + PS + PS*x]
 
  %define func(x) proc_frame x
@@ -93,13 +89,10 @@
 	vmovdqa	[rsp + 3*16], xmm9
 	vmovdqa	[rsp + 4*16], xmm10
 	vmovdqa	[rsp + 5*16], xmm11
-	vmovdqa	[rsp + 6*16], xmm12
-	vmovdqa	[rsp + 7*16], xmm13
-	vmovdqa	[rsp + 8*16], xmm14
-	save_reg	r12,  9*16 + 0*8
-	save_reg	r13,  9*16 + 1*8
-	save_reg	r14,  9*16 + 2*8
-	save_reg	r15,  9*16 + 3*8
+	save_reg	r12,  6*16 + 0*8
+	save_reg	r13,  6*16 + 1*8
+	save_reg	r14,  6*16 + 2*8
+	save_reg	r15,  6*16 + 3*8
 	end_prolog
 	mov	arg4, arg(4)
  %endmacro
@@ -111,13 +104,10 @@
 	vmovdqa	xmm9, [rsp + 3*16]
 	vmovdqa	xmm10, [rsp + 4*16]
 	vmovdqa	xmm11, [rsp + 5*16]
-	vmovdqa	xmm12, [rsp + 6*16]
-	vmovdqa	xmm13, [rsp + 7*16]
-	vmovdqa	xmm14, [rsp + 8*16]
-	mov	r12,  [rsp + 9*16 + 0*8]
-	mov	r13,  [rsp + 9*16 + 1*8]
-	mov	r14,  [rsp + 9*16 + 2*8]
-	mov	r15,  [rsp + 9*16 + 3*8]
+	mov	r12,  [rsp + 6*16 + 0*8]
+	mov	r13,  [rsp + 6*16 + 1*8]
+	mov	r14,  [rsp + 6*16 + 2*8]
+	mov	r15,  [rsp + 6*16 + 3*8]
 	add	rsp, stack_size
  %endmacro
 %endif
