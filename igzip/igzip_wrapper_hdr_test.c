@@ -796,7 +796,7 @@ int main(int argc, char *argv[])
 {
 	uint8_t *hdr_buf;
 	uint32_t hdr_buf_len;
-	int ret = 0, fin_ret = 0;
+	int ret = 0;
 	struct isal_gzip_header gz_hdr_orig;
 	struct isal_zlib_header z_hdr_orig;
 	int i;
@@ -815,7 +815,7 @@ int main(int argc, char *argv[])
 		ret = gen_rand_gzip_header(&gz_hdr_orig);
 		if (ret) {
 			print_error(ret);
-			return (ret == 0);
+			return 1;
 		}
 
 		hdr_buf_len = gzip_header_size(&gz_hdr_orig);
@@ -823,21 +823,18 @@ int main(int argc, char *argv[])
 
 		ret = write_gzip_header(hdr_buf, hdr_buf_len, &gz_hdr_orig);
 
-		fin_ret |= ret;
 		if (ret)
-			return (ret == 0);
+			return 1;
 
 		ret = read_gzip_header_simple(hdr_buf, hdr_buf_len, &gz_hdr_orig);
 
-		fin_ret |= ret;
 		if (ret)
-			return (ret == 0);
+			return 1;
 
 		ret = read_gzip_header_streaming(hdr_buf, hdr_buf_len, &gz_hdr_orig);
 
-		fin_ret |= ret;
 		if (ret)
-			return (ret == 0);
+			return 1;
 
 		free_gzip_header(&gz_hdr_orig);
 		if (hdr_buf != NULL)
@@ -861,21 +858,18 @@ int main(int argc, char *argv[])
 
 		ret = write_zlib_header(hdr_buf, hdr_buf_len, &z_hdr_orig);
 
-		fin_ret |= ret;
 		if (ret)
-			return (ret == 0);
+			return 1;
 
 		ret = read_zlib_header_simple(hdr_buf, hdr_buf_len, &z_hdr_orig);
 
-		fin_ret |= ret;
 		if (ret)
-			return (ret == 0);
+			return 1;
 
 		ret = read_zlib_header_streaming(hdr_buf, hdr_buf_len, &z_hdr_orig);
 
-		fin_ret |= ret;
 		if (ret)
-			return (ret == 0);
+			return 1;
 
 		if (hdr_buf != NULL)
 			free(hdr_buf);
@@ -887,8 +881,7 @@ int main(int argc, char *argv[])
 	}
 	printf("Pass \n");
 
-	printf("igzip wrapper_hdr test finished:%s \n",
-	       fin_ret ? " Some tests failed " : " All tests passed");
+	printf("igzip wrapper_hdr test finished: All tests passed \n");
 
 	return 0;
 }
