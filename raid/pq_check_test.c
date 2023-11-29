@@ -123,7 +123,9 @@ int main(int argc, char *argv[])
 			}
 			((char *)buffs[j])[i] = 0;	// un-corrupt buffer
 		}
+#ifdef TEST_VERBOSE
 		putchar('.');
+#endif
 	}
 
 	// Test rand1
@@ -168,7 +170,9 @@ int main(int argc, char *argv[])
 			}
 			((char *)buffs[j])[i] = c;	// un-corrupt buffer
 		}
+#ifdef TEST_VERBOSE
 		putchar('.');
+#endif
 	}
 
 	// Test various number of sources, full length
@@ -205,7 +209,9 @@ int main(int argc, char *argv[])
 				((char *)buffs[i])[k] = c;	// un-corrupt buffer
 			}
 		}
+#ifdef TEST_VERBOSE
 		putchar('.');
+#endif
 	}
 
 	fflush(0);
@@ -250,7 +256,9 @@ int main(int argc, char *argv[])
 					((char *)buffs[serr])[lerr] = c;	// un-corrupt buffer
 				}
 			}
+#ifdef TEST_VERBOSE
 			putchar('.');
+#endif
 			fflush(0);
 		}
 		k += 16;
@@ -292,7 +300,9 @@ int main(int argc, char *argv[])
 			}
 		}
 
+#ifdef TEST_VERBOSE
 		putchar('.');
+#endif
 		fflush(0);
 	}
 

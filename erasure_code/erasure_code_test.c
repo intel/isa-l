@@ -471,7 +471,9 @@ int main(int argc, char *argv[])
 				return -1;
 			}
 		}
+#ifdef TEST_VERBOSE
 		putchar('.');
+#endif
 	}
 
 	// Run tests at end of buffer for Electric Fence
@@ -681,7 +683,9 @@ int main(int argc, char *argv[])
 			}
 		}
 
+#ifdef TEST_VERBOSE
 		putchar('.');
+#endif
 	}
 
 	// Test size alignment

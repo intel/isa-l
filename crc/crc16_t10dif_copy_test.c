@@ -145,20 +145,26 @@ int main(int argc, char *argv[])
 	for (i = 0; i < MAX_BUF; i++) {
 		r |= crc_copy_check("short len", dst, src, rand(), i, MAX_BUF);
 	}
+#ifdef TEST_VERBOSE
 	printf(".");
+#endif
 
 	// Do a few longer tests, random data
 	for (i = TEST_LEN; i >= (TEST_LEN - TEST_SIZE); i--) {
 		r |= crc_copy_check("long len", dst, src, rand(), i, TEST_LEN);
 	}
+#ifdef TEST_VERBOSE
 	printf(".");
+#endif
 
 	// Do random size, random data
 	for (i = 0; i < RANDOMS; i++) {
 		len = rand() % TEST_LEN;
 		r |= crc_copy_check("rand len", dst, src, rand(), len, TEST_LEN);
 	}
+#ifdef TEST_VERBOSE
 	printf(".");
+#endif
 
 	// Run tests at end of buffer
 	for (i = 0; i < RANDOMS; i++) {
@@ -168,7 +174,9 @@ int main(int argc, char *argv[])
 		tot = len;
 		r |= crc_copy_check("end of buffer", dst, src, rand(), len, tot);
 	}
+#ifdef TEST_VERBOSE
 	printf(".");
+#endif
 
 	printf("Test done: %s\n", r ? "Fail" : "Pass");
 	return r;

@@ -71,7 +71,9 @@ int main(int argc, char *argv[])
 		printf("Fail large buf test\n");
 		return failures;
 	}
+#ifdef TEST_VERBOSE
 	putchar('.');
+#endif
 
 	// Test to help memory checkers
 	for (i = 1; i < 2345; i++) {
@@ -94,7 +96,9 @@ int main(int argc, char *argv[])
 			return failures;
 		}
 	}
+#ifdef TEST_VERBOSE
 	putchar('.');
+#endif
 
 	// Test small buffers near end of alloc region
 	a = buf;
@@ -105,7 +109,9 @@ int main(int argc, char *argv[])
 		printf("Fail:\n");
 		return failures;
 	}
+#ifdef TEST_VERBOSE
 	putchar('.');
+#endif
 
 	// Test for detect non zero
 	a[TEST_MEM / 2] = 1;
@@ -115,7 +121,9 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	a[TEST_MEM / 2] = 0;
+#ifdef TEST_VERBOSE
 	putchar('.');
+#endif
 
 	// Test various non-zero offsets
 	for (i = 0; i < BORDER_BYTES; i++) {
@@ -129,7 +137,9 @@ int main(int argc, char *argv[])
 			a[i] = 0;
 		}
 	}
+#ifdef TEST_VERBOSE
 	putchar('.');
+#endif
 	fflush(0);
 
 	// Test random non-zero offsets
@@ -147,7 +157,9 @@ int main(int argc, char *argv[])
 		}
 		a[r] = 0;
 	}
+#ifdef TEST_VERBOSE
 	putchar('.');
+#endif
 	fflush(0);
 
 	// Test putting non-zero byte at end of buffer
@@ -162,7 +174,9 @@ int main(int argc, char *argv[])
 			a[TEST_MEM - i] = 0;
 		}
 	}
+#ifdef TEST_VERBOSE
 	putchar('.');
+#endif
 
 	// Test various size buffers and non-zero offsets
 	for (l = 1; l < TEST_LEN; l++) {
@@ -188,7 +202,9 @@ int main(int argc, char *argv[])
 			a[i] = 0;
 		}
 	}
+#ifdef TEST_VERBOSE
 	putchar('.');
+#endif
 
 	// Test random test size and non-zero error offsets
 	for (i = 0; i < RANDOMS; i++) {
@@ -203,7 +219,9 @@ int main(int argc, char *argv[])
 		}
 		a[r] = 0;
 	}
+#ifdef TEST_VERBOSE
 	putchar('.');
+#endif
 	fflush(0);
 
 	// Test combinations of zero and non-zero buffers
@@ -231,7 +249,9 @@ int main(int argc, char *argv[])
 
 		a[r] = 0;
 	}
+#ifdef TEST_VERBOSE
 	putchar('.');
+#endif
 	fflush(0);
 
 	aligned_free(buf);

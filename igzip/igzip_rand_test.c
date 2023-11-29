@@ -141,7 +141,7 @@ void init_options(void)
 	options.test_seed = TEST_SEED;
 	options.randoms = RANDOMS;
 	options.do_large_test = 1;
-#ifdef VERBOSE
+#ifdef TEST_VERBOSE
 	options.verbose = 1;
 #else
 	options.verbose = 0;
@@ -2762,12 +2762,13 @@ int main(int argc, char *argv[])
 	input_files = &argv[argv_index];
 	file_count = argc - argv_index;
 
-	if (options.verbose)
+	if (options.verbose) {
 		setbuf(stdout, NULL);
 
-	printf("Window Size: %d K\n", IGZIP_HIST_SIZE / 1024);
-	printf("Test Seed  : %d\n", options.test_seed);
-	printf("Randoms    : %d\n", options.randoms);
+		printf("Window Size: %d K\n", IGZIP_HIST_SIZE / 1024);
+		printf("Test Seed  : %d\n", options.test_seed);
+		printf("Randoms    : %d\n", options.randoms);
+	}
 	srand(options.test_seed);
 
 	hufftables_subset = &hufftables_sub;
@@ -2798,7 +2799,8 @@ int main(int argc, char *argv[])
 				return ret;
 		}
 
-		printf("................");
+		if (options.verbose)
+			printf("................");
 		printf("%s\n", ret ? "Fail" : "Pass");
 		fin_ret |= ret;
 	}
@@ -2824,7 +2826,7 @@ int main(int argc, char *argv[])
 
 		in_buf -= offset;
 
-		if (i % (options.randoms / 16) == 0)
+		if (options.verbose && (i % (options.randoms / 16) == 0))
 			printf(".");
 
 		if (ret)
@@ -2888,7 +2890,7 @@ int main(int argc, char *argv[])
 
 		in_buf -= offset;
 
-		if (i % (options.randoms / 16) == 0)
+		if (options.verbose && (i % (options.randoms / 16) == 0))
 			printf(".");
 
 		if (ret)
@@ -2927,9 +2929,9 @@ int main(int argc, char *argv[])
 		ret |= test_compress(in_buf, in_size, NO_FLUSH);
 
 		in_buf -= offset;
-
-		if (i % (options.randoms / 16) == 0)
+		if (options.verbose && (i % (options.randoms / 16) == 0))
 			printf(".");
+
 		if (ret)
 			return ret;
 	}
@@ -2961,7 +2963,7 @@ int main(int argc, char *argv[])
 
 		in_buf -= offset;
 
-		if (i % (options.randoms / 16) == 0)
+		if (options.verbose && (i % (options.randoms / 16) == 0))
 			printf(".");
 		if (ret)
 			return ret;
@@ -2994,7 +2996,7 @@ int main(int argc, char *argv[])
 
 		in_buf -= offset;
 
-		if (i % (options.randoms / 16) == 0)
+		if (options.verbose && (i % (options.randoms / 16) == 0))
 			printf(".");
 		if (ret)
 			return ret;
@@ -3040,7 +3042,7 @@ int main(int argc, char *argv[])
 
 		in_buf -= offset;
 
-		if (i % ((options.randoms / 4) / 16) == 0)
+		if (options.verbose && (i % ((options.randoms / 4) / 16) == 0))
 			printf(".");
 		if (ret)
 			return ret;
@@ -3071,15 +3073,17 @@ int main(int argc, char *argv[])
 
 			in_buf -= offset;
 
-			if (iterations < 16) {
-				for (j = 0; j < 16 / iterations; j++)
+			if (options.verbose) {
+				if (iterations < 16) {
+					for (j = 0; j < 16 / iterations; j++)
+						printf(".");
+				} else if (i % (iterations / 16) == 0)
 					printf(".");
-			} else if (i % (iterations / 16) == 0)
-				printf(".");
+			}
 
 		}
 
-		if (iterations < 16) {
+		if (options.verbose && iterations < 16) {
 			for (j = (16 / iterations) * iterations; j < 16; j++)
 				printf(".");
 		}
@@ -3094,7 +3098,9 @@ int main(int argc, char *argv[])
 		if (ret)
 			return ret;
 	}
-	printf("................");
+
+	if (options.verbose)
+		printf("................");
 	printf("%s\n", ret ? "Fail" : "Pass");
 
 	printf("igzip rand test finished: %s\n",

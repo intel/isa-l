@@ -105,7 +105,9 @@ int main(int argc, char *argv[])
 				       i, a, buff1[i], buff2[i], gf_mul(2, buff1[i]));
 				return 1;
 			}
+#ifdef TEST_VERBOSE
 		putchar('.');
+#endif
 	}
 
 	// Run tests at end of buffer for Electric Fence
@@ -133,7 +135,9 @@ int main(int argc, char *argv[])
 				return 1;
 			}
 
+#ifdef TEST_VERBOSE
 		putchar('.');
+#endif
 	}
 
 	printf(" done: Pass\n");

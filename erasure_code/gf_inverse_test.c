@@ -111,7 +111,9 @@ int inv_test(u8 * in, u8 * inv, u8 * sav, int n)
 		print_matrix(in, n);
 		return -1;
 	}
+#ifdef TEST_VERBOSE
 	putchar('.');
+#endif
 
 	return 0;
 }
@@ -216,8 +218,10 @@ int main(int argc, char *argv[])
 			print_matrix(test_mat, k);
 			return -1;
 		}
+#ifdef TEST_VERBOSE
 		if (0 == (t % 8))
 			putchar('.');
+#endif
 	}
 
 	printf(" Pass\n");

@@ -71,7 +71,6 @@ int eob_test(func_case_t * test_func);
 int update_test(func_case_t * test_func);
 int update_over_mod_test(func_case_t * test_func);
 
-int verbose = 0;
 void *buf_alloc = NULL;
 
 int main(int argc, char *argv[])
@@ -79,8 +78,6 @@ int main(int argc, char *argv[])
 	int fail = 0, fail_case;
 	int i, ret;
 	func_case_t *test_func;
-
-	verbose = argc - 1;
 
 	// Align to MAX_BUF boundary
 	ret = posix_memalign(&buf_alloc, MAX_BUF, MAX_BUF * TEST_SIZE);
@@ -132,8 +129,11 @@ int zeros_test(func_case_t * test_func)
 		printf("\n		opt    ref\n");
 		printf("		------ ------\n");
 		printf("checksum	zero = 0x%8x 0x%8x \n", c_dut, c_ref);
-	} else
+	}
+#ifdef TEST_VERBOSE
+	else
 		printf(".");
+#endif
 
 	return fail;
 }
@@ -149,12 +149,14 @@ int simple_pattern_test(func_case_t * test_func)
 	memset(buf, 0x8a, MAX_BUF);
 	c_dut = test_func->checksum32_func_call(TEST_SEED, buf, MAX_BUF);
 	c_ref = test_func->checksum32_ref_call(TEST_SEED, buf, MAX_BUF);
-	if (c_dut != c_ref)
+	if (c_dut != c_ref) {
 		fail++;
-	if (verbose)
-		printf("checksum  all 8a = 0x%8x 0x%8x\n", c_dut, c_ref);
+		printf("fail checksum  all 8a = 0x%8x 0x%8x\n", c_dut, c_ref);
+	}
+#ifdef TEST_VERBOSE
 	else
 		printf(".");
+#endif
 
 	return fail;
 }
@@ -175,12 +177,14 @@ int seeds_sizes_test(func_case_t * test_func)
 	for (i = 0; i < TEST_SIZE; i++) {
 		c_dut = test_func->checksum32_func_call(r, buf, MAX_BUF);
 		c_ref = test_func->checksum32_ref_call(r, buf, MAX_BUF);
-		if (c_dut != c_ref)
+		if (c_dut != c_ref) {
 			fail++;
-		if (verbose)
-			printf("checksum rand%3d = 0x%8x 0x%8x\n", i, c_dut, c_ref);
+			printf("fail checksum rand%3d = 0x%8x 0x%8x\n", i, c_dut, c_ref);
+		}
+#ifdef TEST_VERBOSE
 		else
 			printf(".");
+#endif
 		buf += MAX_BUF;
 	}
 
@@ -194,8 +198,11 @@ int seeds_sizes_test(func_case_t * test_func)
 		if (c_dut != c_ref) {
 			fail++;
 			printf("fail random size%i 0x%8x 0x%8x\n", i, c_dut, c_ref);
-		} else
+		}
+#ifdef TEST_VERBOSE
+		else
 			printf(".");
+#endif
 	}
 
 	// Try different seeds
@@ -205,18 +212,22 @@ int seeds_sizes_test(func_case_t * test_func)
 		r = rand();	// just to get a new seed
 		rand_buffer(buf, MAX_BUF * TEST_SIZE);	// new pseudo-rand data
 
-		if (verbose)
-			printf("seed = 0x%x\n", r);
+#ifdef TEST_VERBOSE
+		printf("seed = 0x%x\n", r);
+#endif
 
 		for (i = 0; i < TEST_SIZE; i++) {
 			c_dut = test_func->checksum32_func_call(r, buf, MAX_BUF);
 			c_ref = test_func->checksum32_ref_call(r, buf, MAX_BUF);
-			if (c_dut != c_ref)
+			if (c_dut != c_ref) {
 				fail++;
-			if (verbose)
-				printf("checksum rand%3d = 0x%8x 0x%8x\n", i, c_dut, c_ref);
+				printf("fail checksum rand%3d = 0x%8x 0x%8x\n", i, c_dut,
+				       c_ref);
+			}
+#ifdef TEST_VERBOSE
 			else
 				printf(".");
+#endif
 			buf += MAX_BUF;
 		}
 	}
@@ -237,12 +248,14 @@ int eob_test(func_case_t * test_func)
 	for (i = 0; i < TEST_SIZE; i++) {
 		c_dut = test_func->checksum32_func_call(TEST_SEED, buf + i, TEST_SIZE - i);
 		c_ref = test_func->checksum32_ref_call(TEST_SEED, buf + i, TEST_SIZE - i);
-		if (c_dut != c_ref)
+		if (c_dut != c_ref) {
 			fail++;
-		if (verbose)
-			printf("checksum eob rand%3d = 0x%8x 0x%8x\n", i, c_dut, c_ref);
+			printf("fail checksum eob rand%3d = 0x%8x 0x%8x\n", i, c_dut, c_ref);
+		}
+#ifdef TEST_VERBOSE
 		else
 			printf(".");
+#endif
 	}
 
 	return fail;
@@ -268,12 +281,14 @@ int update_test(func_case_t * test_func)
 		buf += MAX_BUF;
 	}
 
-	if (c_dut != c_ref)
+	if (c_dut != c_ref) {
 		fail++;
-	if (verbose)
 		printf("checksum rand%3d = 0x%8x 0x%8x\n", i, c_dut, c_ref);
+	}
+#ifdef TEST_VERBOSE
 	else
 		printf(".");
+#endif
 
 	return fail;
 }
@@ -296,12 +311,14 @@ int update_over_mod_test(func_case_t * test_func)
 		c_dut = test_func->checksum32_func_call(c_dut, buf, ADLER_MOD - 64);
 	}
 
-	if (c_dut != c_ref)
+	if (c_dut != c_ref) {
 		fail++;
-	if (verbose)
 		printf("checksum rand%3d = 0x%8x 0x%8x\n", i, c_dut, c_ref);
+	}
+#ifdef TEST_VERBOSE
 	else
 		printf(".");
+#endif
 
 	free(buf);
 	return fail;

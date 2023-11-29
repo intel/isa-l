@@ -103,8 +103,10 @@ int main(int argc, char *argv[])
 	if (fail > 0) {
 		printf("fail zero test %d\n", fail);
 		return 1;
-	} else
-		putchar('.');
+	}
+#ifdef TEST_VERBOSE
+	putchar('.');
+#endif
 
 	// Test rand1
 	for (i = 0; i < TEST_SOURCES + 2; i++)
@@ -125,8 +127,10 @@ int main(int argc, char *argv[])
 			dump(buffs[t], 15);
 
 		return 1;
-	} else
-		putchar('.');
+	}
+#ifdef TEST_VERBOSE
+	putchar('.');
+#endif
 
 	// Test various number of sources
 	for (j = 4; j <= TEST_SOURCES + 2; j++) {
@@ -139,8 +143,10 @@ int main(int argc, char *argv[])
 		if (fail > 0) {
 			printf("fail rand test %d sources\n", j);
 			return 1;
-		} else
-			putchar('.');
+		}
+#ifdef TEST_VERBOSE
+		putchar('.');
+#endif
 	}
 
 	fflush(0);
@@ -161,7 +167,9 @@ int main(int argc, char *argv[])
 				return 1;
 			}
 		}
+#ifdef TEST_VERBOSE
 		putchar('.');
+#endif
 		k += 32;
 	}
 
@@ -181,9 +189,10 @@ int main(int argc, char *argv[])
 			       "ret: %d\n", k, TEST_LEN - k, fail, ret);
 			return 1;
 		}
-
+#ifdef TEST_VERBOSE
 		putchar('.');
 		fflush(0);
+#endif
 		k += 32;
 	}
 

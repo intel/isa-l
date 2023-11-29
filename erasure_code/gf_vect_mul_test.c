@@ -104,7 +104,9 @@ int main(int argc, char *argv[])
 				       i, a, buff1[i], buff2[i], gf_mul(2, buff1[i]));
 				return -1;
 			}
+#ifdef TEST_VERBOSE
 		putchar('.');
+#endif
 	}
 
 	// Check buffer len
@@ -122,10 +124,12 @@ int main(int argc, char *argv[])
 				       i, a, buff1[i], buff2[i], gf_mul(2, buff1[i]));
 				return -1;
 			}
+#ifdef TEST_VERBOSE
 		if (0 == tsize % (32 * 8)) {
 			putchar('.');
 			fflush(0);
 		}
+#endif
 	}
 
 	// Run tests at end of buffer for Electric Fence
@@ -162,8 +166,9 @@ int main(int argc, char *argv[])
 				       gf_mul(2, efence_buff1[i]));
 				return 1;
 			}
-
+#ifdef TEST_VERBOSE
 		putchar('.');
+#endif
 	}
 
 	// Test all unsupported sizes up to TEST_SIZE

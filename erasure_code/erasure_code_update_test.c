@@ -370,7 +370,9 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 	}
+#ifdef TEST_VERBOSE
 	putchar('.');
+#endif
 
 	// Pick a first test
 	m = 7;
@@ -465,7 +467,9 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 	}
+#ifdef TEST_VERBOSE
 	putchar('.');
+#endif
 
 	// Do more random tests
 	for (rtest = 0; rtest < RANDOMS; rtest++) {
@@ -568,7 +572,9 @@ int main(int argc, char *argv[])
 				return -1;
 			}
 		}
+#ifdef TEST_VERBOSE
 		putchar('.');
+#endif
 	}
 
 	// Run tests at end of buffer for Electric Fence
@@ -692,7 +698,9 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
+#ifdef TEST_VERBOSE
 		putchar('.');
+#endif
 
 	}
 
@@ -846,7 +854,9 @@ int main(int argc, char *argv[])
 			}
 		}
 
+#ifdef TEST_VERBOSE
 		putchar('.');
+#endif
 	}
 
 	// Test size alignment
@@ -951,7 +961,9 @@ int main(int argc, char *argv[])
 				return -1;
 			}
 		}
+#ifdef TEST_VERBOSE
 		putchar('.');
+#endif
 	}
 
 	printf("done EC tests: Pass\n");

@@ -282,7 +282,9 @@ int main(int argc, char *argv[])
 				return -1;
 			}
 		}
+#ifdef TEST_VERBOSE
 		putchar('.');
+#endif
 	}
 
 	printf("done all: Pass\n");

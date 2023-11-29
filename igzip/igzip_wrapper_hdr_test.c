@@ -843,8 +843,10 @@ int main(int argc, char *argv[])
 		if (hdr_buf != NULL)
 			free(hdr_buf);
 
+#ifdef TEST_VERBOSE
 		if (i % (RANDOMS / 16) == 0)
 			printf(".");
+#endif
 	}
 	printf("Pass \n");
 
@@ -878,8 +880,10 @@ int main(int argc, char *argv[])
 		if (hdr_buf != NULL)
 			free(hdr_buf);
 
+#ifdef TEST_VERBOSE
 		if (i % (RANDOMS / 16) == 0)
 			printf(".");
+#endif
 	}
 	printf("Pass \n");
 
