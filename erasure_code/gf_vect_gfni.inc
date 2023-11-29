@@ -31,28 +31,29 @@
 ; Multiply 1 source register to up to 6 different GF table registers
 ; and XOR the results to partial registers
 ;
-%macro GF_MUL_XOR 4-19
-%define %%SRC      %1
-%define %%GFTABLE1 %2
-%define %%TMP1     %3
-%define %%PARTIAL1 %4
-%define %%GFTABLE2 %5
-%define %%TMP2     %6
-%define %%PARTIAL2 %7
-%define %%GFTABLE3 %8
-%define %%TMP3     %9
-%define %%PARTIAL3 %10
-%define %%GFTABLE4 %11
-%define %%TMP4     %12
-%define %%PARTIAL4 %13
-%define %%GFTABLE5 %14
-%define %%TMP5     %15
-%define %%PARTIAL5 %16
-%define %%GFTABLE6 %17
-%define %%TMP6     %18
-%define %%PARTIAL6 %19
+%macro GF_MUL_XOR 5-20
+%define %%ENCODING %1
+%define %%SRC      %2
+%define %%GFTABLE1 %3
+%define %%TMP1     %4
+%define %%PARTIAL1 %5
+%define %%GFTABLE2 %6
+%define %%TMP2     %7
+%define %%PARTIAL2 %8
+%define %%GFTABLE3 %9
+%define %%TMP3     %10
+%define %%PARTIAL3 %11
+%define %%GFTABLE4 %12
+%define %%TMP4     %13
+%define %%PARTIAL4 %14
+%define %%GFTABLE5 %15
+%define %%TMP5     %16
+%define %%PARTIAL5 %17
+%define %%GFTABLE6 %18
+%define %%TMP6     %19
+%define %%PARTIAL6 %20
 
-%define %%N_BLOCKS ((%0 - 1) / 3)
+%define %%N_BLOCKS ((%0 - 2) / 3)
 
 %assign %%I 1
 %rep %%N_BLOCKS
@@ -61,7 +62,11 @@
 %endrep
 %assign %%I 1
 %rep %%N_BLOCKS
+%ifidn %%ENCODING, VEX
+        vpxor           %%PARTIAL %+ %%I, %%TMP %+ %%I
+%else
         vpxorq          %%PARTIAL %+ %%I, %%TMP %+ %%I
+%endif
 %assign %%I (%%I + 1)
 %endrep
 %endmacro

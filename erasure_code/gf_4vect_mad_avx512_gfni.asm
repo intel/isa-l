@@ -157,7 +157,7 @@ section .text
 	XLDR	xd4, [dest4 + pos]	;Get next dest vector
 %endif
 
-        GF_MUL_XOR x0, xgft1, xret1, xd1, xgft2, xret2, xd2, xgft3, xret3, xd3, \
+        GF_MUL_XOR EVEX, x0, xgft1, xret1, xd1, xgft2, xret2, xd2, xgft3, xret3, xd3, \
                    xgft4, xret4, xd4
 
 %if %0 == 1

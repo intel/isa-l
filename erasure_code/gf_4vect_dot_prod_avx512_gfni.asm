@@ -187,7 +187,7 @@ section .text
         vbroadcastf32x2 xgft4, [tmp + vskip3]
 	add	tmp, 8
 
-        GF_MUL_XOR x0, xgft1, xgft1, xp1, xgft2, xgft2, xp2, xgft3, xgft3, xp3, \
+        GF_MUL_XOR EVEX, x0, xgft1, xgft1, xp1, xgft2, xgft2, xp2, xgft3, xgft3, xp3, \
                        xgft4, xgft4, xp4
 
 	cmp	vec_i, vec

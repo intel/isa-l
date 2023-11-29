@@ -202,7 +202,7 @@ section .text
         vbroadcastf32x2 xgft5, [tmp + vec*4]
 	add	tmp, 8
 
-        GF_MUL_XOR x0, xgft1, xgft1, xp1, xgft2, xgft2, xp2, xgft3, xgft3, xp3, \
+        GF_MUL_XOR EVEX, x0, xgft1, xgft1, xp1, xgft2, xgft2, xp2, xgft3, xgft3, xp3, \
                        xgft4, xgft4, xp4, xgft5, xgft5, xp5
 
 	cmp	vec_i, vec

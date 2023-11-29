@@ -126,7 +126,7 @@ section .text
 	XLDR	xd, [dest + pos]		;Get next dest vector
 %endif
 
-        GF_MUL_XOR x0, xgft1, xret1, xd
+        GF_MUL_XOR EVEX, x0, xgft1, xret1, xd
 
 %if %0 == 1
 	vmovdqu8 [dest + pos]{%%KMASK}, xd

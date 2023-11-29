@@ -138,7 +138,7 @@ section .text
         vbroadcastf32x2 xgft1, [tmp]
 	add	tmp, 8
 
-        GF_MUL_XOR x0, xgft1, xgft1, xp1
+        GF_MUL_XOR EVEX, x0, xgft1, xgft1, xp1
 
 	cmp	vec_i, vec
 	jl	%%next_vect
