@@ -269,6 +269,8 @@ extern void gf_6vect_mad_avx512_gfni(int len, int vec, int vec_i, unsigned char 
 
 extern void gf_vect_dot_prod_avx2_gfni(int len, int k, unsigned char *g_tbls,
 				       unsigned char **data, unsigned char *dest);
+extern void gf_vect_mad_avx2_gfni(int len, int vec, int vec_i, unsigned char *gftbls,
+				  unsigned char *src, unsigned char *dest);
 
 void ec_init_tables_gfni(int k, int rows, unsigned char *a, unsigned char *g_tbls)
 {
@@ -355,6 +357,18 @@ void ec_encode_data_update_avx512_gfni(int len, int k, int rows, int vec_i,
 	case 0:
 	default:
 		break;
+	}
+}
+
+void ec_encode_data_update_avx2_gfni(int len, int k, int rows, int vec_i,
+				     unsigned char *g_tbls, unsigned char *data,
+				     unsigned char **coding)
+{
+	while (rows) {
+		gf_vect_mad_avx2_gfni(len, k, vec_i, g_tbls, data, *coding);
+		g_tbls += k * 8;
+		coding++;
+		rows--;
 	}
 }
 
