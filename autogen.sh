@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-autoreconf --install --symlink -f
+autoreconf --install --symlink -f -Wno-obsolete
 
 libdir() {
         echo $(cd $1/$(gcc -print-multi-os-directory); pwd)
