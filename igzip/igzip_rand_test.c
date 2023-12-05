@@ -33,6 +33,8 @@
 #include <string.h>
 #include <assert.h>
 #include <stdarg.h>
+#include <inttypes.h>
+
 #include "igzip_lib.h"
 #include "checksum_test_ref.h"
 #include "inflate_std_vects.h"
@@ -433,7 +435,7 @@ void print_uint8_t(uint8_t * array, uint64_t length)
 	const int line_size = 16;
 	int i;
 
-	printf("Length = %lu", length);
+	printf("Length = %" PRIu64 "", length);
 	for (i = 0; i < length; i++) {
 		if ((i % line_size) == 0)
 			printf("\n0x%08x\t", i);
