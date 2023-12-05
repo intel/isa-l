@@ -31,6 +31,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <inttypes.h>
+
 #include "crc64.h"
 #include "crc64_ref.h"
 #include "test.h"
@@ -147,8 +149,8 @@ int zeros_test(func_case_t * test_func)
 		fail++;
 		printf("\n		   opt   ref\n");
 		printf("		 ------ ------\n");
-		printf("fail crc	zero = 0x%16lx 0x%16lx 0x%16lx \n", crc_ref, crc_base,
-		       crc);
+		printf("fail crc	zero = 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64 "\n",
+		       crc_ref, crc_base, crc);
 	}
 #ifdef TEST_VERBOSE
 	else
@@ -173,7 +175,8 @@ int simple_pattern_test(func_case_t * test_func)
 
 	if ((crc_base != crc_ref) || (crc != crc_ref)) {
 		fail++;
-		printf("fail crc  all 8a = 0x%16lx 0x%16lx 0x%16lx\n", crc_ref, crc_base, crc);
+		printf("fail crc  all 8a = 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64 "\n",
+		       crc_ref, crc_base, crc);
 	}
 #ifdef TEST_VERBOSE
 	else
@@ -202,8 +205,8 @@ int seeds_sizes_test(func_case_t * test_func)
 
 		if ((crc_base != crc_ref) || (crc != crc_ref)) {
 			fail++;
-			printf("fail crc rand%3d = 0x%16lx 0x%16lx 0x%16lx\n", i, crc_ref,
-			       crc_base, crc);
+			printf("fail crc rand%3d = 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64
+			       "\n", i, crc_ref, crc_base, crc);
 		}
 #ifdef TEST_VERBOSE
 		else if (i % (TEST_SIZE / 8) == 0)
@@ -223,8 +226,8 @@ int seeds_sizes_test(func_case_t * test_func)
 
 		if ((crc_base != crc_ref) || (crc != crc_ref)) {
 			fail++;
-			printf("fail random size%i 0x%16lx 0x%16lx 0x%16lx\n", i, crc_ref,
-			       crc_base, crc);
+			printf("fail random size %d 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64
+			       "\n", i, crc_ref, crc_base, crc);
 		}
 #ifdef TEST_VERBOSE
 		else if (i % (MAX_BUF / 8) == 0)
@@ -250,8 +253,8 @@ int seeds_sizes_test(func_case_t * test_func)
 
 			if ((crc_base != crc_ref) || (crc != crc_ref)) {
 				fail++;
-				printf("fail crc rand%3d = 0x%16lx 0x%16lx 0x%16lx\n", i,
-				       crc_ref, crc_base, crc);
+				printf("fail crc rand%3d = 0x%" PRIx64 " 0x%" PRIx64 " 0x%"
+				       PRIx64 "\n", i, crc_ref, crc_base, crc);
 			}
 #ifdef TEST_VERBOSE
 			else if (i % (TEST_SIZE * 20 / 8) == 0)
@@ -287,8 +290,8 @@ int eob_test(func_case_t * test_func)
 
 		if ((crc_base != crc_ref) || (crc != crc_ref)) {
 			fail++;
-			printf("fail crc eob rand%3d = 0x%16lx 0x%16lx 0x%16lx\n", i, crc_ref,
-			       crc_base, crc);
+			printf("fail crc eob rand%3d = 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64
+			       "\n", i, crc_ref, crc_base, crc);
 		}
 #ifdef TEST_VERBOSE
 		else if (i % (TEST_SIZE / 8) == 0)
@@ -322,8 +325,8 @@ int update_test(func_case_t * test_func)
 
 	if ((crc_base != crc_ref) || (crc != crc_ref)) {
 		fail++;
-		printf("fail crc rand%3d = 0x%16lx 0x%16lx 0x%16lx\n", i, crc_ref, crc_base,
-		       crc);
+		printf("fail crc rand%3d = 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64 "\n", i,
+		       crc_ref, crc_base, crc);
 	}
 #ifdef TEST_VERBOSE
 	else

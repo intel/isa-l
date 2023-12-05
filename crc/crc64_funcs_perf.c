@@ -31,6 +31,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <inttypes.h>
+
 #include "crc64.h"
 #include "test.h"
 
@@ -99,7 +101,7 @@ int main(int argc, char *argv[])
 		printf("%s" TEST_TYPE_STR ": ", test_func->note);
 		perf_print(start, (long long)TEST_LEN);
 
-		printf("finish 0x%lx\n", crc);
+		printf("finish 0x%" PRIx64 "\n", crc);
 	}
 
 	return 0;

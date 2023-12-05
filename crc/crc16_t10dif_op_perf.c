@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	printf(" size blk: %ld, blk_ext: %ld, blk data: %ld, stream: %ld\n",
+	printf(" size blk: %zu, blk_ext: %zu, blk data: %zu, stream: %zu\n",
 	       sizeof(*blks), sizeof(*blks_ext), sizeof(blks->data),
 	       NBLOCKS * sizeof(blks->data));
 	memset(blks, 0xe5, NBLOCKS * sizeof(*blks));
