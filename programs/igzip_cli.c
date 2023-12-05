@@ -38,6 +38,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <errno.h>
 #include "igzip_lib.h"		/* Normally you use isa-l.h instead for external programs */
 
 #if defined (HAVE_THREADS)
@@ -320,14 +321,15 @@ void *malloc_safe(size_t size)
 	return ptr;
 }
 
-FILE *fopen_safe(char *file_name, char *mode)
+FILE *fopen_safe(const char *file_name, const char *mode)
 {
 	FILE *file;
-	int answer = 0, tmp;
 
 	/* Assumes write mode always starts with w */
 	if (mode[0] == 'w') {
 		if (access(file_name, F_OK) == 0) {
+			int answer = 0, tmp;
+
 			log_print(WARN, "igzip: %s already exists;", file_name);
 			if (is_interactive()) {
 				log_print(WARN, " do you wish to overwrite (y/n)?");
@@ -345,30 +347,14 @@ FILE *fopen_safe(char *file_name, char *mode)
 				log_print(WARN, "       not overwritten\n");
 				return NULL;
 			}
-
-			if (access(file_name, W_OK) != 0) {
-				log_print(ERROR, "igzip: %s: Permission denied\n", file_name);
-				return NULL;
-			}
-		}
-	}
-
-	/* Assumes read mode always starts with r */
-	if (mode[0] == 'r') {
-		if (access(file_name, F_OK) != 0) {
-			log_print(ERROR, "igzip: %s does not exist\n", file_name);
-			return NULL;
-		}
-
-		if (access(file_name, R_OK) != 0) {
-			log_print(ERROR, "igzip: %s: Permission denied\n", file_name);
-			return NULL;
 		}
 	}
 
 	file = fopen(file_name, mode);
 	if (!file) {
-		log_print(ERROR, "igzip: Failed to open %s\n", file_name);
+		const char *error_str = strerror(errno);
+
+		log_print(ERROR, "igzip: Failed to open %s : %s\n", file_name, error_str);
 		return NULL;
 	}
 
