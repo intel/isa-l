@@ -1886,7 +1886,7 @@ static inline uint32_t string_header_copy(struct inflate_state *state,
 		state->avail_in--;
 		state->count = 0;
 		if (str_buf != NULL)
-			str_buf[len] = 0;
+			str_buf[offset + len] = 0;
 	}
 
 	return 0;
