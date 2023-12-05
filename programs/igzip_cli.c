@@ -596,7 +596,7 @@ int compress_file(void)
 		allocated_name = malloc_safe(outfile_name_len + 1);
 		outfile_name = allocated_name;
 		strncpy(outfile_name, infile_name, infile_name_len + 1);
-		strncat(outfile_name, suffix, outfile_name_len + 1);
+		strncat(outfile_name, suffix, suffix_len);
 	}
 
 	open_in_file(&in, infile_name);
