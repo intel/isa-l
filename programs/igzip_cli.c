@@ -231,11 +231,13 @@ size_t get_filesize(FILE * fp)
 	return file_size;
 }
 
-uint32_t get_posix_filetime(FILE * fp)
+int get_posix_filetime(FILE * fp, uint32_t * time)
 {
 	struct stat file_stats;
-	fstat(fileno(fp), &file_stats);
-	return file_stats.st_mtime;
+	const int ret = fstat(fileno(fp), &file_stats);
+	if (time != NULL && ret == 0)
+		*time = file_stats.st_mtime;
+	return ret;
 }
 
 uint32_t set_filetime(char *file_name, uint32_t posix_time)
@@ -624,7 +626,8 @@ int compress_file(void)
 
 	isal_gzip_header_init(&gz_hdr);
 	if (global_options.name == NAME_DEFAULT || global_options.name == YES_NAME) {
-		gz_hdr.time = get_posix_filetime(in);
+		if (get_posix_filetime(in, &gz_hdr.time) != 0)
+			goto compress_file_cleanup;
 		gz_hdr.name = infile_name;
 	}
 	gz_hdr.os = UNIX;
@@ -853,7 +856,8 @@ int decompress_file(void)
 	if (in == NULL)
 		goto decompress_file_cleanup;
 
-	file_time = get_posix_filetime(in);
+	if (get_posix_filetime(in, &file_time) != 0)
+		goto decompress_file_cleanup;
 
 	inbuf_size = global_options.in_buf_size;
 	outbuf_size = global_options.out_buf_size;
