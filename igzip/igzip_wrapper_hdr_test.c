@@ -588,12 +588,6 @@ int read_zlib_header_simple(uint8_t * hdr_buf, uint32_t hdr_buf_len,
 
 	rand_buf((uint8_t *) & z_hdr, sizeof(z_hdr));
 
-	if (ret) {
-		print_zlib_final_verbose(hdr_buf, hdr_buf_len, z_hdr_orig, NULL);
-		print_error(ret);
-		return ret;
-	}
-
 	isal_inflate_init(&state);
 	state.next_in = hdr_buf;
 	state.avail_in = hdr_buf_len;
