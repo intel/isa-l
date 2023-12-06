@@ -93,6 +93,7 @@ objs = \
 	bin\gf_6vect_dot_prod_avx512.obj \
 	bin\gf_vect_dot_prod_avx512_gfni.obj \
 	bin\gf_vect_dot_prod_avx2_gfni.obj \
+	bin\gf_2vect_dot_prod_avx2_gfni.obj \
 	bin\gf_3vect_dot_prod_avx2_gfni.obj \
 	bin\gf_2vect_dot_prod_avx512_gfni.obj \
 	bin\gf_3vect_dot_prod_avx512_gfni.obj \
