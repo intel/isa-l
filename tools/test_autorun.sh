@@ -37,6 +37,9 @@ command -V lscpu > /dev/null 2>&1 && lscpu
 
 # Start tests
 
+# Check style first
+./tools/check_format.sh
+
 [ -z "$1" ] && ./tools/test_checks.sh
 
 while [ -n "$1" ]; do
@@ -62,6 +65,4 @@ while [ -n "$1" ]; do
 	    shift ;;
     esac
 done
-
-./tools/check_format.sh
 
