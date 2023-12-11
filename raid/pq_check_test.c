@@ -73,9 +73,9 @@ void rand_buffer(unsigned char *buf, long buffer_size)
 int main(int argc, char *argv[])
 {
 	int i, j, k, ret, fail = 0;
-	void *buffs[TEST_SOURCES + 2];
+	void *buffs[TEST_SOURCES + 2] = { NULL };
 	char c;
-	char *tmp_buf[TEST_SOURCES + 2];
+	char *tmp_buf[TEST_SOURCES + 2] = { NULL };
 	int serr, lerr;
 
 	printf("Test pq_check_test %d sources X %d bytes\n", TEST_SOURCES, TEST_LEN);
@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 			if (ret == 0) {
 				fail++;
 				printf("\nfail corrupt zero buffer test j=%d, i=%d\n", j, i);
-				return 1;
+				goto exit;
 			}
 			((char *)buffs[j])[i] = 0;	// un-corrupt buffer
 		}
@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
 				printf
 				    ("\nFail rand test with un-corrupted buffer j=%d, i=%d\n",
 				     j, i);
-				return 1;
+				goto exit;
 			}
 			c = ((char *)buffs[j])[i];
 			((char *)buffs[j])[i] = c ^ 1;	// corrupt buffer
@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
 			if (ret == 0) {	// Check it now fails
 				fail++;
 				printf("\nfail corrupt buffer test j=%d, i=%d\n", j, i);
-				return 1;
+				goto exit;
 			}
 			((char *)buffs[j])[i] = c;	// un-corrupt buffer
 		}
@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
 				if (ret != 0) {	// Should pass
 					printf("\nfail rand fixed len test %d sources\n", j);
 					fail++;
-					return 1;
+					goto exit;
 				}
 
 				c = ((char *)buffs[i])[k];
@@ -204,7 +204,7 @@ int main(int argc, char *argv[])
 					    ("\nfail rand fixed len test corrupted buffer %d sources\n",
 					     j);
 					fail++;
-					return 1;
+					goto exit;
 				}
 				((char *)buffs[i])[k] = c;	// un-corrupt buffer
 			}
@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
 						    ("\nfail rand var src, len test %d sources, len=%d\n",
 						     j, k);
 						fail++;
-						return 1;
+						goto exit;
 					}
 
 					tmp = (char *)buffs[serr];
@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
 						     "%d sources, len=%d, ret=%d\n", j, k,
 						     ret);
 						fail++;
-						return 1;
+						goto exit;
 					}
 					((char *)buffs[serr])[lerr] = c;	// un-corrupt buffer
 				}
@@ -293,7 +293,7 @@ int main(int argc, char *argv[])
 					       "offset: %d, len: %d, ret: %d\n", i,
 					       TEST_LEN - i, ret);
 					fail++;
-					return 1;
+					goto exit;
 				}
 
 				tmp_buf[serr][lerr] = c;
@@ -309,6 +309,9 @@ int main(int argc, char *argv[])
 	if (fail == 0)
 		printf("Pass\n");
 
+      exit:
+	for (i = 0; i < TEST_SOURCES + 2; i++)
+		aligned_free(buffs[i]);
 	return fail;
 
 }

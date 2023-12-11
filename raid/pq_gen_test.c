@@ -65,9 +65,9 @@ int dump(unsigned char *buf, int len)
 
 int main(int argc, char *argv[])
 {
-	int i, j, k, ret, fail = 0;
-	void *buffs[TEST_SOURCES + 2];	// Pointers to src and dest
-	char *tmp_buf[TEST_SOURCES + 2];
+	int i, j, k, ret = 0, fail = 0;
+	void *buffs[TEST_SOURCES + 2] = { NULL };	// Pointers to src and dest
+	char *tmp_buf[TEST_SOURCES + 2] = { NULL };
 
 	printf("Test pq_gen_test ");
 
@@ -79,7 +79,8 @@ int main(int argc, char *argv[])
 		ret = posix_memalign(&buf, 32, TEST_LEN);
 		if (ret) {
 			printf("alloc error: Fail");
-			return 1;
+			fail = 1;
+			goto exit;
 		}
 		buffs[i] = buf;
 	}
@@ -102,7 +103,7 @@ int main(int argc, char *argv[])
 
 	if (fail > 0) {
 		printf("fail zero test %d\n", fail);
-		return 1;
+		goto exit;
 	}
 #ifdef TEST_VERBOSE
 	putchar('.');
@@ -126,7 +127,7 @@ int main(int argc, char *argv[])
 		for (t = TEST_SOURCES; t < TEST_SOURCES + 2; t++)
 			dump(buffs[t], 15);
 
-		return 1;
+		goto exit;
 	}
 #ifdef TEST_VERBOSE
 	putchar('.');
@@ -142,7 +143,7 @@ int main(int argc, char *argv[])
 
 		if (fail > 0) {
 			printf("fail rand test %d sources\n", j);
-			return 1;
+			goto exit;
 		}
 #ifdef TEST_VERBOSE
 		putchar('.');
@@ -164,7 +165,7 @@ int main(int argc, char *argv[])
 			if (fail > 0) {
 				printf("fail rand test %d sources, len=%d, fail="
 				       "%d, ret=%d\n", j, k, fail, ret);
-				return 1;
+				goto exit;
 			}
 		}
 #ifdef TEST_VERBOSE
@@ -187,7 +188,7 @@ int main(int argc, char *argv[])
 		if (fail > 0) {
 			printf("fail end test - offset: %d, len: %d, fail: %d, "
 			       "ret: %d\n", k, TEST_LEN - k, fail, ret);
-			return 1;
+			goto exit;
 		}
 #ifdef TEST_VERBOSE
 		putchar('.');
@@ -199,5 +200,8 @@ int main(int argc, char *argv[])
 	if (!fail)
 		printf(" done: Pass\n");
 
+      exit:
+	for (i = 0; i < TEST_SOURCES + 2; i++)
+		aligned_free(buffs[i]);
 	return fail;
 }
