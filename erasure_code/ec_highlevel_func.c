@@ -279,6 +279,8 @@ extern void gf_2vect_mad_avx2_gfni(int len, int vec, int vec_i, unsigned char *g
 				   unsigned char *src, unsigned char **dest);
 extern void gf_3vect_mad_avx2_gfni(int len, int vec, int vec_i, unsigned char *gftbls,
 				   unsigned char *src, unsigned char **dest);
+extern void gf_4vect_mad_avx2_gfni(int len, int vec, int vec_i, unsigned char *gftbls,
+				   unsigned char *src, unsigned char **dest);
 
 void ec_init_tables_gfni(int k, int rows, unsigned char *a, unsigned char *g_tbls)
 {
@@ -382,13 +384,16 @@ void ec_encode_data_update_avx2_gfni(int len, int k, int rows, int vec_i,
 				     unsigned char *g_tbls, unsigned char *data,
 				     unsigned char **coding)
 {
-	while (rows >= 3) {
-		gf_3vect_mad_avx2_gfni(len, k, vec_i, g_tbls, data, coding);
-		g_tbls += 3 * k * 8;
-		coding += 3;
-		rows -= 3;
+	while (rows >= 4) {
+		gf_4vect_mad_avx2_gfni(len, k, vec_i, g_tbls, data, coding);
+		g_tbls += 4 * k * 8;
+		coding += 4;
+		rows -= 4;
 	}
 	switch (rows) {
+	case 3:
+		gf_3vect_mad_avx2_gfni(len, k, vec_i, g_tbls, data, coding);
+		break;
 	case 2:
 		gf_2vect_mad_avx2_gfni(len, k, vec_i, g_tbls, data, coding);
 		break;
