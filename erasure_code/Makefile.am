@@ -82,6 +82,7 @@ lsrc_x86_64  += \
 		erasure_code/gf_2vect_mad_avx2_gfni.asm \
 		erasure_code/gf_3vect_mad_avx2_gfni.asm \
 		erasure_code/gf_4vect_mad_avx2_gfni.asm \
+		erasure_code/gf_5vect_mad_avx2_gfni.asm \
 		erasure_code/gf_vect_dot_prod_avx512.asm \
 		erasure_code/gf_2vect_dot_prod_avx512.asm \
 		erasure_code/gf_3vect_dot_prod_avx512.asm \
