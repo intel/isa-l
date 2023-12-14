@@ -285,8 +285,17 @@ my_CFLAGS="\
 -Wshadow \
 -Wstrict-prototypes \
 -Wtype-limits \
+-fstack-protector \
+-D_FORTIFY_SOURCE=2 \
 "
 AC_SUBST([my_CFLAGS])
+
+AM_LDFLAGS="\
+-Wl,-z,noexecstack \
+-Wl,-z,relro \
+-Wl,-z,now \
+"
+AC_SUBST([AM_LDFLAGS])
 
 AC_CONFIG_FILES([\
 	Makefile\
