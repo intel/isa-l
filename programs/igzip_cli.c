@@ -446,17 +446,17 @@ struct thread_pool {
 // Globals for thread pool
 struct thread_pool pool;
 
-static inline int pool_has_space()
+static inline int pool_has_space(void)
 {
 	return ((pool.head + 1) % MAX_JOBQUEUE) != pool.tail;
 }
 
-static inline int pool_has_work()
+static inline int pool_has_work(void)
 {
 	return (pool.queue != pool.head);
 }
 
-int pool_get_work()
+int pool_get_work(void)
 {
 	assert(pool.queue != pool.head);
 	pool.queue = (pool.queue + 1) % MAX_JOBQUEUE;
@@ -532,7 +532,7 @@ void *thread_worker(void *none)
 	pthread_exit(NULL);
 }
 
-int pool_create()
+int pool_create(void)
 {
 	int i;
 	int nthreads = global_options.threads - 1;
@@ -547,7 +547,7 @@ int pool_create()
 	return 0;
 }
 
-void pool_quit()
+void pool_quit(void)
 {
 	int i;
 	pthread_mutex_lock(&pool.mutex);
