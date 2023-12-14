@@ -303,6 +303,8 @@ int update_over_mod_test(func_case_t * test_func)
 	unsigned char *buf = NULL;
 
 	buf = malloc(ADLER_MOD);
+	if (buf == NULL)
+		return 1;
 	memset(buf, 0xff, ADLER_MOD);
 
 	c_ref = c_dut = rand();

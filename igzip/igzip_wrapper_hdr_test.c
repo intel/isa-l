@@ -69,6 +69,7 @@ void print_error(int32_t error)
 		break;
 	case COMMENT_OVERFLOW:
 		printf("Comment buffer overflow while decompressing\n");
+		break;
 	case EXTRA_OVERFLOW:
 		printf("Extra buffer overflow while decomrpessiong\n");
 		break;
@@ -130,10 +131,13 @@ void print_uint8_t(uint8_t * array, uint64_t length, char *prepend)
 	const int line_size = 16;
 	int i;
 
-	if (array == NULL)
-		printf("%s(NULL)", prepend);
-	else if (length == 0)
-		printf("%s(Empty)", prepend);
+	if (array == NULL) {
+		printf("%s(NULL)\n", prepend);
+		return;
+	} else if (length == 0) {
+		printf("%s(Empty)\n", prepend);
+		return;
+	}
 
 	for (i = 0; i < length; i++) {
 		if (i == 0)
@@ -841,10 +845,8 @@ int main(int argc, char *argv[])
 			goto exit;
 
 		free_gzip_header(&gz_hdr_orig);
-		if (hdr_buf != NULL) {
-			free(hdr_buf);
-			hdr_buf = NULL;
-		}
+		free(hdr_buf);
+		hdr_buf = NULL;
 #ifdef TEST_VERBOSE
 		if (i % (RANDOMS / 16) == 0)
 			printf(".");
@@ -860,6 +862,11 @@ int main(int argc, char *argv[])
 
 		hdr_buf_len = zlib_header_size(&z_hdr_orig);
 		hdr_buf = malloc(hdr_buf_len);
+		if (hdr_buf == NULL) {
+			printf("alloc error: Fail\n");
+			ret = 1;
+			goto exit;
+		}
 
 		ret = write_zlib_header(hdr_buf, hdr_buf_len, &z_hdr_orig);
 
@@ -876,10 +883,8 @@ int main(int argc, char *argv[])
 		if (ret)
 			goto exit;
 
-		if (hdr_buf != NULL) {
-			free(hdr_buf);
-			hdr_buf = NULL;
-		}
+		free(hdr_buf);
+		hdr_buf = NULL;
 #ifdef TEST_VERBOSE
 		if (i % (RANDOMS / 16) == 0)
 			printf(".");

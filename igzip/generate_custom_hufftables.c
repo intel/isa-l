@@ -361,6 +361,10 @@ int main(int argc, char *argv[])
 
 	if (argc > 3 && argv[1][0] == '-' && argv[1][1] == 'd') {
 		dict_file = fopen(argv[2], "r");
+		if (dict_file == NULL) {
+			printf("File \"%s\" open error!\n", argv[2]);
+			return 1;
+		}
 
 		fseek(dict_file, 0, SEEK_END);
 		dict_file_length = ftell(dict_file);
@@ -388,6 +392,10 @@ int main(int argc, char *argv[])
 
 	if ((argc > argi + 1) && argv[argi][0] == '-' && argv[argi][1] == 'h') {
 		hist_file = fopen(argv[argi + 1], "r+");
+		if (hist_file == NULL) {
+			printf("File \"%s\" open error!\n", argv[argi + 1]);
+			return 1;
+		}
 		fseek(hist_file, 0, SEEK_END);
 		hist_file_length = ftell(hist_file);
 		fseek(hist_file, 0, SEEK_SET);

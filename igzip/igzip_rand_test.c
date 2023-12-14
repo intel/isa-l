@@ -523,14 +523,16 @@ int inflate_stateless_pass(uint8_t * compress_buf, uint64_t compress_len,
 			state.tmp_in_size = 0;
 			gzip_flag = ISAL_GZIP_NO_HDR_VER;
 
-			isal_read_gzip_header(&state, &gz_hdr);
+			if (isal_read_gzip_header(&state, &gz_hdr) != 0)
+				return INVALID_GZIP_HEADER;
 		}
 	} else if (gzip_flag == IGZIP_ZLIB) {
 		if (rand() % 2 == 0) {
 			memset(&z_hdr, 0, sizeof(z_hdr));
 			isal_inflate_reset(&state);
 			gzip_flag = ISAL_ZLIB_NO_HDR_VER;
-			isal_read_zlib_header(&state, &z_hdr);
+			if (isal_read_zlib_header(&state, &z_hdr) != 0)
+				return INVALID_ZLIB_HEADER;
 		}
 	}
 
@@ -656,13 +658,13 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 		exit(0);
 	}
 
-	create_rand_repeat_data((uint8_t *) state, sizeof(state));
+	create_rand_repeat_data((uint8_t *) state, sizeof(*state));
 	isal_inflate_init(state);
 
 	if (rand() % 4 == 0) {
 		/* Test reset */
 		reset_test_flag = 1;
-		create_rand_repeat_data((uint8_t *) state, sizeof(state));
+		create_rand_repeat_data((uint8_t *) state, sizeof(*state));
 	}
 
 	if (gzip_flag == IGZIP_GZIP_NO_HDR) {
@@ -698,10 +700,8 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 				comp_tmp_size = compress_len - comp_processed;
 
 			if (comp_tmp_size != 0) {
-				if (comp_tmp != NULL) {
+				if (comp_tmp != NULL)
 					free(comp_tmp);
-					comp_tmp = NULL;
-				}
 
 				comp_tmp = malloc(comp_tmp_size);
 
@@ -738,7 +738,6 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 				if (uncomp_tmp != NULL) {
 					fflush(0);
 					free(uncomp_tmp);
-					uncomp_tmp = NULL;
 				}
 
 				uncomp_tmp = malloc(uncomp_tmp_size);
@@ -869,7 +868,7 @@ int inflate_check(uint8_t * z_buf, uint32_t z_size, uint8_t * in_buf, uint32_t i
 	uint32_t test_size = in_size;
 	uint8_t *test_buf = NULL;
 	int mem_result = 0;
-	int gzip_hdr_result = 0, gzip_trl_result = 0;
+	int gzip_trl_result = 0;
 
 	if (in_size > 0) {
 		assert(in_buf != NULL);
@@ -961,12 +960,6 @@ int inflate_check(uint8_t * z_buf, uint32_t z_size, uint8_t * in_buf, uint32_t i
 
 	if (mem_result)
 		return RESULT_ERROR;
-
-	if (gzip_hdr_result == INVALID_GZIP_HEADER)
-		return INVALID_GZIP_HEADER;
-
-	else if (gzip_hdr_result == INVALID_ZLIB_HEADER)
-		return INVALID_ZLIB_HEADER;
 
 	if (gzip_trl_result == INCORRECT_GZIP_TRAILER)
 		return INCORRECT_GZIP_TRAILER;
@@ -1148,6 +1141,10 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 	if (level >= 1) {
 		level_buf_size = get_rand_level_buf_size(stream->level);
 		level_buf = malloc(level_buf_size);
+		if (level_buf == NULL) {
+			free(stream);
+			return MALLOC_FAILED;
+		}
 		create_rand_repeat_data(level_buf, level_buf_size);
 		stream->level_buf = level_buf;
 		stream->level_buf_size = level_buf_size;
@@ -1182,10 +1179,8 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 				}
 
 				if (in_size != 0) {
-					if (in_buf != NULL) {
+					if (in_buf != NULL)
 						free(in_buf);
-						in_buf = NULL;
-					}
 
 					in_buf = malloc(in_size);
 					if (in_buf == NULL) {
@@ -1230,10 +1225,8 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 				out_size = *compressed_size - out_processed;
 
 			if (out_size != 0) {
-				if (out_buf != NULL) {
+				if (out_buf != NULL)
 					free(out_buf);
-					out_buf = NULL;
-				}
 
 				out_buf = malloc(out_size);
 				if (out_buf == NULL) {
@@ -1327,7 +1320,6 @@ int compress_single_pass(uint8_t * data, uint32_t data_size, uint8_t * compresse
 		/* Restore variables not necessarily set by user */
 		stream.hufftables = huff_tmp;
 		stream.end_of_stream = 0;
-		stream.level = 0;
 		stream.level_buf = NULL;
 		stream.level_buf_size = 0;
 	}
@@ -1345,6 +1337,8 @@ int compress_single_pass(uint8_t * data, uint32_t data_size, uint8_t * compresse
 	if (level >= 1) {
 		level_buf_size = get_rand_level_buf_size(stream.level);
 		level_buf = malloc(level_buf_size);
+		if (level_buf == NULL)
+			return MALLOC_FAILED;
 		create_rand_repeat_data(level_buf, level_buf_size);
 		stream.level_buf = level_buf;
 		stream.level_buf_size = level_buf_size;
@@ -1419,6 +1413,8 @@ int compress_ver_rep_buf(uint8_t * data, uint32_t data_size, uint64_t data_rep_s
 	if (level >= 1) {
 		level_buf_size = get_rand_level_buf_size(stream.level);
 		level_buf = malloc(level_buf_size);
+		if (level_buf == NULL)
+			return MALLOC_FAILED;
 		create_rand_repeat_data(level_buf, level_buf_size);
 		stream.level_buf = level_buf;
 		stream.level_buf_size = level_buf_size;
@@ -1485,7 +1481,6 @@ int compress_ver_rep_buf(uint8_t * data, uint32_t data_size, uint64_t data_rep_s
 			cmp_size = (out_size > index) ? index : out_size;
 			ret |= memcmp(decomp_buf + data_size - index, data, cmp_size);
 			out_size -= cmp_size;
-			cmp_size = out_size;
 			ret |= memcmp(decomp_buf, decomp_buf + data_size, out_size);
 			if (ret)
 				return RESULT_ERROR;
@@ -1529,7 +1524,6 @@ int compress_stateless(uint8_t * data, uint32_t data_size, uint8_t * compressed_
 		/* Restore variables not necessarily set by user */
 		stream.hufftables = huff_tmp;
 		stream.end_of_stream = 0;
-		stream.level = 0;
 		stream.level_buf = NULL;
 		stream.level_buf_size = 0;
 	}
@@ -1552,6 +1546,8 @@ int compress_stateless(uint8_t * data, uint32_t data_size, uint8_t * compressed_
 
 		if (level_buf_size >= ISAL_DEF_LVL1_MIN) {
 			level_buf = malloc(level_buf_size);
+			if (level_buf == NULL)
+				return MALLOC_FAILED;
 			create_rand_repeat_data(level_buf, level_buf_size);
 			stream.level_buf = level_buf;
 			stream.level_buf_size = level_buf_size;
@@ -1559,6 +1555,8 @@ int compress_stateless(uint8_t * data, uint32_t data_size, uint8_t * compressed_
 	} else if (level > 1) {
 		level_buf_size = get_rand_level_buf_size(level);
 		level_buf = malloc(level_buf_size);
+		if (level_buf == NULL)
+			return MALLOC_FAILED;
 		create_rand_repeat_data(level_buf, level_buf_size);
 		stream.level_buf = level_buf;
 		stream.level_buf_size = level_buf_size;
@@ -1636,7 +1634,6 @@ int compress_stateless_full_flush(uint8_t * data, uint32_t data_size, uint8_t * 
 		/* Restore variables not necessarily set by user */
 		stream.hufftables = huff_tmp;
 		stream.end_of_stream = 0;
-		stream.level = 0;
 		stream.level_buf = NULL;
 		stream.level_buf_size = 0;
 		stream.gzip_flag = 0;
@@ -1656,6 +1653,8 @@ int compress_stateless_full_flush(uint8_t * data, uint32_t data_size, uint8_t * 
 
 		if (level_buf_size >= ISAL_DEF_LVL1_MIN) {
 			level_buf = malloc(level_buf_size);
+			if (level_buf == NULL)
+				return MALLOC_FAILED;
 			create_rand_repeat_data(level_buf, level_buf_size);
 			stream.level_buf = level_buf;
 			stream.level_buf_size = level_buf_size;
@@ -1663,6 +1662,8 @@ int compress_stateless_full_flush(uint8_t * data, uint32_t data_size, uint8_t * 
 	} else if (level > 1) {
 		level_buf_size = get_rand_level_buf_size(level);
 		level_buf = malloc(level_buf_size);
+		if (level_buf == NULL)
+			return MALLOC_FAILED;
 		create_rand_repeat_data(level_buf, level_buf_size);
 		stream.level_buf = level_buf;
 		stream.level_buf_size = level_buf_size;
@@ -1686,10 +1687,8 @@ int compress_stateless_full_flush(uint8_t * data, uint32_t data_size, uint8_t * 
 		stream.avail_in = in_size;
 
 		if (in_size != 0) {
-			if (in_buf != NULL) {
+			if (in_buf != NULL)
 				free(in_buf);
-				in_buf = NULL;
-			}
 
 			in_buf = malloc(in_size);
 			if (in_buf == NULL) {
@@ -1780,7 +1779,6 @@ int compress_full_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 		/* Restore variables not necessarily set by user */
 		stream.hufftables = huff_tmp;
 		stream.end_of_stream = 0;
-		stream.level = 0;
 		stream.level_buf = NULL;
 		stream.level_buf_size = 0;
 		stream.hist_bits = 0;
@@ -1798,6 +1796,8 @@ int compress_full_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 		level_buf_size = get_rand_level_buf_size(stream.level);
 		if (level_buf_size >= ISAL_DEF_LVL1_MIN) {
 			level_buf = malloc(level_buf_size);
+			if (level_buf == NULL)
+				return MALLOC_FAILED;
 			create_rand_repeat_data(level_buf, level_buf_size);
 			stream.level_buf = level_buf;
 			stream.level_buf_size = level_buf_size;
@@ -1824,10 +1824,8 @@ int compress_full_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 			stream.avail_in = in_size;
 
 			if (in_size != 0) {
-				if (in_buf != NULL) {
+				if (in_buf != NULL)
 					free(in_buf);
-					in_buf = NULL;
-				}
 
 				in_buf = malloc(in_size);
 				if (in_buf == NULL) {
@@ -1935,6 +1933,8 @@ int compress_swap_flush(uint8_t * data, uint32_t data_size, uint8_t * compressed
 		stream.level = level;
 		level_buf_size = get_rand_level_buf_size(stream.level);
 		level_buf = malloc(level_buf_size);
+		if (level_buf == NULL)
+			return MALLOC_FAILED;
 		create_rand_repeat_data(level_buf, level_buf_size);
 		stream.level_buf = level_buf;
 		stream.level_buf_size = level_buf_size;
@@ -2056,10 +2056,8 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 		log_uint8_t(in_buf, in_size);
 	}
 
-	if (z_buf != NULL) {
+	if (z_buf != NULL)
 		free(z_buf);
-		z_buf = NULL;
-	}
 
 	print_error(ret);
 	if (ret)
@@ -2722,7 +2720,6 @@ int create_custom_hufftables(struct isal_hufftables *hufftables_custom, int file
 			     char *files[])
 {
 	long int file_length;
-	uint8_t *stream = NULL;
 	struct isal_huff_histogram histogram;
 	FILE *file;
 	int i;
@@ -2730,6 +2727,8 @@ int create_custom_hufftables(struct isal_hufftables *hufftables_custom, int file
 	memset(&histogram, 0, sizeof(histogram));
 
 	for (i = 0; i < file_count; i++) {
+		uint8_t *stream = NULL;
+
 		printf("Processing %s\n", files[i]);
 		file = fopen(files[i], "r");
 		if (file == NULL) {
@@ -2748,25 +2747,28 @@ int create_custom_hufftables(struct isal_hufftables *hufftables_custom, int file
 				fclose(file);
 				return 1;
 			}
-		}
-
-		if (fread(stream, 1, file_length, file) != file_length) {
-			printf("Error occurred when reading file\n");
+		} else {
+			printf("Zero file length: %s\n", files[i]);
 			fclose(file);
-			free(stream);
-			stream = NULL;
 			return 1;
 		}
+
+		if (file_length > 0)
+			if (fread(stream, 1, file_length, file) != file_length) {
+				printf("Error occurred when reading file\n");
+				fclose(file);
+				free(stream);
+				stream = NULL;
+				return 1;
+			}
 
 		/* Create a histogram of frequency of symbols found in stream to
 		 * generate the huffman tree.*/
 		isal_update_histogram(stream, file_length, &histogram);
 
 		fclose(file);
-		if (stream != NULL) {
+		if (stream != NULL)
 			free(stream);
-			stream = NULL;
-		}
 	}
 
 	return isal_create_hufftables(hufftables_custom, &histogram);
@@ -2775,7 +2777,7 @@ int create_custom_hufftables(struct isal_hufftables *hufftables_custom, int file
 
 int main(int argc, char *argv[])
 {
-	int i = 0, j = 0, ret = 0;
+	int i = 0, j = 0, ret = 0, fin_ret = IGZIP_COMP_OK;
 	uint32_t in_size = 0, offset = 0;
 	uint8_t *in_buf = NULL;
 	struct isal_hufftables hufftables_custom, hufftables_sub;
@@ -2810,12 +2812,13 @@ int main(int argc, char *argv[])
 	}
 
 	in_buf = malloc(IBUF_SIZE);
-	memset(in_buf, 0, IBUF_SIZE);
 
 	if (in_buf == NULL) {
 		fprintf(stderr, "Can't allocate in_buf memory\n");
 		return -1;
 	}
+
+	memset(in_buf, 0, IBUF_SIZE);
 
 	if (file_count > 0) {
 		printf("igzip_rand_test files:                  ");
@@ -2830,7 +2833,7 @@ int main(int argc, char *argv[])
 			printf("................");
 		printf("%s\n", ret ? "Fail" : "Pass");
 		if (ret)
-			goto exit;
+			goto main_exit;
 	}
 
 	printf("igzip_rand_test stateless:              ");
@@ -2893,9 +2896,8 @@ int main(int argc, char *argv[])
 
       exit_stateless_no_flush:
 	printf("%s\n", ret ? "Fail" : "Pass");
-
 	if (ret)
-		goto exit;
+		goto main_exit;
 
 	printf("igzip_rand_test stateless FULL_FLUSH:   ");
 
@@ -2934,9 +2936,8 @@ int main(int argc, char *argv[])
 
       exit_stateless_full_flush:
 	printf("%s\n", ret ? "Fail" : "Pass");
-
 	if (ret)
-		goto exit;
+		goto main_exit;
 
 	printf("igzip_rand_test stateful  NO_FLUSH:     ");
 
@@ -2969,9 +2970,8 @@ int main(int argc, char *argv[])
 
       exit_stateful_no_flush:
 	printf("%s\n", ret ? "Fail" : "Pass");
-
 	if (ret)
-		goto exit;
+		goto main_exit;
 
 	printf("igzip_rand_test stateful  SYNC_FLUSH:   ");
 
@@ -3004,9 +3004,8 @@ int main(int argc, char *argv[])
 
       exit_stateful_sync_flush:
 	printf("%s\n", ret ? "Fail" : "Pass");
-
 	if (ret)
-		goto exit;
+		goto main_exit;
 
 	printf("igzip_rand_test stateful  FULL_FLUSH:   ");
 
@@ -3054,9 +3053,8 @@ int main(int argc, char *argv[])
 
       exit_stateful_full_flush:
 	printf("%s\n", ret ? "Fail" : "Pass");
-
 	if (ret)
-		goto exit;
+		goto main_exit;
 
 	printf("igzip_rand_test stateful  Change Flush: ");
 
@@ -3087,9 +3085,8 @@ int main(int argc, char *argv[])
 
       exit_stateful_change_flush:
 	printf("%s\n", ret ? "Fail" : "Pass");
-
 	if (ret)
-		goto exit;
+		goto main_exit;
 
 	if (options.do_large_test) {
 		printf("igzip_rand_test large input             ");
@@ -3129,9 +3126,8 @@ int main(int argc, char *argv[])
 
       exit_large_test:
 		printf("%s\n", ret ? "Fail" : "Pass");
-
 		if (ret)
-			goto exit;
+			goto main_exit;
 	}
 
 	printf("igzip_rand_test inflate   Std Vectors:  ");
@@ -3146,11 +3142,12 @@ int main(int argc, char *argv[])
 		printf("................");
 	printf("%s\n", ret ? "Fail" : "Pass");
 
-      exit:
+      main_exit:
+	fin_ret |= ret;
 	printf("igzip rand test finished: %s\n",
-	       ret ? "Some tests failed" : "All tests passed");
+	       (fin_ret != IGZIP_COMP_OK) ? "Some tests failed" : "All tests passed");
 
 	free(in_buf);
 
-	return ret;
+	return (fin_ret == IGZIP_COMP_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

@@ -475,13 +475,19 @@ int isal_deflate_dict_perf(uint8_t * outbuf, uint64_t * outbuf_size, uint8_t * i
 	}
 
 	stream.level = level;
-	isal_deflate_process_dict(&stream, &dict_str, dict_buf, dict_file_size);
+	if (isal_deflate_process_dict(&stream, &dict_str, dict_buf, dict_file_size) != COMP_OK) {
+		if (level_buf != NULL)
+			free(level_buf);
+		return 1;
+	}
 
 	BENCHMARK(start, time, check =
 		  isal_deflate_dict_round(&stream, outbuf, *outbuf_size, inbuf,
 					  inbuf_size, level, level_buf,
 					  level_size_buf[level], flush_type, hist_bits,
 					  &dict_str));
+	if (level_buf != NULL)
+		free(level_buf);
 	*outbuf_size = stream.total_out;
 	return check;
 }
@@ -879,8 +885,13 @@ int main(int argc, char *argv[])
 		printf("\n");
 
 		if (outfile != NULL && i + 1 == compression_queue_size) {
-			FILE *out;
-			out = fopen(outfile, "wb");
+			FILE *out = fopen(outfile, "wb");
+
+			if (out == NULL) {
+				fprintf(stderr, "Could not write to the output file \"%s\"\n",
+					outfile);
+				exit(0);
+			}
 			fwrite(compressbuf, 1, info.deflate_size, out);
 			fclose(out);
 		}
