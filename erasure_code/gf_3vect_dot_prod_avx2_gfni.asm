@@ -300,7 +300,7 @@ func(gf_3vect_dot_prod_avx2_gfni)
     mov     dest3, [dest + 2*8]
 
     cmp     len, 64
-    jb      .len_lt_64
+    jl      .len_lt_64
 
 .loop64:
     ENCODE_64B_3
@@ -312,7 +312,7 @@ func(gf_3vect_dot_prod_avx2_gfni)
 
 .len_lt_64:
     cmp     len, 32
-    jb      .len_lt_32
+    jl      .len_lt_32
 
     ENCODE_32B_3
 

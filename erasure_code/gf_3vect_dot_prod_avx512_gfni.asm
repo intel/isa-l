@@ -193,7 +193,7 @@ func(gf_3vect_dot_prod_avx512_gfni)
 	mov	dest1, [dest1]
 
 	cmp	len, 64
-        jb      .len_lt_64
+        jl      .len_lt_64
 
 .loop64:
 

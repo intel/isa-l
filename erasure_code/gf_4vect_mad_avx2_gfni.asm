@@ -213,7 +213,7 @@ func(gf_4vect_mad_avx2_gfni)
         mov     dest1, [dest1]
 
         cmp     len, 32
-        jb      .len_lt_32
+        jl      .len_lt_32
 
 .loop32:
         ENCODE_32B_4            ;; loop on 32 bytes at a time

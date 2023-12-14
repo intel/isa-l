@@ -212,7 +212,7 @@ func(gf_vect_mad_avx2_gfni)
         vbroadcastsd xgft1, [tmp]
 
         cmp     len, 96
-        jb      .len_lt_96
+        jl      .len_lt_96
 
 .loop96:
         ENCODE_96B              ;; loop on 96 bytes at a time
@@ -223,7 +223,7 @@ func(gf_vect_mad_avx2_gfni)
 
 .len_lt_96:
         cmp     len, 64
-        jb      .len_lt_64
+        jl      .len_lt_64
 
         ENCODE_64B              ;; encode next 64 bytes
 
@@ -232,7 +232,7 @@ func(gf_vect_mad_avx2_gfni)
 
 .len_lt_64:
         cmp     len, 32
-        jb      .len_lt_32
+        jl      .len_lt_32
 
         ENCODE_32B              ;; encode next 32 bytes
 

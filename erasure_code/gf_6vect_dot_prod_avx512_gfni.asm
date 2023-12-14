@@ -260,7 +260,7 @@ func(gf_6vect_dot_prod_avx512_gfni)
 	mov	dest5, [dest1 + 4*8]      ;dest1 and dest6 are calculated later
 
 	cmp	len, 64
-        jb      .len_lt_64
+        jl      .len_lt_64
 
 .loop64:
 

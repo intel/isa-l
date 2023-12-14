@@ -158,7 +158,7 @@ func(gf_vect_dot_prod_avx512_gfni)
 	shl	vec, 3		;vec *= 8. Make vec_i count by 8
 
 	cmp	len, 64
-        jb      .len_lt_64
+        jl      .len_lt_64
 
 .loop64:
 

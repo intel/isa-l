@@ -241,7 +241,7 @@ func(gf_3vect_mad_avx2_gfni)
         mov     dest1, [dest1]
 
         cmp     len, 64
-        jb      .len_lt_64
+        jl      .len_lt_64
 
 .loop64:
         ENCODE_64B_3            ;; loop on 64 bytes at a time
@@ -253,7 +253,7 @@ func(gf_3vect_mad_avx2_gfni)
 
 .len_lt_64:
         cmp     len, 32
-        jb      .len_lt_32
+        jl      .len_lt_32
 
         ENCODE_32B_3            ;; encode next 32 bytes
 
