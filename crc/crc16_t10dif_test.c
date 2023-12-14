@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 	int fail = 0;
 	u32 r = 0;
 	int i, s;
-	void *buf_raw;
+	void *buf_raw = NULL;
 	unsigned char *buf;
 
 	printf("Test crc16_t10dif_test ");
@@ -190,6 +190,9 @@ int main(int argc, char *argv[])
 	printf("Test done: %s\n", fail ? "Fail" : "Pass");
 	if (fail)
 		printf("\nFailed %d tests\n", fail);
+
+	if (buf)
+		aligned_free(buf_raw);
 
 	return fail;
 }

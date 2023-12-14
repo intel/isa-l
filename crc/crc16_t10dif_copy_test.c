@@ -34,6 +34,7 @@
 #include <assert.h>
 #include "crc.h"
 #include "crc_ref.h"
+#include "test.h"
 
 #ifndef RANDOMS
 # define RANDOMS   20
@@ -116,14 +117,19 @@ int main(int argc, char *argv[])
 	int r = 0;
 	int i;
 	int len, tot;
-	u8 *src_raw, *dst_raw;
+	u8 *src_raw = NULL, *dst_raw = NULL;
 	u8 *src, *dst;
 
 	printf("Test crc16_t10dif_copy_test:\n");
 	src_raw = (u8 *) malloc(TEST_LEN);
-	dst_raw = (u8 *) malloc(TEST_LEN);
-	if (NULL == src_raw || NULL == dst_raw) {
+	if (NULL == src_raw) {
 		printf("alloc error: Fail");
+		return -1;
+	}
+	dst_raw = (u8 *) malloc(TEST_LEN);
+	if (NULL == dst_raw) {
+		printf("alloc error: Fail");
+		aligned_free(src_raw);
 		return -1;
 	}
 	src = src_raw;
@@ -179,5 +185,9 @@ int main(int argc, char *argv[])
 #endif
 
 	printf("Test done: %s\n", r ? "Fail" : "Pass");
+
+	free(src_raw);
+	free(dst_raw);
+
 	return r;
 }
