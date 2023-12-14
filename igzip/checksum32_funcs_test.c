@@ -109,6 +109,8 @@ int main(int argc, char *argv[])
 
 	printf("CHECKSUM32 Tests all done: %s\n", fail ? "Fail" : "Pass");
 
+	aligned_free(buf_alloc);
+
 	return fail;
 }
 

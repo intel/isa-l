@@ -314,15 +314,20 @@ int malloc_gzip_header(struct isal_gzip_header *gz_hdr)
 	gz_hdr->name = NULL;
 	if (gz_hdr->name_buf_len) {
 		gz_hdr->name = malloc(gz_hdr->name_buf_len);
-		if (gz_hdr->name == NULL)
+		if (gz_hdr->name == NULL) {
+			free(gz_hdr->extra);
 			return MALLOC_FAILED;
+		}
 	}
 
 	gz_hdr->comment = NULL;
 	if (gz_hdr->comment_buf_len) {
 		gz_hdr->comment = malloc(gz_hdr->comment_buf_len);
-		if (gz_hdr->comment == NULL)
+		if (gz_hdr->comment == NULL) {
+			free(gz_hdr->extra);
+			free(gz_hdr->name);
 			return MALLOC_FAILED;
+		}
 	}
 
 	return 0;
@@ -788,7 +793,7 @@ int read_zlib_header_streaming(uint8_t * hdr_buf, uint32_t hdr_buf_len,
 
 int main(int argc, char *argv[])
 {
-	uint8_t *hdr_buf;
+	uint8_t *hdr_buf = NULL;
 	uint32_t hdr_buf_len;
 	int ret = 0;
 	struct isal_gzip_header gz_hdr_orig;
@@ -809,31 +814,37 @@ int main(int argc, char *argv[])
 		ret = gen_rand_gzip_header(&gz_hdr_orig);
 		if (ret) {
 			print_error(ret);
-			return 1;
+			goto exit;
 		}
 
 		hdr_buf_len = gzip_header_size(&gz_hdr_orig);
 		hdr_buf = malloc(hdr_buf_len);
+		if (hdr_buf == NULL) {
+			printf("alloc error: Fail");
+			ret = 1;
+			goto exit;
+		}
 
 		ret = write_gzip_header(hdr_buf, hdr_buf_len, &gz_hdr_orig);
 
 		if (ret)
-			return 1;
+			goto exit;
 
 		ret = read_gzip_header_simple(hdr_buf, hdr_buf_len, &gz_hdr_orig);
 
 		if (ret)
-			return 1;
+			goto exit;
 
 		ret = read_gzip_header_streaming(hdr_buf, hdr_buf_len, &gz_hdr_orig);
 
 		if (ret)
-			return 1;
+			goto exit;
 
 		free_gzip_header(&gz_hdr_orig);
-		if (hdr_buf != NULL)
+		if (hdr_buf != NULL) {
 			free(hdr_buf);
-
+			hdr_buf = NULL;
+		}
 #ifdef TEST_VERBOSE
 		if (i % (RANDOMS / 16) == 0)
 			printf(".");
@@ -853,21 +864,22 @@ int main(int argc, char *argv[])
 		ret = write_zlib_header(hdr_buf, hdr_buf_len, &z_hdr_orig);
 
 		if (ret)
-			return 1;
+			goto exit;
 
 		ret = read_zlib_header_simple(hdr_buf, hdr_buf_len, &z_hdr_orig);
 
 		if (ret)
-			return 1;
+			goto exit;
 
 		ret = read_zlib_header_streaming(hdr_buf, hdr_buf_len, &z_hdr_orig);
 
 		if (ret)
-			return 1;
+			goto exit;
 
-		if (hdr_buf != NULL)
+		if (hdr_buf != NULL) {
 			free(hdr_buf);
-
+			hdr_buf = NULL;
+		}
 #ifdef TEST_VERBOSE
 		if (i % (RANDOMS / 16) == 0)
 			printf(".");
@@ -877,5 +889,10 @@ int main(int argc, char *argv[])
 
 	printf("igzip wrapper_hdr test finished: All tests passed \n");
 
-	return 0;
+	ret = 0;
+      exit:
+	if (hdr_buf != NULL)
+		free(hdr_buf);
+
+	return ret;
 }

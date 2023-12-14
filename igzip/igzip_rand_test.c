@@ -707,7 +707,8 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 
 				if (comp_tmp == NULL) {
 					printf("Failed to allocate memory\n");
-					return MALLOC_FAILED;
+					ret = MALLOC_FAILED;
+					goto exit_in_multi_pass;
 				}
 
 				memcpy(comp_tmp, compress_buf + comp_processed, comp_tmp_size);
@@ -743,7 +744,8 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 				uncomp_tmp = malloc(uncomp_tmp_size);
 				if (uncomp_tmp == NULL) {
 					printf("Failed to allocate memory\n");
-					return MALLOC_FAILED;
+					ret = MALLOC_FAILED;
+					goto exit_in_multi_pass;
 				}
 				memset(uncomp_tmp, 0, uncomp_tmp_size);
 
@@ -822,6 +824,7 @@ int inflate_multi_pass(uint8_t * compress_buf, uint64_t compress_len,
 	if (ret == 0 && state->avail_in != 0)
 		ret = INFLATE_LEFTOVER_INPUT;
 
+      exit_in_multi_pass:
 	if (comp_tmp != NULL) {
 		free(comp_tmp);
 		comp_tmp = NULL;
@@ -1113,8 +1116,10 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 
 	isal_deflate_init(stream);
 
-	if (state->state != ZSTATE_NEW_HDR)
-		return COMPRESS_INCORRECT_STATE;
+	if (state->state != ZSTATE_NEW_HDR) {
+		ret = COMPRESS_INCORRECT_STATE;
+		goto exit_comp_multi_pass;
+	}
 
 	if (rand() % 4 == 0) {
 		/* Test reset */
@@ -1185,7 +1190,7 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 					in_buf = malloc(in_size);
 					if (in_buf == NULL) {
 						ret = MALLOC_FAILED;
-						break;
+						goto exit_comp_multi_pass;
 					}
 					memcpy(in_buf, data + in_processed, in_size);
 					in_processed += in_size;
@@ -1233,7 +1238,7 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 				out_buf = malloc(out_size);
 				if (out_buf == NULL) {
 					ret = MALLOC_FAILED;
-					break;
+					goto exit_comp_multi_pass;
 				}
 
 				stream->avail_out = out_size;
@@ -1270,6 +1275,7 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 
 	}
 
+      exit_comp_multi_pass:
 	if (stream != NULL)
 		free(stream);
 	if (level_buf != NULL)
@@ -2004,8 +2010,10 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 
 	z_buf = malloc(z_size);
 
-	if (z_buf == NULL)
-		return MALLOC_FAILED;
+	if (z_buf == NULL) {
+		ret = MALLOC_FAILED;
+		goto exit_comp_stateless;
+	}
 
 	create_rand_repeat_data(z_buf, z_size);
 
@@ -2077,8 +2085,10 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 
 	z_buf = malloc(z_size);
 
-	if (z_buf == NULL)
-		return MALLOC_FAILED;
+	if (z_buf == NULL) {
+		ret = MALLOC_FAILED;
+		goto exit_comp_stateless;
+	}
 
 	create_rand_repeat_data(z_buf, z_size);
 
@@ -2111,8 +2121,10 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 		if (z_size > 0) {
 			z_buf = malloc(z_size);
 
-			if (z_buf == NULL)
-				return MALLOC_FAILED;
+			if (z_buf == NULL) {
+				ret = MALLOC_FAILED;
+				goto exit_comp_stateless;
+			}
 		}
 
 		overflow = compress_stateless(in_buf, in_size, z_buf, &z_size, flush_type,
@@ -2165,8 +2177,10 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 
 		z_buf = malloc(z_size);
 
-		if (z_buf == NULL)
-			return MALLOC_FAILED;
+		if (z_buf == NULL) {
+			ret = MALLOC_FAILED;
+			goto exit_comp_stateless;
+		}
 
 		create_rand_repeat_data(z_buf, z_size);
 
@@ -2193,6 +2207,8 @@ int test_compress_stateless(uint8_t * in_data, uint32_t in_size, uint32_t flush_
 			log_uint8_t(in_buf, in_size);
 		}
 	}
+
+      exit_comp_stateless:
 	if (z_buf != NULL)
 		free(z_buf);
 
@@ -2247,7 +2263,8 @@ int test_compress(uint8_t * in_buf, uint32_t in_size, uint32_t flush_type)
 		dict = malloc(dict_len);
 		if (dict == NULL) {
 			print_error(MALLOC_FAILED);
-			return MALLOC_FAILED;
+			fin_ret = MALLOC_FAILED;
+			goto test_compress_cleanup;
 		}
 		create_rand_dict(dict, dict_len, z_buf, z_size);
 	}
@@ -2495,6 +2512,8 @@ int test_flush(uint8_t * in_buf, uint32_t in_size)
 	fin_ret |= ret;
 	print_error(ret);
 
+	free(z_buf);
+
 	return fin_ret;
 }
 
@@ -2585,6 +2604,8 @@ int test_inflate(struct vect_result *in_vector)
 			ret = IGZIP_COMP_OK;
 	}
 
+	free(out_buf);
+
 	return ret;
 
 }
@@ -2616,6 +2637,7 @@ int test_large(uint8_t * in_buf, uint32_t in_size, uint64_t large_size)
 	tmp_buf = malloc(tmp_buf_size);
 	if (tmp_buf == NULL) {
 		print_error(MALLOC_FAILED);
+		free(z_buf);
 		return MALLOC_FAILED;
 	}
 
@@ -2661,12 +2683,13 @@ int test_compress_file(char *file_name)
 		in_buf = malloc(in_size);
 		if (in_buf == NULL) {
 			printf("Failed to allocate in_buf for test_compress_file\n");
-			return MALLOC_FAILED;
+			ret = MALLOC_FAILED;
+			goto exit_comp_file;
 		}
 		if (fread(in_buf, 1, in_size, in_file) != in_size) {
 			printf("Failed to read in_buf from test_compress_file\n");
-			free(in_buf);
-			return FILE_READ_FAILED;
+			ret = FILE_READ_FAILED;
+			goto exit_comp_file;
 		}
 	}
 
@@ -2687,9 +2710,11 @@ int test_compress_file(char *file_name)
 	if (ret)
 		printf("Failed on file %s\n", file_name);
 
+      exit_comp_file:
 	if (in_buf != NULL)
 		free(in_buf);
 
+	fclose(in_file);
 	return ret;
 }
 
@@ -2750,9 +2775,9 @@ int create_custom_hufftables(struct isal_hufftables *hufftables_custom, int file
 
 int main(int argc, char *argv[])
 {
-	int i = 0, j = 0, ret = 0, fin_ret = 0;
+	int i = 0, j = 0, ret = 0;
 	uint32_t in_size = 0, offset = 0;
-	uint8_t *in_buf;
+	uint8_t *in_buf = NULL;
 	struct isal_hufftables hufftables_custom, hufftables_sub;
 	uint64_t iterations, large_buf_size;
 	size_t argv_index;
@@ -2796,26 +2821,27 @@ int main(int argc, char *argv[])
 		printf("igzip_rand_test files:                  ");
 
 		for (i = 0; i < file_count; i++) {
-			ret |= test_compress_file(input_files[i]);
+			ret = test_compress_file(input_files[i]);
 			if (ret)
-				return ret;
+				break;
 		}
 
 		if (options.verbose)
 			printf("................");
 		printf("%s\n", ret ? "Fail" : "Pass");
-		fin_ret |= ret;
+		if (ret)
+			goto exit;
 	}
 
 	printf("igzip_rand_test stateless:              ");
 
 	ret = test_compress_stateless((uint8_t *) str1, sizeof(str1), NO_FLUSH);
 	if (ret)
-		return ret;
+		goto exit_stateless_no_flush;
 
-	ret |= test_compress_stateless((uint8_t *) str2, sizeof(str2), NO_FLUSH);
+	ret = test_compress_stateless((uint8_t *) str2, sizeof(str2), NO_FLUSH);
 	if (ret)
-		return ret;
+		goto exit_stateless_no_flush;
 
 	for (i = 0; i < options.randoms; i++) {
 		in_size = get_rand_data_length();
@@ -2824,7 +2850,7 @@ int main(int argc, char *argv[])
 
 		create_rand_repeat_data(in_buf, in_size);
 
-		ret |= test_compress_stateless(in_buf, in_size, NO_FLUSH);
+		ret = test_compress_stateless(in_buf, in_size, NO_FLUSH);
 
 		in_buf -= offset;
 
@@ -2832,25 +2858,23 @@ int main(int argc, char *argv[])
 			printf(".");
 
 		if (ret)
-			return ret;
+			goto exit_stateless_no_flush;
 	}
 
 	for (i = 0; i < options.randoms / 16; i++) {
 		create_rand_repeat_data(in_buf, PAGE_SIZE);
 		ret |= test_compress_stateless(in_buf, PAGE_SIZE, NO_FLUSH);	// good for efence
 		if (ret)
-			return ret;
+			goto exit_stateless_no_flush;
 	}
-
-	fin_ret |= ret;
 
 	ret = test_compress_stateless((uint8_t *) str1, sizeof(str1), SYNC_FLUSH);
 	if (ret)
-		return ret;
+		goto exit_stateless_no_flush;
 
-	ret |= test_compress_stateless((uint8_t *) str2, sizeof(str2), SYNC_FLUSH);
+	ret = test_compress_stateless((uint8_t *) str2, sizeof(str2), SYNC_FLUSH);
 	if (ret)
-		return ret;
+		goto exit_stateless_no_flush;
 
 	for (i = 0; i < 16; i++) {
 		in_size = get_rand_data_length();
@@ -2864,22 +2888,24 @@ int main(int argc, char *argv[])
 		in_buf -= offset;
 
 		if (ret)
-			return ret;
+			break;
 	}
 
-	fin_ret |= ret;
-
+      exit_stateless_no_flush:
 	printf("%s\n", ret ? "Fail" : "Pass");
+
+	if (ret)
+		goto exit;
 
 	printf("igzip_rand_test stateless FULL_FLUSH:   ");
 
 	ret = test_compress_stateless((uint8_t *) str1, sizeof(str1), FULL_FLUSH);
 	if (ret)
-		return ret;
+		goto exit_stateless_full_flush;
 
-	ret |= test_compress_stateless((uint8_t *) str2, sizeof(str2), FULL_FLUSH);
+	ret = test_compress_stateless((uint8_t *) str2, sizeof(str2), FULL_FLUSH);
 	if (ret)
-		return ret;
+		goto exit_stateless_full_flush;
 
 	for (i = 0; i < options.randoms; i++) {
 		in_size = get_rand_data_length();
@@ -2888,7 +2914,7 @@ int main(int argc, char *argv[])
 
 		create_rand_repeat_data(in_buf, in_size);
 
-		ret |= test_compress_stateless(in_buf, in_size, FULL_FLUSH);
+		ret = test_compress_stateless(in_buf, in_size, FULL_FLUSH);
 
 		in_buf -= offset;
 
@@ -2896,30 +2922,33 @@ int main(int argc, char *argv[])
 			printf(".");
 
 		if (ret)
-			return ret;
+			goto exit_stateless_full_flush;
 	}
 
 	for (i = 0; i < options.randoms / 16; i++) {
 		create_rand_repeat_data(in_buf, PAGE_SIZE);
-		ret |= test_compress_stateless(in_buf, PAGE_SIZE, FULL_FLUSH);	// good for efence
+		ret = test_compress_stateless(in_buf, PAGE_SIZE, FULL_FLUSH);	// good for efence
 		if (ret)
-			return ret;
+			break;
 	}
-	fin_ret |= ret;
 
+      exit_stateless_full_flush:
 	printf("%s\n", ret ? "Fail" : "Pass");
+
+	if (ret)
+		goto exit;
 
 	printf("igzip_rand_test stateful  NO_FLUSH:     ");
 
 	memcpy(in_buf, str1, sizeof(str1));
 	ret = test_compress(in_buf, sizeof(str1), NO_FLUSH);
 	if (ret)
-		return ret;
+		goto exit_stateful_no_flush;
 
 	memcpy(in_buf, str2, sizeof(str2));
 	ret |= test_compress(in_buf, sizeof(str2), NO_FLUSH);
 	if (ret)
-		return ret;
+		goto exit_stateful_no_flush;
 
 	for (i = 0; i < options.randoms; i++) {
 		in_size = get_rand_data_length();
@@ -2935,24 +2964,26 @@ int main(int argc, char *argv[])
 			printf(".");
 
 		if (ret)
-			return ret;
+			break;
 	}
 
-	fin_ret |= ret;
-
+      exit_stateful_no_flush:
 	printf("%s\n", ret ? "Fail" : "Pass");
+
+	if (ret)
+		goto exit;
 
 	printf("igzip_rand_test stateful  SYNC_FLUSH:   ");
 
 	memcpy(in_buf, str1, sizeof(str1));
 	ret = test_compress(in_buf, sizeof(str1), SYNC_FLUSH);
 	if (ret)
-		return ret;
+		goto exit_stateful_sync_flush;
 
 	memcpy(in_buf, str2, sizeof(str2));
 	ret |= test_compress(in_buf, sizeof(str2), SYNC_FLUSH);
 	if (ret)
-		return ret;
+		goto exit_stateful_sync_flush;
 
 	for (i = 0; i < options.randoms; i++) {
 		in_size = get_rand_data_length();
@@ -2968,24 +2999,26 @@ int main(int argc, char *argv[])
 		if (options.verbose && (i % (options.randoms / 16) == 0))
 			printf(".");
 		if (ret)
-			return ret;
+			break;
 	}
 
-	fin_ret |= ret;
-
+      exit_stateful_sync_flush:
 	printf("%s\n", ret ? "Fail" : "Pass");
+
+	if (ret)
+		goto exit;
 
 	printf("igzip_rand_test stateful  FULL_FLUSH:   ");
 
 	memcpy(in_buf, str1, sizeof(str1));
 	ret = test_compress(in_buf, sizeof(str1), FULL_FLUSH);
 	if (ret)
-		return ret;
+		goto exit_stateful_full_flush;
 
 	memcpy(in_buf, str2, sizeof(str2));
 	ret |= test_compress(in_buf, sizeof(str2), FULL_FLUSH);
 	if (ret)
-		return ret;
+		goto exit_stateful_full_flush;
 
 	for (i = 0; i < options.randoms; i++) {
 		in_size = get_rand_data_length();
@@ -3001,7 +3034,7 @@ int main(int argc, char *argv[])
 		if (options.verbose && (i % (options.randoms / 16) == 0))
 			printf(".");
 		if (ret)
-			return ret;
+			goto exit_stateful_full_flush;
 	}
 
 	for (i = 0; i < options.randoms / 8; i++) {
@@ -3016,22 +3049,24 @@ int main(int argc, char *argv[])
 		in_buf -= offset;
 
 		if (ret)
-			return ret;
+			break;
 	}
 
-	fin_ret |= ret;
-
+      exit_stateful_full_flush:
 	printf("%s\n", ret ? "Fail" : "Pass");
+
+	if (ret)
+		goto exit;
 
 	printf("igzip_rand_test stateful  Change Flush: ");
 
 	ret = test_flush((uint8_t *) str1, sizeof(str1));
 	if (ret)
-		return ret;
+		goto exit_stateful_change_flush;
 
 	ret |= test_flush((uint8_t *) str2, sizeof(str2));
 	if (ret)
-		return ret;
+		goto exit_stateful_change_flush;
 
 	for (i = 0; i < options.randoms / 4; i++) {
 		in_size = get_rand_data_length();
@@ -3047,12 +3082,14 @@ int main(int argc, char *argv[])
 		if (options.verbose && (i % ((options.randoms / 4) / 16) == 0))
 			printf(".");
 		if (ret)
-			return ret;
+			break;
 	}
 
-	fin_ret |= ret;
-
+      exit_stateful_change_flush:
 	printf("%s\n", ret ? "Fail" : "Pass");
+
+	if (ret)
+		goto exit;
 
 	if (options.do_large_test) {
 		printf("igzip_rand_test large input             ");
@@ -3068,10 +3105,10 @@ int main(int argc, char *argv[])
 			large_buf_size += rand() % (1024 * 1024) + 1;
 			create_rand_repeat_data(in_buf, in_size);
 
-			ret |= test_large(in_buf, in_size, large_buf_size);
+			ret = test_large(in_buf, in_size, large_buf_size);
 
 			if (ret)
-				return ret;
+				goto exit_large_test;
 
 			in_buf -= offset;
 
@@ -3090,7 +3127,11 @@ int main(int argc, char *argv[])
 				printf(".");
 		}
 
+      exit_large_test:
 		printf("%s\n", ret ? "Fail" : "Pass");
+
+		if (ret)
+			goto exit;
 	}
 
 	printf("igzip_rand_test inflate   Std Vectors:  ");
@@ -3098,15 +3139,18 @@ int main(int argc, char *argv[])
 	for (i = 0; i < sizeof(std_vect_array) / sizeof(struct vect_result); i++) {
 		ret = test_inflate(&std_vect_array[i]);
 		if (ret)
-			return ret;
+			break;
 	}
 
 	if (options.verbose)
 		printf("................");
 	printf("%s\n", ret ? "Fail" : "Pass");
 
+      exit:
 	printf("igzip rand test finished: %s\n",
-	       fin_ret ? "Some tests failed" : "All tests passed");
+	       ret ? "Some tests failed" : "All tests passed");
 
-	return fin_ret != IGZIP_COMP_OK;
+	free(in_buf);
+
+	return ret;
 }
