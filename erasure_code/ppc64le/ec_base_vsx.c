@@ -95,3 +95,8 @@ int gf_vect_mul(int len, unsigned char *a, void *src, void *dest)
 	gf_vect_mul_vsx(len, a, (unsigned char *)src, (unsigned char *)dest);
 	return 0;
 }
+
+void ec_init_tables(int k, int rows, unsigned char *a, unsigned char *g_tbls)
+{
+	return ec_init_tables_base(k, rows, a, g_tbls);
+}

@@ -34,3 +34,4 @@ mbin_interface gf_vect_mul
 mbin_interface gf_vect_dot_prod
 mbin_interface gf_vect_mad
 mbin_interface ec_encode_data_update
+mbin_interface ec_init_tables

@@ -117,3 +117,8 @@ DEFINE_INTERFACE_DISPATCHER(gf_vect_mul)
 	return PROVIDER_BASIC(gf_vect_mul);
 
 }
+
+DEFINE_INTERFACE_DISPATCHER(ec_init_tables)
+{
+	return PROVIDER_BASIC(ec_init_tables);
+}
