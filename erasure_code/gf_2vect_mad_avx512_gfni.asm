@@ -158,6 +158,8 @@ func(gf_2vect_mad_avx512_gfni)
 	mov	dest2, [dest1 + 8]	; reuse mul_array
 	mov	dest1, [dest1]
 
+        cmp     len, 64
+        jl      .len_lt_64
 .loop64:
         ENCODE_64B_2
 

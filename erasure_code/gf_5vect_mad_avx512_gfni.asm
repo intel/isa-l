@@ -209,6 +209,8 @@ func(gf_5vect_mad_avx512_gfni)
 	mov	dest5, [dest1 + 4*8]		; reuse vec_i
 	mov	dest1, [dest1]
 
+        cmp     len, 64
+        jl      .len_lt_64
 .loop64:
         ENCODE_64B_5
 

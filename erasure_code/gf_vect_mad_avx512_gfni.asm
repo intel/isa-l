@@ -144,6 +144,8 @@ func(gf_vect_mad_avx512_gfni)
 
         vbroadcastf32x2 xgft1, [vec_i + mul_array]
 
+        cmp     len, 64
+        jl      .len_lt_64
 .loop64:
         ENCODE_64B
 
