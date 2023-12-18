@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>		// for memset, memcmp
+#include <assert.h>
 #include "erasure_code.h"
 #include "test.h"
 
@@ -134,8 +135,7 @@ int main(int argc, char *argv[])
 	// Pick a first test
 	m = 9;
 	k = 5;
-	if (m > MMAX || k > KMAX)
-		return -1;
+	assert(!(m > MMAX || k > KMAX));
 
 	gf_gen_cauchy1_matrix(a, m, k);
 

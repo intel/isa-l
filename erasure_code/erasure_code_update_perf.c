@@ -179,12 +179,21 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 	}
-	m = k + p;
 
 	if (nerrs > k) {
 		printf
 		    ("Number of errors (%d) cannot be higher than number of data buffers (%d)\n",
 		     nerrs, k);
+		return -1;
+	}
+
+	if (k <= 0) {
+		printf("Number of source buffers (%d) must be > 0\n", k);
+		return -1;
+	}
+
+	if (p <= 0) {
+		printf("Number of parity buffers (%d) must be > 0\n", p);
 		return -1;
 	}
 
@@ -195,13 +204,20 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	if (nerrs <= 0) {
+		printf("Number of errors (%d) must be > 0\n", nerrs);
+		return -1;
+	}
+
+	m = k + p;
+
 	if (m > MMAX) {
 		printf("Number of total buffers (data and parity) cannot be higher than %d\n",
 		       MMAX);
 		return -1;
 	}
 
-	u8 *err_list = malloc(nerrs);
+	u8 *err_list = malloc((size_t)nerrs);
 	if (err_list == NULL) {
 		printf("Error allocating list of array of error indices\n");
 		return -1;
