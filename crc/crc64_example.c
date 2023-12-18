@@ -28,6 +28,7 @@
 **********************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <assert.h>
 #include "crc64.h"
 
@@ -62,7 +63,8 @@ int main(int argc, char *argv[])
 	}
 
 	fclose(in);
-	printf("total length is %ld, checksum is 0x%lx\n", total_in, crc64_checksum);
+	printf("total length is %" PRIu64 ", checksum is 0x%" PRIx64 "\n", total_in,
+	       crc64_checksum);
 
 	return 0;
 }
