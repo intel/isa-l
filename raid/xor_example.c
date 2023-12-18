@@ -29,21 +29,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "raid.h"
+#include "test.h"
 
 #define TEST_SOURCES 16
 #define TEST_LEN     16*1024
 
 int main(int argc, char *argv[])
 {
-	int i, j, should_pass, should_fail;
-	void *buffs[TEST_SOURCES + 1];
+	int i, j, should_pass, should_fail, ret = 0;
+	void *buffs[TEST_SOURCES + 1] = { NULL };
 
 	printf("XOR example\n");
 	for (i = 0; i < TEST_SOURCES + 1; i++) {
 		void *buf;
 		if (posix_memalign(&buf, 32, TEST_LEN)) {
 			printf("alloc error: Fail");
-			return 1;
+			goto exit;
 		}
 		buffs[i] = buf;
 	}
@@ -59,11 +60,21 @@ int main(int argc, char *argv[])
 	printf("Check parity: ");
 	should_pass = xor_check(TEST_SOURCES + 1, TEST_LEN, buffs);
 	printf("%s\n", should_pass == 0 ? "Pass" : "Fail");
+	if (should_pass != 0) {
+		ret = -1;
+		goto exit;
+	}
 
 	printf("Find corruption: ");
 	((char *)buffs[TEST_SOURCES / 2])[TEST_LEN / 2] ^= 1;	// flip one bit
 	should_fail = xor_check(TEST_SOURCES + 1, TEST_LEN, buffs);	//recheck
 	printf("%s\n", should_fail != 0 ? "Pass" : "Fail");
 
-	return 0;
+	if (should_fail == 0)
+		ret = -1;
+      exit:
+	for (i = 0; i < TEST_SOURCES + 1; i++)
+		free(buffs[i]);
+
+	return ret;
 }
