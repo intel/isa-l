@@ -78,14 +78,19 @@ int main(int argc, char *argv[])
 	// Test to help memory checkers
 	for (i = 1; i < 2345; i++) {
 		uint8_t *newbuf = (uint8_t *) malloc(i);
-		memset(newbuf, 0, i);
-		failures = isal_zero_detect(newbuf, i);
-		if (failures) {
-			printf("Fail alloc test\n");
-			free(newbuf);
+
+		if (newbuf == NULL) {
+			printf("Fail alloc test - not enough memory\n");
+			failures = -1;
 			goto exit;
 		}
+		memset(newbuf, 0, i);
+		failures = isal_zero_detect(newbuf, i);
 		free(newbuf);
+		if (failures) {
+			printf("Fail alloc test\n");
+			goto exit;
+		}
 	}
 
 	// Test small buffers
