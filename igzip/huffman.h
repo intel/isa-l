@@ -104,7 +104,7 @@ static void compute_dist_code(struct isal_hufftables *hufftables, uint16_t dist,
 	uint32_t code;
 
 	msb = bsr(dist);
-	assert(msb >= 1);
+	assert(msb >= 2);
 	num_extra_bits = msb - 2;
 	extra_bits = dist & ((1 << num_extra_bits) - 1);
 	dist >>= num_extra_bits;
@@ -119,8 +119,6 @@ static void compute_dist_code(struct isal_hufftables *hufftables, uint16_t dist,
 static inline void get_dist_code(struct isal_hufftables *hufftables, uint32_t dist,
 				 uint64_t * code, uint64_t * len)
 {
-	if (dist < 1)
-		dist = 0;
 	assert(dist >= 1);
 	assert(dist <= 32768);
 	if (dist <= IGZIP_DIST_TABLE_SIZE) {
@@ -161,7 +159,7 @@ static void compute_dist_icf_code(uint32_t dist, uint32_t * code, uint32_t * ext
 
 	dist -= 1;
 	msb = bsr(dist);
-	assert(msb >= 1);
+	assert(msb >= 2);
 	num_extra_bits = msb - 2;
 	*extra_bits = dist & ((1 << num_extra_bits) - 1);
 	dist >>= num_extra_bits;
