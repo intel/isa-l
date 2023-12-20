@@ -121,3 +121,4 @@ crc64_rocksoft_refl_base        @116
 crc64_rocksoft_norm             @117
 crc64_rocksoft_refl             @118
 ec_init_tables_base             @119
+isal_zlib_header_init           @120

@@ -605,6 +605,13 @@ void isal_deflate_reset(struct isal_zstream *stream);
 void isal_gzip_header_init(struct isal_gzip_header *gz_hdr);
 
 /**
+ * @brief Set zlib header default values
+ *
+ * @param z_hdr: zlib header to initialize.
+ */
+void isal_zlib_header_init(struct isal_zlib_header *z_hdr);
+
+/**
  * @brief Write gzip header to output stream
  *
  * Writes the gzip header to the output stream. On entry this function assumes

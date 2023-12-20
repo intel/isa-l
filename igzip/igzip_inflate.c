@@ -2195,12 +2195,15 @@ int isal_inflate_stateless(struct inflate_state *state)
 
 	if (state->crc_flag == IGZIP_GZIP) {
 		struct isal_gzip_header gz_hdr;
+
 		isal_gzip_header_init(&gz_hdr);
 		ret = isal_read_gzip_header(state, &gz_hdr);
 		if (ret)
 			return ret;
 	} else if (state->crc_flag == IGZIP_ZLIB) {
-		struct isal_zlib_header z_hdr = { 0 };
+		struct isal_zlib_header z_hdr;
+
+		isal_zlib_header_init(&z_hdr);
 		ret = isal_read_zlib_header(state, &z_hdr);
 		if (ret)
 			return ret;
@@ -2268,6 +2271,7 @@ int isal_inflate(struct inflate_state *state)
 
 	if (!state->wrapper_flag && state->crc_flag == IGZIP_GZIP) {
 		struct isal_gzip_header gz_hdr;
+
 		isal_gzip_header_init(&gz_hdr);
 		ret = isal_read_gzip_header(state, &gz_hdr);
 		if (ret < 0)
@@ -2275,7 +2279,9 @@ int isal_inflate(struct inflate_state *state)
 		else if (ret > 0)
 			return ISAL_DECOMP_OK;
 	} else if (!state->wrapper_flag && state->crc_flag == IGZIP_ZLIB) {
-		struct isal_zlib_header z_hdr = { 0 };
+		struct isal_zlib_header z_hdr;
+
+		isal_zlib_header_init(&z_hdr);
 		ret = isal_read_zlib_header(state, &z_hdr);
 		if (ret < 0)
 			return ret;

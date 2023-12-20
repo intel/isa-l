@@ -856,7 +856,7 @@ int main(int argc, char *argv[])
 
 	printf("zlib wrapper test: ");
 	for (i = 0; i < RANDOMS; i++) {
-		memset(&z_hdr_orig, 0, sizeof(z_hdr_orig));
+		isal_zlib_header_init(&z_hdr_orig);
 
 		gen_rand_zlib_header(&z_hdr_orig);
 

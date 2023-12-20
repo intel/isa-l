@@ -1023,6 +1023,14 @@ void isal_gzip_header_init(struct isal_gzip_header *gz_hdr)
 	gz_hdr->flags = 0;
 }
 
+void isal_zlib_header_init(struct isal_zlib_header *z_hdr)
+{
+	z_hdr->info = 0;
+	z_hdr->level = 0;
+	z_hdr->dict_id = 0;
+	z_hdr->dict_flag = 0;
+}
+
 uint32_t isal_write_gzip_header(struct isal_zstream *stream, struct isal_gzip_header *gz_hdr)
 {
 	uint32_t flags = 0, hcrc, hdr_size = GZIP_HDR_BASE;
