@@ -264,9 +264,10 @@ struct isal_huff_histogram {
 	uint16_t hash_table[IGZIP_LVL0_HASH_SIZE]; //!< Tmp space used as a hash table
 };
 
+/** @brief Holds modified histogram */
 struct isal_mod_hist {
-    uint32_t d_hist[30];
-    uint32_t ll_hist[513];
+    uint32_t d_hist[30]; //!< Distance
+    uint32_t ll_hist[513]; //! Literal/length
 };
 
 #define ISAL_DEF_MIN_LEVEL 0
@@ -325,6 +326,7 @@ struct BitBuf2 {
 	uint8_t *m_out_start;	//!< start of buffer to write to
 };
 
+/** @brief Holds Zlib header information */
 struct isal_zlib_header {
 	uint32_t info;		//!< base-2 logarithm of the LZ77 window size minus 8
 	uint32_t level;		//!< Compression level (fastest, fast, default, maximum)
@@ -332,10 +334,11 @@ struct isal_zlib_header {
 	uint32_t dict_flag;	//!< Whether to use a dictionary
 };
 
+/** @brief Holds Gzip header information */
 struct isal_gzip_header {
 	uint32_t text;		//!< Optional Text hint
 	uint32_t time;		//!< Unix modification time in gzip header
-	uint32_t xflags;		//!< xflags in gzip header
+	uint32_t xflags;	//!< xflags in gzip header
 	uint32_t os;		//!< OS in gzip header
 	uint8_t *extra;		//!< Extra field in gzip header
 	uint32_t extra_buf_len;	//!< Length of extra buffer
@@ -421,11 +424,11 @@ struct isal_zstream {
 /******************************************************************************/
 /*
  * Inflate_huff_code data structures are used to store a Huffman code for fast
- * lookup. It works by performing a lookup in small_code_lookup that hopefully
+ * lookup. It works by performing a lookup in short_code_lookup that hopefully
  * yields the correct symbol. Otherwise a lookup into long_code_lookup is
  * performed to find the correct symbol. The details of how this works follows:
  *
- * Let i be some index into small_code_lookup and let e be the associated
+ * Let i be some index into short_code_lookup and let e be the associated
  * element.  Bit 15 in e is a flag. If bit 15 is not set, then index i contains
  * a Huffman code for a symbol which has length at most DECODE_LOOKUP_SIZE. Bits
  * 0 through 8 are the symbol associated with that code and bits 9 through 12 of
@@ -437,11 +440,11 @@ struct isal_zstream {
  * index i. The offset into long_code_lookup is for an array associated with all
  * codes which start with the bits in i.
  *
- * The elements of long_code_lookup are in the same format as small_code_lookup,
+ * The elements of long_code_lookup are in the same format as short_code_lookup,
  * except bit 15 is never set. Let i be a number made up of DECODE_LOOKUP_SIZE
  * bits.  Then all Huffman codes which start with DECODE_LOOKUP_SIZE bits are
  * stored in an array starting at index h in long_code_lookup. This index h is
- * stored in bits 0 through 9 at index i in small_code_lookup. The index j is an
+ * stored in bits 0 through 9 at index i in short_code_lookup. The index j is an
  * index of this array if the number of bits contained in j and i is the number
  * of bits in the longest huff_code starting with the bits of i. The symbol
  * stored at index j is the symbol whose huffcode can be found in (j <<
@@ -450,7 +453,7 @@ struct isal_zstream {
  *
  * The following are explanations for sizes of the tables:
  *
- * Since small_code_lookup is a lookup on DECODE_LOOKUP_SIZE bits, it must have
+ * Since short_code_lookup is a lookup on DECODE_LOOKUP_SIZE bits, it must have
  * size 2^DECODE_LOOKUP_SIZE.
  *
  * To determine the amount of memory required for long_code_lookup, note that
@@ -488,16 +491,16 @@ struct isal_zstream {
 #define ISAL_HUFF_CODE_LARGE_LONG_ALIGNED (ISAL_L_SIZE + (-ISAL_L_SIZE & 0xf))
 #define ISAL_HUFF_CODE_SMALL_LONG_ALIGNED (ISAL_S_SIZE + (-ISAL_S_SIZE & 0xf))
 
-/* Large lookup table for decoding huffman codes */
+/** @brief Large lookup table for decoding huffman codes */
 struct inflate_huff_code_large {
-	uint32_t short_code_lookup[1 << (ISAL_DECODE_LONG_BITS)];
-	uint16_t long_code_lookup[ISAL_HUFF_CODE_LARGE_LONG_ALIGNED];
+	uint32_t short_code_lookup[1 << (ISAL_DECODE_LONG_BITS)];       //!< Short code lookup table
+	uint16_t long_code_lookup[ISAL_HUFF_CODE_LARGE_LONG_ALIGNED];   //!< Long code lookup table
 };
 
-/* Small lookup table for decoding huffman codes */
+/** @brief Small lookup table for decoding huffman codes */
 struct inflate_huff_code_small {
-	uint16_t short_code_lookup[1 << (ISAL_DECODE_SHORT_BITS)];
-	uint16_t long_code_lookup[ISAL_HUFF_CODE_SMALL_LONG_ALIGNED];
+	uint16_t short_code_lookup[1 << (ISAL_DECODE_SHORT_BITS)];      //!<Short code lookup table
+	uint16_t long_code_lookup[ISAL_HUFF_CODE_SMALL_LONG_ALIGNED];   //!< Long code lookup table
 };
 
 /** @brief Holds decompression state information*/
