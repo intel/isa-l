@@ -60,21 +60,25 @@ pkginclude_HEADERS += $(sort ${extern_hdrs})
 libisal_la_SOURCES = ${lsrc}
 
 if CPU_X86_64
+ARCH=-Dx86_64
 libisal_la_SOURCES += ${lsrc_x86_64}
 other_tests += ${other_tests_x86_64}
 endif
 
 if CPU_X86_32
+ARCH=-Dx86_32
 libisal_la_SOURCES += ${lsrc_x86_32}
 other_tests += ${other_tests_x86_32}
 endif
 
 if CPU_AARCH64
+ARCH=-Daarch64
 libisal_la_SOURCES += ${lsrc_aarch64}
 other_tests += ${other_tests_aarch64}
 endif
 
 if CPU_PPC64LE
+ARCH=-Dppc64le
 libisal_la_SOURCES += ${lsrc_ppc64le}
 other_tests += ${other_tests_ppc64le}
 endif
@@ -132,7 +136,7 @@ CCAS = $(as_filter)
 EXTRA_DIST += tools/yasm-filter.sh tools/nasm-filter.sh
 EXTRA_DIST += tools/yasm-cet-filter.sh tools/nasm-cet-filter.sh
 
-AM_CFLAGS = ${my_CFLAGS} ${INCLUDE} $(src_include) ${D}
+AM_CFLAGS = ${my_CFLAGS} ${INCLUDE} $(src_include) ${ARCH} ${D}
 if CPU_AARCH64
 AM_CCASFLAGS = ${AM_CFLAGS}
 else
