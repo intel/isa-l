@@ -1,4 +1,4 @@
-v2.30 Intel Intelligent Storage Acceleration Library Release Notes
+v2.31 Intel Intelligent Storage Acceleration Library Release Notes
 ==================================================================
 
 RELEASE NOTE CONTENTS
@@ -13,8 +13,21 @@ RELEASE NOTE CONTENTS
 
 * 32-bit lib is not supported in Windows.
 
+* 32-bit lib is not validated.
+
 2. FIXED ISSUES
 ---------------
+v2.31
+
+* Fixed various compilation issues/warnings for different platforms.
+* Fixed documentation on xor/pq gen/check functions, with minimum
+  number of vectors.
+* Fixed potential out-of-bounds read on Adler32 Neon implementation.
+* Fixed potential out-of-bounds read on gf_vect_mul Neon implementation.
+* Fixed x86 load/store instructions in erasure coding functions (aligned moves
+  that should be unaligned).
+* Fixed memory leaks in unit tests.
+
 v2.30
 
 * Intel CET support.
@@ -114,6 +127,43 @@ v2.10
 
 3. CHANGE LOG & FEATURES ADDED
 ------------------------------
+
+v2.31
+
+* API changes:
+  - gf_vect_mul_base() function now returns an integer, matching the return type
+    of gf_vect_mul() function (not a breaking change).
+
+* Igzip compression improvements:
+  - Added compress/decompress with dictionary to perf test app.
+  - Zlib header can be now created on the fly when starting the compression.
+  - Added isal_zlib_hdr_init() function to initialize the zlib header to 0.
+
+* Zero-memory dectection improvements:
+  - Optimized AVX implementation.
+  - Added new AVX2 and AVX512 implementations.
+
+* Erasure coding improvements:
+  - Added new AVX512 and AVX2 implementations using GFNI instructions.
+  - Added new SVE implementation.
+
+* CRC improvements:
+  - Added new CRC64 Rocksoft algorithm.
+  - CRC x86 implementations optimized using ternary logic instructions and
+    folding of bigger data on the last bytes.
+  - CRC16 T10dif aarch64 implementation improved.
+  - CRC aarch64 implementations optimized using XOR fusion feature.
+
+* Documentation:
+  - Added function overview documentation page.
+  - Added security file.
+
+* Performance apps:
+  - Changed performance tests to warm by default.
+
+* Example apps:
+  - Added CRC combine example `crc_combine_example` for multiple polynomials.
+
 v2.30
 
 * Igzip compression enhancements.
