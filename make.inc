@@ -80,7 +80,8 @@ LDFLAGS_so = -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now -Wl,-soname,$(soname)
 
 ifeq ($(shell uname),Linux)
 ifeq ($(host_cpu),x86_64)
-  CFLAGS_ = -fcf-protection=full
+  CFLAGS_ += -fcf-protection=full
+  ASFLAGS_ += -DINTEL_CET_ENABLED
   LDFLAGS += -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error
 endif
 endif
