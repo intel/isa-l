@@ -353,7 +353,7 @@ isa-l.h:
 	@echo #define _ISAL_H_>> $@
 	@echo.>> $@
 	@echo #define ISAL_MAJOR_VERSION 2 >> $@
-	@echo #define ISAL_MINOR_VERSION 30 >> $@
+	@echo #define ISAL_MINOR_VERSION 31 >> $@
 	@echo #define ISAL_PATCH_VERSION 0 >> $@
 	@echo #define ISAL_MAKE_VERSION(maj, min, patch)  ((maj) * 0x10000 + (min) * 0x100 + (patch))>> $@
 	@echo #define ISAL_VERSION ISAL_MAKE_VERSION(ISAL_MAJOR_VERSION, ISAL_MINOR_VERSION, ISAL_PATCH_VERSION)>> $@

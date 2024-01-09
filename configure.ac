@@ -3,10 +3,9 @@
 
 AC_PREREQ(2.69)
 AC_INIT([libisal],
-        [2.30.0],
-        [sg.support.isal@intel.com],
-        [isa-l],
-        [http://01.org/storage-acceleration-library])
+        [2.31.0],
+        [https://github.com/intel/isa-l/issues],
+        [isa-l])
 AC_CONFIG_SRCDIR([])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([
