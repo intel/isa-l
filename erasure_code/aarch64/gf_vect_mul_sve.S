@@ -53,12 +53,13 @@ x_len		.req	x0
 x_tbl		.req	x1
 x_src		.req	x2
 x_dest		.req	x3
+x_tmp		.req	x4
 
 /* returns */
 w_ret		.req	w0
 
 /* local variables */
-x_pos		.req	x4
+x_pos		.req	x5
 
 /* vectors */
 z_mask0f	.req	z0
@@ -77,9 +78,10 @@ q_gft1_lo	.req	q6
 q_gft1_hi	.req	q7
 
 cdecl(gf_vect_mul_sve):
-	/* less than 32 bytes, return_fail */
-	cmp	x_len, #32
-	blt	.return_fail
+	/* len not aligned to 32B, return_fail */
+	and	x_tmp, x_len, #0x1f
+	cmp	x_tmp, #0
+	bne	.return_fail
 
 	mov	z_mask0f.b, #0x0f		/* z_mask0f = 0x0F0F...0F */
 	mov	x_pos, #0
