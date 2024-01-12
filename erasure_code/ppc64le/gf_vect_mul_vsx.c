@@ -1,5 +1,19 @@
 #include "ec_base_vsx.h"
 
+/*
+ * Same as gf_vect_mul_base in "ec_base.h" but without the size restriction.
+ */
+static void _gf_vect_mul_base(int len, unsigned char *a, unsigned char *src,
+			      unsigned char *dest)
+{
+	//2nd element of table array is ref value used to fill it in
+	unsigned char c = a[1];
+
+	while (len-- > 0)
+		*dest++ = gf_mul(c, *src++);
+	return 0;
+}
+
 void gf_vect_mul_vsx(int len, unsigned char *gftbl, unsigned char *src, unsigned char *dest)
 {
 	unsigned char *s, *t0;
@@ -19,8 +33,7 @@ void gf_vect_mul_vsx(int len, unsigned char *gftbl, unsigned char *src, unsigned
 
 	head = len % 128;
 	if (head != 0) {
-		// errors are ignored.
-		gf_vect_mul_base(head, gftbl, src, dest);
+		_gf_vect_mul_base(head, gftbl, src, dest);
 	}
 
 	vlo0 = EC_vec_xl(0, gftbl);
