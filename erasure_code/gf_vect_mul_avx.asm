@@ -38,9 +38,6 @@
  %define arg1  rsi
  %define arg2  rdx
  %define arg3  rcx
- %define arg4  r8
- %define arg5  r9
- %define tmp   r11
  %define return rax
  %define func(x) x: endbranch
  %define FUNC_SAVE
@@ -81,6 +78,7 @@
 %define	src   arg2
 %define dest  arg3
 %define pos   return
+%define tmp   r11
 
 
 ;;; Use Non-temporal load/stor
@@ -113,7 +111,14 @@ section .text
 align 16
 mk_global gf_vect_mul_avx, function
 func(gf_vect_mul_avx)
+
+	; Check if length is multiple of 32 bytes
+	mov     tmp, len
+	and     tmp, 0x1f
+	jnz     return_fail
+
 	FUNC_SAVE
+
 	mov	pos, 0
 	vmovdqa	xmask0f, [mask0f]	;Load mask of lower nibble in each byte
 	vmovdqu	xgft_lo, [mul_array]	;Load array Cx{00}, Cx{01}, Cx{02}, ...
@@ -140,14 +145,13 @@ loop32:
 	XSTR	[dest+pos-16], xtmp2b	;Store +16B result
 	jl	loop32
 
+	FUNC_RESTORE
 
 return_pass:
-	FUNC_RESTORE
-	sub	pos, len
+	xor     return, return
 	ret
 
 return_fail:
-	FUNC_RESTORE
 	mov	return, 1
 	ret
 
