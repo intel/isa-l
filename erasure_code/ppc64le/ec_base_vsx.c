@@ -92,6 +92,10 @@ void ec_encode_data_update(int len, int k, int rows, int vec_i, unsigned char *v
 
 int gf_vect_mul(int len, unsigned char *a, void *src, void *dest)
 {
+	/* Size must be aligned to 32 bytes */
+	if ((len % 32) != 0)
+		return -1;
+
 	gf_vect_mul_vsx(len, a, (unsigned char *)src, (unsigned char *)dest);
 	return 0;
 }
