@@ -11,7 +11,7 @@ static void _gf_vect_mul_base(int len, unsigned char *a, unsigned char *src,
 
 	while (len-- > 0)
 		*dest++ = gf_mul(c, *src++);
-	return 0;
+	return;
 }
 
 void gf_vect_mul_vsx(int len, unsigned char *gftbl, unsigned char *src, unsigned char *dest)
