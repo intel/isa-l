@@ -385,3 +385,21 @@ doc: isa-l.h
 	$(MAKE) -C generated_doc/latex &> generated_doc/latex_build_api.log
 	cp generated_doc/latex/refman.pdf isa-l_api_$(version).pdf
 
+# Check spelling in the code with codespell.
+# See https://github.com/codespell-project/codespell for more details.
+# Codespell options explained:
+# -d        -- disable colours (emacs colours it anyway)
+# -L        -- List of words to be ignored
+# -S <skip> -- skip file types
+# -I FILE   -- File containing words to be ignored
+#
+CODESPELL ?= codespell
+CS_IGNORE_WORDS ?= iinclude,struc,fo,ue,od,ba,padd,hist,unx,sav,datas
+
+.PHONY: spellcheck
+spellcheck:
+	$(CODESPELL) -d -L $(CS_IGNORE_WORDS) \
+	-S "*.obj,*.o,*.a,*.so,*.lib,*~,*.so,*.so.*,*.d" \
+	./erasure_code ./examples ./igzip ./include ./mem ./programs ./raid ./tests README.md SECURITY.md CONTRIBUTING.md \
+	Makefile.unx Makefile.nmake Release_notes.txt LICENSE $(CS_EXTRA_OPTS)
+
