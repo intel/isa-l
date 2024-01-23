@@ -625,7 +625,7 @@ static void write_constant_compressed_stateless(struct isal_zstream *stream,
 	/* Add smaller repeat codes as necessary. Code280 can describe repeat
 	 * lengths of 115-130 bits. Code10 can describe repeat lengths of 10
 	 * bits. If more than 230 bits, fill code with two code280s. Else if
-	 * more than 115 repeates, fill with code10s until one code280 can
+	 * more than 115 repeats, fill with code10s until one code280 can
 	 * finish the rest of the repeats. Else, fill with code10s and
 	 * literals */
 	if (rep_extra > 115) {

@@ -244,7 +244,7 @@ if command -V md5sum >/dev/null 2>&1 && command -V dd >/dev/null 2>&1; then
     dd if=<(for i in `seq 1000`; do cat $TEST_FILE; done) iflag=fullblock bs=1M count=201 2> out.stder | tee >(md5sum > out.sum1) \
 	| $IGZIP -c -T 4 | $IGZIP -d | md5sum > out.sum2 \
 	&& $DIFF out.sum1 out.sum2 || ret=1
-    pass_check $ret "Large stream compresss test"
+    pass_check $ret "Large stream compress test"
     clear_dir
 
     if test -e /dev/urandom; then

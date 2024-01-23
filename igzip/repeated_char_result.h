@@ -46,7 +46,7 @@
 #define END_OF_BLOCK 0x7
 #define END_OF_BLOCK_LEN 0x4
 
-/* MIN_REPEAT_LEN currently optimizes storage space, another possiblity is to
+/* MIN_REPEAT_LEN currently optimizes storage space, another possibility is to
  * find the size which optimizes speed instead.*/
 #define MIN_REPEAT_LEN 4*1024
 

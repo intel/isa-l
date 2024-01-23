@@ -173,7 +173,7 @@ struct hufftables_icf {
  *
  * @param bb: bitbuf structure where the header huffman code header is written
  * @param hufftables: output huffman code representation
- * @param hist: histogram used to generat huffman code
+ * @param hist: histogram used to generate huffman code
  * @param end_of_block: flag whether this is the final huffman code
  *
  * @returns Returns the length in bits of the block with histogram hist encoded

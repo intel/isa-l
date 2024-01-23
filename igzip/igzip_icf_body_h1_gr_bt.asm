@@ -436,7 +436,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 
 .len_dist_huffman:
 	dec	f_i
-	;; Setup for updateing hash
+	;; Setup for updating hash
 	lea	tmp3, [f_i + 2]	; tmp3 <= k
 
 	neg	dist

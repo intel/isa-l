@@ -86,7 +86,7 @@ void print_error(int32_t error)
 		printf("Incorrect os field found\n");
 		break;
 	case INCORRECT_EXTRA_LEN:
-		printf("Incorect extra_len field found\n");
+		printf("Incorrect extra_len field found\n");
 		break;
 	case INCORRECT_EXTRA_BUF:
 		printf("Incorrect extra buffer found\n");

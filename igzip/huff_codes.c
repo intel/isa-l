@@ -962,7 +962,7 @@ gen_huff_code_lens(struct heap_tree *heap_space, uint32_t heap_size, uint32_t * 
  * @requires table has been initialized to already contain the code length for each element.
  * @param table: A lookup table used to store the codes.
  * @param table_length: The length of table.
- * @param count: a histogram representing the number of occurences of codes of a given length
+ * @param count: a histogram representing the number of occurrences of codes of a given length
  */
 static inline uint32_t set_huff_codes(struct huff_code *huff_code_table, int table_length,
 				      uint32_t * count)
@@ -1031,7 +1031,7 @@ static inline uint32_t set_dist_huff_codes(struct huff_code *codes, uint32_t * b
  * 0 corresponds to not end of block and all other inputs correspond to end of block.
  * @param hclen: Length of huffman code for huffman codes minus 4.
  * @param hlit: Length of literal/length table minus 257.
- * @parm hdist: Length of distance table minus 1.
+ * @param hdist: Length of distance table minus 1.
  */
 static int create_huffman_header(struct BitBuf2 *header_bitbuf,
 				 struct huff_code *lookup_table,
@@ -1233,7 +1233,7 @@ static inline uint32_t rl_encode(uint16_t * codes, uint32_t num_codes, uint64_t 
  * @brief Creates a two table representation of huffman codes.
  * @param code_table: output table containing the code
  * @param code_size_table: output table containing the code length
- * @param length: the lenght of hufftable
+ * @param length: the length of hufftable
  * @param hufftable: a huffman lookup table
  */
 static void create_code_tables(uint16_t * code_table, uint8_t * code_length_table,
@@ -1262,7 +1262,7 @@ static void create_packed_len_table(uint32_t * packed_table,
 	uint16_t extra_bits_count = 0;
 
 	/* Gain extra bits is the next place where the number of extra bits in
-	 * lenght codes increases. */
+	 * length codes increases. */
 	uint16_t gain_extra_bits = LEN_EXTRA_BITS_START;
 
 	for (i = 257; i < LIT_LEN - 1; i++) {
@@ -1366,7 +1366,7 @@ static int are_hufftables_useable(struct huff_code *lit_len_hufftable,
 
 	max_code_len = max_lit_code_len + max_len_code_len + max_dist_code_len;
 
-	/* Some versions of igzip can write upto one literal, one length and one
+	/* Some versions of igzip can write up to one literal, one length and one
 	 * distance code at the same time. This checks to make sure that is
 	 * always writeable in bitbuf*/
 	return (max_code_len > MAX_BITBUF_BIT_WRITE);

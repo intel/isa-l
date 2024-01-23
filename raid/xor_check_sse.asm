@@ -185,7 +185,7 @@ next_vect:
 ;;;  	prefetch [ptr+pos+(8*16)]
 	jge	next_vect		;Loop for each vect
 
-	;; End of vects, chech that all parity regs = 0
+	;; End of vects, check that all parity regs = 0
 	mov	tmp, vec		;Back to last vector
 	por	xmm0, xmm1
 	por	xmm2, xmm3

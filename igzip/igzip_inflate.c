@@ -454,7 +454,7 @@ static void make_inflate_huff_code_lit_len(struct inflate_huff_code_large *resul
 
 	min_length = last_length;
 	for (; last_length <= ISAL_DECODE_LONG_BITS; last_length++) {
-		/* Copy forward previosly set codes */
+		/* Copy forward previously set codes */
 		memcpy(short_code_lookup + copy_size, short_code_lookup,
 		       sizeof(*short_code_lookup) * copy_size);
 		copy_size *= 2;
@@ -1900,7 +1900,7 @@ static int check_gzip_checksum(struct inflate_state *state)
 	int ret;
 
 	if (state->read_in_length >= 8 * GZIP_TRAILER_LEN) {
-		/* The following is unecessary as state->read_in_length == 64 */
+		/* The following is unnecessary as state->read_in_length == 64 */
 		/* bit_count = state->read_in_length % 8; */
 		/* state->read_in >>= bit_count; */
 		/* state->read_in_length -= bit_count; */

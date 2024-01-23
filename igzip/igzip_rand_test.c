@@ -626,7 +626,7 @@ int isal_inflate_with_checks(struct inflate_state *state, uint32_t compress_len,
 
 	ret = isal_inflate(state);
 
-	/* Verify the stream is in a valid state when no errors occured */
+	/* Verify the stream is in a valid state when no errors occurred */
 	if (ret >= 0) {
 		stream_check =
 		    inflate_state_valid_check(state, in_buf, in_size, out_buf, out_size,
@@ -1210,7 +1210,7 @@ int compress_multi_pass(uint8_t * data, uint32_t data_size, uint8_t * compressed
 
 		/* Setup out buffer for next round of compression */
 		if (stream->avail_out == 0) {
-			/* Save compressed data inot compressed_buf */
+			/* Save compressed data into compressed_buf */
 			if (out_buf != NULL) {
 				memcpy(compressed_buf + out_processed, out_buf,
 				       out_size - stream->avail_out);
@@ -1450,7 +1450,7 @@ int compress_ver_rep_buf(uint8_t * data, uint32_t data_size, uint64_t data_rep_s
 				return COMPRESS_GENERAL_ERROR;
 		}
 
-		/* Verfiy the compressed buffer */
+		/* Verify the compressed buffer */
 		state.next_in = compressed_buf;
 		state.avail_in = compressed_size;
 		state.next_out = NULL;
