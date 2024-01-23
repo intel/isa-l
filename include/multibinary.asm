@@ -56,7 +56,7 @@
 
 ;;;;
 ; multibinary macro:
-;   creates the visable entry point that uses HW optimized call pointer
+;   creates the visible entry point that uses HW optimized call pointer
 ;   creates the init of the HW optimized call pointer
 ;;;;
 %macro mbin_interface 1

@@ -399,7 +399,7 @@ stack_size		equ	4 * 8 + 8 * 8
 %define	%%state_offset		%3 ; Type of huff code, should be either LIT or DIST
 %define %%read_in		%4 ; Bits read in from compressed stream
 %define %%read_in_length	%5 ; Number of valid bits in read_in
-%define %%next_sym		%6 ; Returned symobl
+%define %%next_sym		%6 ; Returned symbol
 %define %%next_extra_bits	%7
 %define	%%next_bits		%8
 
@@ -447,7 +447,7 @@ stack_size		equ	4 * 8 + 8 * 8
 %define	%%state_offset		%3
 %define %%read_in		%4 ; Bits read in from compressed stream
 %define %%read_in_length	%5 ; Number of valid bits in read_in
-%define %%next_sym		%6 ; Returned symobl
+%define %%next_sym		%6 ; Returned symbol
 %define %%next_extra_bits	%7
 %define %%next_bits		%8
 

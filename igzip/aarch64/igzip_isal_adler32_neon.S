@@ -54,7 +54,7 @@ Macros
 	uint32_t adler32_neon(uint32_t adler32, uint8_t * start, uint32_t length);
 */
 /*
-Arguements list
+Arguments list
 */
 	adler32	.req	w0
 	start	.req	x1

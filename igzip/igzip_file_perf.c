@@ -99,7 +99,7 @@ int usage(void)
 		"  -X        use compression level X with 0 <= X <= 1\n"
 		"  -b <size> input buffer size, 0 buffers all the input\n"
 		"  -i <time> time in seconds to benchmark (at least 0)\n"
-		"  -o <file> output file for compresed data\n"
+		"  -o <file> output file for compressed data\n"
 		"  -d <file> dictionary file used by compression\n"
 		"  -w <size> log base 2 size of history window, between 8 and 15\n");
 

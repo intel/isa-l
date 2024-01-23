@@ -73,7 +73,7 @@ extern "C" {
 # define DEBUG_PRINT(x) do {} while (0)
 #endif
 
-/* Decide wether to use benchmark time as an approximation or a minimum. Fewer
+/* Decide whether to use benchmark time as an approximation or a minimum. Fewer
  * calls to the timer are required for the approximation case.*/
 #define BENCHMARK_MIN_TIME 0
 #define BENCHMARK_APPROX_TIME 1
@@ -100,7 +100,7 @@ extern "C" {
 #endif
 # define GHZ 1000000000
 # define UNIT_SCALE (GHZ)
-# define CALLIBRATE_TIME (UNIT_SCALE / 2)
+# define CALIBRATE_TIME (UNIT_SCALE / 2)
 static inline long long get_time(void) {
 	unsigned int dummy;
 	return __rdtscp(&dummy);
@@ -115,7 +115,7 @@ static inline long long get_res(void) {
 #endif
 #ifdef _MSC_VER
 #define UNIT_SCALE get_res()
-#define CALLIBRATE_TIME (UNIT_SCALE / 4)
+#define CALIBRATE_TIME (UNIT_SCALE / 4)
 static inline long long get_time(void) {
 	long long ret = 0;
 	QueryPerformanceCounter(&ret);
@@ -130,7 +130,7 @@ static inline long long get_res(void) {
 #else
 # define NANO_SCALE 1000000000
 # define UNIT_SCALE NANO_SCALE
-# define CALLIBRATE_TIME (UNIT_SCALE / 4)
+# define CALIBRATE_TIME (UNIT_SCALE / 4)
 #ifdef __FreeBSD__
 # define CLOCK_ID CLOCK_MONOTONIC_PRECISE
 #else
@@ -208,15 +208,15 @@ static inline unsigned long long estimate_perf_iterations(struct perf *p,
 		return (total + get_res() - 1) / get_res();
 }
 
-#define CALLIBRATE(PERF, FUNC_CALL) {				\
+#define CALIBRATE(PERF, FUNC_CALL) {				\
 	unsigned long long _i, _iter = 1;			\
 	perf_start(PERF);					\
 	FUNC_CALL;						\
 	perf_pause(PERF);					\
 								\
-	while (get_base_elapsed(PERF) < CALLIBRATE_TIME) {	\
+	while (get_base_elapsed(PERF) < CALIBRATE_TIME) {	\
 		_iter = estimate_perf_iterations(PERF, _iter,	\
-						2 * CALLIBRATE_TIME);	\
+						2 * CALIBRATE_TIME);	\
 		perf_start(PERF);				\
 		for (_i = 0; _i < _iter; _i++) {		\
 			FUNC_CALL;				\
@@ -255,7 +255,7 @@ static inline unsigned long long estimate_perf_iterations(struct perf *p,
 
 #define BENCHMARK(PERF, RUN_TIME, FUNC_CALL) {			\
 	if((RUN_TIME) > 0) {					\
-		CALLIBRATE(PERF, FUNC_CALL);			\
+		CALIBRATE(PERF, FUNC_CALL);			\
 		PERFORMANCE_TEST(PERF, RUN_TIME, FUNC_CALL);	\
 								\
 	} else {						\

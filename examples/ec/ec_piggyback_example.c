@@ -61,7 +61,7 @@ void gf_gen_full_pb_cauchy_matrix(u8 * a, int m, int k)
 {
 	int i, j, p = m - k;
 
-	// Identity matrix in top k x k to indicate a symetric code
+	// Identity matrix in top k x k to indicate a symmetric code
 	memset(a, 0, k * m);
 	for (i = 0; i < k; i++)
 		a[k * i + i] = 1;
@@ -99,7 +99,7 @@ void gf_gen_full_pb_vand_matrix(u8 * a, int m, int k)
 	int i, j, p = m - k;
 	unsigned char q, gen = 1;
 
-	// Identity matrix in top k x k to indicate a symetric code
+	// Identity matrix in top k x k to indicate a symmetric code
 	memset(a, 0, k * m);
 	for (i = 0; i < k; i++)
 		a[k * i + i] = 1;

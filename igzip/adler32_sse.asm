@@ -86,7 +86,7 @@ default rel
 	save_reg	r12,  2*8
 	save_reg	r13,  3*8
 	end_prolog
-	mov	init_d, ecx	; initalize init_d from arg1 to keep ecx free
+	mov	init_d, ecx	; initialize init_d from arg1 to keep ecx free
  %endmacro
 
  %macro FUNC_RESTORE 0

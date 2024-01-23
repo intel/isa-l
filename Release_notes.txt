@@ -139,7 +139,7 @@ v2.31
   - Zlib header can be now created on the fly when starting the compression.
   - Added isal_zlib_hdr_init() function to initialize the zlib header to 0.
 
-* Zero-memory dectection improvements:
+* Zero-memory detection improvements:
   - Optimized AVX implementation.
   - Added new AVX2 and AVX512 implementations.
 
@@ -209,7 +209,7 @@ v2.25
 * Igzip performance improvements and features.
   - Performance improvements for uncompressable files. Random or uncompressable
     files can be up to 3x faster in level 1 or 2 compression.
-  - Additional small file performance improvments.
+  - Additional small file performance improvements.
   - New options in igzip cli: use name from header or not, test compressed file.
 
 * Multi-arch autoconf script.
@@ -331,7 +331,7 @@ v2.14
 
 v2.13
 
-* Erasure code improvments
+* Erasure code improvements
   - 32-bit port of optimized gf_vect_dot_prod() functions.  This makes
     ec_encode_data() functions much faster on 32-bit processors.
   - Avoton performance improvements.  Performance on Avoton for

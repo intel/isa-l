@@ -442,7 +442,7 @@ align	16
 	or	code4, code
 	add	code_len2, rcx
 
-	;; Setup for updateing hash
+	;; Setup for updating hash
 	lea	tmp3, [f_i + 2]	; tmp3 <= k
 	add	f_i, len
 

@@ -185,7 +185,7 @@ full_block:
 
 ;       ;; branch into array
 ;       jmp     CONCAT(crc_,128,)
-	; Fall thruogh into top of crc array (crc_128)
+	; Fall through into top of crc array (crc_128)
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
