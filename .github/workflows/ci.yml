@@ -39,7 +39,7 @@ jobs:
         run: sudo apt install ${{ matrix.assembler }}
         if: runner.os == 'Linux'
       - name: Install build dependencies (Macos)
-        run: brew install ${{ matrix.assembler }} automake autoconf coreutils
+        run: brew install ${{ matrix.assembler }} automake autoconf coreutils libtool
         if: runner.os == 'macOS'
       - name: Build
         run: |
