@@ -50,7 +50,6 @@ jobs:
         run: bash tools/test_checks.sh
       - name: Run extended tests
         run: bash tools/test_extended.sh
-        if: runner.os == 'Linux'  # Fails on Mac OS due to nmake consistency issue
 
   run_tests_windows:
     needs: check_format
