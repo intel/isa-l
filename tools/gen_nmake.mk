@@ -14,7 +14,7 @@ Makefile.nmake tst.nmake: FORCE
 	@echo ''			>> $@
 	@echo '# This file can be auto-regenerated with $$make -f Makefile.unx Makefile.nmake' >> $@
 	@echo ''			>> $@
-	@echo -n 'objs =' >> $@
+	@printf 'objs =' >> $@
 	@$(foreach o, $(subst /,\\,$(objs:.o=.obj)), printf " %s\n\t%s" \\ $(o) >> $@; )
 	@echo ''			>> $@
 	@echo ''			>> $@
@@ -60,7 +60,7 @@ Makefile.nmake tst.nmake: FORCE
 	@echo ''			>> $@
 ifneq (,$(examples))
 	@echo "# Examples"	>> $@
-	@echo -n 'ex =' >> $@
+	@printf 'ex =' >> $@
 	@$(foreach ex, $(notdir $(examples)), printf " %s\n\t%s.exe" \\ $(ex) >> $@; )
 	@echo ''			>> $@
 	@echo ''			>> $@
@@ -75,7 +75,7 @@ endif
 	@echo '	link /out:$$@ $$(LINKFLAGS) isa-l.lib $$?'	>> $@
 	@echo ''			>> $@
 	@echo '# Check tests'		>> $@
-	@echo -n 'checks =' 		>> $@
+	@printf 'checks =' 		>> $@
 	@$(foreach check, $(notdir $(check_tests)), printf " %s\n\t%s.exe" \\ $(check) >> $@; )
 	@echo ''			>> $@
 	@echo ''			>> $@
@@ -85,7 +85,7 @@ endif
 	@echo '	!$$?'			>> $@
 	@echo ''			>> $@
 	@echo '# Unit tests'		>> $@
-	@echo -n 'tests =' 		>> $@
+	@printf 'tests =' 		>> $@
 	@$(foreach test, $(notdir $(unit_tests)), printf " %s\n\t%s.exe" \\ $(test) >> $@; )
 	@echo ''			>> $@
 	@echo ''			>> $@
@@ -93,14 +93,14 @@ endif
 	@echo '$$(tests): $$(@B).obj'	>> $@
 	@echo ''			>> $@
 	@echo '# Performance tests'	>> $@
-	@echo -n 'perfs =' 		>> $@
+	@printf 'perfs =' 		>> $@
 	@$(foreach perf, $(notdir $(perf_tests)), printf " %s\n\t%s.exe" \\ $(perf) >> $@; )
 	@echo ''			>> $@
 	@echo ''			>> $@
 	@echo 'perfs: lib $$(perfs)'	>> $@
 	@echo '$$(perfs): $$(@B).obj'	>> $@
 	@echo ''			>> $@
-	@echo -n 'progs ='		>> $@
+	@printf 'progs ='		>> $@
 	@$(foreach prog, $(notdir $(bin_PROGRAMS)), printf " %s\n\t%s.exe" \\ $(prog) >> $@; )
 	@echo ''			>> $@
 	@echo ''			>> $@
