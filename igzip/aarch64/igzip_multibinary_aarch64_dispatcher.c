@@ -91,7 +91,7 @@ DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_finish_lvl1)
 		return PROVIDER_INFO(isal_deflate_icf_finish_hash_hist_aarch64);
 #elif defined(__APPLE__)
 	if (sysctlEnabled(SYSCTL_CRC32_KEY))
-		return PROVIDER_INFO(isal_deflate_icf_body_hash_hist_aarch64);
+		return PROVIDER_INFO(isal_deflate_icf_finish_hash_hist_aarch64);
 #endif
 	return PROVIDER_BASIC(isal_deflate_icf_finish_hash_hist);
 }
