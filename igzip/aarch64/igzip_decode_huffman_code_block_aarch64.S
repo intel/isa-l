@@ -273,7 +273,7 @@ declare Macros
 	declare_generic_reg	arg2,		2, x
 
 	declare_generic_reg	state,		11,x
-	declare_generic_reg	start_out,	18,x
+	declare_generic_reg	start_out,	29,x
 
 	declare_generic_reg	read_in,	3,x
 	declare_generic_reg	read_in_length,	4,w

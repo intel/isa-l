@@ -117,7 +117,7 @@ void isal_deflate_icf_finish_hash_hist_aarch64(struct isal_zstream *stream);
 	declare_generic_reg	next_in,		8,x
 	declare_generic_reg	next_out,		10,x
 	declare_generic_reg	next_out_iter,		5,x
-	declare_generic_reg	file_start,		18,x
+	declare_generic_reg	file_start,		17,x
 	declare_generic_reg	last_seen,		14,x
 
 	declare_generic_reg	literal_code,		9,w
