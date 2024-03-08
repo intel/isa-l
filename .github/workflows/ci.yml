@@ -29,7 +29,8 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - macos-latest
+          - macos-13  # x86_64
+          - macos-14  # arm64
         assembler:
           - nasm
     runs-on: ${{ matrix.os }}
