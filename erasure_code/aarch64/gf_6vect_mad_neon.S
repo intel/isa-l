@@ -61,7 +61,7 @@ x_tbl3		.req	x15
 x_tbl4		.req	x16
 x_tbl5		.req	x17
 x_tbl6		.req	x_tbl
-x_const		.req	x18
+x_const		.req	x0
 
 /* vectors */
 v_mask0f	.req	v0

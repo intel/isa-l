@@ -107,7 +107,7 @@ void isal_deflate_icf_body_hash_hist_base(struct isal_zstream *stream);
 	declare_generic_reg	param2,		2,x
 
 	/* local variable */
-	declare_generic_reg	level_buf,	18,x
+	declare_generic_reg	level_buf,	17,x
 	declare_generic_reg	avail_in,	13,w
 	declare_generic_reg	end_in,		13,x
 	declare_generic_reg	start_in,	19,x

@@ -97,7 +97,7 @@ skip_has_hist:
 	declare_generic_reg	m_out_start,	15,x
 	declare_generic_reg	m_out_end,	16,x
 	declare_generic_reg	m_bits,		17,x
-	declare_generic_reg	m_bit_count,	18,w
+	declare_generic_reg	m_bit_count,	2,w
 
 	declare_generic_reg	start_in,	19,x
 	declare_generic_reg	end_in,		20,x
