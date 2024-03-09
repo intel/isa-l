@@ -1,4 +1,4 @@
-#/bin/sh
+#!/bin/sh
 
 # Filter out unnecessary options added by automake
 
