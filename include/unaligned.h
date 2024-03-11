@@ -50,7 +50,7 @@
 #define isal_bswap16(x) bswap_16(x)
 #define isal_bswap32(x) bswap_32(x)
 #define isal_bswap64(x) bswap_64(x)
-#elif defined _WIN64
+#elif defined _WIN32
 #define isal_bswap16(x) _byteswap_ushort(x)
 #define isal_bswap32(x) _byteswap_ulong(x)
 #define isal_bswap64(x) _byteswap_uint64(x)
