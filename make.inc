@@ -48,7 +48,7 @@ ifeq ($(host_cpu)_$(arch),aarch64_)
   arch = aarch64
 endif
 
-CC  = gcc
+CC  ?= gcc
 AS  = nasm
 AWK = awk
 
