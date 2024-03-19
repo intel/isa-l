@@ -1,8 +1,10 @@
 Intel(R) Intelligent Storage Acceleration Library
 =================================================
 
-[![Build Status](https://travis-ci.org/intel/isa-l.svg?branch=master)](https://travis-ci.org/intel/isa-l)
+![Continuous Integration](https://github.com/intel/isa-l/actions/workflows/ci.yml/badge.svg)
 [![Package on conda-forge](https://img.shields.io/conda/v/conda-forge/isa-l.svg)](https://anaconda.org/conda-forge/isa-l)
+[![Coverity Status](https://scan.coverity.com/projects/29480/badge.svg)](https://scan.coverity.com/projects/intel-isa-l)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/intel/isa-l/badge)](https://securityscorecards.dev/viewer/?uri=github.com/intel/isa-l)
 
 ISA-L is a collection of optimized low-level functions targeting storage
 applications.  ISA-L includes:
