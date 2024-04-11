@@ -2443,8 +2443,12 @@ isal_inflate(struct inflate_state *state)
                                 ret = check_gzip_checksum(state);
                                 break;
                         }
+                        /* Undo count stuff of bytes read into the read buffer */
+                        state->next_in -= state->read_in_length / 8;
+                        state->avail_in += state->read_in_length / 8;
+                        state->read_in_length = 0;
+                        state->read_in = 0;
                 }
-
                 state->total_out -= state->tmp_out_valid - state->tmp_out_processed;
         }
 
