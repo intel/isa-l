@@ -27,7 +27,6 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-
 #ifndef _GF_VECT_MUL_H
 #define _GF_VECT_MUL_H
 
@@ -46,7 +45,7 @@ extern "C" {
 // x86 only
 #if defined(__i386__) || defined(__x86_64__)
 
- /**
+/**
  * @brief GF(2^8) vector multiply by constant.
  *
  * Does a GF(2^8) vector multiply b = Ca where a and b are arrays and C
@@ -64,10 +63,10 @@ extern "C" {
  * @returns 0 pass, other fail
  */
 
-int gf_vect_mul_sse(int len, unsigned char *gftbl, void *src, void *dest);
+int
+gf_vect_mul_sse(int len, unsigned char *gftbl, void *src, void *dest);
 
-
- /**
+/**
  * @brief GF(2^8) vector multiply by constant.
  *
  * Does a GF(2^8) vector multiply b = Ca where a and b are arrays and C
@@ -85,7 +84,8 @@ int gf_vect_mul_sse(int len, unsigned char *gftbl, void *src, void *dest);
  * @returns 0 pass, other fail
  */
 
-int gf_vect_mul_avx(int len, unsigned char *gftbl, void *src, void *dest);
+int
+gf_vect_mul_avx(int len, unsigned char *gftbl, void *src, void *dest);
 
 #endif
 
@@ -109,8 +109,8 @@ int gf_vect_mul_avx(int len, unsigned char *gftbl, void *src, void *dest);
  * @returns 0 pass, other fail
  */
 
-int gf_vect_mul(int len, unsigned char *gftbl, void *src, void *dest);
-
+int
+gf_vect_mul(int len, unsigned char *gftbl, void *src, void *dest);
 
 /**
  * @brief Initialize 32-byte constant array for GF(2^8) vector multiply
@@ -122,8 +122,8 @@ int gf_vect_mul(int len, unsigned char *gftbl, void *src, void *dest);
  * @param gftbl Table output.
  */
 
-void gf_vect_mul_init(unsigned char c, unsigned char* gftbl);
-
+void
+gf_vect_mul_init(unsigned char c, unsigned char *gftbl);
 
 /**
  * @brief GF(2^8) vector multiply by constant, runs baseline version.
@@ -143,8 +143,8 @@ void gf_vect_mul_init(unsigned char c, unsigned char* gftbl);
  * @returns 0 pass, other fail
  */
 
-int gf_vect_mul_base(int len, unsigned char *a, unsigned char *src,
-                      unsigned char *dest);
+int
+gf_vect_mul_base(int len, unsigned char *a, unsigned char *src, unsigned char *dest);
 
 #ifdef __cplusplus
 }

@@ -36,7 +36,6 @@
  *  Defines the interface for vector versions of common memory functions.
  */
 
-
 #ifndef _MEM_ROUTINES_H_
 #define _MEM_ROUTINES_H_
 
@@ -54,11 +53,11 @@ extern "C" {
  * @returns  0     - region is all zeros
  *           other - region has non zero bytes
  */
-int isal_zero_detect(void *mem, size_t len);
+int
+isal_zero_detect(void *mem, size_t len);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif // _MEM_ROUTINES_H_
-
