@@ -6,231 +6,229 @@
 
 extern const struct isal_hufftables hufftables_default;
 
-static inline void update_state(struct isal_zstream *stream, uint8_t * start_in,
-				uint8_t * next_in, uint8_t * end_in)
+static inline void
+update_state(struct isal_zstream *stream, uint8_t *start_in, uint8_t *next_in, uint8_t *end_in)
 {
-	struct isal_zstate *state = &stream->internal_state;
-	uint32_t bytes_written;
+        struct isal_zstate *state = &stream->internal_state;
+        uint32_t bytes_written;
 
-	if (next_in - start_in > 0)
-		state->has_hist = IGZIP_HIST;
+        if (next_in - start_in > 0)
+                state->has_hist = IGZIP_HIST;
 
-	stream->next_in = next_in;
-	stream->total_in += next_in - start_in;
-	stream->avail_in = end_in - next_in;
+        stream->next_in = next_in;
+        stream->total_in += next_in - start_in;
+        stream->avail_in = end_in - next_in;
 
-	bytes_written = buffer_used(&state->bitbuf);
-	stream->total_out += bytes_written;
-	stream->next_out += bytes_written;
-	stream->avail_out -= bytes_written;
-
+        bytes_written = buffer_used(&state->bitbuf);
+        stream->total_out += bytes_written;
+        stream->next_out += bytes_written;
+        stream->avail_out -= bytes_written;
 }
 
-void isal_deflate_body_base(struct isal_zstream *stream)
+void
+isal_deflate_body_base(struct isal_zstream *stream)
 {
-	uint32_t literal, hash;
-	uint8_t *start_in, *next_in, *end_in, *end, *next_hash;
-	uint16_t match_length;
-	uint32_t dist;
-	uint64_t code, code_len, code2, code_len2;
-	struct isal_zstate *state = &stream->internal_state;
-	uint16_t *last_seen = state->head;
-	uint8_t *file_start = (uint8_t *) ((uintptr_t) stream->next_in - stream->total_in);
-	uint32_t hist_size = state->dist_mask;
-	uint32_t hash_mask = state->hash_mask;
+        uint32_t literal, hash;
+        uint8_t *start_in, *next_in, *end_in, *end, *next_hash;
+        uint16_t match_length;
+        uint32_t dist;
+        uint64_t code, code_len, code2, code_len2;
+        struct isal_zstate *state = &stream->internal_state;
+        uint16_t *last_seen = state->head;
+        uint8_t *file_start = (uint8_t *) ((uintptr_t) stream->next_in - stream->total_in);
+        uint32_t hist_size = state->dist_mask;
+        uint32_t hash_mask = state->hash_mask;
 
-	if (stream->avail_in == 0) {
-		if (stream->end_of_stream || stream->flush != NO_FLUSH)
-			state->state = ZSTATE_FLUSH_READ_BUFFER;
-		return;
-	}
+        if (stream->avail_in == 0) {
+                if (stream->end_of_stream || stream->flush != NO_FLUSH)
+                        state->state = ZSTATE_FLUSH_READ_BUFFER;
+                return;
+        }
 
-	set_buf(&state->bitbuf, stream->next_out, stream->avail_out);
+        set_buf(&state->bitbuf, stream->next_out, stream->avail_out);
 
-	start_in = stream->next_in;
-	end_in = start_in + stream->avail_in;
-	next_in = start_in;
+        start_in = stream->next_in;
+        end_in = start_in + stream->avail_in;
+        next_in = start_in;
 
-	while (next_in + ISAL_LOOK_AHEAD < end_in) {
+        while (next_in + ISAL_LOOK_AHEAD < end_in) {
 
-		if (is_full(&state->bitbuf)) {
-			update_state(stream, start_in, next_in, end_in);
-			return;
-		}
+                if (is_full(&state->bitbuf)) {
+                        update_state(stream, start_in, next_in, end_in);
+                        return;
+                }
 
-		literal = load_le_u32(next_in);
-		hash = compute_hash(literal) & hash_mask;
-		dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
-		last_seen[hash] = (uint64_t) (next_in - file_start);
+                literal = load_le_u32(next_in);
+                hash = compute_hash(literal) & hash_mask;
+                dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
+                last_seen[hash] = (uint64_t) (next_in - file_start);
 
-		/* The -1 are to handle the case when dist = 0 */
-		if (dist - 1 < hist_size) {
-			assert(dist != 0);
+                /* The -1 are to handle the case when dist = 0 */
+                if (dist - 1 < hist_size) {
+                        assert(dist != 0);
 
-			match_length = compare258(next_in - dist, next_in, 258);
+                        match_length = compare258(next_in - dist, next_in, 258);
 
-			if (match_length >= SHORTEST_MATCH) {
-				next_hash = next_in;
+                        if (match_length >= SHORTEST_MATCH) {
+                                next_hash = next_in;
 #ifdef ISAL_LIMIT_HASH_UPDATE
-				end = next_hash + 3;
+                                end = next_hash + 3;
 #else
-				end = next_hash + match_length;
+                                end = next_hash + match_length;
 #endif
-				next_hash++;
+                                next_hash++;
 
-				for (; next_hash < end; next_hash++) {
-					literal = load_le_u32(next_hash);
-					hash = compute_hash(literal) & hash_mask;
-					last_seen[hash] = (uint64_t) (next_hash - file_start);
-				}
+                                for (; next_hash < end; next_hash++) {
+                                        literal = load_le_u32(next_hash);
+                                        hash = compute_hash(literal) & hash_mask;
+                                        last_seen[hash] = (uint64_t) (next_hash - file_start);
+                                }
 
-				get_len_code(stream->hufftables, match_length, &code,
-					     &code_len);
-				get_dist_code(stream->hufftables, dist, &code2, &code_len2);
+                                get_len_code(stream->hufftables, match_length, &code, &code_len);
+                                get_dist_code(stream->hufftables, dist, &code2, &code_len2);
 
-				code |= code2 << code_len;
-				code_len += code_len2;
+                                code |= code2 << code_len;
+                                code_len += code_len2;
 
-				write_bits(&state->bitbuf, code, code_len);
+                                write_bits(&state->bitbuf, code, code_len);
 
-				next_in += match_length;
+                                next_in += match_length;
 
-				continue;
-			}
-		}
+                                continue;
+                        }
+                }
 
-		get_lit_code(stream->hufftables, literal & 0xFF, &code, &code_len);
-		write_bits(&state->bitbuf, code, code_len);
-		next_in++;
-	}
+                get_lit_code(stream->hufftables, literal & 0xFF, &code, &code_len);
+                write_bits(&state->bitbuf, code, code_len);
+                next_in++;
+        }
 
-	update_state(stream, start_in, next_in, end_in);
+        update_state(stream, start_in, next_in, end_in);
 
-	assert(stream->avail_in <= ISAL_LOOK_AHEAD);
-	if (stream->end_of_stream || stream->flush != NO_FLUSH)
-		state->state = ZSTATE_FLUSH_READ_BUFFER;
+        assert(stream->avail_in <= ISAL_LOOK_AHEAD);
+        if (stream->end_of_stream || stream->flush != NO_FLUSH)
+                state->state = ZSTATE_FLUSH_READ_BUFFER;
 
-	return;
-
+        return;
 }
 
-void isal_deflate_finish_base(struct isal_zstream *stream)
+void
+isal_deflate_finish_base(struct isal_zstream *stream)
 {
-	uint32_t literal = 0, hash;
-	uint8_t *start_in, *next_in, *end_in, *end, *next_hash;
-	uint16_t match_length;
-	uint32_t dist;
-	uint64_t code, code_len, code2, code_len2;
-	struct isal_zstate *state = &stream->internal_state;
-	uint16_t *last_seen = state->head;
-	uint8_t *file_start = (uint8_t *) ((uintptr_t) stream->next_in - stream->total_in);
-	uint32_t hist_size = state->dist_mask;
-	uint32_t hash_mask = state->hash_mask;
+        uint32_t literal = 0, hash;
+        uint8_t *start_in, *next_in, *end_in, *end, *next_hash;
+        uint16_t match_length;
+        uint32_t dist;
+        uint64_t code, code_len, code2, code_len2;
+        struct isal_zstate *state = &stream->internal_state;
+        uint16_t *last_seen = state->head;
+        uint8_t *file_start = (uint8_t *) ((uintptr_t) stream->next_in - stream->total_in);
+        uint32_t hist_size = state->dist_mask;
+        uint32_t hash_mask = state->hash_mask;
 
-	set_buf(&state->bitbuf, stream->next_out, stream->avail_out);
+        set_buf(&state->bitbuf, stream->next_out, stream->avail_out);
 
-	start_in = stream->next_in;
-	end_in = start_in + stream->avail_in;
-	next_in = start_in;
+        start_in = stream->next_in;
+        end_in = start_in + stream->avail_in;
+        next_in = start_in;
 
-	if (stream->avail_in != 0) {
-		while (next_in + 3 < end_in) {
-			if (is_full(&state->bitbuf)) {
-				update_state(stream, start_in, next_in, end_in);
-				return;
-			}
+        if (stream->avail_in != 0) {
+                while (next_in + 3 < end_in) {
+                        if (is_full(&state->bitbuf)) {
+                                update_state(stream, start_in, next_in, end_in);
+                                return;
+                        }
 
-			literal = load_le_u32(next_in);
-			hash = compute_hash(literal) & hash_mask;
-			dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
-			last_seen[hash] = (uint64_t) (next_in - file_start);
+                        literal = load_le_u32(next_in);
+                        hash = compute_hash(literal) & hash_mask;
+                        dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
+                        last_seen[hash] = (uint64_t) (next_in - file_start);
 
-			if (dist - 1 < hist_size) {	/* The -1 are to handle the case when dist = 0 */
-				match_length =
-				    compare258(next_in - dist, next_in, end_in - next_in);
+                        if (dist - 1 <
+                            hist_size) { /* The -1 are to handle the case when dist = 0 */
+                                match_length =
+                                        compare258(next_in - dist, next_in, end_in - next_in);
 
-				if (match_length >= SHORTEST_MATCH) {
-					next_hash = next_in;
+                                if (match_length >= SHORTEST_MATCH) {
+                                        next_hash = next_in;
 #ifdef ISAL_LIMIT_HASH_UPDATE
-					end = next_hash + 3;
+                                        end = next_hash + 3;
 #else
-					end = next_hash + match_length;
+                                        end = next_hash + match_length;
 #endif
-					next_hash++;
+                                        next_hash++;
 
-					for (; next_hash < end - 3; next_hash++) {
-						literal = load_le_u32(next_hash);
-						hash = compute_hash(literal) & hash_mask;
-						last_seen[hash] =
-						    (uint64_t) (next_hash - file_start);
-					}
+                                        for (; next_hash < end - 3; next_hash++) {
+                                                literal = load_le_u32(next_hash);
+                                                hash = compute_hash(literal) & hash_mask;
+                                                last_seen[hash] =
+                                                        (uint64_t) (next_hash - file_start);
+                                        }
 
-					get_len_code(stream->hufftables, match_length, &code,
-						     &code_len);
-					get_dist_code(stream->hufftables, dist, &code2,
-						      &code_len2);
+                                        get_len_code(stream->hufftables, match_length, &code,
+                                                     &code_len);
+                                        get_dist_code(stream->hufftables, dist, &code2, &code_len2);
 
-					code |= code2 << code_len;
-					code_len += code_len2;
+                                        code |= code2 << code_len;
+                                        code_len += code_len2;
 
-					write_bits(&state->bitbuf, code, code_len);
+                                        write_bits(&state->bitbuf, code, code_len);
 
-					next_in += match_length;
+                                        next_in += match_length;
 
-					continue;
-				}
-			}
+                                        continue;
+                                }
+                        }
 
-			get_lit_code(stream->hufftables, literal & 0xFF, &code, &code_len);
-			write_bits(&state->bitbuf, code, code_len);
-			next_in++;
+                        get_lit_code(stream->hufftables, literal & 0xFF, &code, &code_len);
+                        write_bits(&state->bitbuf, code, code_len);
+                        next_in++;
+                }
 
-		}
+                while (next_in < end_in) {
+                        if (is_full(&state->bitbuf)) {
+                                update_state(stream, start_in, next_in, end_in);
+                                return;
+                        }
 
-		while (next_in < end_in) {
-			if (is_full(&state->bitbuf)) {
-				update_state(stream, start_in, next_in, end_in);
-				return;
-			}
+                        literal = *next_in;
+                        get_lit_code(stream->hufftables, literal & 0xFF, &code, &code_len);
+                        write_bits(&state->bitbuf, code, code_len);
+                        next_in++;
+                }
+        }
 
-			literal = *next_in;
-			get_lit_code(stream->hufftables, literal & 0xFF, &code, &code_len);
-			write_bits(&state->bitbuf, code, code_len);
-			next_in++;
+        if (!is_full(&state->bitbuf)) {
+                get_lit_code(stream->hufftables, 256, &code, &code_len);
+                write_bits(&state->bitbuf, code, code_len);
+                state->has_eob = 1;
 
-		}
-	}
+                if (stream->end_of_stream == 1)
+                        state->state = ZSTATE_TRL;
+                else
+                        state->state = ZSTATE_SYNC_FLUSH;
+        }
 
-	if (!is_full(&state->bitbuf)) {
-		get_lit_code(stream->hufftables, 256, &code, &code_len);
-		write_bits(&state->bitbuf, code, code_len);
-		state->has_eob = 1;
+        update_state(stream, start_in, next_in, end_in);
 
-		if (stream->end_of_stream == 1)
-			state->state = ZSTATE_TRL;
-		else
-			state->state = ZSTATE_SYNC_FLUSH;
-	}
-
-	update_state(stream, start_in, next_in, end_in);
-
-	return;
+        return;
 }
 
-void isal_deflate_hash_base(uint16_t * hash_table, uint32_t hash_mask,
-			    uint32_t current_index, uint8_t * dict, uint32_t dict_len)
+void
+isal_deflate_hash_base(uint16_t *hash_table, uint32_t hash_mask, uint32_t current_index,
+                       uint8_t *dict, uint32_t dict_len)
 {
-	uint8_t *next_in = dict;
-	uint8_t *end_in = dict + dict_len - SHORTEST_MATCH;
-	uint32_t literal;
-	uint32_t hash;
-	uint16_t index = current_index - dict_len;
+        uint8_t *next_in = dict;
+        uint8_t *end_in = dict + dict_len - SHORTEST_MATCH;
+        uint32_t literal;
+        uint32_t hash;
+        uint16_t index = current_index - dict_len;
 
-	while (next_in <= end_in) {
-		literal = load_le_u32(next_in);
-		hash = compute_hash(literal) & hash_mask;
-		hash_table[hash] = index;
-		index++;
-		next_in++;
-	}
+        while (next_in <= end_in) {
+                literal = load_le_u32(next_in);
+                hash = compute_hash(literal) & hash_mask;
+                hash_table[hash] = index;
+                index++;
+                next_in++;
+        }
 }

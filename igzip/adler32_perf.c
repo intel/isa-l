@@ -35,40 +35,41 @@
 #include "test.h"
 
 #ifndef GT_L3_CACHE
-# define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
+#define GT_L3_CACHE 32 * 1024 * 1024 /* some number > last level cache */
 #endif
 
 #if !defined(COLD_TEST) && !defined(TEST_CUSTOM)
 // Cached test, loop many times over small dataset
-# define TEST_LEN     8*1024
-# define TEST_TYPE_STR "_warm"
-#elif defined (COLD_TEST)
+#define TEST_LEN      8 * 1024
+#define TEST_TYPE_STR "_warm"
+#elif defined(COLD_TEST)
 // Uncached test.  Pull from large mem base.
-# define TEST_LEN     (2 * GT_L3_CACHE)
-# define TEST_TYPE_STR "_cold"
+#define TEST_LEN      (2 * GT_L3_CACHE)
+#define TEST_TYPE_STR "_cold"
 #endif
 
 #ifndef TEST_SEED
 #define TEST_SEED 0x1234
 #endif
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
-	void *buf;
-	uint32_t checksum = 0;
-	struct perf start;
+        void *buf;
+        uint32_t checksum = 0;
+        struct perf start;
 
-	printf("adler32_perf:\n");
+        printf("adler32_perf:\n");
 
-	if (posix_memalign(&buf, 1024, TEST_LEN)) {
-		printf("alloc error: Fail");
-		return -1;
-	}
-	memset(buf, 0, TEST_LEN);
+        if (posix_memalign(&buf, 1024, TEST_LEN)) {
+                printf("alloc error: Fail");
+                return -1;
+        }
+        memset(buf, 0, TEST_LEN);
 
-	BENCHMARK(&start, BENCHMARK_TIME, checksum |= isal_adler32(TEST_SEED, buf, TEST_LEN));
-	printf("adler32" TEST_TYPE_STR ": ");
-	perf_print(start, (long long)TEST_LEN);
+        BENCHMARK(&start, BENCHMARK_TIME, checksum |= isal_adler32(TEST_SEED, buf, TEST_LEN));
+        printf("adler32" TEST_TYPE_STR ": ");
+        perf_print(start, (long long) TEST_LEN);
 
-	return 0;
+        return 0;
 }
