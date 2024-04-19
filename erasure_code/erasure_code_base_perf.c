@@ -29,27 +29,27 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>		// for memset, memcmp
+#include <string.h> // for memset, memcmp
 #include <assert.h>
 #include "erasure_code.h"
 #include "test.h"
 
 #ifndef GT_L3_CACHE
-# define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
+#define GT_L3_CACHE 32 * 1024 * 1024 /* some number > last level cache */
 #endif
 
 #if !defined(COLD_TEST) && !defined(TEST_CUSTOM)
 // Cached test, loop many times over small dataset
-# define TEST_SOURCES 32
-# define TEST_LEN(m)  ((128*1024 / m) & ~(64-1))
-# define TEST_TYPE_STR "_warm"
-#elif defined (COLD_TEST)
+#define TEST_SOURCES  32
+#define TEST_LEN(m)   ((128 * 1024 / m) & ~(64 - 1))
+#define TEST_TYPE_STR "_warm"
+#elif defined(COLD_TEST)
 // Uncached test.  Pull from large mem base.
-# define TEST_SOURCES 32
-# define TEST_LEN(m)  ((GT_L3_CACHE / m) & ~(64-1))
-# define TEST_TYPE_STR "_cold"
-#elif defined (TEST_CUSTOM)
-# define TEST_TYPE_STR "_cus"
+#define TEST_SOURCES  32
+#define TEST_LEN(m)   ((GT_L3_CACHE / m) & ~(64 - 1))
+#define TEST_TYPE_STR "_cold"
+#elif defined(TEST_CUSTOM)
+#define TEST_TYPE_STR "_cus"
 #endif
 
 #define MMAX TEST_SOURCES
@@ -59,117 +59,120 @@
 
 typedef unsigned char u8;
 
-void ec_encode_perf(int m, int k, u8 * a, u8 * g_tbls, u8 ** buffs)
+void
+ec_encode_perf(int m, int k, u8 *a, u8 *g_tbls, u8 **buffs)
 {
-	ec_init_tables_base(k, m - k, &a[k * k], g_tbls);
-	ec_encode_data_base(TEST_LEN(m), k, m - k, g_tbls, buffs, &buffs[k]);
+        ec_init_tables_base(k, m - k, &a[k * k], g_tbls);
+        ec_encode_data_base(TEST_LEN(m), k, m - k, g_tbls, buffs, &buffs[k]);
 }
 
-int ec_decode_perf(int m, int k, u8 * a, u8 * g_tbls, u8 ** buffs, u8 * src_in_err,
-		   u8 * src_err_list, int nerrs, u8 ** temp_buffs)
+int
+ec_decode_perf(int m, int k, u8 *a, u8 *g_tbls, u8 **buffs, u8 *src_in_err, u8 *src_err_list,
+               int nerrs, u8 **temp_buffs)
 {
-	int i, j, r;
-	u8 b[MMAX * KMAX], c[MMAX * KMAX], d[MMAX * KMAX];
-	u8 *recov[TEST_SOURCES];
+        int i, j, r;
+        u8 b[MMAX * KMAX], c[MMAX * KMAX], d[MMAX * KMAX];
+        u8 *recov[TEST_SOURCES];
 
-	// Construct b by removing error rows
-	for (i = 0, r = 0; i < k; i++, r++) {
-		while (src_in_err[r])
-			r++;
-		recov[i] = buffs[r];
-		for (j = 0; j < k; j++)
-			b[k * i + j] = a[k * r + j];
-	}
+        // Construct b by removing error rows
+        for (i = 0, r = 0; i < k; i++, r++) {
+                while (src_in_err[r])
+                        r++;
+                recov[i] = buffs[r];
+                for (j = 0; j < k; j++)
+                        b[k * i + j] = a[k * r + j];
+        }
 
-	if (gf_invert_matrix(b, d, k) < 0)
-		return BAD_MATRIX;
+        if (gf_invert_matrix(b, d, k) < 0)
+                return BAD_MATRIX;
 
-	for (i = 0; i < nerrs; i++)
-		for (j = 0; j < k; j++)
-			c[k * i + j] = d[k * src_err_list[i] + j];
+        for (i = 0; i < nerrs; i++)
+                for (j = 0; j < k; j++)
+                        c[k * i + j] = d[k * src_err_list[i] + j];
 
-	// Recover data
-	ec_init_tables_base(k, nerrs, c, g_tbls);
-	ec_encode_data_base(TEST_LEN(m), k, nerrs, g_tbls, recov, temp_buffs);
+        // Recover data
+        ec_init_tables_base(k, nerrs, c, g_tbls);
+        ec_encode_data_base(TEST_LEN(m), k, nerrs, g_tbls, recov, temp_buffs);
 
-	return 0;
+        return 0;
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
-	int i, j, m, k, nerrs, check;
-	void *buf;
-	u8 *temp_buffs[TEST_SOURCES], *buffs[TEST_SOURCES];
-	u8 a[MMAX * KMAX];
-	u8 g_tbls[KMAX * TEST_SOURCES * 32], src_in_err[TEST_SOURCES];
-	u8 src_err_list[TEST_SOURCES];
-	struct perf start;
+        int i, j, m, k, nerrs, check;
+        void *buf;
+        u8 *temp_buffs[TEST_SOURCES], *buffs[TEST_SOURCES];
+        u8 a[MMAX * KMAX];
+        u8 g_tbls[KMAX * TEST_SOURCES * 32], src_in_err[TEST_SOURCES];
+        u8 src_err_list[TEST_SOURCES];
+        struct perf start;
 
-	// Pick test parameters
-	m = 14;
-	k = 10;
-	nerrs = 4;
-	const u8 err_list[] = { 2, 4, 5, 7 };
+        // Pick test parameters
+        m = 14;
+        k = 10;
+        nerrs = 4;
+        const u8 err_list[] = { 2, 4, 5, 7 };
 
-	printf("erasure_code_base_perf: %dx%d %d\n", m, TEST_LEN(m), nerrs);
+        printf("erasure_code_base_perf: %dx%d %d\n", m, TEST_LEN(m), nerrs);
 
-	// check input parameters
-	assert(!(m > MMAX || k > KMAX || nerrs > (m - k)));
+        // check input parameters
+        assert(!(m > MMAX || k > KMAX || nerrs > (m - k)));
 
-	memcpy(src_err_list, err_list, nerrs);
-	memset(src_in_err, 0, TEST_SOURCES);
-	for (i = 0; i < nerrs; i++)
-		src_in_err[src_err_list[i]] = 1;
+        memcpy(src_err_list, err_list, nerrs);
+        memset(src_in_err, 0, TEST_SOURCES);
+        for (i = 0; i < nerrs; i++)
+                src_in_err[src_err_list[i]] = 1;
 
-	// Allocate the arrays
-	for (i = 0; i < m; i++) {
-		if (posix_memalign(&buf, 64, TEST_LEN(m))) {
-			printf("alloc error: Fail\n");
-			return -1;
-		}
-		buffs[i] = buf;
-	}
+        // Allocate the arrays
+        for (i = 0; i < m; i++) {
+                if (posix_memalign(&buf, 64, TEST_LEN(m))) {
+                        printf("alloc error: Fail\n");
+                        return -1;
+                }
+                buffs[i] = buf;
+        }
 
-	for (i = 0; i < (m - k); i++) {
-		if (posix_memalign(&buf, 64, TEST_LEN(m))) {
-			printf("alloc error: Fail\n");
-			return -1;
-		}
-		temp_buffs[i] = buf;
-	}
+        for (i = 0; i < (m - k); i++) {
+                if (posix_memalign(&buf, 64, TEST_LEN(m))) {
+                        printf("alloc error: Fail\n");
+                        return -1;
+                }
+                temp_buffs[i] = buf;
+        }
 
-	// Make random data
-	for (i = 0; i < k; i++)
-		for (j = 0; j < TEST_LEN(m); j++)
-			buffs[i][j] = rand();
+        // Make random data
+        for (i = 0; i < k; i++)
+                for (j = 0; j < TEST_LEN(m); j++)
+                        buffs[i][j] = rand();
 
-	gf_gen_rs_matrix(a, m, k);
+        gf_gen_rs_matrix(a, m, k);
 
-	// Start encode test
-	BENCHMARK(&start, BENCHMARK_TIME, ec_encode_perf(m, k, a, g_tbls, buffs));
-	printf("erasure_code_base_encode" TEST_TYPE_STR ": ");
-	perf_print(start, (long long)(TEST_LEN(m)) * (m));
+        // Start encode test
+        BENCHMARK(&start, BENCHMARK_TIME, ec_encode_perf(m, k, a, g_tbls, buffs));
+        printf("erasure_code_base_encode" TEST_TYPE_STR ": ");
+        perf_print(start, (long long) (TEST_LEN(m)) * (m));
 
-	// Start decode test
-	BENCHMARK(&start, BENCHMARK_TIME, check =
-		  ec_decode_perf(m, k, a, g_tbls, buffs, src_in_err, src_err_list, nerrs,
-				 temp_buffs));
+        // Start decode test
+        BENCHMARK(&start, BENCHMARK_TIME,
+                  check = ec_decode_perf(m, k, a, g_tbls, buffs, src_in_err, src_err_list, nerrs,
+                                         temp_buffs));
 
-	if (check == BAD_MATRIX) {
-		printf("BAD MATRIX\n");
-		return check;
-	}
+        if (check == BAD_MATRIX) {
+                printf("BAD MATRIX\n");
+                return check;
+        }
 
-	for (i = 0; i < nerrs; i++) {
-		if (0 != memcmp(temp_buffs[i], buffs[src_err_list[i]], TEST_LEN(m))) {
-			printf("Fail error recovery (%d, %d, %d) - ", m, k, nerrs);
-			return -1;
-		}
-	}
+        for (i = 0; i < nerrs; i++) {
+                if (0 != memcmp(temp_buffs[i], buffs[src_err_list[i]], TEST_LEN(m))) {
+                        printf("Fail error recovery (%d, %d, %d) - ", m, k, nerrs);
+                        return -1;
+                }
+        }
 
-	printf("erasure_code_base_decode" TEST_TYPE_STR ": ");
-	perf_print(start, (long long)(TEST_LEN(m)) * (k + nerrs));
+        printf("erasure_code_base_decode" TEST_TYPE_STR ": ");
+        perf_print(start, (long long) (TEST_LEN(m)) * (k + nerrs));
 
-	printf("done all: Pass\n");
-	return 0;
+        printf("done all: Pass\n");
+        return 0;
 }

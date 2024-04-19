@@ -29,63 +29,65 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>		// for memset
+#include <string.h> // for memset
 #include "erasure_code.h"
 #include "test.h"
 
 #ifndef GT_L3_CACHE
-# define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
+#define GT_L3_CACHE 32 * 1024 * 1024 /* some number > last level cache */
 #endif
 
 #if !defined(COLD_TEST) && !defined(TEST_CUSTOM)
 // Cached test, loop many times over small dataset
-# define TEST_SOURCES 10
-# define TEST_LEN     8*1024
-# define TEST_TYPE_STR "_warm"
-#elif defined (COLD_TEST)
+#define TEST_SOURCES  10
+#define TEST_LEN      8 * 1024
+#define TEST_TYPE_STR "_warm"
+#elif defined(COLD_TEST)
 // Uncached test.  Pull from large mem base.
-# define TEST_SOURCES 10
-# define TEST_LEN     (GT_L3_CACHE / 2)
-# define TEST_TYPE_STR "_cold"
-#elif defined (TEST_CUSTOM)
-# define TEST_TYPE_STR "_cus"
+#define TEST_SOURCES  10
+#define TEST_LEN      (GT_L3_CACHE / 2)
+#define TEST_TYPE_STR "_cold"
+#elif defined(TEST_CUSTOM)
+#define TEST_TYPE_STR "_cus"
 #endif
 
 #define TEST_MEM (2 * TEST_LEN)
 
 typedef unsigned char u8;
 
-void gf_vect_mul_perf(u8 a, u8 * gf_const_tbl, u8 * buff1, u8 * buff2)
+void
+gf_vect_mul_perf(u8 a, u8 *gf_const_tbl, u8 *buff1, u8 *buff2)
 {
-	gf_vect_mul_init(a, gf_const_tbl);
-	gf_vect_mul(TEST_LEN, gf_const_tbl, buff1, buff2);
+        gf_vect_mul_init(a, gf_const_tbl);
+        gf_vect_mul(TEST_LEN, gf_const_tbl, buff1, buff2);
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
-	u8 *buff1, *buff2, gf_const_tbl[64], a = 2;
-	struct perf start;
+        u8 *buff1, *buff2, gf_const_tbl[64], a = 2;
+        struct perf start;
 
-	printf("gf_vect_mul_perf:\n");
+        printf("gf_vect_mul_perf:\n");
 
-	// Allocate large mem region
-	buff1 = (u8 *) malloc(TEST_LEN);
-	buff2 = (u8 *) malloc(TEST_LEN);
-	if (NULL == buff1 || NULL == buff2) {
-		printf("Failed to allocate %dB\n", TEST_LEN);
-		return 1;
-	}
+        // Allocate large mem region
+        buff1 = (u8 *) malloc(TEST_LEN);
+        buff2 = (u8 *) malloc(TEST_LEN);
+        if (NULL == buff1 || NULL == buff2) {
+                printf("Failed to allocate %dB\n", TEST_LEN);
+                return 1;
+        }
 
-	memset(buff1, 0, TEST_LEN);
-	memset(buff2, 0, TEST_LEN);
+        memset(buff1, 0, TEST_LEN);
+        memset(buff2, 0, TEST_LEN);
 
-	printf("Start timed tests\n");
-	fflush(0);
+        printf("Start timed tests\n");
+        fflush(0);
 
-	BENCHMARK(&start, BENCHMARK_TIME, gf_vect_mul_perf(a, gf_const_tbl, buff1, buff2));
+        BENCHMARK(&start, BENCHMARK_TIME, gf_vect_mul_perf(a, gf_const_tbl, buff1, buff2));
 
-	printf("gf_vect_mul" TEST_TYPE_STR ": ");
-	perf_print(start, (long long)TEST_LEN);
+        printf("gf_vect_mul" TEST_TYPE_STR ": ");
+        perf_print(start, (long long) TEST_LEN);
 
-	return 0;
+        return 0;
 }
