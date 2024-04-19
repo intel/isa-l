@@ -30,9 +30,11 @@
 #include <stdint.h>
 #include "mem_routines.h"
 
-int mem_zero_detect_base(void *buf, size_t n);
+int
+mem_zero_detect_base(void *buf, size_t n);
 
-int isal_zero_detect(void *mem, size_t len)
+int
+isal_zero_detect(void *mem, size_t len)
 {
-	return mem_zero_detect_base(mem, len);
+        return mem_zero_detect_base(mem, len);
 }

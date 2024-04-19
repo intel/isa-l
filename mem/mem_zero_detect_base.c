@@ -31,39 +31,40 @@
 #include <stddef.h>
 #include "unaligned.h"
 
-int mem_zero_detect_base(void *buf, size_t n)
+int
+mem_zero_detect_base(void *buf, size_t n)
 {
-	uint8_t *c = buf;
-	uintmax_t a = 0;
+        uint8_t *c = buf;
+        uintmax_t a = 0;
 
-	// Check buffer in native machine width comparisons
-	while (n >= sizeof(uintmax_t)) {
-		n -= sizeof(uintmax_t);
-		if (load_le_umax(c) != 0)
-			return -1;
-		c += sizeof(uintmax_t);
-	}
+        // Check buffer in native machine width comparisons
+        while (n >= sizeof(uintmax_t)) {
+                n -= sizeof(uintmax_t);
+                if (load_le_umax(c) != 0)
+                        return -1;
+                c += sizeof(uintmax_t);
+        }
 
-	// Check remaining bytes
-	switch (n) {
-	case 7:
-		a |= *c++;	// fall through to case 6,5,4
-	case 6:
-		a |= *c++;	// fall through to case 5,4
-	case 5:
-		a |= *c++;	// fall through to case 4
-	case 4:
-		a |= load_le_u32(c);
-		break;
-	case 3:
-		a |= *c++;	// fall through to case 2
-	case 2:
-		a |= load_le_u16(c);
-		break;
-	case 1:
-		a |= *c;
-		break;
-	}
+        // Check remaining bytes
+        switch (n) {
+        case 7:
+                a |= *c++; // fall through to case 6,5,4
+        case 6:
+                a |= *c++; // fall through to case 5,4
+        case 5:
+                a |= *c++; // fall through to case 4
+        case 4:
+                a |= load_le_u32(c);
+                break;
+        case 3:
+                a |= *c++; // fall through to case 2
+        case 2:
+                a |= load_le_u16(c);
+                break;
+        case 1:
+                a |= *c;
+                break;
+        }
 
-	return (a == 0) ? 0 : -1;
+        return (a == 0) ? 0 : -1;
 }
