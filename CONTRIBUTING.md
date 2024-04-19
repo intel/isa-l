@@ -25,10 +25,10 @@ patches, file issues, and ask questions on our [mailing list].
 
 ## Coding Style
 
-The coding style for ISA-L C code roughly follows linux kernel guidelines.  Use
-the included indent script to format C code.
+The coding style for ISA-L C code is roughly based on LLVM style with
+some customizations. Use the included format script to format C code.
 
-    ./tools/iindent your_files.c
+    ./tools/format.sh
 
 And use check format script before submitting.
 

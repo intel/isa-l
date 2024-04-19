@@ -3,12 +3,23 @@
 set -e
 rc=0
 verbose=0
-# NOTE: there is a bug in GNU indent command line parse where it says, that
-#       -il6 require numeric parameter. This is because it treat it like "-i"
-#       param. Here we pass -i8 which is default for linux code style and
-#       we use long parameter name for indent label.
-indent_args='-i8 -linux -l95 -cp1 -lps -ncs --indent-label6'
-function iver { printf "%03d%03d%03d%03d" $(echo "$@" | sed 's/^.* indent//; y/./ /'); }
+clang_format_min_version=18
+
+function clang_format_version() {
+    version_str=$($clang_format --version)
+    regex="[0-9]+"
+    if [[ $version_str =~ $regex ]]; then
+        major_version="${BASH_REMATCH[0]}"
+	echo $major_version
+    fi
+}
+
+# set clang-format binary if not set externally
+if [[ -z $CLANGFORMAT ]]; then
+    clang_format="clang-format"
+else
+    clang_format=$CLANGFORMAT
+fi
 
 while [ -n "$*" ]; do
     case "$1" in
@@ -29,26 +40,20 @@ if ! git rev-parse --is-inside-work-tree >& /dev/null; then
     exit 1
 fi
 
-# On FreeBSD we need to use gindent
-for indent_tool in indent gindent ''; do
-	if hash $indent_tool && [ $(iver $($indent_tool --version)) -ge $(iver 2.2.12) ]; then
-		break
-	fi
-done
-
-if [ -n "$indent_tool" ]; then
-    echo "Checking C files for coding style..."
-    for f in `git ls-files '*.c'`; do
+if [ $(clang_format_version) -ge $clang_format_min_version ]; then
+    echo "Checking C files for coding style (clang-format v$(clang_format_version))..."
+    for f in `git ls-files '*.[c|h]'`; do
 	[ "$verbose" -gt 0 ] && echo "checking style on $f"
-	if ! $indent_tool $indent_args -st $f | diff -q $f - >& /dev/null; then
+	if ! $clang_format -style=file --dry-run --Werror "$f" >/dev/null 2>&1; then
 	    echo "  File found with formatting issues: $f"
-	    [ "$verbose" -gt 0 ] 2> /dev/null && $indent_tool $indent_args -st $f | diff -u $f -
+	    [ "$verbose" -gt 0 ] && $clang_format -style=file --dry-run "$f"
 	    rc=1
 	fi
     done
-    [ "$rc" -gt 0 ] && echo "  Run ./tools/iindent on files"
+    [ "$rc" -gt 0 ] && echo "  Run ./tools/format.sh to fix formatting issues"
 else
-	echo "You do not have a recent indent installed so your code style is not being checked!"
+    echo "You do not have clang-format version ${clang_format_min_version}+" \
+	"installed so your code style is not being checked!"
 fi
 
 if hash grep; then
@@ -74,7 +79,7 @@ while read -r perm _res0 _res1 f; do
 	echo "  File found with permissions issue ($perm): $f"
 	rc=1
     fi
-done <<< $(git ls-files -s -- ':(exclude)*.sh' ':(exclude)*iindent')
+done <<< $(git ls-files -s -- ':(exclude)*.sh')
 
 echo "Checking script files for permissions..."
 while read -r perm _res0 _res1 f; do

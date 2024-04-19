@@ -1,2 +1,0 @@
-#!/bin/sh
-indent -linux -l95 -cp1 -lps -il6 -ncs "$@"
