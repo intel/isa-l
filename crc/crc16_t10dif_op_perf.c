@@ -37,83 +37,82 @@
 #define BLKSIZE (512)
 
 #ifndef GT_L3_CACHE
-# define GT_L3_CACHE  32*1024*1024	/* some number > last level cache */
+#define GT_L3_CACHE 32 * 1024 * 1024 /* some number > last level cache */
 #endif
 
 #if !defined(COLD_TEST) && !defined(TEST_CUSTOM)
 // Cached test, loop many times over small dataset
-# define NBLOCKS      100
-# define TEST_TYPE_STR "_warm"
-#elif defined (COLD_TEST)
+#define NBLOCKS       100
+#define TEST_TYPE_STR "_warm"
+#elif defined(COLD_TEST)
 // Uncached test.  Pull from large mem base.
-# define TEST_LEN     (2 * GT_L3_CACHE)
-# define NBLOCKS      (TEST_LEN / BLKSIZE)
-# define TEST_TYPE_STR "_cold"
+#define TEST_LEN      (2 * GT_L3_CACHE)
+#define NBLOCKS       (TEST_LEN / BLKSIZE)
+#define TEST_TYPE_STR "_cold"
 #endif
 
 #ifndef TEST_SEED
-# define TEST_SEED 0x1234
+#define TEST_SEED 0x1234
 #endif
 
 struct blk {
-	uint8_t data[BLKSIZE];
+        uint8_t data[BLKSIZE];
 };
 
 struct blk_ext {
-	uint8_t data[BLKSIZE];
-	uint32_t tag;
-	uint16_t meta;
-	uint16_t crc;
+        uint8_t data[BLKSIZE];
+        uint32_t tag;
+        uint16_t meta;
+        uint16_t crc;
 };
 
-static void crc16_t10dif_copy_perf(struct blk *blks, struct blk *blkp,
-				   struct blk_ext *blks_ext, struct blk_ext *blkp_ext,
-				   uint16_t * crc)
+static void
+crc16_t10dif_copy_perf(struct blk *blks, struct blk *blkp, struct blk_ext *blks_ext,
+                       struct blk_ext *blkp_ext, uint16_t *crc)
 {
-	int i;
-	for (i = 0, blkp = blks, blkp_ext = blks_ext; i < NBLOCKS; i++) {
-		*crc = crc16_t10dif_copy(TEST_SEED, blkp_ext->data, blkp->data,
-					 sizeof(blks->data));
-		blkp_ext->crc = *crc;
-		blkp++;
-		blkp_ext++;
-	}
+        int i;
+        for (i = 0, blkp = blks, blkp_ext = blks_ext; i < NBLOCKS; i++) {
+                *crc = crc16_t10dif_copy(TEST_SEED, blkp_ext->data, blkp->data, sizeof(blks->data));
+                blkp_ext->crc = *crc;
+                blkp++;
+                blkp_ext++;
+        }
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
-	uint16_t crc;
-	struct blk *blks = NULL, *blkp = NULL;
-	struct blk_ext *blks_ext = NULL, *blkp_ext = NULL;
-	struct perf start;
+        uint16_t crc;
+        struct blk *blks = NULL, *blkp = NULL;
+        struct blk_ext *blks_ext = NULL, *blkp_ext = NULL;
+        struct perf start;
 
-	printf("crc16_t10dif_streaming_insert_perf:\n");
+        printf("crc16_t10dif_streaming_insert_perf:\n");
 
-	if (posix_memalign((void *)&blks, 1024, NBLOCKS * sizeof(*blks))) {
-		printf("alloc error: Fail");
-		return -1;
-	}
-	if (posix_memalign((void *)&blks_ext, 1024, NBLOCKS * sizeof(*blks_ext))) {
-		printf("alloc error: Fail");
-		return -1;
-	}
+        if (posix_memalign((void *) &blks, 1024, NBLOCKS * sizeof(*blks))) {
+                printf("alloc error: Fail");
+                return -1;
+        }
+        if (posix_memalign((void *) &blks_ext, 1024, NBLOCKS * sizeof(*blks_ext))) {
+                printf("alloc error: Fail");
+                return -1;
+        }
 
-	printf(" size blk: %zu, blk_ext: %zu, blk data: %zu, stream: %zu\n",
-	       sizeof(*blks), sizeof(*blks_ext), sizeof(blks->data),
-	       NBLOCKS * sizeof(blks->data));
-	memset(blks, 0xe5, NBLOCKS * sizeof(*blks));
-	memset(blks_ext, 0xe5, NBLOCKS * sizeof(*blks_ext));
+        printf(" size blk: %zu, blk_ext: %zu, blk data: %zu, stream: %zu\n", sizeof(*blks),
+               sizeof(*blks_ext), sizeof(blks->data), NBLOCKS * sizeof(blks->data));
+        memset(blks, 0xe5, NBLOCKS * sizeof(*blks));
+        memset(blks_ext, 0xe5, NBLOCKS * sizeof(*blks_ext));
 
-	printf("Start timed tests\n");
-	fflush(0);
+        printf("Start timed tests\n");
+        fflush(0);
 
-	// Copy and insert test
-	BENCHMARK(&start, BENCHMARK_TIME,
-		  crc16_t10dif_copy_perf(blks, blkp, blks_ext, blkp_ext, &crc));
+        // Copy and insert test
+        BENCHMARK(&start, BENCHMARK_TIME,
+                  crc16_t10dif_copy_perf(blks, blkp, blks_ext, blkp_ext, &crc));
 
-	printf("crc16_t10pi_op_copy_insert" TEST_TYPE_STR ": ");
-	perf_print(start, (long long)sizeof(blks->data) * NBLOCKS);
+        printf("crc16_t10pi_op_copy_insert" TEST_TYPE_STR ": ");
+        perf_print(start, (long long) sizeof(blks->data) * NBLOCKS);
 
-	printf("finish 0x%x\n", crc);
-	return 0;
+        printf("finish 0x%x\n", crc);
+        return 0;
 }

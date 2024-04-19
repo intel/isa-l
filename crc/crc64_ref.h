@@ -37,142 +37,149 @@ extern "C" {
 #include "crc64.h"
 
 #ifdef _MSC_VER
-# define inline __inline
+#define inline __inline
 #endif
 
-#define MAX_ITER	8
+#define MAX_ITER 8
 
 // crc64_ecma reference function, slow crc64 from the definition.
-static inline uint64_t crc64_ecma_refl_ref(uint64_t seed, const uint8_t * buf, uint64_t len)
+static inline uint64_t
+crc64_ecma_refl_ref(uint64_t seed, const uint8_t *buf, uint64_t len)
 {
-	uint64_t rem = ~seed;
-	unsigned int i, j;
+        uint64_t rem = ~seed;
+        unsigned int i, j;
 
-	uint64_t poly = 0xC96C5795D7870F42ULL;	// ECMA-182 standard reflected
+        uint64_t poly = 0xC96C5795D7870F42ULL; // ECMA-182 standard reflected
 
-	for (i = 0; i < len; i++) {
-		rem = rem ^ (uint64_t) buf[i];
-		for (j = 0; j < MAX_ITER; j++) {
-			rem = (rem & 0x1ULL ? poly : 0) ^ (rem >> 1);
-		}
-	}
-	return ~rem;
+        for (i = 0; i < len; i++) {
+                rem = rem ^ (uint64_t) buf[i];
+                for (j = 0; j < MAX_ITER; j++) {
+                        rem = (rem & 0x1ULL ? poly : 0) ^ (rem >> 1);
+                }
+        }
+        return ~rem;
 }
 
-static inline uint64_t crc64_ecma_norm_ref(uint64_t seed, const uint8_t * buf, uint64_t len)
+static inline uint64_t
+crc64_ecma_norm_ref(uint64_t seed, const uint8_t *buf, uint64_t len)
 {
-	uint64_t rem = ~seed;
-	unsigned int i, j;
+        uint64_t rem = ~seed;
+        unsigned int i, j;
 
-	uint64_t poly = 0x42F0E1EBA9EA3693ULL;	// ECMA-182 standard
+        uint64_t poly = 0x42F0E1EBA9EA3693ULL; // ECMA-182 standard
 
-	for (i = 0; i < len; i++) {
-		rem = rem ^ ((uint64_t) buf[i] << 56);
-		for (j = 0; j < MAX_ITER; j++) {
-			rem = (rem & 0x8000000000000000ULL ? poly : 0) ^ (rem << 1);
-		}
-	}
-	return ~rem;
+        for (i = 0; i < len; i++) {
+                rem = rem ^ ((uint64_t) buf[i] << 56);
+                for (j = 0; j < MAX_ITER; j++) {
+                        rem = (rem & 0x8000000000000000ULL ? poly : 0) ^ (rem << 1);
+                }
+        }
+        return ~rem;
 }
 
 // crc64_iso reference function, slow crc64 from the definition.
-static inline uint64_t crc64_iso_refl_ref(uint64_t seed, const uint8_t * buf, uint64_t len)
+static inline uint64_t
+crc64_iso_refl_ref(uint64_t seed, const uint8_t *buf, uint64_t len)
 {
-	uint64_t rem = ~seed;
-	unsigned int i, j;
+        uint64_t rem = ~seed;
+        unsigned int i, j;
 
-	uint64_t poly = 0xD800000000000000ULL;	// ISO standard reflected
+        uint64_t poly = 0xD800000000000000ULL; // ISO standard reflected
 
-	for (i = 0; i < len; i++) {
-		rem = rem ^ (uint64_t) buf[i];
-		for (j = 0; j < MAX_ITER; j++) {
-			rem = (rem & 0x1ULL ? poly : 0) ^ (rem >> 1);
-		}
-	}
-	return ~rem;
+        for (i = 0; i < len; i++) {
+                rem = rem ^ (uint64_t) buf[i];
+                for (j = 0; j < MAX_ITER; j++) {
+                        rem = (rem & 0x1ULL ? poly : 0) ^ (rem >> 1);
+                }
+        }
+        return ~rem;
 }
 
-static inline uint64_t crc64_iso_norm_ref(uint64_t seed, const uint8_t * buf, uint64_t len)
+static inline uint64_t
+crc64_iso_norm_ref(uint64_t seed, const uint8_t *buf, uint64_t len)
 {
-	uint64_t rem = ~seed;
-	unsigned int i, j;
+        uint64_t rem = ~seed;
+        unsigned int i, j;
 
-	uint64_t poly = 0x000000000000001BULL;	// ISO standard
+        uint64_t poly = 0x000000000000001BULL; // ISO standard
 
-	for (i = 0; i < len; i++) {
-		rem = rem ^ ((uint64_t) buf[i] << 56);
-		for (j = 0; j < MAX_ITER; j++) {
-			rem = (rem & 0x8000000000000000ULL ? poly : 0) ^ (rem << 1);
-		}
-	}
-	return ~rem;
+        for (i = 0; i < len; i++) {
+                rem = rem ^ ((uint64_t) buf[i] << 56);
+                for (j = 0; j < MAX_ITER; j++) {
+                        rem = (rem & 0x8000000000000000ULL ? poly : 0) ^ (rem << 1);
+                }
+        }
+        return ~rem;
 }
 
 // crc64_jones reference function, slow crc64 from the definition.
-static inline uint64_t crc64_jones_refl_ref(uint64_t seed, const uint8_t * buf, uint64_t len)
+static inline uint64_t
+crc64_jones_refl_ref(uint64_t seed, const uint8_t *buf, uint64_t len)
 {
-	uint64_t rem = ~seed;
-	unsigned int i, j;
+        uint64_t rem = ~seed;
+        unsigned int i, j;
 
-	uint64_t poly = 0x95ac9329ac4bc9b5ULL;	// Jones coefficients reflected
+        uint64_t poly = 0x95ac9329ac4bc9b5ULL; // Jones coefficients reflected
 
-	for (i = 0; i < len; i++) {
-		rem = rem ^ (uint64_t) buf[i];
-		for (j = 0; j < MAX_ITER; j++) {
-			rem = (rem & 0x1ULL ? poly : 0) ^ (rem >> 1);
-		}
-	}
-	return ~rem;
+        for (i = 0; i < len; i++) {
+                rem = rem ^ (uint64_t) buf[i];
+                for (j = 0; j < MAX_ITER; j++) {
+                        rem = (rem & 0x1ULL ? poly : 0) ^ (rem >> 1);
+                }
+        }
+        return ~rem;
 }
 
-static inline uint64_t crc64_jones_norm_ref(uint64_t seed, const uint8_t * buf, uint64_t len)
+static inline uint64_t
+crc64_jones_norm_ref(uint64_t seed, const uint8_t *buf, uint64_t len)
 {
-	uint64_t rem = ~seed;
-	unsigned int i, j;
+        uint64_t rem = ~seed;
+        unsigned int i, j;
 
-	uint64_t poly = 0xad93d23594c935a9ULL;	// Jones coefficients
+        uint64_t poly = 0xad93d23594c935a9ULL; // Jones coefficients
 
-	for (i = 0; i < len; i++) {
-		rem = rem ^ ((uint64_t) buf[i] << 56);
-		for (j = 0; j < MAX_ITER; j++) {
-			rem = (rem & 0x8000000000000000ULL ? poly : 0) ^ (rem << 1);
-		}
-	}
-	return ~rem;
+        for (i = 0; i < len; i++) {
+                rem = rem ^ ((uint64_t) buf[i] << 56);
+                for (j = 0; j < MAX_ITER; j++) {
+                        rem = (rem & 0x8000000000000000ULL ? poly : 0) ^ (rem << 1);
+                }
+        }
+        return ~rem;
 }
-
 
 // crc64_rocksoft reference function, slow crc64 from the definition.
-static inline uint64_t crc64_rocksoft_refl_ref(uint64_t seed, const uint8_t * buf, uint64_t len)
+static inline uint64_t
+crc64_rocksoft_refl_ref(uint64_t seed, const uint8_t *buf, uint64_t len)
 {
-	uint64_t rem = ~seed;
-	unsigned int i, j;
+        uint64_t rem = ~seed;
+        unsigned int i, j;
 
-	uint64_t poly = 0x9a6c9329ac4bc9b5ULL;	// Rocksoft coefficients reflected
+        uint64_t poly = 0x9a6c9329ac4bc9b5ULL; // Rocksoft coefficients reflected
 
-	for (i = 0; i < len; i++) {
-		rem = rem ^ (uint64_t) buf[i];
-		for (j = 0; j < MAX_ITER; j++) {
-			rem = (rem & 0x1ULL ? poly : 0) ^ (rem >> 1);
-		}
-	}
-	return ~rem;
+        for (i = 0; i < len; i++) {
+                rem = rem ^ (uint64_t) buf[i];
+                for (j = 0; j < MAX_ITER; j++) {
+                        rem = (rem & 0x1ULL ? poly : 0) ^ (rem >> 1);
+                }
+        }
+        return ~rem;
 }
 
-static inline uint64_t crc64_rocksoft_norm_ref(uint64_t seed, const uint8_t * buf, uint64_t len)
+static inline uint64_t
+crc64_rocksoft_norm_ref(uint64_t seed, const uint8_t *buf, uint64_t len)
 {
-	uint64_t rem = ~seed;
-	unsigned int i, j;
+        uint64_t rem = ~seed;
+        unsigned int i, j;
 
-	uint64_t poly = 0xad93d23594c93659ULL;	// Rocksoft coefficients
+        uint64_t poly = 0xad93d23594c93659ULL; // Rocksoft coefficients
 
-	for (i = 0; i < len; i++) {
-		rem = rem ^ ((uint64_t) buf[i] << 56);
-		for (j = 0; j < MAX_ITER; j++) {
-			rem = (rem & 0x8000000000000000ULL ? poly : 0) ^ (rem << 1);
-		}
-	}
-	return ~rem;
+        for (i = 0; i < len; i++) {
+                rem = rem ^ ((uint64_t) buf[i] << 56);
+                for (j = 0; j < MAX_ITER; j++) {
+                        rem = (rem & 0x8000000000000000ULL ? poly : 0) ^ (rem << 1);
+                }
+        }
+        return ~rem;
 }
 #ifdef __cplusplus
 }

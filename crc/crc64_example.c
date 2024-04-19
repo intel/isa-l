@@ -32,39 +32,40 @@
 #include <assert.h>
 #include "crc64.h"
 
-#define BUF_SIZE 8192
+#define BUF_SIZE  8192
 #define INIT_SEED 0x12345678
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
-	uint8_t inbuf[BUF_SIZE];
-	uint64_t avail_in, total_in = 0;
-	uint64_t crc64_checksum;
-	FILE *in;
+        uint8_t inbuf[BUF_SIZE];
+        uint64_t avail_in, total_in = 0;
+        uint64_t crc64_checksum;
+        FILE *in;
 
-	if (argc != 2) {
-		fprintf(stderr, "Usage: crc64_example infile\n");
-		exit(0);
-	}
-	in = fopen(argv[1], "rb");
-	if (!in) {
-		fprintf(stderr, "Can't open %s for reading\n", argv[1]);
-		exit(0);
-	}
+        if (argc != 2) {
+                fprintf(stderr, "Usage: crc64_example infile\n");
+                exit(0);
+        }
+        in = fopen(argv[1], "rb");
+        if (!in) {
+                fprintf(stderr, "Can't open %s for reading\n", argv[1]);
+                exit(0);
+        }
 
-	printf("crc64_example -- crc64_ecma_refl:\n");
-	fflush(0);
+        printf("crc64_example -- crc64_ecma_refl:\n");
+        fflush(0);
 
-	crc64_checksum = INIT_SEED;
-	while ((avail_in = fread(inbuf, 1, BUF_SIZE, in))) {
-		// crc update mode
-		crc64_checksum = crc64_ecma_refl(crc64_checksum, inbuf, avail_in);
-		total_in += avail_in;
-	}
+        crc64_checksum = INIT_SEED;
+        while ((avail_in = fread(inbuf, 1, BUF_SIZE, in))) {
+                // crc update mode
+                crc64_checksum = crc64_ecma_refl(crc64_checksum, inbuf, avail_in);
+                total_in += avail_in;
+        }
 
-	fclose(in);
-	printf("total length is %" PRIu64 ", checksum is 0x%" PRIx64 "\n", total_in,
-	       crc64_checksum);
+        fclose(in);
+        printf("total length is %" PRIu64 ", checksum is 0x%" PRIx64 "\n", total_in,
+               crc64_checksum);
 
-	return 0;
+        return 0;
 }

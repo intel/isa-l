@@ -30,12 +30,14 @@
 #include "crc64.h"
 #include <stdint.h>
 
-uint64_t crc64_rocksoft_refl(uint64_t seed, const uint8_t * buf, uint64_t len)
+uint64_t
+crc64_rocksoft_refl(uint64_t seed, const uint8_t *buf, uint64_t len)
 {
-	return crc64_rocksoft_refl_base(seed, buf, len);
+        return crc64_rocksoft_refl_base(seed, buf, len);
 }
 
-uint64_t crc64_rocksoft_norm(uint64_t seed, const uint8_t * buf, uint64_t len)
+uint64_t
+crc64_rocksoft_norm(uint64_t seed, const uint8_t *buf, uint64_t len)
 {
-	return crc64_rocksoft_norm_base(seed, buf, len);
+        return crc64_rocksoft_norm_base(seed, buf, len);
 }

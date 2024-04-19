@@ -38,302 +38,314 @@
 #include "test.h"
 
 #ifndef TEST_SEED
-# define TEST_SEED 0x1234
+#define TEST_SEED 0x1234
 #endif
 
 #define MAX_BUF   4096
-#define TEST_SIZE  32
+#define TEST_SIZE 32
 
 typedef uint64_t u64;
 typedef uint32_t u32;
 typedef uint16_t u16;
 typedef uint8_t u8;
 
-typedef uint64_t(*crc64_func_t) (uint64_t, const uint8_t *, uint64_t);
+typedef uint64_t (*crc64_func_t)(uint64_t, const uint8_t *, uint64_t);
 
 typedef struct func_case {
-	char *note;
-	crc64_func_t crc64_func_call;
-	crc64_func_t crc64_base_call;
-	crc64_func_t crc64_ref_call;
+        char *note;
+        crc64_func_t crc64_func_call;
+        crc64_func_t crc64_base_call;
+        crc64_func_t crc64_ref_call;
 } func_case_t;
 
 func_case_t test_funcs[] = {
-	{"crc64_ecma_norm", crc64_ecma_norm, crc64_ecma_norm_base, crc64_ecma_norm_ref},
-	{"crc64_ecma_refl", crc64_ecma_refl, crc64_ecma_refl_base, crc64_ecma_refl_ref},
-	{"crc64_iso_norm", crc64_iso_norm, crc64_iso_norm_base, crc64_iso_norm_ref},
-	{"crc64_iso_refl", crc64_iso_refl, crc64_iso_refl_base, crc64_iso_refl_ref},
-	{"crc64_jones_norm", crc64_jones_norm, crc64_jones_norm_base,
-	 crc64_jones_norm_ref},
-	{"crc64_jones_refl", crc64_jones_refl, crc64_jones_refl_base, crc64_jones_refl_ref},
-	{"crc64_rocksoft_norm", crc64_rocksoft_norm, crc64_rocksoft_norm_base,
-	 crc64_rocksoft_norm_ref},
-	{"crc64_rocksoft_refl", crc64_rocksoft_refl, crc64_rocksoft_refl_base,
-	 crc64_rocksoft_refl_ref}
+        { "crc64_ecma_norm", crc64_ecma_norm, crc64_ecma_norm_base, crc64_ecma_norm_ref },
+        { "crc64_ecma_refl", crc64_ecma_refl, crc64_ecma_refl_base, crc64_ecma_refl_ref },
+        { "crc64_iso_norm", crc64_iso_norm, crc64_iso_norm_base, crc64_iso_norm_ref },
+        { "crc64_iso_refl", crc64_iso_refl, crc64_iso_refl_base, crc64_iso_refl_ref },
+        { "crc64_jones_norm", crc64_jones_norm, crc64_jones_norm_base, crc64_jones_norm_ref },
+        { "crc64_jones_refl", crc64_jones_refl, crc64_jones_refl_base, crc64_jones_refl_ref },
+        { "crc64_rocksoft_norm", crc64_rocksoft_norm, crc64_rocksoft_norm_base,
+          crc64_rocksoft_norm_ref },
+        { "crc64_rocksoft_refl", crc64_rocksoft_refl, crc64_rocksoft_refl_base,
+          crc64_rocksoft_refl_ref }
 };
 
 // Generates pseudo-random data
 
-void rand_buffer(unsigned char *buf, long buffer_size)
+void
+rand_buffer(unsigned char *buf, long buffer_size)
 {
-	long i;
-	for (i = 0; i < buffer_size; i++)
-		buf[i] = rand();
+        long i;
+        for (i = 0; i < buffer_size; i++)
+                buf[i] = rand();
 }
 
 // Test cases
-int zeros_test(func_case_t * test_func);
+int
+zeros_test(func_case_t *test_func);
 
-int simple_pattern_test(func_case_t * test_func);
+int
+simple_pattern_test(func_case_t *test_func);
 
-int seeds_sizes_test(func_case_t * test_func);
+int
+seeds_sizes_test(func_case_t *test_func);
 
-int eob_test(func_case_t * test_func);
+int
+eob_test(func_case_t *test_func);
 
-int update_test(func_case_t * test_func);
+int
+update_test(func_case_t *test_func);
 
 void *buf_alloc = NULL;
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
-	int fail = 0, fail_case;
-	int i, ret;
-	func_case_t *test_func;
+        int fail = 0, fail_case;
+        int i, ret;
+        func_case_t *test_func;
 
-	// Align to 32B boundary
-	ret = posix_memalign(&buf_alloc, TEST_SIZE, MAX_BUF * TEST_SIZE);
-	if (ret) {
-		printf("alloc error: Fail");
-		return -1;
-	}
-	srand(TEST_SEED);
-	printf("CRC64 Tests\n");
+        // Align to 32B boundary
+        ret = posix_memalign(&buf_alloc, TEST_SIZE, MAX_BUF * TEST_SIZE);
+        if (ret) {
+                printf("alloc error: Fail");
+                return -1;
+        }
+        srand(TEST_SEED);
+        printf("CRC64 Tests\n");
 
-	for (i = 0; i < sizeof(test_funcs) / sizeof(test_funcs[0]); i++) {
-		fail_case = 0;
-		test_func = &test_funcs[i];
+        for (i = 0; i < sizeof(test_funcs) / sizeof(test_funcs[0]); i++) {
+                fail_case = 0;
+                test_func = &test_funcs[i];
 
-		printf("Test %s\t", test_func->note);
-		fail_case += zeros_test(test_func);
-		fail_case += simple_pattern_test(test_func);
-		fail_case += seeds_sizes_test(test_func);
-		fail_case += eob_test(test_func);
-		fail_case += update_test(test_func);
-		printf(" done: %s\n", fail_case ? "Fail" : "Pass");
+                printf("Test %s\t", test_func->note);
+                fail_case += zeros_test(test_func);
+                fail_case += simple_pattern_test(test_func);
+                fail_case += seeds_sizes_test(test_func);
+                fail_case += eob_test(test_func);
+                fail_case += update_test(test_func);
+                printf(" done: %s\n", fail_case ? "Fail" : "Pass");
 
-		if (fail_case) {
-			printf("\n%s Failed %d tests\n", test_func->note, fail_case);
-			fail++;
-		}
-	}
+                if (fail_case) {
+                        printf("\n%s Failed %d tests\n", test_func->note, fail_case);
+                        fail++;
+                }
+        }
 
-	printf("CRC64 Tests all done: %s\n", fail ? "Fail" : "Pass");
+        printf("CRC64 Tests all done: %s\n", fail ? "Fail" : "Pass");
 
-	aligned_free(buf_alloc);
+        aligned_free(buf_alloc);
 
-	return fail;
+        return fail;
 }
 
 // Test of all zeros
-int zeros_test(func_case_t * test_func)
+int
+zeros_test(func_case_t *test_func)
 {
-	uint64_t crc_ref, crc_base, crc;
-	int fail = 0;
-	unsigned char *buf = NULL;
+        uint64_t crc_ref, crc_base, crc;
+        int fail = 0;
+        unsigned char *buf = NULL;
 
-	buf = (unsigned char *)buf_alloc;
-	memset(buf, 0, MAX_BUF * 10);
-	crc_ref = test_func->crc64_ref_call(TEST_SEED, buf, MAX_BUF * 10);
-	crc_base = test_func->crc64_base_call(TEST_SEED, buf, MAX_BUF * 10);
-	crc = test_func->crc64_func_call(TEST_SEED, buf, MAX_BUF * 10);
+        buf = (unsigned char *) buf_alloc;
+        memset(buf, 0, MAX_BUF * 10);
+        crc_ref = test_func->crc64_ref_call(TEST_SEED, buf, MAX_BUF * 10);
+        crc_base = test_func->crc64_base_call(TEST_SEED, buf, MAX_BUF * 10);
+        crc = test_func->crc64_func_call(TEST_SEED, buf, MAX_BUF * 10);
 
-	if ((crc_base != crc_ref) || (crc != crc_ref)) {
-		fail++;
-		printf("\n		   opt   ref\n");
-		printf("		 ------ ------\n");
-		printf("fail crc	zero = 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64 "\n",
-		       crc_ref, crc_base, crc);
-	}
+        if ((crc_base != crc_ref) || (crc != crc_ref)) {
+                fail++;
+                printf("\n		   opt   ref\n");
+                printf("		 ------ ------\n");
+                printf("fail crc	zero = 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64 "\n",
+                       crc_ref, crc_base, crc);
+        }
 #ifdef TEST_VERBOSE
-	else
-		printf(".");
+        else
+                printf(".");
 #endif
 
-	return fail;
+        return fail;
 }
 
 // Another simple test pattern
-int simple_pattern_test(func_case_t * test_func)
+int
+simple_pattern_test(func_case_t *test_func)
 {
-	uint64_t crc_ref, crc_base, crc;
-	int fail = 0;
-	unsigned char *buf = NULL;
+        uint64_t crc_ref, crc_base, crc;
+        int fail = 0;
+        unsigned char *buf = NULL;
 
-	buf = (unsigned char *)buf_alloc;
-	memset(buf, 0x8a, MAX_BUF);
-	crc_ref = test_func->crc64_ref_call(TEST_SEED, buf, MAX_BUF);
-	crc_base = test_func->crc64_base_call(TEST_SEED, buf, MAX_BUF);
-	crc = test_func->crc64_func_call(TEST_SEED, buf, MAX_BUF);
+        buf = (unsigned char *) buf_alloc;
+        memset(buf, 0x8a, MAX_BUF);
+        crc_ref = test_func->crc64_ref_call(TEST_SEED, buf, MAX_BUF);
+        crc_base = test_func->crc64_base_call(TEST_SEED, buf, MAX_BUF);
+        crc = test_func->crc64_func_call(TEST_SEED, buf, MAX_BUF);
 
-	if ((crc_base != crc_ref) || (crc != crc_ref)) {
-		fail++;
-		printf("fail crc  all 8a = 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64 "\n",
-		       crc_ref, crc_base, crc);
-	}
+        if ((crc_base != crc_ref) || (crc != crc_ref)) {
+                fail++;
+                printf("fail crc  all 8a = 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64 "\n", crc_ref,
+                       crc_base, crc);
+        }
 #ifdef TEST_VERBOSE
-	else
-		printf(".");
+        else
+                printf(".");
 #endif
-	return fail;
+        return fail;
 }
 
-int seeds_sizes_test(func_case_t * test_func)
+int
+seeds_sizes_test(func_case_t *test_func)
 {
-	uint64_t crc_ref, crc_base, crc;
-	int fail = 0;
-	int i;
-	uint64_t r, s;
-	unsigned char *buf = NULL;
+        uint64_t crc_ref, crc_base, crc;
+        int fail = 0;
+        int i;
+        uint64_t r, s;
+        unsigned char *buf = NULL;
 
-	// Do a few random tests
-	buf = (unsigned char *)buf_alloc;	//reset buf
-	r = rand();
-	rand_buffer(buf, MAX_BUF * TEST_SIZE);
+        // Do a few random tests
+        buf = (unsigned char *) buf_alloc; // reset buf
+        r = rand();
+        rand_buffer(buf, MAX_BUF * TEST_SIZE);
 
-	for (i = 0; i < TEST_SIZE; i++) {
-		crc_ref = test_func->crc64_ref_call(r, buf, MAX_BUF);
-		crc_base = test_func->crc64_base_call(r, buf, MAX_BUF);
-		crc = test_func->crc64_func_call(r, buf, MAX_BUF);
+        for (i = 0; i < TEST_SIZE; i++) {
+                crc_ref = test_func->crc64_ref_call(r, buf, MAX_BUF);
+                crc_base = test_func->crc64_base_call(r, buf, MAX_BUF);
+                crc = test_func->crc64_func_call(r, buf, MAX_BUF);
 
-		if ((crc_base != crc_ref) || (crc != crc_ref)) {
-			fail++;
-			printf("fail crc rand%3d = 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64
-			       "\n", i, crc_ref, crc_base, crc);
-		}
+                if ((crc_base != crc_ref) || (crc != crc_ref)) {
+                        fail++;
+                        printf("fail crc rand%3d = 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64 "\n", i,
+                               crc_ref, crc_base, crc);
+                }
 #ifdef TEST_VERBOSE
-		else if (i % (TEST_SIZE / 8) == 0)
-			printf(".");
+                else if (i % (TEST_SIZE / 8) == 0)
+                        printf(".");
 #endif
-		buf += MAX_BUF;
-	}
+                buf += MAX_BUF;
+        }
 
-	// Do a few random sizes
-	buf = (unsigned char *)buf_alloc;	//reset buf
-	r = rand();
+        // Do a few random sizes
+        buf = (unsigned char *) buf_alloc; // reset buf
+        r = rand();
 
-	for (i = MAX_BUF; i >= 0; i--) {
-		crc_ref = test_func->crc64_ref_call(r, buf, i);
-		crc_base = test_func->crc64_base_call(r, buf, i);
-		crc = test_func->crc64_func_call(r, buf, i);
+        for (i = MAX_BUF; i >= 0; i--) {
+                crc_ref = test_func->crc64_ref_call(r, buf, i);
+                crc_base = test_func->crc64_base_call(r, buf, i);
+                crc = test_func->crc64_func_call(r, buf, i);
 
-		if ((crc_base != crc_ref) || (crc != crc_ref)) {
-			fail++;
-			printf("fail random size %d 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64
-			       "\n", i, crc_ref, crc_base, crc);
-		}
+                if ((crc_base != crc_ref) || (crc != crc_ref)) {
+                        fail++;
+                        printf("fail random size %d 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64 "\n", i,
+                               crc_ref, crc_base, crc);
+                }
 #ifdef TEST_VERBOSE
-		else if (i % (MAX_BUF / 8) == 0)
-			printf(".");
+                else if (i % (MAX_BUF / 8) == 0)
+                        printf(".");
 #endif
-	}
+        }
 
-	// Try different seeds
-	for (s = 0; s < 20; s++) {
-		buf = (unsigned char *)buf_alloc;	//reset buf
+        // Try different seeds
+        for (s = 0; s < 20; s++) {
+                buf = (unsigned char *) buf_alloc; // reset buf
 
-		r = rand();	// just to get a new seed
-		rand_buffer(buf, MAX_BUF * TEST_SIZE);	// new pseudo-rand data
+                r = rand();                            // just to get a new seed
+                rand_buffer(buf, MAX_BUF * TEST_SIZE); // new pseudo-rand data
 
 #ifdef TEST_VERBOSE
-		printf("seed = 0x%lx\n", r);
+                printf("seed = 0x%lx\n", r);
 #endif
 
-		for (i = 0; i < TEST_SIZE; i++) {
-			crc_ref = test_func->crc64_ref_call(r, buf, MAX_BUF);
-			crc_base = test_func->crc64_base_call(r, buf, MAX_BUF);
-			crc = test_func->crc64_func_call(r, buf, MAX_BUF);
+                for (i = 0; i < TEST_SIZE; i++) {
+                        crc_ref = test_func->crc64_ref_call(r, buf, MAX_BUF);
+                        crc_base = test_func->crc64_base_call(r, buf, MAX_BUF);
+                        crc = test_func->crc64_func_call(r, buf, MAX_BUF);
 
-			if ((crc_base != crc_ref) || (crc != crc_ref)) {
-				fail++;
-				printf("fail crc rand%3d = 0x%" PRIx64 " 0x%" PRIx64 " 0x%"
-				       PRIx64 "\n", i, crc_ref, crc_base, crc);
-			}
+                        if ((crc_base != crc_ref) || (crc != crc_ref)) {
+                                fail++;
+                                printf("fail crc rand%3d = 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64
+                                       "\n",
+                                       i, crc_ref, crc_base, crc);
+                        }
 #ifdef TEST_VERBOSE
-			else if (i % (TEST_SIZE * 20 / 8) == 0)
-				printf(".");
+                        else if (i % (TEST_SIZE * 20 / 8) == 0)
+                                printf(".");
 #endif
-			buf += MAX_BUF;
-		}
-	}
+                        buf += MAX_BUF;
+                }
+        }
 
-	return fail;
+        return fail;
 }
 
 // Run tests at end of buffer
-int eob_test(func_case_t * test_func)
+int
+eob_test(func_case_t *test_func)
 {
-	uint64_t crc_ref, crc_base, crc;
-	int fail = 0;
-	int i;
-	unsigned char *buf = NULL;
+        uint64_t crc_ref, crc_base, crc;
+        int fail = 0;
+        int i;
+        unsigned char *buf = NULL;
 
-	// Null test
-	if (0 != test_func->crc64_func_call(0, NULL, 0)) {
-		fail++;
-		printf("crc null test fail\n");
-	}
+        // Null test
+        if (0 != test_func->crc64_func_call(0, NULL, 0)) {
+                fail++;
+                printf("crc null test fail\n");
+        }
 
-	buf = (unsigned char *)buf_alloc;	//reset buf
-	buf = buf + ((MAX_BUF - 1) * TEST_SIZE);	//Line up TEST_SIZE from end
-	for (i = 0; i <= TEST_SIZE; i++) {
-		crc_ref = test_func->crc64_ref_call(TEST_SEED, buf + i, TEST_SIZE - i);
-		crc_base = test_func->crc64_base_call(TEST_SEED, buf + i, TEST_SIZE - i);
-		crc = test_func->crc64_func_call(TEST_SEED, buf + i, TEST_SIZE - i);
+        buf = (unsigned char *) buf_alloc;       // reset buf
+        buf = buf + ((MAX_BUF - 1) * TEST_SIZE); // Line up TEST_SIZE from end
+        for (i = 0; i <= TEST_SIZE; i++) {
+                crc_ref = test_func->crc64_ref_call(TEST_SEED, buf + i, TEST_SIZE - i);
+                crc_base = test_func->crc64_base_call(TEST_SEED, buf + i, TEST_SIZE - i);
+                crc = test_func->crc64_func_call(TEST_SEED, buf + i, TEST_SIZE - i);
 
-		if ((crc_base != crc_ref) || (crc != crc_ref)) {
-			fail++;
-			printf("fail crc eob rand%3d = 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64
-			       "\n", i, crc_ref, crc_base, crc);
-		}
+                if ((crc_base != crc_ref) || (crc != crc_ref)) {
+                        fail++;
+                        printf("fail crc eob rand%3d = 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64 "\n",
+                               i, crc_ref, crc_base, crc);
+                }
 #ifdef TEST_VERBOSE
-		else if (i % (TEST_SIZE / 8) == 0)
-			printf(".");
+                else if (i % (TEST_SIZE / 8) == 0)
+                        printf(".");
 #endif
-	}
+        }
 
-	return fail;
+        return fail;
 }
 
-int update_test(func_case_t * test_func)
+int
+update_test(func_case_t *test_func)
 {
-	uint64_t crc_ref, crc_base, crc;
-	int fail = 0;
-	int i;
-	uint64_t r;
-	unsigned char *buf = NULL;
+        uint64_t crc_ref, crc_base, crc;
+        int fail = 0;
+        int i;
+        uint64_t r;
+        unsigned char *buf = NULL;
 
-	buf = (unsigned char *)buf_alloc;	//reset buf
-	r = rand();
-	// Process the whole buf with reference func single call.
-	crc_ref = test_func->crc64_ref_call(r, buf, MAX_BUF * TEST_SIZE);
-	crc_base = test_func->crc64_base_call(r, buf, MAX_BUF * TEST_SIZE);
-	// Process buf with update method.
-	for (i = 0; i < TEST_SIZE; i++) {
-		crc = test_func->crc64_func_call(r, buf, MAX_BUF);
-		// Update crc seeds and buf pointer.
-		r = crc;
-		buf += MAX_BUF;
-	}
+        buf = (unsigned char *) buf_alloc; // reset buf
+        r = rand();
+        // Process the whole buf with reference func single call.
+        crc_ref = test_func->crc64_ref_call(r, buf, MAX_BUF * TEST_SIZE);
+        crc_base = test_func->crc64_base_call(r, buf, MAX_BUF * TEST_SIZE);
+        // Process buf with update method.
+        for (i = 0; i < TEST_SIZE; i++) {
+                crc = test_func->crc64_func_call(r, buf, MAX_BUF);
+                // Update crc seeds and buf pointer.
+                r = crc;
+                buf += MAX_BUF;
+        }
 
-	if ((crc_base != crc_ref) || (crc != crc_ref)) {
-		fail++;
-		printf("fail crc rand%3d = 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64 "\n", i,
-		       crc_ref, crc_base, crc);
-	}
+        if ((crc_base != crc_ref) || (crc != crc_ref)) {
+                fail++;
+                printf("fail crc rand%3d = 0x%" PRIx64 " 0x%" PRIx64 " 0x%" PRIx64 "\n", i, crc_ref,
+                       crc_base, crc);
+        }
 #ifdef TEST_VERBOSE
-	else
-		printf(".");
+        else
+                printf(".");
 #endif
 
-	return fail;
+        return fail;
 }

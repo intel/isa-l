@@ -36,29 +36,30 @@ const uint16_t t10_dif_expected = 0x60b3;
 const uint32_t init_crc_32 = 0x12345678;
 const uint32_t ieee_expected = 0x2ceadbe3;
 
-int main(void)
+int
+main(void)
 {
-	unsigned char p_buf[48];
-	uint16_t t10_dif_computed;
-	uint32_t ieee_computed;
-	int i;
+        unsigned char p_buf[48];
+        uint16_t t10_dif_computed;
+        uint32_t ieee_computed;
+        int i;
 
-	for (i = 0; i < 48; i++)
-		p_buf[i] = i;
+        for (i = 0; i < 48; i++)
+                p_buf[i] = i;
 
-	t10_dif_computed = crc16_t10dif(init_crc_16, p_buf, 48);
+        t10_dif_computed = crc16_t10dif(init_crc_16, p_buf, 48);
 
-	if (t10_dif_computed != t10_dif_expected)
-		printf("WRONG CRC-16(T10 DIF) value\n");
-	else
-		printf("CORRECT CRC-16(T10 DIF) value\n");
+        if (t10_dif_computed != t10_dif_expected)
+                printf("WRONG CRC-16(T10 DIF) value\n");
+        else
+                printf("CORRECT CRC-16(T10 DIF) value\n");
 
-	ieee_computed = crc32_ieee(init_crc_32, p_buf, 48);
+        ieee_computed = crc32_ieee(init_crc_32, p_buf, 48);
 
-	if (ieee_computed != ieee_expected)
-		printf("WRONG CRC-32(IEEE) value\n");
-	else
-		printf("CORRECT CRC-32(IEEE) value\n");
+        if (ieee_computed != ieee_expected)
+                printf("WRONG CRC-32(IEEE) value\n");
+        else
+                printf("CORRECT CRC-32(IEEE) value\n");
 
-	return 0;
+        return 0;
 }
