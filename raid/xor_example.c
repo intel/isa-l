@@ -32,49 +32,50 @@
 #include "test.h"
 
 #define TEST_SOURCES 16
-#define TEST_LEN     16*1024
+#define TEST_LEN     16 * 1024
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
-	int i, j, should_pass, should_fail, ret = 0;
-	void *buffs[TEST_SOURCES + 1] = { NULL };
+        int i, j, should_pass, should_fail, ret = 0;
+        void *buffs[TEST_SOURCES + 1] = { NULL };
 
-	printf("XOR example\n");
-	for (i = 0; i < TEST_SOURCES + 1; i++) {
-		void *buf;
-		if (posix_memalign(&buf, 32, TEST_LEN)) {
-			printf("alloc error: Fail");
-			goto exit;
-		}
-		buffs[i] = buf;
-	}
+        printf("XOR example\n");
+        for (i = 0; i < TEST_SOURCES + 1; i++) {
+                void *buf;
+                if (posix_memalign(&buf, 32, TEST_LEN)) {
+                        printf("alloc error: Fail");
+                        goto exit;
+                }
+                buffs[i] = buf;
+        }
 
-	printf("Make random data\n");
-	for (i = 0; i < TEST_SOURCES + 1; i++)
-		for (j = 0; j < TEST_LEN; j++)
-			((char *)buffs[i])[j] = rand();
+        printf("Make random data\n");
+        for (i = 0; i < TEST_SOURCES + 1; i++)
+                for (j = 0; j < TEST_LEN; j++)
+                        ((char *) buffs[i])[j] = rand();
 
-	printf("Generate xor parity\n");
-	xor_gen(TEST_SOURCES + 1, TEST_LEN, buffs);
+        printf("Generate xor parity\n");
+        xor_gen(TEST_SOURCES + 1, TEST_LEN, buffs);
 
-	printf("Check parity: ");
-	should_pass = xor_check(TEST_SOURCES + 1, TEST_LEN, buffs);
-	printf("%s\n", should_pass == 0 ? "Pass" : "Fail");
-	if (should_pass != 0) {
-		ret = -1;
-		goto exit;
-	}
+        printf("Check parity: ");
+        should_pass = xor_check(TEST_SOURCES + 1, TEST_LEN, buffs);
+        printf("%s\n", should_pass == 0 ? "Pass" : "Fail");
+        if (should_pass != 0) {
+                ret = -1;
+                goto exit;
+        }
 
-	printf("Find corruption: ");
-	((char *)buffs[TEST_SOURCES / 2])[TEST_LEN / 2] ^= 1;	// flip one bit
-	should_fail = xor_check(TEST_SOURCES + 1, TEST_LEN, buffs);	//recheck
-	printf("%s\n", should_fail != 0 ? "Pass" : "Fail");
+        printf("Find corruption: ");
+        ((char *) buffs[TEST_SOURCES / 2])[TEST_LEN / 2] ^= 1;      // flip one bit
+        should_fail = xor_check(TEST_SOURCES + 1, TEST_LEN, buffs); // recheck
+        printf("%s\n", should_fail != 0 ? "Pass" : "Fail");
 
-	if (should_fail == 0)
-		ret = -1;
-      exit:
-	for (i = 0; i < TEST_SOURCES + 1; i++)
-		free(buffs[i]);
+        if (should_fail == 0)
+                ret = -1;
+exit:
+        for (i = 0; i < TEST_SOURCES + 1; i++)
+                free(buffs[i]);
 
-	return ret;
+        return ret;
 }

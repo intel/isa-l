@@ -31,111 +31,114 @@
 #include <stdint.h>
 
 #if __WORDSIZE == 64 || _WIN64 || __x86_64__
-# define notbit0 0xfefefefefefefefeULL
-# define bit7    0x8080808080808080ULL
-# define gf8poly 0x1d1d1d1d1d1d1d1dULL
+#define notbit0 0xfefefefefefefefeULL
+#define bit7    0x8080808080808080ULL
+#define gf8poly 0x1d1d1d1d1d1d1d1dULL
 #else
-# define notbit0 0xfefefefeUL
-# define bit7    0x80808080UL
-# define gf8poly 0x1d1d1d1dUL
+#define notbit0 0xfefefefeUL
+#define bit7    0x80808080UL
+#define gf8poly 0x1d1d1d1dUL
 #endif
 
-int pq_gen_base(int vects, int len, void **array)
+int
+pq_gen_base(int vects, int len, void **array)
 {
-	int i, j;
-	unsigned long p, q, s;
-	unsigned long **src = (unsigned long **)array;
-	int blocks = len / sizeof(long);
+        int i, j;
+        unsigned long p, q, s;
+        unsigned long **src = (unsigned long **) array;
+        int blocks = len / sizeof(long);
 
-	if (vects < 4)
-		return 1;	// Must have at least 2 src and 2 dest
+        if (vects < 4)
+                return 1; // Must have at least 2 src and 2 dest
 
-	for (i = 0; i < blocks; i++) {
-		q = p = src[vects - 3][i];
+        for (i = 0; i < blocks; i++) {
+                q = p = src[vects - 3][i];
 
-		for (j = vects - 4; j >= 0; j--) {
-			p ^= s = src[j][i];
-			q = s ^ (((q << 1) & notbit0) ^	// shift each byte
-				 ((((q & bit7) << 1) - ((q & bit7) >> 7))	// mask out bytes
-				  & gf8poly));	// apply poly
-		}
+                for (j = vects - 4; j >= 0; j--) {
+                        p ^= s = src[j][i];
+                        q = s ^ (((q << 1) & notbit0) ^                   // shift each byte
+                                 ((((q & bit7) << 1) - ((q & bit7) >> 7)) // mask out bytes
+                                  & gf8poly));                            // apply poly
+                }
 
-		src[vects - 2][i] = p;	// second to last pointer is p
-		src[vects - 1][i] = q;	// last pointer is q
-	}
-	return 0;
+                src[vects - 2][i] = p; // second to last pointer is p
+                src[vects - 1][i] = q; // last pointer is q
+        }
+        return 0;
 }
 
-int pq_check_base(int vects, int len, void **array)
+int
+pq_check_base(int vects, int len, void **array)
 {
-	int i, j;
-	unsigned char p, q, s;
-	unsigned char **src = (unsigned char **)array;
+        int i, j;
+        unsigned char p, q, s;
+        unsigned char **src = (unsigned char **) array;
 
-	if (vects < 4)
-		return 1;	// Must have at least 2 src and 2 dest
+        if (vects < 4)
+                return 1; // Must have at least 2 src and 2 dest
 
-	for (i = 0; i < len; i++) {
-		q = p = src[vects - 3][i];
+        for (i = 0; i < len; i++) {
+                q = p = src[vects - 3][i];
 
-		for (j = vects - 4; j >= 0; j--) {
-			s = src[j][i];
-			p ^= s;
+                for (j = vects - 4; j >= 0; j--) {
+                        s = src[j][i];
+                        p ^= s;
 
-			// mult by GF{2}
-			q = s ^ ((q << 1) ^ ((q & 0x80) ? 0x1d : 0));
-		}
+                        // mult by GF{2}
+                        q = s ^ ((q << 1) ^ ((q & 0x80) ? 0x1d : 0));
+                }
 
-		if (src[vects - 2][i] != p)	// second to last pointer is p
-			return i | 1;
-		if (src[vects - 1][i] != q)	// last pointer is q
-			return i | 2;
-	}
-	return 0;
+                if (src[vects - 2][i] != p) // second to last pointer is p
+                        return i | 1;
+                if (src[vects - 1][i] != q) // last pointer is q
+                        return i | 2;
+        }
+        return 0;
 }
 
-int xor_gen_base(int vects, int len, void **array)
+int
+xor_gen_base(int vects, int len, void **array)
 {
-	int i, j;
-	unsigned char parity;
-	unsigned char **src = (unsigned char **)array;
+        int i, j;
+        unsigned char parity;
+        unsigned char **src = (unsigned char **) array;
 
-	if (vects < 3)
-		return 1;	// Must have at least 2 src and 1 dest
+        if (vects < 3)
+                return 1; // Must have at least 2 src and 1 dest
 
-	for (i = 0; i < len; i++) {
-		parity = src[0][i];
-		for (j = 1; j < vects - 1; j++)
-			parity ^= src[j][i];
+        for (i = 0; i < len; i++) {
+                parity = src[0][i];
+                for (j = 1; j < vects - 1; j++)
+                        parity ^= src[j][i];
 
-		src[vects - 1][i] = parity;	// last pointer is dest
+                src[vects - 1][i] = parity; // last pointer is dest
+        }
 
-	}
-
-	return 0;
+        return 0;
 }
 
-int xor_check_base(int vects, int len, void **array)
+int
+xor_check_base(int vects, int len, void **array)
 {
-	int i, j, fail = 0;
+        int i, j, fail = 0;
 
-	unsigned char parity;
-	unsigned char **src = (unsigned char **)array;
+        unsigned char parity;
+        unsigned char **src = (unsigned char **) array;
 
-	if (vects < 2)
-		return 1;	// Must have at least 2 src
+        if (vects < 2)
+                return 1; // Must have at least 2 src
 
-	for (i = 0; i < len; i++) {
-		parity = 0;
-		for (j = 0; j < vects; j++)
-			parity ^= src[j][i];
+        for (i = 0; i < len; i++) {
+                parity = 0;
+                for (j = 0; j < vects; j++)
+                        parity ^= src[j][i];
 
-		if (parity != 0) {
-			fail = 1;
-			break;
-		}
-	}
-	if (fail && len > 0)
-		return len;
-	return fail;
+                if (parity != 0) {
+                        fail = 1;
+                        break;
+                }
+        }
+        if (fail && len > 0)
+                return len;
+        return fail;
 }

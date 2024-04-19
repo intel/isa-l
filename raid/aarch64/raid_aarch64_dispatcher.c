@@ -31,47 +31,43 @@
 DEFINE_INTERFACE_DISPATCHER(xor_gen)
 {
 #if defined(__linux__)
-	if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
-		return PROVIDER_INFO(xor_gen_neon);
+        if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
+                return PROVIDER_INFO(xor_gen_neon);
 #elif defined(__APPLE__)
-	return PROVIDER_INFO(xor_gen_neon);
+        return PROVIDER_INFO(xor_gen_neon);
 #endif
-	return PROVIDER_BASIC(xor_gen);
-
+        return PROVIDER_BASIC(xor_gen);
 }
 
 DEFINE_INTERFACE_DISPATCHER(xor_check)
 {
 #if defined(__linux__)
-	if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
-		return PROVIDER_INFO(xor_check_neon);
+        if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
+                return PROVIDER_INFO(xor_check_neon);
 #elif defined(__APPLE__)
-	return PROVIDER_INFO(xor_check_neon);
+        return PROVIDER_INFO(xor_check_neon);
 #endif
-	return PROVIDER_BASIC(xor_check);
-
+        return PROVIDER_BASIC(xor_check);
 }
 
 DEFINE_INTERFACE_DISPATCHER(pq_gen)
 {
 #if defined(__linux__)
-	if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
-		return PROVIDER_INFO(pq_gen_neon);
+        if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
+                return PROVIDER_INFO(pq_gen_neon);
 #elif defined(__APPLE__)
-	return PROVIDER_INFO(pq_gen_neon);
+        return PROVIDER_INFO(pq_gen_neon);
 #endif
-	return PROVIDER_BASIC(pq_gen);
-
+        return PROVIDER_BASIC(pq_gen);
 }
 
 DEFINE_INTERFACE_DISPATCHER(pq_check)
 {
 #if defined(__linux__)
-	if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
-		return PROVIDER_INFO(pq_check_neon);
+        if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
+                return PROVIDER_INFO(pq_check_neon);
 #elif defined(__APPLE__)
-	return PROVIDER_INFO(pq_check_neon);
+        return PROVIDER_INFO(pq_check_neon);
 #endif
-	return PROVIDER_BASIC(pq_check);
-
+        return PROVIDER_BASIC(pq_check);
 }

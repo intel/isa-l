@@ -27,181 +27,186 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#include<stdio.h>
-#include<stdint.h>
-#include<string.h>
-#include<stdlib.h>
-#include<limits.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
+#include <limits.h>
 #include "raid.h"
 #include "test.h"
 
 #define TEST_SOURCES 16
 #define TEST_LEN     1024
-#define TEST_MEM ((TEST_SOURCES + 2)*(TEST_LEN))
+#define TEST_MEM     ((TEST_SOURCES + 2) * (TEST_LEN))
 #ifndef TEST_SEED
-# define TEST_SEED 0x1234
+#define TEST_SEED 0x1234
 #endif
 
 // Generates pseudo-random data
 
-void rand_buffer(unsigned char *buf, long buffer_size)
+void
+rand_buffer(unsigned char *buf, long buffer_size)
 {
-	long i;
-	for (i = 0; i < buffer_size; i++)
-		buf[i] = rand();
+        long i;
+        for (i = 0; i < buffer_size; i++)
+                buf[i] = rand();
 }
 
-int dump(unsigned char *buf, int len)
+int
+dump(unsigned char *buf, int len)
 {
-	int i;
-	for (i = 0; i < len;) {
-		printf(" %2x", buf[i++]);
-		if (i % 16 == 0)
-			printf("\n");
-	}
-	printf("\n");
-	return 0;
+        int i;
+        for (i = 0; i < len;) {
+                printf(" %2x", buf[i++]);
+                if (i % 16 == 0)
+                        printf("\n");
+        }
+        printf("\n");
+        return 0;
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
-	int i, j, k, ret = 0, fail = 0;
-	void *buffs[TEST_SOURCES + 2] = { NULL };	// Pointers to src and dest
-	char *tmp_buf[TEST_SOURCES + 2] = { NULL };
+        int i, j, k, ret = 0, fail = 0;
+        void *buffs[TEST_SOURCES + 2] = { NULL }; // Pointers to src and dest
+        char *tmp_buf[TEST_SOURCES + 2] = { NULL };
 
-	printf("Test pq_gen_test ");
+        printf("Test pq_gen_test ");
 
-	srand(TEST_SEED);
+        srand(TEST_SEED);
 
-	// Allocate the arrays
-	for (i = 0; i < TEST_SOURCES + 2; i++) {
-		void *buf;
-		ret = posix_memalign(&buf, 32, TEST_LEN);
-		if (ret) {
-			printf("alloc error: Fail");
-			fail = 1;
-			goto exit;
-		}
-		buffs[i] = buf;
-	}
+        // Allocate the arrays
+        for (i = 0; i < TEST_SOURCES + 2; i++) {
+                void *buf;
+                ret = posix_memalign(&buf, 32, TEST_LEN);
+                if (ret) {
+                        printf("alloc error: Fail");
+                        fail = 1;
+                        goto exit;
+                }
+                buffs[i] = buf;
+        }
 
-	// Test of all zeros
-	for (i = 0; i < TEST_SOURCES + 2; i++)
-		memset(buffs[i], 0, TEST_LEN);
+        // Test of all zeros
+        for (i = 0; i < TEST_SOURCES + 2; i++)
+                memset(buffs[i], 0, TEST_LEN);
 
-	pq_gen(TEST_SOURCES + 2, TEST_LEN, buffs);
+        pq_gen(TEST_SOURCES + 2, TEST_LEN, buffs);
 
-	for (i = 0; i < TEST_LEN; i++) {
-		if (((char *)buffs[TEST_SOURCES])[i] != 0)
-			fail++;
-	}
+        for (i = 0; i < TEST_LEN; i++) {
+                if (((char *) buffs[TEST_SOURCES])[i] != 0)
+                        fail++;
+        }
 
-	for (i = 0; i < TEST_LEN; i++) {
-		if (((char *)buffs[TEST_SOURCES + 1])[i] != 0)
-			fail++;
-	}
+        for (i = 0; i < TEST_LEN; i++) {
+                if (((char *) buffs[TEST_SOURCES + 1])[i] != 0)
+                        fail++;
+        }
 
-	if (fail > 0) {
-		printf("fail zero test %d\n", fail);
-		goto exit;
-	}
+        if (fail > 0) {
+                printf("fail zero test %d\n", fail);
+                goto exit;
+        }
 #ifdef TEST_VERBOSE
-	putchar('.');
+        putchar('.');
 #endif
 
-	// Test rand1
-	for (i = 0; i < TEST_SOURCES + 2; i++)
-		rand_buffer(buffs[i], TEST_LEN);
+        // Test rand1
+        for (i = 0; i < TEST_SOURCES + 2; i++)
+                rand_buffer(buffs[i], TEST_LEN);
 
-	ret = pq_gen(TEST_SOURCES + 2, TEST_LEN, buffs);
-	fail |= pq_check_base(TEST_SOURCES + 2, TEST_LEN, buffs);
+        ret = pq_gen(TEST_SOURCES + 2, TEST_LEN, buffs);
+        fail |= pq_check_base(TEST_SOURCES + 2, TEST_LEN, buffs);
 
-	if (fail > 0) {
-		int t;
-		printf(" Fail rand test1 fail=%d, ret=%d\n", fail, ret);
-		for (t = 0; t < TEST_SOURCES + 2; t++)
-			dump(buffs[t], 15);
+        if (fail > 0) {
+                int t;
+                printf(" Fail rand test1 fail=%d, ret=%d\n", fail, ret);
+                for (t = 0; t < TEST_SOURCES + 2; t++)
+                        dump(buffs[t], 15);
 
-		printf(" reference function p,q\n");
-		pq_gen_base(TEST_SOURCES + 2, TEST_LEN, buffs);
-		for (t = TEST_SOURCES; t < TEST_SOURCES + 2; t++)
-			dump(buffs[t], 15);
+                printf(" reference function p,q\n");
+                pq_gen_base(TEST_SOURCES + 2, TEST_LEN, buffs);
+                for (t = TEST_SOURCES; t < TEST_SOURCES + 2; t++)
+                        dump(buffs[t], 15);
 
-		goto exit;
-	}
+                goto exit;
+        }
 #ifdef TEST_VERBOSE
-	putchar('.');
+        putchar('.');
 #endif
 
-	// Test various number of sources
-	for (j = 4; j <= TEST_SOURCES + 2; j++) {
-		for (i = 0; i < j; i++)
-			rand_buffer(buffs[i], TEST_LEN);
+        // Test various number of sources
+        for (j = 4; j <= TEST_SOURCES + 2; j++) {
+                for (i = 0; i < j; i++)
+                        rand_buffer(buffs[i], TEST_LEN);
 
-		pq_gen(j, TEST_LEN, buffs);
-		fail |= pq_check_base(j, TEST_LEN, buffs);
+                pq_gen(j, TEST_LEN, buffs);
+                fail |= pq_check_base(j, TEST_LEN, buffs);
 
-		if (fail > 0) {
-			printf("fail rand test %d sources\n", j);
-			goto exit;
-		}
+                if (fail > 0) {
+                        printf("fail rand test %d sources\n", j);
+                        goto exit;
+                }
 #ifdef TEST_VERBOSE
-		putchar('.');
+                putchar('.');
 #endif
-	}
+        }
 
-	fflush(0);
+        fflush(0);
 
-	// Test various number of sources and len
-	k = 0;
-	while (k <= TEST_LEN) {
-		for (j = 4; j <= TEST_SOURCES + 2; j++) {
-			for (i = 0; i < j; i++)
-				rand_buffer(buffs[i], k);
+        // Test various number of sources and len
+        k = 0;
+        while (k <= TEST_LEN) {
+                for (j = 4; j <= TEST_SOURCES + 2; j++) {
+                        for (i = 0; i < j; i++)
+                                rand_buffer(buffs[i], k);
 
-			ret = pq_gen(j, k, buffs);
-			fail |= pq_check_base(j, k, buffs);
+                        ret = pq_gen(j, k, buffs);
+                        fail |= pq_check_base(j, k, buffs);
 
-			if (fail > 0) {
-				printf("fail rand test %d sources, len=%d, fail="
-				       "%d, ret=%d\n", j, k, fail, ret);
-				goto exit;
-			}
-		}
+                        if (fail > 0) {
+                                printf("fail rand test %d sources, len=%d, fail="
+                                       "%d, ret=%d\n",
+                                       j, k, fail, ret);
+                                goto exit;
+                        }
+                }
 #ifdef TEST_VERBOSE
-		putchar('.');
+                putchar('.');
 #endif
-		k += 32;
-	}
+                k += 32;
+        }
 
-	// Test at the end of buffer
-	k = 0;
-	while (k <= TEST_LEN) {
-		for (j = 0; j < (TEST_SOURCES + 2); j++) {
-			rand_buffer(buffs[j], TEST_LEN - k);
-			tmp_buf[j] = (char *)buffs[j] + k;
-		}
+        // Test at the end of buffer
+        k = 0;
+        while (k <= TEST_LEN) {
+                for (j = 0; j < (TEST_SOURCES + 2); j++) {
+                        rand_buffer(buffs[j], TEST_LEN - k);
+                        tmp_buf[j] = (char *) buffs[j] + k;
+                }
 
-		ret = pq_gen(TEST_SOURCES + 2, TEST_LEN - k, (void *)tmp_buf);
-		fail |= pq_check_base(TEST_SOURCES + 2, TEST_LEN - k, (void *)tmp_buf);
+                ret = pq_gen(TEST_SOURCES + 2, TEST_LEN - k, (void *) tmp_buf);
+                fail |= pq_check_base(TEST_SOURCES + 2, TEST_LEN - k, (void *) tmp_buf);
 
-		if (fail > 0) {
-			printf("fail end test - offset: %d, len: %d, fail: %d, "
-			       "ret: %d\n", k, TEST_LEN - k, fail, ret);
-			goto exit;
-		}
+                if (fail > 0) {
+                        printf("fail end test - offset: %d, len: %d, fail: %d, "
+                               "ret: %d\n",
+                               k, TEST_LEN - k, fail, ret);
+                        goto exit;
+                }
 #ifdef TEST_VERBOSE
-		putchar('.');
-		fflush(0);
+                putchar('.');
+                fflush(0);
 #endif
-		k += 32;
-	}
+                k += 32;
+        }
 
-	if (!fail)
-		printf(" done: Pass\n");
+        if (!fail)
+                printf(" done: Pass\n");
 
-      exit:
-	for (i = 0; i < TEST_SOURCES + 2; i++)
-		aligned_free(buffs[i]);
-	return fail;
+exit:
+        for (i = 0; i < TEST_SOURCES + 2; i++)
+                aligned_free(buffs[i]);
+        return fail;
 }
