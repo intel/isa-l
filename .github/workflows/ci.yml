@@ -13,13 +13,19 @@ permissions:
 
 jobs:
   check_format:
+    env:
+      CLANGFORMAT: clang-format-18
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.3.4
         with:
           fetch-depth: 2
-      - name: Install indent
-        run: sudo apt install indent
+      - name: Install clang-format-18
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 18
+          sudo apt install -y clang-format-18
       - name: Run format check
         run: bash tools/check_format.sh
 
