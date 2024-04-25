@@ -331,7 +331,7 @@ static inline int sysctlEnabled(const char* name){
  */
 static inline uint32_t get_micro_arch_id(void)
 {
-	uint32_t id=CPU_IMPLEMENTER_RESERVE;
+	uint64_t id=CPU_IMPLEMENTER_RESERVE;
 #ifndef __APPLE__
 	if ((getauxval(AT_HWCAP) & HWCAP_CPUID)) {
 		/** Here will trap into kernel space */
