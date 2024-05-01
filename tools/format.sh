@@ -36,8 +36,11 @@ if [ $(clang_format_version) -ge $clang_format_min_version ]; then
     echo "Formatting files using clang-format v$(clang_format_version)..."
     for f in `git ls-files '*.[c|h]'`; do
         [ "$verbose" -gt 0 ] && echo "formatting $f"
-        $clang_format -style=file -i "$f"
+        $clang_format -style=file -i "$f" &
     done
 else
     echo "clang-format version ${clang_format_min_version}+ is required!"
 fi
+
+# wait for background processes to finish
+wait
