@@ -34,5 +34,5 @@ programs_igzip_LDADD = libisal.la
 dist_man_MANS = programs/igzip.1
 other_src    += programs/igzip.1.h2m
 
-programs/igzip.1: % : %.h2m programs/igzip_cli.c
+programs/igzip.1: % : %.h2m programs/igzip_cli.c programs/igzip
 	-help2man -o $@ -i $< -N ./programs/igzip
