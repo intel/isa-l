@@ -34,7 +34,7 @@
 #include "stdlib.h"
 #include "string.h"
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__NetBSD__)
 #include <sys/types.h>
 #include <sys/endian.h>
 #define isal_bswap16(x) bswap16(x)
