@@ -56,7 +56,6 @@ int
 main(int argc, char *argv[])
 {
         void *buf;
-        uint32_t checksum = 0;
         struct perf start;
 
         printf("adler32_perf:\n");
@@ -67,7 +66,7 @@ main(int argc, char *argv[])
         }
         memset(buf, 0, TEST_LEN);
 
-        BENCHMARK(&start, BENCHMARK_TIME, checksum |= isal_adler32(TEST_SEED, buf, TEST_LEN));
+        BENCHMARK(&start, BENCHMARK_TIME, isal_adler32(TEST_SEED, buf, TEST_LEN));
         printf("adler32" TEST_TYPE_STR ": ");
         perf_print(start, (long long) TEST_LEN);
 
