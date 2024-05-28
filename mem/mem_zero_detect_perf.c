@@ -39,7 +39,6 @@
 int
 main(int argc, char *argv[])
 {
-        int val = 0;
         void *buf;
         struct perf start;
 
@@ -51,7 +50,7 @@ main(int argc, char *argv[])
         }
 
         memset(buf, 0, TEST_LEN);
-        BENCHMARK(&start, BENCHMARK_TIME, val |= isal_zero_detect(buf, TEST_LEN));
+        BENCHMARK(&start, BENCHMARK_TIME, isal_zero_detect(buf, TEST_LEN));
 
         printf("mem_zero_detect_perf" TEST_TYPE_STR ": ");
         perf_print(start, (long long) TEST_LEN);
