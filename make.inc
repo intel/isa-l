@@ -247,7 +247,7 @@ $(O)/%.o: $(host_cpu)/%.S
 $(O)/%.o   : $(host_cpu)/%.c
 	@echo "  ---> Building $< $(msg)"
 	@$(COMPILE.c) $(OUTPUT_OPTION) $<
-$(O)/%.o %.o: %.c
+$(O)/%.o: %.c
 	@echo "  ---> Building $< $(msg)"
 	@$(COMPILE.c) $(OUTPUT_OPTION) $<
 
