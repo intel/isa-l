@@ -29,10 +29,12 @@ other_tests_x86_64=
 other_tests_x86_32=
 other_tests_aarch64=
 other_tests_ppc64le=
+other_tests_riscv64=
 lsrc_x86_64=
 lsrc_x86_32=
 lsrc_aarch64=
 lsrc_ppc64le=
+lsrc_riscv64=
 lsrc_base_aliases=
 lsrc32=
 unit_tests32=
@@ -83,6 +85,12 @@ libisal_la_SOURCES += ${lsrc_ppc64le}
 other_tests += ${other_tests_ppc64le}
 endif
 
+if CPU_RISCV64
+ARCH=-Driscv64
+libisal_la_SOURCES += ${lsrc_riscv64}
+other_tests += ${other_tests_riscv64}
+endif
+
 if CPU_UNDEFINED
 libisal_la_SOURCES += ${lsrc_base_aliases}
 endif
@@ -131,6 +139,9 @@ endif
 if CPU_AARCH64
   as_filter = $(CC) -D__ASSEMBLY__
 endif
+if CPU_RISCV64
+  as_filter = $(CC) -D__ASSEMBLY__
+endif
 
 CCAS = $(as_filter)
 EXTRA_DIST += tools/yasm-filter.sh tools/nasm-filter.sh
@@ -141,6 +152,9 @@ if CPU_AARCH64
 AM_CCASFLAGS = ${AM_CFLAGS}
 else
 AM_CCASFLAGS = ${yasm_args} ${INCLUDE} ${src_include} ${DEFS} ${D}
+endif
+if CPU_RISCV64
+AM_CCASFLAGS = ${AM_CFLAGS}
 endif
 
 .asm.s:
