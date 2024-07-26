@@ -71,3 +71,27 @@ crc16_t10dif:
 	.dword 0x000000002d560000
 .k6:
 	.dword 0x0000000013680000
+
+
+/* uint16_t crc16_t10dif_copy(uint16_t seed, uint8_t * dst, uint8_t * src, uint64_t len) */
+/* in addition to calculating crc, also copies from src to dst */
+.text
+.align 1
+.global crc16_t10dif_copy
+.type crc16_t10dif_copy, %function
+crc16_t10dif_copy:
+	beqz a3, .memcpy_done
+	add t0, a2, a3
+	mv t1, a2
+.memcpy_loop:
+	lb t2, 0(t1)
+	sb t2, 0(a1)
+	addi t1, t1, 1
+	addi a1, a1, 1
+	bne t1, t0, .memcpy_loop
+
+.memcpy_done:
+	/* tail-call crc function */
+	mv a1, a2
+	mv a2, a3
+	tail crc16_t10dif
