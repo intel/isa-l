@@ -92,7 +92,7 @@ AS_IF([test "x$enable_debug" = "xyes"], [
         AC_DEFINE(ENABLE_DEBUG, [1], [Debug messages.])
 ])
 
-# If this build is for x86, look for yasm and nasm
+# If this build is for x86, look for nasm
 if test x"$is_x86" = x"yes"; then
   AC_MSG_CHECKING([whether Intel CET is enabled])
   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[
@@ -122,48 +122,8 @@ int main(int argc, char **argv)
 		LDFLAGS=""]
 )
 
-  # Pick an assembler yasm or nasm
+  # Pick NASM assembler
   if test x"$AS" = x""; then
-    # Check for yasm and yasm features
-    yasm_feature_level=0
-    AC_CHECK_PROG(HAVE_YASM, yasm, yes, no)
-    if test "$HAVE_YASM" = "yes"; then
-       yasm_feature_level=1
-    else
-       AC_MSG_RESULT([no yasm])
-    fi
-    if test x"$yasm_feature_level" = x"1"; then
-       AC_MSG_CHECKING([for modern yasm])
-       AC_LANG_CONFTEST([AC_LANG_SOURCE([[vmovdqa %xmm0, %xmm1;]])])
-       if yasm -f elf64 -p gas conftest.c ; then
-         AC_MSG_RESULT([yes])
-         yasm_feature_level=4
-       else
-         AC_MSG_RESULT([no])
-       fi
-    fi
-    if test x"$yasm_feature_level" = x"4"; then
-       AC_MSG_CHECKING([for optional yasm AVX512 support])
-       AC_LANG_CONFTEST([AC_LANG_SOURCE([[vpshufb %zmm0, %zmm1, %zmm2;]])])
-       if yasm -f elf64 -p gas conftest.c 2> /dev/null; then
-         AC_MSG_RESULT([yes])
-         yasm_feature_level=6
-       else
-         AC_MSG_RESULT([no])
-       fi
-    fi
-    if test x"$yasm_feature_level" = x"6"; then
-      AC_MSG_CHECKING([for additional yasm AVX512 support])
-      AC_LANG_CONFTEST([AC_LANG_SOURCE([[vpcompressb zmm0, k1, zmm1;]])])
-      sed -i -e '/vpcompressb/!d' conftest.c
-      if yasm -f elf64  conftest.c 2> /dev/null; then
-        AC_MSG_RESULT([yes])
-        yasm_feature_level=10
-      else
-        AC_MSG_RESULT([no])
-      fi
-    fi
-
     # Check for nasm and nasm features
     nasm_feature_level=0
     AC_CHECK_PROG(HAVE_NASM, nasm, yes, no)
@@ -207,13 +167,8 @@ int main(int argc, char **argv)
       fi
     fi
 
-    if test $nasm_feature_level -ge $yasm_feature_level ; then
-      AS=nasm
-      as_feature_level=$nasm_feature_level
-    else
-      AS=yasm
-      as_feature_level=$yasm_feature_level
-    fi
+    AS=nasm
+    as_feature_level=$nasm_feature_level
 
   else
     # Check for $AS supported features
@@ -261,25 +216,16 @@ int main(int argc, char **argv)
   fi
 
   if test $as_feature_level -lt 2 ; then
-    AC_MSG_ERROR([No modern nasm or yasm found as required. Nasm should be v2.11.01 or later (v2.13 for AVX512) and yasm should be 1.2.0 or later.])
+    AC_MSG_ERROR([No modern nasm found as required. Nasm should be v2.11.01 or later (v2.13 for AVX512).])
   fi
 
   case $host_os in
-       *linux*)  arch=linux   yasm_args="-f elf64";;
-       *darwin*) arch=darwin  yasm_args="-f macho64 --prefix=_ ";;
-       *netbsd*) arch=netbsd  yasm_args="-f elf64";;
-       *mingw*)  arch=mingw   yasm_args="-f win64";;
-       *)        arch=unknown yasm_args="-f elf64";;
+       *linux*)  arch=linux   asm_args="-f elf64";;
+       *darwin*) arch=darwin  asm_args="-f macho64 --prefix=_ ";;
+       *netbsd*) arch=netbsd  asm_args="-f elf64";;
+       *mingw*)  arch=mingw   asm_args="-f win64";;
+       *)        arch=unknown asm_args="-f elf64";;
   esac
-
-  # Fix for nasm missing windows features
-  if test x"$arch" = x"mingw"; then
-    AS=yasm
-    as_feature_level=$yasm_feature_level
-    if test $as_feature_level -lt 2 ; then
-      AC_MSG_ERROR([Mingw build requires Yasm 1.2.0 or later.])
-    fi
-  fi
 
   AC_DEFINE_UNQUOTED(AS_FEATURE_LEVEL, [$as_feature_level], [Assembler feature level.])
   if test $as_feature_level -ge 6 ; then
@@ -289,15 +235,13 @@ int main(int argc, char **argv)
     AC_MSG_RESULT([Assembler does not understand AVX512 opcodes.  Consider upgrading for best performance.])
   fi
 
-  AM_CONDITIONAL(USE_YASM, test x"$AS" = x"yasm")
   AM_CONDITIONAL(USE_NASM, test x"$AS" = x"nasm")
   AM_CONDITIONAL(WITH_AVX512, test x"$have_as_knows_avx512" = x"yes")
-  AC_SUBST([yasm_args])
+  AC_SUBST([asm_args])
   AM_CONDITIONAL(DARWIN, test x"$arch" = x"darwin")
-  AC_MSG_RESULT([Using $AS args target "$arch" "$yasm_args"])
+  AC_MSG_RESULT([Using $AS args target "$arch" "$asm_args"])
 else
   # Disable below conditionals if not x86
-  AM_CONDITIONAL(USE_YASM, test "x" = "y")
   AM_CONDITIONAL(USE_NASM, test "x" = "y")
   AM_CONDITIONAL(WITH_AVX512, test "x" = "y")
   AM_CONDITIONAL(DARWIN, test "x" = "y")

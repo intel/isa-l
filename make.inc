@@ -53,7 +53,6 @@ AS  = nasm
 AWK = awk
 
 DEBUG      = -g
-DEBUG_yasm = -g dwarf2
 DEBUG_nasm = -g
 
 # Default arch= build options
@@ -239,7 +238,7 @@ $(addsuffix .run,$(all_tests)): %.run : %
 # Other build rules
 msg = $(if $(DEBUG),DEBUG) $(patsubst 32,32-bit,$(host_cpu)) $D
 
-# yasm/nasm assembly files
+# nasm assembly files
 $(O)/%.o: %.asm
 	@echo "  ---> Building $< $(msg)"
 	@$(AS) $(ASFLAGS) -o $@ $<

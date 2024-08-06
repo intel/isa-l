@@ -129,10 +129,7 @@ test: $(addsuffix .run,$(unit_tests))
 	$<
 	@echo Completed run: $<
 
-# Support for yasm/nasm/gas
-if USE_YASM
-  as_filter = ${srcdir}/tools/yasm-filter.sh
-endif
+# Support for nasm/gas
 if USE_NASM
   as_filter = ${srcdir}/tools/nasm-filter.sh
 endif
@@ -144,14 +141,14 @@ if CPU_RISCV64
 endif
 
 CCAS = $(as_filter)
-EXTRA_DIST += tools/yasm-filter.sh tools/nasm-filter.sh
-EXTRA_DIST += tools/yasm-cet-filter.sh tools/nasm-cet-filter.sh
+EXTRA_DIST += tools/nasm-filter.sh
+EXTRA_DIST += tools/nasm-cet-filter.sh
 
 AM_CFLAGS = ${my_CFLAGS} ${INCLUDE} $(src_include) ${ARCH} ${D}
 if CPU_AARCH64
 AM_CCASFLAGS = ${AM_CFLAGS}
 else
-AM_CCASFLAGS = ${yasm_args} ${INCLUDE} ${src_include} ${DEFS} ${D}
+AM_CCASFLAGS = ${asm_args} ${INCLUDE} ${src_include} ${DEFS} ${D}
 endif
 if CPU_RISCV64
 AM_CCASFLAGS = ${AM_CFLAGS}
