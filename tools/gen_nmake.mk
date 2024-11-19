@@ -99,6 +99,8 @@ endif
 	@echo ''			>> $@
 	@echo 'perfs: lib $$(perfs)'	>> $@
 	@echo '$$(perfs): $$(@B).obj'	>> $@
+	@echo 'perf: $$(perfs)'	>> $@
+	@echo '	!$$?'			>> $@
 	@echo ''			>> $@
 	@printf 'progs ='		>> $@
 	@$(foreach prog, $(notdir $(bin_PROGRAMS)), printf " %s\n\t%s.exe" \\ $(prog) >> $@; )

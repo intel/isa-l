@@ -335,6 +335,8 @@ perfs = \
 
 perfs: lib $(perfs)
 $(perfs): $(@B).obj
+perf: $(perfs)
+	!$?
 
 progs = \
 	igzip.exe
