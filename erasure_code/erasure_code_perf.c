@@ -272,8 +272,8 @@ main(int argc, char *argv[])
 exit:
         free(err_list);
         for (i = 0; i < TEST_SOURCES; i++) {
-                free(buffs[i]);
-                free(temp_buffs[i]);
+                aligned_free(buffs[i]);
+                aligned_free(temp_buffs[i]);
         }
         return ret;
 }
