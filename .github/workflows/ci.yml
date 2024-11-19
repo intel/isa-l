@@ -69,10 +69,10 @@ jobs:
         uses: ilammy/setup-nasm@v1.2.0
       - name: Build
         run: |
-          nmake -f Makefile.nmake
-          nmake checks -f Makefile.nmake
-          nmake perfs -f Makefile.nmake
+          nmake -f Makefile.nmake || exit /b 1
+          nmake checks -f Makefile.nmake || exit /b 1
+          nmake perfs -f Makefile.nmake || exit /b 1
       - name: Run perf apps
-        run: nmake perf -f Makefile.nmake
+        run: nmake perf -f Makefile.nmake || exit /b 1
       - name: Run checks
-        run: nmake check -f Makefile.nmake
+        run: nmake check -f Makefile.nmake || exit /b 1
