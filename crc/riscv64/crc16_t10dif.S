@@ -1,5 +1,5 @@
 ########################################################################
-#  Copyright(c) 2011-2015 Intel Corporation All rights reserved.
+#  Copyright(c) 2024 ByteDance All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
 #      notice, this list of conditions and the following disclaimer in
 #      the documentation and/or other materials provided with the
 #      distribution.
-#    * Neither the name of Intel Corporation nor the names of its
+#    * Neither the name of ByteDance Corporation nor the names of its
 #      contributors may be used to endorse or promote products derived
 #      from this software without specific prior written permission.
 #
@@ -27,42 +27,71 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ########################################################################
 
-include raid/aarch64/Makefile.am
+#include "crc32_norm_common_clmul.h"
 
-lsrc        += 	raid/raid_base.c
+/* uint16_t crc16_t10dif(uint16_t init_crc, uint8_t *buf, uint64_t len) */
+.text
+.align 1
+.global crc16_t10dif
+.type crc16_t10dif, %function
+crc16_t10dif:
+	/* load precomputed constants */
+	ld POLY, .poly
+	ld MU, .mu
 
-lsrc_base_aliases += raid/raid_base_aliases.c
-lsrc_ppc64le      += raid/raid_base_aliases.c
-lsrc_riscv64      += raid/raid_base_aliases.c
+	/* shift 16-bit seed into upper nibble */
+	slli SEED, SEED, 16
 
-lsrc_x86_64 += \
-		raid/xor_gen_sse.asm \
-		raid/pq_gen_sse.asm \
-		raid/xor_check_sse.asm \
-		raid/pq_check_sse.asm \
-		raid/pq_gen_avx.asm \
-		raid/xor_gen_avx.asm \
-		raid/pq_gen_avx2.asm \
-		raid/xor_gen_avx512.asm \
-		raid/pq_gen_avx512.asm \
-		raid/raid_multibinary.asm
+	/* align and fold as though we're calculating a 32-bit crc */
+	crc32_norm_align
 
-lsrc_x86_32 += \
-		raid/xor_gen_sse.asm \
-		raid/pq_gen_sse_i32.asm \
-		raid/xor_check_sse.asm \
-		raid/pq_check_sse_i32.asm \
-		raid/raid_multibinary_i32.asm
+	crc_fold_loop 32 1 0
+	crc32_norm_fold_reduction
+
+	crc32_norm_excess
+
+	/* shift back down result */
+	srli SEED, SEED, 16
+	ret
+
+/* precomputed constants */
+.poly:
+	.dword 0x000000018bb70000
+.mu:
+	.dword 0x00000001f65a57f8
+.k1:
+	.dword 0x00000000371d0000
+.k2:
+	.dword 0x0000000087e70000
+.k3:
+	.dword 0x000000004c1a0000
+.k4:
+	.dword 0x00000000fb0b0000
+.k5:
+	.dword 0x000000002d560000
+.k6:
+	.dword 0x0000000013680000
 
 
-extern_hdrs +=	include/raid.h
+/* uint16_t crc16_t10dif_copy(uint16_t seed, uint8_t * dst, uint8_t * src, uint64_t len) */
+/* in addition to calculating crc, also copies from src to dst */
+.text
+.align 1
+.global crc16_t10dif_copy
+.type crc16_t10dif_copy, %function
+crc16_t10dif_copy:
+	beqz a3, .memcpy_done
+	add t0, a2, a3
+	mv t1, a2
+.memcpy_loop:
+	lb t2, 0(t1)
+	sb t2, 0(a1)
+	addi t1, t1, 1
+	addi a1, a1, 1
+	bne t1, t0, .memcpy_loop
 
-other_src   +=  include/test.h
-
-check_tests +=  raid/xor_gen_test raid/pq_gen_test raid/xor_check_test raid/pq_check_test
-
-perf_tests  +=  raid/xor_gen_perf raid/pq_gen_perf
-
-examples    += 	raid/xor_example
-
-lsrc32       += xor_gen_sse.asm pq_gen_sse_i32.asm xor_check_sse.asm pq_check_sse_i32.asm raid_base.c
+.memcpy_done:
+	/* tail-call crc function */
+	mv a1, a2
+	mv a2, a3
+	tail crc16_t10dif
