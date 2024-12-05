@@ -118,7 +118,7 @@ write_trailer(struct isal_zstream *stream);
 uint32_t
 isal_adler32_bam1(uint32_t adler32, const unsigned char *start, uint64_t length)
 {
-        uint64_t a;
+        uint32_t a;
 
         /* Internally the checksum is being stored as B | (A-1) so crc and
          * addler have same init value */
