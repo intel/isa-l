@@ -206,7 +206,7 @@ INCLUDES   = -I./ -Ierasure_code/ -Iraid/ -Icrc/ -Iigzip/ -Iprograms/ -Imem/ -Im
 CFLAGS_REL = -O2 -DNDEBUG /Z7 /Gy
 CFLAGS_DBG = -Od -DDEBUG /Z7
 LINKFLAGS  = -nologo -incremental:no -debug
-CFLAGS     = $(CFLAGS_REL) -nologo -D_USE_MATH_DEFINES $(INCLUDES) $(D)
+CFLAGS     = $(CFLAGS_REL) -nologo -D_USE_MATH_DEFINES $(INCLUDES) $(D) /W3
 AFLAGS     = -f win64 $(INCLUDES) $(D)
 CC         = cl
 # or CC    = icl -Qstd=c99

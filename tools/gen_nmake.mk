@@ -22,7 +22,7 @@ Makefile.nmake tst.nmake: FORCE
 	@echo 'CFLAGS_REL = -O2 -DNDEBUG /Z7 /Gy'		>> $@
 	@echo 'CFLAGS_DBG = -Od -DDEBUG /Z7'			>> $@
 	@echo 'LINKFLAGS  = -nologo -incremental:no -debug'	>> $@
-	@echo 'CFLAGS     = $$(CFLAGS_REL) -nologo -D_USE_MATH_DEFINES $$(INCLUDES) $$(D)'	>> $@
+	@echo 'CFLAGS     = $$(CFLAGS_REL) -nologo -D_USE_MATH_DEFINES $$(INCLUDES) $$(D) /W3'	>> $@
 	@echo 'AFLAGS     = -f win64 $$(INCLUDES) $$(D)'	>> $@
 	@echo 'CC         = cl'			>> $@
 	@echo '# or CC    = icl -Qstd=c99'	>> $@
