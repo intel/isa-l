@@ -1,5 +1,5 @@
-v2.31 Intel Intelligent Storage Acceleration Library Release Notes
-==================================================================
+v2.31.1 Intel Intelligent Storage Acceleration Library Release Notes
+====================================================================
 
 RELEASE NOTE CONTENTS
 1. KNOWN ISSUES
@@ -17,6 +17,17 @@ RELEASE NOTE CONTENTS
 
 2. FIXED ISSUES
 ---------------
+v2.31.1
+
+* Fixed return type for PowerPC _gf_vect_mul_base function.
+* Fixed isal_deflate_icf_finish_lvl1 dispatcher for aarch64.
+* Fixed CRC compilation on aarch64.
+* Fixed MacOS-14 compilation.
+* Fixed MinGW build.
+* Fixed Clang compilation on igzip library on aarch64.
+* Fixed spelling mistakes and typos.
+* Fixed Windows build on erasure code performance libaries.
+
 v2.31
 
 * Fixed various compilation issues/warnings for different platforms.
