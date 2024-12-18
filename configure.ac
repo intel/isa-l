@@ -3,7 +3,7 @@
 
 AC_PREREQ(2.69)
 AC_INIT([libisal],
-        [2.31.0],
+        [2.31.1],
         [https://github.com/intel/isa-l/issues],
         [isa-l])
 AC_CONFIG_SRCDIR([])
