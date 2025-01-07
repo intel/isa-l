@@ -26,6 +26,7 @@ v2.31.1
 * Fixed spelling mistakes and typos.
 * Fixed Windows build on erasure code performance applications.
 * Fixed FreeBSD build warnings.
+* Fixed compilation with YASM.
 
 v2.31
 
