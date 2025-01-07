@@ -245,15 +245,6 @@ int main(int argc, char **argv)
        *)        arch=unknown yasm_args="-f elf64";;
   esac
 
-  # Fix for nasm missing windows features
-  if test x"$arch" = x"mingw"; then
-    AS=yasm
-    as_feature_level=$yasm_feature_level
-    if test $as_feature_level -lt 2 ; then
-      AC_MSG_ERROR([Mingw build requires Yasm 1.2.0 or later.])
-    fi
-  fi
-
   AC_DEFINE_UNQUOTED(AS_FEATURE_LEVEL, [$as_feature_level], [Assembler feature level.])
   if test $as_feature_level -ge 6 ; then
     AC_DEFINE(HAVE_AS_KNOWS_AVX512, [1], [Assembler can do AVX512.])
