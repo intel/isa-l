@@ -53,7 +53,7 @@ include mem/Makefile.am
 # LIB version info not necessarily the same as package version
 LIBISAL_CURRENT=2
 LIBISAL_REVISION=31
-LIBISAL_AGE=1
+LIBISAL_AGE=0
 
 lib_LTLIBRARIES = libisal.la
 pkginclude_HEADERS += $(sort ${extern_hdrs})
