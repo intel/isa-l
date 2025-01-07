@@ -29,6 +29,8 @@
 
 %include "reg_sizes.asm"
 
+%ifdef HAVE_AS_KNOWS_AVX512
+
 %ifidn __OUTPUT_FORMAT__, elf64
  %define arg0  rdi
  %define arg1  rsi
@@ -140,3 +142,5 @@ align 16
 
 
 endproc_frame
+
+%endif  ; ifdef HAVE_AS_KNOWS_AVX512
