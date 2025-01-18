@@ -4,7 +4,7 @@
 #include "igzip_level_buf_structs.h"
 
 extern uint64_t
-gen_icf_map_lh1(struct isal_zstream *, struct deflate_icf *, uint32_t);
+gen_icf_map_lh1(struct isal_zstream *, struct deflate_icf *, uint64_t);
 extern void
 set_long_icf_fg(uint8_t *, uint64_t, uint64_t, struct deflate_icf *);
 extern void

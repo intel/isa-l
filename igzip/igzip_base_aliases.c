@@ -59,9 +59,10 @@ extern void
 isal_deflate_hash_base(uint16_t *, uint32_t, uint32_t, uint8_t *, uint32_t);
 
 void
-set_long_icf_fg_base(uint8_t *next_in, uint8_t *end_in, struct deflate_icf *match_lookup,
-                     struct level_buf *level_buf);
-void
+set_long_icf_fg_base(uint8_t *next_in, uint64_t processed, uint64_t input_size,
+                     struct deflate_icf *match_lookup);
+
+uint64_t
 gen_icf_map_h1_base(struct isal_zstream *stream, struct deflate_icf *matches_icf_lookup,
                     uint64_t input_size);
 
@@ -167,15 +168,15 @@ isal_deflate_hash_lvl3(uint16_t *hash_table, uint32_t hash_mask, uint32_t curren
 }
 
 void
-set_long_icf_fg(uint8_t *next_in, uint8_t *end_in, struct deflate_icf *match_lookup,
-                struct level_buf *level_buf)
+set_long_icf_fg(uint8_t *next_in, uint64_t processed, uint64_t input_size,
+                struct deflate_icf *match_lookup)
 {
-        set_long_icf_fg_base(next_in, end_in, match_lookup, level_buf);
+        set_long_icf_fg_base(next_in, processed, input_size, match_lookup);
 }
 
-void
+uint64_t
 gen_icf_map_lh1(struct isal_zstream *stream, struct deflate_icf *matches_icf_lookup,
                 uint64_t input_size)
 {
-        gen_icf_map_h1_base(stream, matches_icf_lookup, input_size);
+        return gen_icf_map_h1_base(stream, matches_icf_lookup, input_size);
 }
