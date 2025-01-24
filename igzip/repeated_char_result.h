@@ -59,8 +59,13 @@
 /* Headers for constant 0x00 and 0xFF blocks
  * This also contains the first literal character. */
 const uint32_t repeated_char_header[2][5] = {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
         { 0x0121c0ec, 0xc30c0000, 0x7d57fab0, 0x49270938 }, /* Deflate header for 0x00 */
         { 0x0121c0ec, 0xc30c0000, 0x7baaff30, 0x49270938 }  /* Deflate header for 0xFF */
+#else
+        { 0xecc02101, 0x00000cc3, 0xb0fa577d, 0x38092749 }, /* Deflate header for 0x00 */
+        { 0xecc02101, 0x00000cc3, 0x30ffaa7b, 0x38092749 }, /* Deflate header for 0xFF */
+#endif
 
 };
 
