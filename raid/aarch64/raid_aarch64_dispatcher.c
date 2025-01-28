@@ -27,47 +27,60 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 #include <aarch64_multibinary.h>
+#include "raid.h"
+
+extern int
+xor_gen_neon(int, int, void **);
+
+extern int
+xor_check_neon(int, int, void **);
+
+extern int
+pq_gen_neon(int, int, void **);
+
+extern int
+pq_check_neon(int, int, void **);
 
 DEFINE_INTERFACE_DISPATCHER(xor_gen)
 {
 #if defined(__linux__)
         if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
-                return PROVIDER_INFO(xor_gen_neon);
+                return xor_gen_neon;
 #elif defined(__APPLE__)
-        return PROVIDER_INFO(xor_gen_neon);
+        return xor_gen_neon;
 #endif
-        return PROVIDER_BASIC(xor_gen);
+        return xor_gen_base;
 }
 
 DEFINE_INTERFACE_DISPATCHER(xor_check)
 {
 #if defined(__linux__)
         if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
-                return PROVIDER_INFO(xor_check_neon);
+                return xor_check_neon;
 #elif defined(__APPLE__)
-        return PROVIDER_INFO(xor_check_neon);
+        return xor_check_neon;
 #endif
-        return PROVIDER_BASIC(xor_check);
+        return xor_check_base;
 }
 
 DEFINE_INTERFACE_DISPATCHER(pq_gen)
 {
 #if defined(__linux__)
         if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
-                return PROVIDER_INFO(pq_gen_neon);
+                return pq_gen_neon;
 #elif defined(__APPLE__)
-        return PROVIDER_INFO(pq_gen_neon);
+        return pq_gen_neon;
 #endif
-        return PROVIDER_BASIC(pq_gen);
+        return pq_gen_base;
 }
 
 DEFINE_INTERFACE_DISPATCHER(pq_check)
 {
 #if defined(__linux__)
         if (getauxval(AT_HWCAP) & HWCAP_ASIMD)
-                return PROVIDER_INFO(pq_check_neon);
+                return pq_check_neon;
 #elif defined(__APPLE__)
-        return PROVIDER_INFO(pq_check_neon);
+        return pq_check_neon;
 #endif
-        return PROVIDER_BASIC(pq_check);
+        return pq_check_base;
 }

@@ -51,7 +51,7 @@ Macros
 .endm
 
 /*
-	uint32_t adler32_neon(uint32_t adler32, uint8_t * start, uint32_t length);
+	uint32_t adler32_neon(uint32_t adler32, uint8_t * start, uint64_t length);
 */
 /*
 Arguments list
