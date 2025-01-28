@@ -233,23 +233,11 @@ static inline int sysctlEnabled(const char* name){
 #define DEFINE_INTERFACE_DISPATCHER(name)                               \
 	void * name##_dispatcher(void)
 
-#define PROVIDER_BASIC(name)                                            \
-	PROVIDER_INFO(name##_base)
-
 #define DO_DIGNOSTIC(x)	_Pragma GCC diagnostic ignored "-W"#x
 #define DO_PRAGMA(x) _Pragma (#x)
 #define DIGNOSTIC_IGNORE(x) DO_PRAGMA(GCC diagnostic ignored #x)
 #define DIGNOSTIC_PUSH()	DO_PRAGMA(GCC diagnostic push)
 #define DIGNOSTIC_POP()		DO_PRAGMA(GCC diagnostic pop)
-
-
-#define PROVIDER_INFO(_func_entry)                                  	\
-	({	DIGNOSTIC_PUSH()					\
-		DIGNOSTIC_IGNORE(-Wnested-externs)			\
-		extern void  _func_entry(void);				\
-		DIGNOSTIC_POP()						\
-		_func_entry;						\
-	})
 
 /**
  * Micro-Architector definitions
@@ -303,16 +291,16 @@ static inline int sysctlEnabled(const char* name){
  *              if ((HWCAP_CRC32 | HWCAP_PMULL) == (auxval & (HWCAP_CRC32 | HWCAP_PMULL))) {
  *                      switch (get_micro_arch_id()) {
  *                      case MICRO_ARCH_ID(ARM, CORTEX_A57):
- *                              return PROVIDER_INFO(crc32_pmull_crc_for_a57);
+ *                              return crc32_pmull_crc_for_a57;
  *                      case MICRO_ARCH_ID(ARM, CORTEX_A72):
- *                              return PROVIDER_INFO(crc32_pmull_crc_for_a72);
+ *                              return crc32_pmull_crc_for_a72;
  *                      case MICRO_ARCH_ID(ARM, NEOVERSE_N1):
- *                              return PROVIDER_INFO(crc32_pmull_crc_for_n1);
+ *                              return crc32_pmull_crc_for_n1;
  *                      case default:
- *                              return PROVIDER_INFO(crc32_pmull_crc_for_others);
+ *                              return crc32_pmull_crc_for_others;
  *                      }
  *              }
- *              return PROVIDER_BASIC(crc32_iscsi);
+ *              return crc32_iscsi_base;
  *      }
  * KNOWN ISSUE:
  *   On a heterogeneous system (big.LITTLE), it will work but the performance
