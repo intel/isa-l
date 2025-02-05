@@ -28,6 +28,7 @@
 ########################################################################
 
 include crc/aarch64/Makefile.am
+include crc/riscv64/Makefile.am
 
 lsrc  += \
 	crc/crc_base.c \
