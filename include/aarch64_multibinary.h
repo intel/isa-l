@@ -218,7 +218,7 @@
 #elif defined(__APPLE__)
 #define SYSCTL_PMULL_KEY "hw.optional.arm.FEAT_PMULL" // from macOS 12 FEAT_* sysctl infos are available
 #define SYSCTL_CRC32_KEY "hw.optional.armv8_crc32"
-#define SYSCTL_SVE_KEY "hw.optional.arm.FEAT_SVE" // this one is just a guess and need to check macOS update
+#define SYSCTL_SME_KEY "hw.optional.arm.FEAT_SME"
 #include <sys/sysctl.h>
 #include <stddef.h>
 static inline int sysctlEnabled(const char* name){
