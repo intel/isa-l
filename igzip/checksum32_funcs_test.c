@@ -126,7 +126,7 @@ main(int argc, char *argv[])
 int
 zeros_test(func_case_t *test_func)
 {
-        uint32_t c_dut, c_ref;
+        volatile uint32_t c_dut, c_ref;
         int fail = 0;
         unsigned char *buf = NULL;
 
@@ -153,7 +153,7 @@ zeros_test(func_case_t *test_func)
 int
 simple_pattern_test(func_case_t *test_func)
 {
-        uint32_t c_dut, c_ref;
+        volatile uint32_t c_dut, c_ref;
         int fail = 0;
         unsigned char *buf = NULL;
 
@@ -176,7 +176,7 @@ simple_pattern_test(func_case_t *test_func)
 int
 seeds_sizes_test(func_case_t *test_func)
 {
-        uint32_t c_dut, c_ref;
+        volatile uint32_t c_dut, c_ref;
         int fail = 0;
         int i;
         uint32_t r, s;
@@ -251,7 +251,7 @@ seeds_sizes_test(func_case_t *test_func)
 int
 eob_test(func_case_t *test_func)
 {
-        uint32_t c_dut, c_ref;
+        volatile uint32_t c_dut, c_ref;
         int fail = 0;
         int i;
         unsigned char *buf = NULL;
@@ -277,7 +277,7 @@ eob_test(func_case_t *test_func)
 int
 update_test(func_case_t *test_func)
 {
-        uint32_t c_dut, c_ref;
+        volatile uint32_t c_dut, c_ref;
         int fail = 0;
         int i;
         uint32_t r;
@@ -310,7 +310,7 @@ update_test(func_case_t *test_func)
 int
 update_over_mod_test(func_case_t *test_func)
 {
-        uint32_t c_dut, c_ref;
+        volatile uint32_t c_dut, c_ref;
         int fail = 0;
         int i;
         unsigned char *buf = NULL;
