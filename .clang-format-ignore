@@ -1,3 +1,6 @@
 include/aarch64_multibinary.h
 include/aarch64_label.h
 **/aarch64/*.h
+
+include/riscv64_multibinary.h
+**/riscv64/*.h
