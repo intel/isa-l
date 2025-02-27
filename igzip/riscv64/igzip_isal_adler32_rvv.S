@@ -26,6 +26,7 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
+#if HAVE_RVV
 .option         arch, +v
 .global         adler32_rvv
 .type           adler32_rvv, %function
@@ -74,3 +75,4 @@ adler32_rvv:
   add           a0, t2, t3                           // a0 = A + B
 
   ret
+#endif
