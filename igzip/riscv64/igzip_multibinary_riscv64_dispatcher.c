@@ -30,5 +30,9 @@
 
 DEFINE_INTERFACE_DISPATCHER(isal_adler32)
 {
-        return PROVIDER_BASIC(adler32);
+        const unsigned long hwcap = getauxval(AT_HWCAP);
+        if (hwcap & HWCAP_RV('V'))
+                return PROVIDER_INFO(adler32_rvv);
+        else
+                return PROVIDER_BASIC(adler32);
 }

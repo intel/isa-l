@@ -29,7 +29,8 @@
 
 #include "riscv64_multibinary.h"
 
-mbin_interface_base isal_adler32, adler32_base
+mbin_interface		isal_adler32
+
 mbin_interface_base gen_icf_map_lh1, gen_icf_map_h1_base
 mbin_interface_base decode_huffman_code_block_stateless, decode_huffman_code_block_stateless_base
 mbin_interface_base isal_deflate_icf_finish_lvl3, isal_deflate_icf_finish_hash_map_base
