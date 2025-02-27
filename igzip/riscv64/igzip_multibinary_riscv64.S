@@ -29,7 +29,11 @@
 
 #include "riscv64_multibinary.h"
 
-mbin_interface		isal_adler32
+#if HAVE_RVV
+    mbin_interface		isal_adler32
+#else
+    mbin_interface_base		isal_adler32, adler32_base
+#endif
 
 mbin_interface_base gen_icf_map_lh1, gen_icf_map_h1_base
 mbin_interface_base decode_huffman_code_block_stateless, decode_huffman_code_block_stateless_base
