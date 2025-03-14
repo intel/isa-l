@@ -1,5 +1,5 @@
 ########################################################################
-#  Copyright(c) 2011-2015 Intel Corporation All rights reserved.
+#  Copyright (c) 2025 Institute of Software Chinese Academy of Sciences (ISCAS).
 #
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
 #      notice, this list of conditions and the following disclaimer in
 #      the documentation and/or other materials provided with the
 #      distribution.
-#    * Neither the name of Intel Corporation nor the names of its
+#    * Neither the name of ISCAS Corporation nor the names of its
 #      contributors may be used to endorse or promote products derived
 #      from this software without specific prior written permission.
 #
@@ -27,43 +27,7 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ########################################################################
 
-include raid/aarch64/Makefile.am
-
-include raid/riscv64/Makefile.am
-
-lsrc        += 	raid/raid_base.c
-
-lsrc_base_aliases += raid/raid_base_aliases.c
-lsrc_ppc64le      += raid/raid_base_aliases.c
-
-lsrc_x86_64 += \
-		raid/xor_gen_sse.asm \
-		raid/pq_gen_sse.asm \
-		raid/xor_check_sse.asm \
-		raid/pq_check_sse.asm \
-		raid/pq_gen_avx.asm \
-		raid/xor_gen_avx.asm \
-		raid/pq_gen_avx2.asm \
-		raid/xor_gen_avx512.asm \
-		raid/pq_gen_avx512.asm \
-		raid/raid_multibinary.asm
-
-lsrc_x86_32 += \
-		raid/xor_gen_sse.asm \
-		raid/pq_gen_sse_i32.asm \
-		raid/xor_check_sse.asm \
-		raid/pq_check_sse_i32.asm \
-		raid/raid_multibinary_i32.asm
-
-
-extern_hdrs +=	include/raid.h
-
-other_src   +=  include/test.h
-
-check_tests +=  raid/xor_gen_test raid/pq_gen_test raid/xor_check_test raid/pq_check_test
-
-perf_tests  +=  raid/xor_gen_perf raid/pq_gen_perf
-
-examples    += 	raid/xor_example
-
-lsrc32       += xor_gen_sse.asm pq_gen_sse_i32.asm xor_check_sse.asm pq_check_sse_i32.asm raid_base.c
+lsrc_riscv64 += \
+	raid/riscv64/raid_multibinary_riscv64_dispatcher.c \
+	raid/riscv64/raid_multibinary_riscv64.S \
+	raid/riscv64/raid_pq_gen_rvv.S
