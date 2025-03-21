@@ -138,7 +138,5 @@ xor_check_base(int vects, int len, void **array)
                         break;
                 }
         }
-        if (fail && len > 0)
-                return len;
         return fail;
 }
