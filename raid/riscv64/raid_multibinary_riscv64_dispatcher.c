@@ -38,3 +38,14 @@ DEFINE_INTERFACE_DISPATCHER(pq_gen)
 #endif
                 return PROVIDER_BASIC(pq_gen);
 }
+
+DEFINE_INTERFACE_DISPATCHER(xor_gen)
+{
+#if HAVE_RVV
+        const unsigned long hwcap = getauxval(AT_HWCAP);
+        if (hwcap & HWCAP_RV('V'))
+                return PROVIDER_INFO(xor_gen_rvv);
+        else
+#endif
+                return PROVIDER_BASIC(xor_gen);
+}
