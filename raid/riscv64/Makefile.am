@@ -30,4 +30,5 @@
 lsrc_riscv64 += \
 	raid/riscv64/raid_multibinary_riscv64_dispatcher.c \
 	raid/riscv64/raid_multibinary_riscv64.S \
-	raid/riscv64/raid_pq_gen_rvv.S
+	raid/riscv64/raid_pq_gen_rvv.S \
+	raid/riscv64/raid_xor_gen_rvv.S
