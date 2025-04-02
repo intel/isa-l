@@ -31,10 +31,11 @@ include erasure_code/aarch64/Makefile.am
 
 include erasure_code/ppc64le/Makefile.am
 
+include erasure_code/riscv64/Makefile.am
+
 lsrc         += erasure_code/ec_base.c
 
 lsrc_base_aliases += erasure_code/ec_base_aliases.c
-lsrc_riscv64      += erasure_code/ec_base_aliases.c
 lsrc_x86_64  += \
 		erasure_code/ec_highlevel_func.c \
 		erasure_code/gf_vect_mul_sse.asm \
