@@ -102,7 +102,7 @@ main(int argc, char *argv[])
                 for (i = 0; i < TEST_SIZE; i++)
                         if (gf_mul(a, buff1[i]) != buff2[i]) {
                                 printf("fail at %d, 0x%x x %d = 0x%x (0x%x)\n", i, a, buff1[i],
-                                       buff2[i], gf_mul(2, buff1[i]));
+                                       buff2[i], gf_mul(a, buff1[i]));
                                 goto exit;
                         }
 #ifdef TEST_VERBOSE
