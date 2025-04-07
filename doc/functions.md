@@ -198,7 +198,7 @@ Examples:
 - [ec example]
 - [raid example]
 - [crc example]
-- [igzip example]
+- [igzip examples]
 
 ---
 
@@ -207,4 +207,5 @@ Examples:
 [raid example]: https://github.com/intel/isa-l/blob/master/raid/xor_example.c
 [crc example]: https://github.com/intel/isa-l/blob/master/crc/crc64_example.c
 [crc combine example]: https://github.com/intel/isa-l/blob/master/examples/crc/crc_combine_example.c
-[igzip example]: https://github.com/intel/isa-l/blob/master/igzip/igzip_example.c
+[igzip deflate example]: https://github.com/intel/isa-l/blob/master/igzip/igzip_example.c
+[igzip inflate example]: https://github.com/intel/isa-l/blob/master/igzip/igzip_inflate_example.c

@@ -264,6 +264,7 @@ ex = \
 	crc_simple_test.exe \
 	crc64_example.exe \
 	igzip_example.exe \
+	igzip_inflate_example.exe \
 	igzip_sync_flush_example.exe \
 	ec_simple_example.exe \
 	ec_piggyback_example.exe

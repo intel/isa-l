@@ -152,6 +152,9 @@ test_end "xor_example" $?
 test_start "igzip_example"
 ./igzip_example ${in_file} ${in_file}.cmp
 test_end "igzip_example" $?
+test_start "igzip_inflate_example"
+./igzip_inflate_example ${in_file}.cmp ${in_file}
+test_end "igzip_inflate_example" $?
 rm -rf ${in_file}.cmp
 msg+=$'Examples run: Pass\n'
 
