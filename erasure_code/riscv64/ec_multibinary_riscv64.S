@@ -31,11 +31,12 @@
 
 #if HAVE_RVV
     mbin_interface              gf_vect_mul
+    mbin_interface              gf_vect_dot_prod
 #else
     mbin_interface_base         gf_vect_mul gf_vect_mul_base
+    mbin_interface_base         gf_vect_dot_prod gf_vect_dot_prod_base
 #endif
 
-mbin_interface_base gf_vect_dot_prod gf_vect_dot_prod_base
 mbin_interface_base ec_encode_data ec_encode_data_base
 mbin_interface_base ec_init_tables ec_init_tables_base
 mbin_interface_base ec_encode_data_update ec_encode_data_update_base

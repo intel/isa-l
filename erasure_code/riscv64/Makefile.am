@@ -30,4 +30,5 @@
 lsrc_riscv64 += \
 	erasure_code/riscv64/ec_multibinary_riscv64_dispatcher.c \
 	erasure_code/riscv64/ec_multibinary_riscv64.S \
-	erasure_code/riscv64/ec_gf_vect_mul_rvv.S
+	erasure_code/riscv64/ec_gf_vect_mul_rvv.S \
+	erasure_code/riscv64/ec_gf_vect_dot_prod_rvv.S
