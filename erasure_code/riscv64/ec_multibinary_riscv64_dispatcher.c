@@ -32,6 +32,11 @@ extern int
 gf_vect_mul_rvv(int len, unsigned char *a, unsigned char *src, unsigned char *dest);
 extern int
 gf_vect_mul_base(int len, unsigned char *a, unsigned char *src, unsigned char *dest);
+extern void
+gf_vect_dot_prod_rvv(int len, int vlen, unsigned char *v, unsigned char **src, unsigned char *dest);
+extern void
+gf_vect_dot_prod_base(int len, int vlen, unsigned char *v, unsigned char **src,
+                      unsigned char *dest);
 
 DEFINE_INTERFACE_DISPATCHER(gf_vect_mul)
 {
@@ -42,4 +47,15 @@ DEFINE_INTERFACE_DISPATCHER(gf_vect_mul)
         else
 #endif
                 return gf_vect_mul_base;
+}
+
+DEFINE_INTERFACE_DISPATCHER(gf_vect_dot_prod)
+{
+#if HAVE_RVV
+        const unsigned long hwcap = getauxval(AT_HWCAP);
+        if (hwcap & HWCAP_RV('V'))
+                return gf_vect_dot_prod_rvv;
+        else
+#endif
+                return gf_vect_dot_prod_base;
 }
