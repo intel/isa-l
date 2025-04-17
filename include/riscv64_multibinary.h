@@ -56,20 +56,26 @@
 	.section .text
 	.global \name\()_mbinit
 \name\()_mbinit:
-	addi        sp, sp, -32
-	sd          ra, 24(sp)
+	addi        sp, sp, -56
+	sd          ra, 48(sp)
 	sd          a0, 0(sp)
 	sd          a1, 8(sp)
 	sd          a2, 16(sp)
+	sd          a3, 24(sp)
+	sd          a4, 32(sp)
+	sd          a5, 40(sp)
 	call        \name\()_dispatcher
 	mv          t2, a0
 	la          t0, \name\()_dispatcher_info
 	sd          a0, 0(t0)
-	ld          ra, 24(sp)
+	ld          ra, 48(sp)
 	ld          a0, 0(sp)
 	ld          a1, 8(sp)
 	ld          a2, 16(sp)
-	addi        sp, sp, 32
+	ld          a3, 24(sp)
+	ld          a4, 32(sp)
+	ld          a5, 40(sp)
+	addi        sp, sp, 56
 	jr          t2
 .global \name\()
 .type \name,%function
