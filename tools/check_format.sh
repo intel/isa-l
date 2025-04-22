@@ -21,6 +21,8 @@ else
     clang_format=$CLANGFORMAT
 fi
 
+echo "Clang-format version: " $(clang_format_version)
+
 while [ -n "$*" ]; do
     case "$1" in
 	-v )
