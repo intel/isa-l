@@ -233,12 +233,6 @@ static inline int sysctlEnabled(const char* name){
 #define DEFINE_INTERFACE_DISPATCHER(name)                               \
 	void * name##_dispatcher(void)
 
-#define DO_DIGNOSTIC(x)	_Pragma GCC diagnostic ignored "-W"#x
-#define DO_PRAGMA(x) _Pragma (#x)
-#define DIGNOSTIC_IGNORE(x) DO_PRAGMA(GCC diagnostic ignored #x)
-#define DIGNOSTIC_PUSH()	DO_PRAGMA(GCC diagnostic push)
-#define DIGNOSTIC_POP()		DO_PRAGMA(GCC diagnostic pop)
-
 /**
  * Micro-Architector definitions
  * Reference: https://developer.arm.com/docs/ddi0595/f/aarch64-system-registers/midr_el1
