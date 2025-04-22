@@ -1,4 +1,4 @@
-v2.31.1 Intel Intelligent Storage Acceleration Library Release Notes
+v2.32 Intel Intelligent Storage Acceleration Library Release Notes
 ====================================================================
 
 RELEASE NOTE CONTENTS
@@ -138,6 +138,17 @@ v2.10
 
 3. CHANGE LOG & FEATURES ADDED
 ------------------------------
+
+v2.32
+
+* RISCV support.
+  - Initial riscv64 support with runtime and build-time CPU feature detection.
+
+* Igzip compression improvements:
+  - Added new RVV adler32 implementations.
+
+* RAID improvements:
+  - Added new RVV xor_gen, pq_gen implementations.
 
 v2.31
 
