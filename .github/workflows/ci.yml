@@ -126,3 +126,18 @@ jobs:
         run: nmake perf -f Makefile.nmake || exit /b 1
       - name: Run checks
         run: nmake check -f Makefile.nmake || exit /b 1
+
+  run_tests_linux-riscv64-v:
+    needs: check_format
+    runs-on: run_tests_linux-riscv64-v
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - name: Build
+        run: |
+          ./autogen.sh
+          ./configure
+          bash -c 'make -j $(nproc)'
+      - name: Run tests
+        run: bash tools/test_checks.sh
+      - name: Run extended tests
+        run: bash tools/test_extended.sh
