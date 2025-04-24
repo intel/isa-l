@@ -53,12 +53,16 @@ extern xor_check_sse
  extern pq_gen_avx512
 %endif
 
+%if (AS_FEATURE_LEVEL) >= 10
+ extern pq_gen_avx512_gfni
+%endif
+
 mbin_interface xor_gen
 mbin_interface pq_gen
 
 
 mbin_dispatch_init6 xor_gen, xor_gen_base, xor_gen_sse, xor_gen_avx, xor_gen_avx, xor_gen_avx512
-mbin_dispatch_init6 pq_gen, pq_gen_base, pq_gen_sse, pq_gen_avx, pq_gen_avx2, pq_gen_avx512
+mbin_dispatch_init8 pq_gen, pq_gen_base, pq_gen_sse, pq_gen_avx, pq_gen_avx2, pq_gen_avx512, pq_gen_avx2, pq_gen_avx512_gfni
 
 section .data
 
