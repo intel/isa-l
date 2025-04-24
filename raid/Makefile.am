@@ -44,6 +44,7 @@ lsrc_x86_64 += \
 		raid/pq_gen_avx.asm \
 		raid/xor_gen_avx.asm \
 		raid/pq_gen_avx2.asm \
+		raid/pq_gen_avx2_gfni.asm \
 		raid/xor_gen_avx512.asm \
 		raid/pq_gen_avx512.asm \
 		raid/pq_gen_avx512_gfni.asm \

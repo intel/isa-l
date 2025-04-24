@@ -126,6 +126,7 @@ objs = \
 	bin\pq_gen_avx.obj \
 	bin\xor_gen_avx.obj \
 	bin\pq_gen_avx2.obj \
+	bin\pq_gen_avx2_gfni.obj \
 	bin\xor_gen_avx512.obj \
 	bin\pq_gen_avx512.obj \
 	bin\pq_gen_avx512_gfni.obj \
