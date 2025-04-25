@@ -157,6 +157,10 @@ v2.32
 * Zero-memory detection improvements:
   - Added new RVV implementations.
 
+* CRC improvements:
+  - CRC64 Rocksoft implementation on aarch64 optimized similar to other CRC64
+    implementations.
+
 v2.31
 
 * API changes:
