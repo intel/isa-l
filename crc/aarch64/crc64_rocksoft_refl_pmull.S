@@ -1,5 +1,5 @@
 ########################################################################
-#  Copyright(c) 2019 Arm Corporation All rights reserved.
+#  Copyright(c) 2025 Tim Burke All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions
@@ -26,19 +26,9 @@
 #  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
-#include <aarch64_multibinary.h>
 
+#include "../include/aarch64_label.h"
+#include "crc64_rocksoft_refl_pmull.h"
+#include "crc64_refl_common_pmull.h"
 
-mbin_interface crc32_iscsi
-mbin_interface crc16_t10dif
-mbin_interface crc16_t10dif_copy
-mbin_interface crc32_ieee
-mbin_interface crc32_gzip_refl
-mbin_interface crc64_ecma_refl
-mbin_interface crc64_ecma_norm
-mbin_interface crc64_iso_refl
-mbin_interface crc64_iso_norm
-mbin_interface crc64_jones_refl
-mbin_interface crc64_jones_norm
-mbin_interface crc64_rocksoft_refl
-mbin_interface crc64_rocksoft_norm
+crc64_refl_func crc64_rocksoft_refl_pmull
