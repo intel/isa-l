@@ -71,6 +71,12 @@ crc64_jones_refl_pmull(uint64_t, const unsigned char *, uint64_t);
 extern uint64_t
 crc64_jones_norm_pmull(uint64_t, const unsigned char *, uint64_t);
 
+extern uint64_t
+crc64_rocksoft_refl_pmull(uint64_t, const unsigned char *, uint64_t);
+
+extern uint64_t
+crc64_rocksoft_norm_pmull(uint64_t, const unsigned char *, uint64_t);
+
 DEFINE_INTERFACE_DISPATCHER(crc16_t10dif)
 {
 #if defined(__linux__)
@@ -244,4 +250,30 @@ DEFINE_INTERFACE_DISPATCHER(crc64_jones_norm)
                 return crc64_jones_norm_pmull;
 #endif
         return crc64_jones_norm_base;
+}
+
+DEFINE_INTERFACE_DISPATCHER(crc64_rocksoft_refl)
+{
+#if defined(__linux__)
+        unsigned long auxval = getauxval(AT_HWCAP);
+        if (auxval & HWCAP_PMULL)
+                return crc64_rocksoft_refl_pmull;
+#elif defined(__APPLE__)
+        if (sysctlEnabled(SYSCTL_PMULL_KEY))
+                return crc64_rocksoft_refl_pmull;
+#endif
+        return crc64_rocksoft_refl_base;
+}
+
+DEFINE_INTERFACE_DISPATCHER(crc64_rocksoft_norm)
+{
+#if defined(__linux__)
+        unsigned long auxval = getauxval(AT_HWCAP);
+        if (auxval & HWCAP_PMULL)
+                return crc64_rocksoft_norm_pmull;
+#elif defined(__APPLE__)
+        if (sysctlEnabled(SYSCTL_PMULL_KEY))
+                return crc64_rocksoft_norm_pmull;
+#endif
+        return crc64_rocksoft_norm_base;
 }
