@@ -37,6 +37,12 @@ gf_vect_dot_prod_rvv(int len, int vlen, unsigned char *v, unsigned char **src, u
 extern void
 gf_vect_dot_prod_base(int len, int vlen, unsigned char *v, unsigned char **src,
                       unsigned char *dest);
+extern void
+ec_encode_data_rvv(int len, int srcs, int dests, unsigned char *v, unsigned char **src,
+                   unsigned char **dest);
+extern void
+ec_encode_data_base(int len, int srcs, int dests, unsigned char *v, unsigned char **src,
+                    unsigned char **dest);
 
 DEFINE_INTERFACE_DISPATCHER(gf_vect_mul)
 {
@@ -58,4 +64,15 @@ DEFINE_INTERFACE_DISPATCHER(gf_vect_dot_prod)
         else
 #endif
                 return gf_vect_dot_prod_base;
+}
+
+DEFINE_INTERFACE_DISPATCHER(ec_encode_data)
+{
+#if HAVE_RVV
+        const unsigned long hwcap = getauxval(AT_HWCAP);
+        if (hwcap & HWCAP_RV('V'))
+                return ec_encode_data_rvv;
+        else
+#endif
+                return ec_encode_data_base;
 }
