@@ -48,15 +48,11 @@ extern pq_check_sse
 extern xor_check_base
 extern xor_check_sse
 
-%ifdef HAVE_AS_KNOWS_AVX512
- extern xor_gen_avx512
- extern pq_gen_avx512
-%endif
+extern xor_gen_avx512
+extern pq_gen_avx512
 
-%if (AS_FEATURE_LEVEL) >= 10
- extern pq_gen_avx512_gfni
- extern pq_gen_avx2_gfni
-%endif
+extern pq_gen_avx512_gfni
+extern pq_gen_avx2_gfni
 
 mbin_interface xor_gen
 mbin_interface pq_gen

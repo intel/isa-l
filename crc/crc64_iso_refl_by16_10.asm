@@ -41,8 +41,6 @@
 %define FUNCTION_NAME crc64_iso_refl_by16_10
 %endif
 
-%if (AS_FEATURE_LEVEL) >= 10
-
 %define	fetch_dist	1024
 
 [bits 64]
@@ -474,10 +472,3 @@ dq 0x0706050403020100, 0x000e0d0c0b0a0908
 mask:  dq     0xFFFFFFFFFFFFFFFF, 0x0000000000000000
 mask2: dq     0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF
 mask3: dq     0x8080808080808080, 0x8080808080808080
-
-%else  ; Assembler doesn't understand these opcodes. Add empty symbol for windows.
-%ifidn __OUTPUT_FORMAT__, win64
-global no_ %+ FUNCTION_NAME
-no_ %+ FUNCTION_NAME %+ :
-%endif
-%endif ; (AS_FEATURE_LEVEL) >= 10

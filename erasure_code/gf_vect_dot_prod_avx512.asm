@@ -33,8 +33,6 @@
 
 %include "reg_sizes.asm"
 
-%ifdef HAVE_AS_KNOWS_AVX512
-
 %ifidn __OUTPUT_FORMAT__, elf64
  %define arg0  rdi
  %define arg1  rsi
@@ -231,10 +229,3 @@ func(gf_vect_dot_prod_avx512)
 	ret
 
 endproc_frame
-
-%else
-%ifidn __OUTPUT_FORMAT__, win64
-global no_gf_vect_dot_prod_avx512
-no_gf_vect_dot_prod_avx512:
-%endif
-%endif  ; ifdef HAVE_AS_KNOWS_AVX512

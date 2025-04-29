@@ -51,8 +51,6 @@
 %define FUNCTION_NAME crc16_t10dif_by16_10
 %endif
 
-%if (AS_FEATURE_LEVEL) >= 10
-
 [bits 64]
 default rel
 
@@ -576,10 +574,3 @@ dq 0x8786858483828100, 0x8f8e8d8c8b8a8988
 dq 0x0706050403020100, 0x000e0d0c0b0a0908
 dq 0x8080808080808080, 0x0f0e0d0c0b0a0908
 dq 0x8080808080808080, 0x8080808080808080
-
-%else  ; Assembler doesn't understand these opcodes. Add empty symbol for windows.
-%ifidn __OUTPUT_FORMAT__, win64
-global no_ %+ FUNCTION_NAME
-no_ %+ FUNCTION_NAME %+ :
-%endif
-%endif ; (AS_FEATURE_LEVEL) >= 10

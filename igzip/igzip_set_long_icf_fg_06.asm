@@ -33,7 +33,6 @@
 %include "igzip_compare_types.asm"
 %define NEQ 4
 
-%ifdef HAVE_AS_KNOWS_AVX512
 %ifidn __OUTPUT_FORMAT__, win64
 %define arg1 rcx
 %define arg2 rdx
@@ -369,4 +368,3 @@ twosixtytwo:
 	dd 0x106
 nlen_mask:
 	dd 0xfffffc00
-%endif

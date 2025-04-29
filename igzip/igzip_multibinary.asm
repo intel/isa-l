@@ -61,11 +61,9 @@ extern encode_deflate_icf_04
 extern set_long_icf_fg_base
 extern set_long_icf_fg_04
 
-%ifdef HAVE_AS_KNOWS_AVX512
 extern encode_deflate_icf_06
 extern set_long_icf_fg_06
 extern gen_icf_map_lh1_06
-%endif
 
 extern adler32_base
 extern adler32_avx2_4

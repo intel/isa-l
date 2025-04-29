@@ -3,20 +3,12 @@
 ## Build tools
 
 NASM: For x86-64 builds it is highly recommended to get an up-to-date version of
-[nasm] that can understand the latest instruction sets. Building with an older
-assembler version is often possible but the library may lack some function
-versions for the best performance. For example, as a minimum, nasm v2.11.01
-can be used to build a limited functionality library but it will not
-include any function versions with AVX2, AVX512, or optimizations for many
-processors before the assembler's build. The configure or make tools can run
-tests to check the assembler's knowledge of new instructions and change build
-defines. For autoconf builds, check the output of configure for full nasm
-support as it includes the following lines.
+[nasm] that can understand the latest instruction sets.
+Minimum version of NASM is 2.14.01, supporting all the ISA needed for the library.
+The configure or make tools can check for this minimum version.
 
     checking for nasm... yes
     checking for modern nasm... yes
-    checking for optional nasm AVX512 support... yes
-    checking for additional nasm AVX512 support... yes
 
 If an appropriate nasm is not available from your distro, it is simple to build
 from source or download an executable from [nasm].

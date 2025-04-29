@@ -41,8 +41,6 @@
 %define FUNCTION_NAME crc64_iso_norm_by16_10
 %endif
 
-%if (AS_FEATURE_LEVEL) >= 10
-
 %define	fetch_dist	1024
 
 [bits 64]
@@ -463,11 +461,3 @@ dw      0x0000, 0x0001, 0x0003, 0x0007,
 dw      0x000f, 0x001f, 0x003f, 0x007f,
 dw      0x00ff, 0x01ff, 0x03ff, 0x07ff,
 dw      0x0fff, 0x1fff, 0x3fff, 0x7fff,
-
-
-%else  ; Assembler doesn't understand these opcodes. Add empty symbol for windows.
-%ifidn __OUTPUT_FORMAT__, win64
-global no_ %+ FUNCTION_NAME
-no_ %+ FUNCTION_NAME %+ :
-%endif
-%endif ; (AS_FEATURE_LEVEL) >= 10

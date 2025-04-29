@@ -36,7 +36,6 @@
 %define USE_HSWNI
 %define ARCH 06
 
-%ifdef HAVE_AS_KNOWS_AVX512
 %ifidn __OUTPUT_FORMAT__, win64
 %define arg1 rcx
 %define arg2 rdx
@@ -578,4 +577,3 @@ lit_len_mask:
 	dd LIT_LEN_MASK
 shortest_matches:
 	dd MIN_DEF_MATCH
-%endif

@@ -35,8 +35,6 @@
 %include "gf_vect_gfni.inc"
 %include "memcpy.asm"
 
-%if AS_FEATURE_LEVEL >= 10
-
 %ifidn __OUTPUT_FORMAT__, elf64
  %define arg0   rdi
  %define arg1   rsi
@@ -252,4 +250,3 @@ func(gf_vect_mad_avx2_gfni)
         ret
 
 endproc_frame
-%endif  ; if AS_FEATURE_LEVEL >= 10

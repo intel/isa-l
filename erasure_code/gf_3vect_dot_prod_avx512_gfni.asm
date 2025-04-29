@@ -34,8 +34,6 @@
 %include "reg_sizes.asm"
 %include "gf_vect_gfni.inc"
 
-%if AS_FEATURE_LEVEL >= 10
-
 %ifidn __OUTPUT_FORMAT__, elf64
  %define arg0  rdi
  %define arg1  rsi
@@ -222,4 +220,3 @@ func(gf_3vect_dot_prod_avx512_gfni)
 	ret
 
 endproc_frame
-%endif  ; if AS_FEATURE_LEVEL >= 10

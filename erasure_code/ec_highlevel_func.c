@@ -141,8 +141,6 @@ ec_encode_data_avx2(int len, int k, int rows, unsigned char *g_tbls, unsigned ch
         }
 }
 
-#ifdef HAVE_AS_KNOWS_AVX512
-
 extern int
 gf_vect_dot_prod_avx512(int len, int k, unsigned char *g_tbls, unsigned char **data,
                         unsigned char *dest);
@@ -252,8 +250,6 @@ ec_encode_data_update_avx512(int len, int k, int rows, int vec_i, unsigned char 
                 break;
         }
 }
-
-#if AS_FEATURE_LEVEL >= 10
 
 extern void
 gf_vect_dot_prod_avx512_gfni(int len, int k, unsigned char *g_tbls, unsigned char **data,
@@ -446,9 +442,6 @@ ec_encode_data_update_avx2_gfni(int len, int k, int rows, int vec_i, unsigned ch
                 break;
         }
 }
-
-#endif // AS_FEATURE_LEVEL >= 10
-#endif // HAVE_AS_KNOWS_AVX512
 
 #if __WORDSIZE == 64 || _WIN64 || __x86_64__
 

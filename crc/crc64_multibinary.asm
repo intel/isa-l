@@ -61,7 +61,6 @@ extern crc64_rocksoft_refl_base
 extern crc64_rocksoft_norm_by8
 extern crc64_rocksoft_norm_base
 
-%if (AS_FEATURE_LEVEL) >= 10
 extern crc64_iso_refl_by16_10
 extern crc64_iso_norm_by16_10
 extern crc64_jones_refl_by16_10
@@ -70,7 +69,6 @@ extern crc64_ecma_refl_by16_10
 extern crc64_ecma_norm_by16_10
 extern crc64_rocksoft_refl_by16_10
 extern crc64_rocksoft_norm_by16_10
-%endif
 
 section .text
 

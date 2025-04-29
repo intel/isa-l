@@ -141,6 +141,9 @@ v2.10
 
 v2.32
 
+* General:
+  - Minimum NASM version required for x86 architecture is 2.14.01 now.
+
 * RISCV support.
   - Initial riscv64 support with runtime and build-time CPU feature detection.
 

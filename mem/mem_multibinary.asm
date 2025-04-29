@@ -33,9 +33,7 @@
 default rel
 [bits 64]
 
-%ifdef HAVE_AS_KNOWS_AVX512
- extern mem_zero_detect_avx512
-%endif
+extern mem_zero_detect_avx512
 extern mem_zero_detect_avx2
 extern mem_zero_detect_avx
 extern mem_zero_detect_sse

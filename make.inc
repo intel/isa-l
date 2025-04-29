@@ -179,26 +179,6 @@ $(all_llvm_fuzz_tests): % : %.o $(lib_name)
 	$(CXX) $(CXXFLAGS)  $^ $(LDLIBS) $(FUZZLINK) -o $@
 
 
-# Check for modern as
-test-as = $(shell hash printf && printf $(3) > $(2) && $(AS) $(ASFLAGS) ${tmpf} -o /dev/null 2> /dev/null && echo $(1) || echo $(4))
-as_4  := "pblendvb xmm2, xmm1;"
-as_6  := "vinserti32x8 zmm0, ymm1, 1;"
-as_10 := "vpcompressb zmm0 {k1}, zmm1;"
-
-tmpf := $(shell mktemp)
-as_feature_level := $(call test-as, 4,  $(tmpf), $(as_4),  $(as_feature_level))
-as_feature_level := $(call test-as, 6,  $(tmpf), $(as_6),  $(as_feature_level))
-as_feature_level := $(call test-as, 10, $(tmpf), $(as_10), $(as_feature_level))
-tmpf := $(shell rm ${tmpf})
-
-ifneq ($(findstring $(as_feature_level),6 10),)
-  D_HAVE_AS_KNOWS_AVX512_y := -DHAVE_AS_KNOWS_AVX512
-endif
-
-CFLAGS  += -DAS_FEATURE_LEVEL=$(as_feature_level) $(D_HAVE_AS_KNOWS_AVX512_y)
-ASFLAGS += -DAS_FEATURE_LEVEL=$(as_feature_level) $(D_HAVE_AS_KNOWS_AVX512_y)
-
-
 # Check for pthreads
 ifeq ($(arch),mingw)
 have_threads ?= y

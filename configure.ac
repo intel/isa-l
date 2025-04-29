@@ -135,31 +135,9 @@ int main(int argc, char **argv)
 
     if test x"$nasm_feature_level" = x"1"; then
       AC_MSG_CHECKING([for modern nasm])
-      AC_LANG_CONFTEST([AC_LANG_SOURCE([[pblendvb xmm2, xmm1;]])])
-      sed -i -e '/pblendvb/!d' conftest.c
-      if nasm -f elf64 conftest.c 2> /dev/null; then
-        AC_MSG_RESULT([yes])
-        nasm_feature_level=4
-      else
-        AC_MSG_RESULT([no])
-      fi
-    fi
-    if test x"$nasm_feature_level" = x"4"; then
-      AC_MSG_CHECKING([for optional nasm AVX512 support])
-      AC_LANG_CONFTEST([AC_LANG_SOURCE([[vinserti32x8 zmm0, ymm1, 1;]])])
-      sed -i -e '/vinsert/!d' conftest.c
-      if nasm -f elf64  conftest.c 2> /dev/null; then
-        AC_MSG_RESULT([yes])
-        nasm_feature_level=6
-      else
-        AC_MSG_RESULT([no])
-      fi
-    fi
-    if test x"$nasm_feature_level" = x"6"; then
-      AC_MSG_CHECKING([for additional nasm AVX512 support])
       AC_LANG_CONFTEST([AC_LANG_SOURCE([[vpcompressb zmm0 {k1}, zmm1;]])])
       sed -i -e '/vpcompressb/!d' conftest.c
-      if nasm -f elf64  conftest.c 2> /dev/null; then
+      if nasm -f elf64 conftest.c 2> /dev/null; then
         AC_MSG_RESULT([yes])
         nasm_feature_level=10
       else
@@ -181,29 +159,6 @@ int main(int argc, char **argv)
     fi
 
     if test x"$as_feature_level" = x"1"; then
-      AC_MSG_CHECKING([for modern $AS])
-      AC_LANG_CONFTEST([AC_LANG_SOURCE([[pblendvb xmm2, xmm1;]])])
-      sed -i -e '/pblendvb/!d' conftest.c
-      if $AS -f elf64 conftest.c 2> /dev/null; then
-        AC_MSG_RESULT([yes])
-        as_feature_level=4
-      else
-        AC_MSG_RESULT([no])
-      fi
-    fi
-    if test x"$as_feature_level" = x"4"; then
-      AC_MSG_CHECKING([for optional as AVX512 support])
-      AC_LANG_CONFTEST([AC_LANG_SOURCE([[vinserti32x8 zmm0, ymm1, 1;]])])
-      sed -i -e '/vinsert/!d' conftest.c
-      if $AS -f elf64  conftest.c 2> /dev/null; then
-        AC_MSG_RESULT([yes])
-        as_feature_level=6
-      else
-        AC_MSG_RESULT([no])
-      fi
-    fi
-    if test x"$as_feature_level" = x"6"; then
-      AC_MSG_CHECKING([for additional as AVX512 support])
       AC_LANG_CONFTEST([AC_LANG_SOURCE([[vpcompressb zmm0, k1, zmm1;]])])
       sed -i -e '/vpcompressb/!d' conftest.c
       if $AS -f elf64  conftest.c 2> /dev/null; then
@@ -215,8 +170,8 @@ int main(int argc, char **argv)
     fi
   fi
 
-  if test $as_feature_level -lt 2 ; then
-    AC_MSG_ERROR([No modern nasm found as required. Nasm should be v2.11.01 or later (v2.13 for AVX512).])
+  if test $as_feature_level -lt 10 ; then
+    AC_MSG_ERROR([No modern nasm found as required. Nasm should be v2.14.01 or later.])
   fi
 
   case $host_os in
@@ -227,23 +182,13 @@ int main(int argc, char **argv)
        *)        arch=unknown asm_args="-f elf64";;
   esac
 
-  AC_DEFINE_UNQUOTED(AS_FEATURE_LEVEL, [$as_feature_level], [Assembler feature level.])
-  if test $as_feature_level -ge 6 ; then
-    AC_DEFINE(HAVE_AS_KNOWS_AVX512, [1], [Assembler can do AVX512.])
-    have_as_knows_avx512=yes
-  else
-    AC_MSG_RESULT([Assembler does not understand AVX512 opcodes.  Consider upgrading for best performance.])
-  fi
-
   AM_CONDITIONAL(USE_NASM, test x"$AS" = x"nasm")
-  AM_CONDITIONAL(WITH_AVX512, test x"$have_as_knows_avx512" = x"yes")
   AC_SUBST([asm_args])
   AM_CONDITIONAL(DARWIN, test x"$arch" = x"darwin")
   AC_MSG_RESULT([Using $AS args target "$arch" "$asm_args"])
 else
   # Disable below conditionals if not x86
   AM_CONDITIONAL(USE_NASM, test "x" = "y")
-  AM_CONDITIONAL(WITH_AVX512, test "x" = "y")
   AM_CONDITIONAL(DARWIN, test "x" = "y")
 fi
 

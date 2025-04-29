@@ -67,11 +67,8 @@
 %define tmp0 arg2
 %define tmp1 arg3
 
-; Workaround for YASM
-%ifdef HAVE_AS_KNOWS_AVX512
 %use smartalign
 ALIGNMODE P6
-%endif
 
 default rel
 

@@ -30,10 +30,6 @@
 %ifndef _REG_SIZES_ASM_
 %define _REG_SIZES_ASM_
 
-%ifndef AS_FEATURE_LEVEL
-%define AS_FEATURE_LEVEL 4
-%endif
-
 %define EFLAGS_HAS_CPUID        (1<<21)
 %define FLAG_CPUID1_ECX_CLMUL   (1<<1)
 %define FLAG_CPUID1_EDX_SSE2    (1<<26)
@@ -198,7 +194,6 @@
 
 %ifdef INTEL_CET_ENABLED
  %ifdef __NASM_VER__
-  %if AS_FEATURE_LEVEL >= 10
    %ifidn __OUTPUT_FORMAT__,elf32
 section .note.gnu.property  note  alloc noexec align=4
 DD 0x00000004,0x0000000c,0x00000005,0x00554e47
@@ -209,7 +204,6 @@ section .note.gnu.property  note  alloc noexec align=8
 DD 0x00000004,0x00000010,0x00000005,0x00554e47
 DD 0xc0000002,0x00000004,0x00000003,0x00000000
    %endif
-  %endif
  %endif
 %endif
 

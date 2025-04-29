@@ -39,8 +39,7 @@ Building ISA-L
 * Optional: Manual generation requires help2man package.
 
 x86_64:
-* Assembler: nasm. Version 2.15 or later suggested (other versions of nasm
-  may build but with limited function [support](doc/build.md)).
+* Assembler: nasm. 2.14.01 minimum version required [support](doc/build.md)).
 * Compiler: gcc, clang, icc or VC compiler.
 
 aarch64:

@@ -39,12 +39,10 @@
  extern ec_encode_data_update_sse
  extern ec_encode_data_update_avx
  extern ec_encode_data_update_avx2
-%ifdef HAVE_AS_KNOWS_AVX512
  extern ec_encode_data_avx512
  extern gf_vect_dot_prod_avx512
  extern ec_encode_data_update_avx512
  extern gf_vect_mad_avx512
-%endif
  extern gf_vect_mul_sse
  extern gf_vect_mul_avx
 
@@ -53,13 +51,11 @@
  extern gf_vect_mad_avx2
 %endif
 
-%if (AS_FEATURE_LEVEL) >= 10
- extern ec_init_tables_gfni
- extern ec_encode_data_avx512_gfni
- extern ec_encode_data_avx2_gfni
- extern ec_encode_data_update_avx512_gfni
- extern ec_encode_data_update_avx2_gfni
-%endif
+extern ec_init_tables_gfni
+extern ec_encode_data_avx512_gfni
+extern ec_encode_data_avx2_gfni
+extern ec_encode_data_update_avx512_gfni
+extern ec_encode_data_update_avx2_gfni
 
 extern ec_init_tables_base
 

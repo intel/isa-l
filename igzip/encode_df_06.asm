@@ -32,8 +32,6 @@
 %include "data_struct2.asm"
 %include "stdmac.asm"
 
-%ifdef HAVE_AS_KNOWS_AVX512
-
 %define ARCH 06
 %define USE_HSWNI
 
@@ -620,5 +618,3 @@ k_mask_2: dq 0xfffffff0
 k_mask_3: dq 0xfffffffc
 k_mask_4: dw 0x0101, 0x0101, 0x0101, 0x0101
 k_mask_5: dq 0xfffffffe
-
-%endif
