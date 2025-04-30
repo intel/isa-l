@@ -28,7 +28,11 @@
 **********************************************************************/
 .text
 .align		6
+#ifdef __APPLE__
+.arch		armv8-a+sme
+#else
 .arch		armv8-a+sve
+#endif
 
 #include "../include/aarch64_label.h"
 
@@ -72,6 +76,9 @@ q_gft1_lo	.req	q6
 q_gft1_hi	.req	q7
 
 cdecl(gf_vect_mad_sve):
+#ifdef __APPLE__
+	smstart	sm
+#endif
 	/* less than 16 bytes, return_fail */
 	cmp	x_len, #16
 	blt	.return_fail
@@ -87,7 +94,7 @@ cdecl(gf_vect_mad_sve):
 	/* vector length agnostic */
 .Lloopsve_vl:
 	whilelo	p0.b, x_pos, x_len
-	b.none	.return_pass
+	b.eq	.return_pass
 
 	/* prefetch dest data */
 	prfb	pldl2strm, p0, [x_dest, x_pos]
@@ -119,8 +126,14 @@ cdecl(gf_vect_mad_sve):
 
 .return_pass:
 	mov	w_ret, #0
+#ifdef __APPLE__
+	smstop	sm
+#endif
 	ret
 
 .return_fail:
 	mov	w_ret, #1
+#ifdef __APPLE__
+	smstop	sm
+#endif
 	ret
