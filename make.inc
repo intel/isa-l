@@ -62,7 +62,6 @@ ARFLAGS_   = cr $@
 STRIP_gcc  = strip -d -R .comment $@
 
 # arch=32 build options
-ASFLAGS_32 = -f elf32
 CFLAGS_32  = -m32
 ARFLAGS_32 = cr $@
 

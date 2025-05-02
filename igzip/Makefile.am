@@ -39,7 +39,6 @@ lsrc        += 	igzip/igzip.c \
 		igzip/igzip_icf_body.c
 
 lsrc_base_aliases += igzip/igzip_base_aliases.c igzip/proc_heap_base.c
-lsrc_x86_32       += igzip/igzip_base_aliases.c igzip/proc_heap_base.c
 lsrc_ppc64le      += igzip/igzip_base_aliases.c igzip/proc_heap_base.c
 lsrc_riscv64      +=                            igzip/proc_heap_base.c
 

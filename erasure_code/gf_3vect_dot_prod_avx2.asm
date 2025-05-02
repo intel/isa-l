@@ -120,79 +120,6 @@
  %endmacro
 %endif
 
-%ifidn __OUTPUT_FORMAT__, elf32
-
-;;;================== High Address;
-;;;	arg4
-;;;	arg3
-;;;	arg2
-;;;	arg1
-;;;	arg0
-;;;	return
-;;;<================= esp of caller
-;;;	ebp
-;;;<================= ebp = esp
-;;;	var0
-;;;	var1
-;;;	esi
-;;;	edi
-;;;	ebx
-;;;<================= esp of callee
-;;;
-;;;================== Low Address;
-
- %define PS 4
- %define LOG_PS 2
- %define func(x) x: endbranch
- %define arg(x) [ebp + PS*2 + PS*x]
- %define var(x) [ebp - PS - PS*x]
-
- %define trans   ecx
- %define trans2  esi
- %define arg0    trans			;trans and trans2 are for the variables in stack
- %define arg0_m  arg(0)
- %define arg1    ebx
- %define arg2    arg2_m
- %define arg2_m  arg(2)
- %define arg3    trans
- %define arg3_m  arg(3)
- %define arg4    trans
- %define arg4_m  arg(4)
- %define arg5	 trans2
- %define tmp	 edx
- %define tmp.w   edx
- %define tmp.b   dl
- %define tmp2    edi
- %define tmp3    trans2
- %define tmp3_m  var(0)
- %define tmp4    trans2
- %define tmp4_m  var(1)
- %define return  eax
- %macro SLDR     2			;stack load/restore
-	mov %1, %2
- %endmacro
- %define SSTR SLDR
-
- %macro FUNC_SAVE 0
-	push	ebp
-	mov	ebp, esp
-	sub	esp, PS*2		;2 local variables
-	push	esi
-	push	edi
-	push	ebx
-	mov	arg1, arg(1)
- %endmacro
-
- %macro FUNC_RESTORE 0
-	pop	ebx
-	pop	edi
-	pop	esi
-	add	esp, PS*2		;2 local variables
-	pop	ebp
- %endmacro
-
-%endif	; output formats
-
 %define len   arg0
 %define vec   arg1
 %define mul_array arg2
@@ -204,14 +131,6 @@
 %define dest2 tmp3
 %define dest3 tmp4
 %define pos   return
-
-%ifidn PS,4				;32-bit code
- %define  len_m   arg0_m
- %define  src_m   arg3_m
- %define  dest1_m arg4_m
- %define  dest2_m tmp3_m
- %define  dest3_m tmp4_m
-%endif
 
 %ifndef EC_ALIGNED_ADDR
 ;;; Use Un-aligned load/store
@@ -228,45 +147,25 @@
  %endif
 %endif
 
-%ifidn PS,8				;64-bit code
- default rel
- [bits 64]
-%endif
+default rel
+[bits 64]
 
 section .text
 
-%ifidn PS,8				;64-bit code
- %define xmask0f   ymm11
- %define xmask0fx  xmm11
- %define xgft1_lo  ymm10
- %define xgft1_hi  ymm9
- %define xgft2_lo  ymm8
- %define xgft2_hi  ymm7
- %define xgft3_lo  ymm6
- %define xgft3_hi  ymm5
+%define xmask0f   ymm11
+%define xmask0fx  xmm11
+%define xgft1_lo  ymm10
+%define xgft1_hi  ymm9
+%define xgft2_lo  ymm8
+%define xgft2_hi  ymm7
+%define xgft3_lo  ymm6
+%define xgft3_hi  ymm5
 
- %define x0     ymm0
- %define xtmpa  ymm1
- %define xp1    ymm2
- %define xp2    ymm3
- %define xp3    ymm4
-%else
- %define xmask0f   ymm7
- %define xmask0fx  xmm7
- %define xgft1_lo  ymm6
- %define xgft1_hi  ymm5
- %define xgft2_lo  xgft1_lo
- %define xgft2_hi  xgft1_hi
- %define xgft3_lo  xgft1_lo
- %define xgft3_hi  xgft1_hi
-
- %define x0     ymm0
- %define xtmpa  ymm1
- %define xp1    ymm2
- %define xp2    ymm3
- %define xp3    ymm4
-
-%endif
+%define x0     ymm0
+%define xtmpa  ymm1
+%define xp1    ymm2
+%define xp2    ymm3
+%define xp3    ymm4
 
 align 16
 mk_global gf_3vect_dot_prod_avx2, function
@@ -305,7 +204,6 @@ func(gf_3vect_dot_prod_avx2)
 					;     "     Ax{00}, Ax{10}, ..., Ax{f0}
 	vperm2i128 xgft1_hi, xgft1_lo, xgft1_lo, 0x11 ; swapped to hi | hi
 	vperm2i128 xgft1_lo, xgft1_lo, xgft1_lo, 0x00 ; swapped to lo | lo
- %ifidn PS,8				; 64-bit code
 	vmovdqu	   xgft2_lo, [tmp+vec*(32/PS)]	;Load array Bx{00}, Bx{01}, ..., Bx{0f}
 						;     "     Bx{00}, Bx{10}, ..., Bx{f0}
 	vperm2i128 xgft2_hi, xgft2_lo, xgft2_lo, 0x11 ; swapped to hi | hi
@@ -318,7 +216,6 @@ func(gf_3vect_dot_prod_avx2)
 
 	add	tmp, 32
 	add	vec_i, PS
- %endif
 	XLDR	x0, [ptr+pos]		;Get next source vector
 
 	vpand	xtmpa, x0, xmask0f	;Mask low src nibble in bits 4-0
@@ -330,27 +227,11 @@ func(gf_3vect_dot_prod_avx2)
 	vpxor	xgft1_hi, xgft1_lo	;GF add high and low partials
 	vpxor	xp1, xgft1_hi		;xp1 += partial
 
- %ifidn PS,4				; 32-bit code
-	vmovdqu	xgft2_lo, [tmp+vec*(32/PS)]	;Load array Bx{00}, Bx{01}, ..., Bx{0f}
-						;     "     Bx{00}, Bx{10}, ..., Bx{f0}
-	vperm2i128 xgft2_hi, xgft2_lo, xgft2_lo, 0x11 ; swapped to hi | hi
-	vperm2i128 xgft2_lo, xgft2_lo, xgft2_lo, 0x00 ; swapped to lo | lo
- %endif
 	vpshufb	   xgft2_hi, x0		;Lookup mul table of high nibble
 	vpshufb	   xgft2_lo, xtmpa		;Lookup mul table of low nibble
 	vpxor	   xgft2_hi, xgft2_lo	;GF add high and low partials
 	vpxor	   xp2, xgft2_hi		;xp2 += partial
 
- %ifidn PS,4				; 32-bit code
-	sal     vec, 1
-	vmovdqu	xgft3_lo, [tmp+vec*(32/PS)]	;Load array Cx{00}, Cx{01}, ..., Cx{0f}
-						;     "     Cx{00}, Cx{10}, ..., Cx{f0}
-	vperm2i128 xgft3_hi, xgft3_lo, xgft3_lo, 0x11 ; swapped to hi | hi
-	vperm2i128 xgft3_lo, xgft3_lo, xgft3_lo, 0x00 ; swapped to lo | lo
-	sar	vec, 1
-	add	tmp, 32
-	add	vec_i, PS
- %endif
 	vpshufb	xgft3_hi, x0		;Lookup mul table of high nibble
 	vpshufb	xgft3_lo, xtmpa		;Lookup mul table of low nibble
 	vpxor	xgft3_hi, xgft3_lo	;GF add high and low partials

@@ -90,70 +90,6 @@
  %endmacro
 %endif
 
-%ifidn __OUTPUT_FORMAT__, elf32
-
-;;;================== High Address;
-;;;	arg4
-;;;	arg3
-;;;	arg2
-;;;	arg1
-;;;	arg0
-;;;	return
-;;;<================= esp of caller
-;;;	ebp
-;;;<================= ebp = esp
-;;;	esi
-;;;	edi
-;;;	ebx
-;;;<================= esp of callee
-;;;
-;;;================== Low Address;
-
- %define PS 4
- %define LOG_PS 2
- %define func(x) x: endbranch
- %define arg(x) [ebp + PS*2 + PS*x]
-
- %define trans   ecx			;trans is for the variables in stack
- %define arg0    trans
- %define arg0_m  arg(0)
- %define arg1    trans
- %define arg1_m  arg(1)
- %define arg2    arg2_m
- %define arg2_m  arg(2)
- %define arg3    ebx
- %define arg4    trans
- %define arg4_m  arg(4)
- %define tmp	 edx
- %define tmp.w   edx
- %define tmp.b   dl
- %define tmp2    edi
- %define tmp3    esi
- %define return  eax
- %macro SLDR     2			;stack load/restore
-	mov %1, %2
- %endmacro
- %define SSTR SLDR
-
- %macro FUNC_SAVE 0
-	push	ebp
-	mov	ebp, esp
-	push	esi
-	push	edi
-	push	ebx
-	mov	arg3, arg(3)
- %endmacro
-
- %macro FUNC_RESTORE 0
-	pop	ebx
-	pop	edi
-	pop	esi
-	mov	esp, ebp
-	pop	ebp
- %endmacro
-
-%endif	; output formats
-
 %define len   arg0
 %define vec   arg1
 %define mul_array arg2
@@ -163,12 +99,6 @@
 %define vec_i tmp2
 %define ptr   tmp3
 %define pos   return
-
-%ifidn PS,4				;32-bit code
- %define  vec_m  arg1_m
- %define  len_m  arg0_m
- %define  dest_m arg4_m
-%endif
 
 %ifndef EC_ALIGNED_ADDR
 ;;; Use Un-aligned load/store
@@ -185,10 +115,8 @@
  %endif
 %endif
 
-%ifidn PS,8				;64-bit code
- default rel
- [bits 64]
-%endif
+default rel
+[bits 64]
 
 section .text
 

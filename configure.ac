@@ -26,7 +26,6 @@ CPU=""
 AS_CASE([$host_cpu],
   [x86_64], [CPU="x86_64"],
   [amd64], [CPU="x86_64"],
-  [i?86], [CPU="x86_32"],
   [aarch64], [CPU="aarch64"],
   [arm64], [CPU="aarch64"],
   [powerpc64le], [CPU="ppc64le"],
@@ -34,7 +33,6 @@ AS_CASE([$host_cpu],
   [riscv64], [CPU="riscv64"],
 )
 AM_CONDITIONAL([CPU_X86_64], [test "$CPU" = "x86_64"])
-AM_CONDITIONAL([CPU_X86_32], [test "$CPU" = "x86_32"])
 AM_CONDITIONAL([CPU_AARCH64], [test "$CPU" = "aarch64"])
 AM_CONDITIONAL([CPU_PPC64LE], [test "$CPU" = "ppc64le"])
 AM_CONDITIONAL([CPU_RISCV64], [test "$CPU" = "riscv64"])
@@ -53,11 +51,6 @@ AC_PROG_MKDIR_P
 case "${CPU}" in
 
 	x86_64)
-
-		is_x86=yes
-		;;
-
-	x86_32)
 
 		is_x86=yes
 		;;

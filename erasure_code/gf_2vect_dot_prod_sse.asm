@@ -105,74 +105,6 @@
  %endmacro
 %endif
 
-%ifidn __OUTPUT_FORMAT__, elf32
-
-;;;================== High Address;
-;;;	arg4
-;;;	arg3
-;;;	arg2
-;;;	arg1
-;;;	arg0
-;;;	return
-;;;<================= esp of caller
-;;;	ebp
-;;;<================= ebp = esp
-;;;	var0
-;;;	esi
-;;;	edi
-;;;	ebx
-;;;<================= esp of callee
-;;;
-;;;================== Low Address;
-
- %define PS 4
- %define LOG_PS 2
- %define func(x) x: endbranch
- %define arg(x) [ebp + PS*2 + PS*x]
- %define var(x) [ebp - PS - PS*x]
-
- %define trans   ecx
- %define trans2  esi
- %define arg0    trans			;trans and trans2 are for the variables in stack
- %define arg0_m  arg(0)
- %define arg1    ebx
- %define arg2    arg2_m
- %define arg2_m  arg(2)
- %define arg3    trans
- %define arg3_m  arg(3)
- %define arg4    trans
- %define arg4_m  arg(4)
- %define tmp	 edx
- %define tmp2    edi
- %define tmp3    trans2
- %define tmp4    trans2
- %define tmp4_m  var(0)
- %define return  eax
- %macro SLDR 2	;; stack load/restore
-	mov %1, %2
- %endmacro
- %define SSTR SLDR
-
- %macro FUNC_SAVE 0
-	push	ebp
-	mov	ebp, esp
-	sub 	esp, PS*1		;1 local variable
-	push	esi
-	push	edi
-	push	ebx
-	mov	arg1, arg(1)
- %endmacro
-
- %macro FUNC_RESTORE 0
-	pop	ebx
-	pop	edi
-	pop	esi
-	add	esp, PS*1		;1 local variable
-	pop	ebp
- %endmacro
-
-%endif	; output formats
-
 %define len   arg0
 %define vec   arg1
 %define mul_array arg2
@@ -183,13 +115,6 @@
 %define ptr   tmp3
 %define dest2 tmp4
 %define pos   return
-
- %ifidn PS,4				;32-bit code
-	%define  len_m 	 arg0_m
-	%define  src_m 	 arg3_m
-	%define  dest1_m arg4_m
-	%define  dest2_m tmp4_m
- %endif
 
 %ifndef EC_ALIGNED_ADDR
 ;;; Use Un-aligned load/store
@@ -206,36 +131,21 @@
  %endif
 %endif
 
-%ifidn PS,8				;64-bit code
- default rel
-  [bits 64]
-%endif
+default rel
+[bits 64]
 
 section .text
 
-%ifidn PS,8				;64-bit code
- %define xmask0f   xmm8
- %define xgft1_lo  xmm7
- %define xgft1_hi  xmm6
- %define xgft2_lo  xmm5
- %define xgft2_hi  xmm4
+%define xmask0f   xmm8
+%define xgft1_lo  xmm7
+%define xgft1_hi  xmm6
+%define xgft2_lo  xmm5
+%define xgft2_hi  xmm4
 
- %define x0     xmm0
- %define xtmpa  xmm1
- %define xp1    xmm2
- %define xp2    xmm3
-%else					;32-bit code
- %define xmask0f   xmm4
- %define xgft1_lo  xmm7
- %define xgft1_hi  xmm6
- %define xgft2_lo  xgft1_lo
- %define xgft2_hi  xgft1_hi
-
- %define x0     xmm0
- %define xtmpa  xmm1
- %define xp1    xmm2
- %define xp2    xmm3
-%endif
+%define x0     xmm0
+%define xtmpa  xmm1
+%define xp1    xmm2
+%define xp2    xmm3
 
 align 16
 mk_global gf_2vect_dot_prod_sse, function
@@ -267,12 +177,10 @@ func(gf_2vect_dot_prod_sse)
 
 	movdqu	xgft1_lo, [tmp]		;Load array Ax{00}, Ax{01}, ..., Ax{0f}
 	movdqu	xgft1_hi, [tmp+16]	;     "     Ax{00}, Ax{10}, ..., Ax{f0}
- %ifidn PS,8				;64-bit code
 	movdqu	xgft2_lo, [tmp+vec*(32/PS)]	;Load array Bx{00}, Bx{01}, ..., Bx{0f}
 	movdqu	xgft2_hi, [tmp+vec*(32/PS)+16]	;     "     Bx{00}, Bx{10}, ..., Bx{f0}
 	add	tmp, 32
 	add	vec_i, PS
- %endif
 	XLDR	x0, [ptr+pos]		;Get next source vector
 
 	movdqa	xtmpa, x0		;Keep unshifted copy of src
@@ -285,13 +193,6 @@ func(gf_2vect_dot_prod_sse)
 	pxor	xgft1_hi, xgft1_lo	;GF add high and low partials
 	pxor	xp1, xgft1_hi		;xp1 += partial
 
- %ifidn PS,4				;32-bit code
-	movdqu	xgft2_lo, [tmp+vec*(32/PS)]	;Load array Bx{00}, Bx{01}, ..., Bx{0f}
-	movdqu	xgft2_hi, [tmp+vec*(32/PS)+16]	;     "     Bx{00}, Bx{10}, ..., Bx{f0}
-
-	add	tmp, 32
-	add	vec_i, PS
- %endif
 	pshufb	xgft2_hi, x0		;Lookup mul table of high nibble
 	pshufb	xgft2_lo, xtmpa		;Lookup mul table of low nibble
 	pxor	xgft2_hi, xgft2_lo	;GF add high and low partials

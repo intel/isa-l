@@ -9,10 +9,6 @@ RELEASE NOTE CONTENTS
 1. KNOWN ISSUES
 ----------------
 
-* 32-bit lib is not supported in Windows.
-
-* 32-bit lib is not validated.
-
 2. FIXED ISSUES
 ---------------
 v2.31.1
@@ -143,6 +139,7 @@ v2.32
 
 * General:
   - Minimum NASM version required for x86 architecture is 2.14.01 now.
+  - 32-bit x86 support has been removed.
 
 * RISCV support.
   - Initial riscv64 support with runtime and build-time CPU feature detection.

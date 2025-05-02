@@ -26,19 +26,13 @@ perf_tests_extra=
 examples=
 other_tests=
 other_tests_x86_64=
-other_tests_x86_32=
-other_tests_aarch64=
 other_tests_ppc64le=
 other_tests_riscv64=
 lsrc_x86_64=
-lsrc_x86_32=
 lsrc_aarch64=
 lsrc_ppc64le=
 lsrc_riscv64=
 lsrc_base_aliases=
-lsrc32=
-unit_tests32=
-perf_tests32=
 progs=
 
 # Include units
@@ -65,12 +59,6 @@ if CPU_X86_64
 ARCH=-Dx86_64
 libisal_la_SOURCES += ${lsrc_x86_64}
 other_tests += ${other_tests_x86_64}
-endif
-
-if CPU_X86_32
-ARCH=-Dx86_32
-libisal_la_SOURCES += ${lsrc_x86_32}
-other_tests += ${other_tests_x86_32}
 endif
 
 if CPU_AARCH64

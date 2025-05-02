@@ -113,35 +113,6 @@ lsrc_x86_64  += \
 		erasure_code/gf_5vect_mad_avx512_gfni.asm \
 		erasure_code/gf_6vect_mad_avx512_gfni.asm
 
-lsrc_x86_32  += \
-		erasure_code/ec_highlevel_func.c \
-		erasure_code/ec_multibinary.asm \
-		erasure_code/gf_vect_dot_prod_avx.asm \
-		erasure_code/gf_2vect_dot_prod_avx.asm \
-		erasure_code/gf_3vect_dot_prod_avx.asm \
-		erasure_code/gf_4vect_dot_prod_avx.asm \
-		erasure_code/gf_vect_dot_prod_sse.asm \
-		erasure_code/gf_2vect_dot_prod_sse.asm \
-		erasure_code/gf_3vect_dot_prod_sse.asm \
-		erasure_code/gf_4vect_dot_prod_sse.asm \
-		erasure_code/gf_vect_dot_prod_avx2.asm \
-		erasure_code/gf_2vect_dot_prod_avx2.asm \
-		erasure_code/gf_3vect_dot_prod_avx2.asm \
-		erasure_code/gf_4vect_dot_prod_avx2.asm
-
-unit_tests32 += erasure_code/erasure_code_base_test \
-		erasure_code/erasure_code_test \
-		erasure_code/gf_vect_mul_test \
-		erasure_code/gf_vect_mul_base_test \
-		erasure_code/gf_vect_dot_prod_base_test \
-		erasure_code/gf_vect_dot_prod_test
-
-perf_tests32 += erasure_code/gf_vect_mul_perf \
-		erasure_code/gf_vect_dot_prod_perf \
-		erasure_code/erasure_code_perf \
-		erasure_code/erasure_code_base_perf \
-		erasure_code/gf_vect_dot_prod_1tbl
-
 src_include += -I $(srcdir)/erasure_code
 extern_hdrs  += include/erasure_code.h \
 		include/gf_vect_mul.h

@@ -30,25 +30,14 @@
 %ifndef _MULTIBINARY_ASM_
 %define _MULTIBINARY_ASM_
 
-%ifidn __OUTPUT_FORMAT__, elf32
- %define mbin_def_ptr	dd
- %define mbin_ptr_sz	dword
- %define mbin_rdi	edi
- %define mbin_rsi	esi
- %define mbin_rax	eax
- %define mbin_rbx	ebx
- %define mbin_rcx	ecx
- %define mbin_rdx	edx
-%else
- %define mbin_def_ptr	dq
- %define mbin_ptr_sz	qword
- %define mbin_rdi	rdi
- %define mbin_rsi	rsi
- %define mbin_rax	rax
- %define mbin_rbx	rbx
- %define mbin_rcx	rcx
- %define mbin_rdx	rdx
-%endif
+%define dq	dq
+%define ptr_sz	qword
+%define rdi	rdi
+%define rsi	rsi
+%define rax	rax
+%define rbx	rbx
+%define rcx	rcx
+%define rdx	rdx
 
 ;;;;
 ; multibinary macro:
@@ -62,7 +51,7 @@
 	;;;;
 	section .data
 	%1_dispatched:
-		mbin_def_ptr	%1_mbinit
+		dq	%1_mbinit
 
 	section .text
 	mk_global %1, function
@@ -73,7 +62,7 @@
 		;;; falls thru to execute the hw optimized code
 	%1:
 		endbranch
-		jmp	mbin_ptr_sz [%1_dispatched]
+		jmp	qword [%1_dispatched]
 %endmacro
 
 ;;;;;
@@ -87,28 +76,28 @@
 %macro mbin_dispatch_init 4
 	section .text
 	%1_dispatch_init:
-		push	mbin_rsi
-		push	mbin_rax
-		push	mbin_rbx
-		push	mbin_rcx
-		push	mbin_rdx
-		lea	mbin_rsi, [%2 WRT_OPT] ; Default to SSE 00/01
+		push	rsi
+		push	rax
+		push	rbx
+		push	rcx
+		push	rdx
+		lea	rsi, [%2 WRT_OPT] ; Default to SSE 00/01
 
 		mov	eax, 1
 		cpuid
 		and	ecx, (FLAG_CPUID1_ECX_AVX | FLAG_CPUID1_ECX_OSXSAVE)
 		cmp	ecx, (FLAG_CPUID1_ECX_AVX | FLAG_CPUID1_ECX_OSXSAVE)
-		lea	mbin_rbx, [%3 WRT_OPT] ; AVX (gen2) opt func
+		lea	rbx, [%3 WRT_OPT] ; AVX (gen2) opt func
 		jne	_%1_init_done ; AVX is not available so end
-		mov	mbin_rsi, mbin_rbx
+		mov	rsi, rbx
 
 		;; Try for AVX2
 		xor	ecx, ecx
 		mov	eax, 7
 		cpuid
 		test	ebx, FLAG_CPUID7_EBX_AVX2
-		lea	mbin_rbx, [%4 WRT_OPT] ; AVX (gen4) opt func
-		cmovne	mbin_rsi, mbin_rbx
+		lea	rbx, [%4 WRT_OPT] ; AVX (gen4) opt func
+		cmovne	rsi, rbx
 
 		;; Does it have xmm and ymm support
 		xor	ecx, ecx
@@ -116,31 +105,15 @@
 		and	eax, FLAG_XGETBV_EAX_XMM_YMM
 		cmp	eax, FLAG_XGETBV_EAX_XMM_YMM
 		je	_%1_init_done
-		lea	mbin_rsi, [%2 WRT_OPT]
+		lea	rsi, [%2 WRT_OPT]
 
 	_%1_init_done:
-		pop	mbin_rdx
-		pop	mbin_rcx
-		pop	mbin_rbx
-		pop	mbin_rax
-		mov	[%1_dispatched], mbin_rsi
-		pop	mbin_rsi
-		ret
-%endmacro
-
-;;;;;
-; mbin_dispatch_init2 parameters
-;  Cases where only base functions are available
-; 1-> function name
-; 2-> base function
-;;;;;
-%macro mbin_dispatch_init2 2
-	section .text
-	%1_dispatch_init:
-		push	mbin_rsi
-		lea	mbin_rsi, [%2 WRT_OPT] ; Default
-		mov	[%1_dispatched], mbin_rsi
-		pop	mbin_rsi
+		pop	rdx
+		pop	rcx
+		pop	rbx
+		pop	rax
+		mov	[%1_dispatched], rsi
+		pop	rsi
 		ret
 %endmacro
 
@@ -156,13 +129,13 @@
 %macro mbin_dispatch_init_clmul 5
 	section .text
 	%1_dispatch_init:
-		push	mbin_rsi
-		push	mbin_rax
-		push	mbin_rbx
-		push	mbin_rcx
-		push	mbin_rdx
-		push	mbin_rdi
-		lea     mbin_rsi, [%2 WRT_OPT] ; Default - use base function
+		push	rsi
+		push	rax
+		push	rbx
+		push	rcx
+		push	rdx
+		push	rdi
+		lea     rsi, [%2 WRT_OPT] ; Default - use base function
 
 		mov     eax, 1
 		cpuid
@@ -171,7 +144,7 @@
 		jz	_%1_init_done
 		test    ecx, FLAG_CPUID1_ECX_CLMUL
 		jz	_%1_init_done
-		lea	mbin_rsi, [%3 WRT_OPT] ; SSE possible so use 00/01 opt
+		lea	rsi, [%3 WRT_OPT] ; SSE possible so use 00/01 opt
 
 		;; Test for XMM_YMM support/AVX
 		test	ecx, FLAG_CPUID1_ECX_OSXSAVE
@@ -185,7 +158,7 @@
 		jne	_%1_init_done
 		test	ebx, FLAG_CPUID1_ECX_AVX
 		je	_%1_init_done
-		lea	mbin_rsi, [%4 WRT_OPT] ; AVX/02 opt
+		lea	rsi, [%4 WRT_OPT] ; AVX/02 opt
 
 		;; Test for AVX2
 		xor	ecx, ecx
@@ -204,16 +177,16 @@
 
 		and	ecx, FLAGS_CPUID7_ECX_AVX512_G2
 		cmp	ecx, FLAGS_CPUID7_ECX_AVX512_G2
-		lea	mbin_rbx, [%5 WRT_OPT] ; AVX512/10 opt
-		cmove	mbin_rsi, mbin_rbx
+		lea	rbx, [%5 WRT_OPT] ; AVX512/10 opt
+		cmove	rsi, rbx
 	_%1_init_done:
-		pop	mbin_rdi
-		pop	mbin_rdx
-		pop	mbin_rcx
-		pop	mbin_rbx
-		pop	mbin_rax
-		mov	[%1_dispatched], mbin_rsi
-		pop	mbin_rsi
+		pop	rdi
+		pop	rdx
+		pop	rcx
+		pop	rbx
+		pop	rax
+		mov	[%1_dispatched], rsi
+		pop	rsi
 		ret
 %endmacro
 
@@ -228,33 +201,33 @@
 %macro mbin_dispatch_init5 5
 	section .text
 	%1_dispatch_init:
-		push	mbin_rsi
-		push	mbin_rax
-		push	mbin_rbx
-		push	mbin_rcx
-		push	mbin_rdx
-		lea	mbin_rsi, [%2 WRT_OPT] ; Default - use base function
+		push	rsi
+		push	rax
+		push	rbx
+		push	rcx
+		push	rdx
+		lea	rsi, [%2 WRT_OPT] ; Default - use base function
 
 		mov	eax, 1
 		cpuid
 		; Test for SSE4.2
 		test	ecx, FLAG_CPUID1_ECX_SSE4_2
-		lea	mbin_rbx, [%3 WRT_OPT] ; SSE opt func
-		cmovne	mbin_rsi, mbin_rbx
+		lea	rbx, [%3 WRT_OPT] ; SSE opt func
+		cmovne	rsi, rbx
 
 		and	ecx, (FLAG_CPUID1_ECX_AVX | FLAG_CPUID1_ECX_OSXSAVE)
 		cmp	ecx, (FLAG_CPUID1_ECX_AVX | FLAG_CPUID1_ECX_OSXSAVE)
-		lea	mbin_rbx, [%4 WRT_OPT] ; AVX (gen2) opt func
+		lea	rbx, [%4 WRT_OPT] ; AVX (gen2) opt func
 		jne	_%1_init_done ; AVX is not available so end
-		mov	mbin_rsi, mbin_rbx
+		mov	rsi, rbx
 
 		;; Try for AVX2
 		xor	ecx, ecx
 		mov	eax, 7
 		cpuid
 		test	ebx, FLAG_CPUID7_EBX_AVX2
-		lea	mbin_rbx, [%5 WRT_OPT] ; AVX (gen4) opt func
-		cmovne	mbin_rsi, mbin_rbx
+		lea	rbx, [%5 WRT_OPT] ; AVX (gen4) opt func
+		cmovne	rsi, rbx
 
 		;; Does it have xmm and ymm support
 		xor	ecx, ecx
@@ -262,15 +235,15 @@
 		and	eax, FLAG_XGETBV_EAX_XMM_YMM
 		cmp	eax, FLAG_XGETBV_EAX_XMM_YMM
 		je	_%1_init_done
-		lea	mbin_rsi, [%3 WRT_OPT]
+		lea	rsi, [%3 WRT_OPT]
 
 	_%1_init_done:
-		pop	mbin_rdx
-		pop	mbin_rcx
-		pop	mbin_rbx
-		pop	mbin_rax
-		mov	[%1_dispatched], mbin_rsi
-		pop	mbin_rsi
+		pop	rdx
+		pop	rcx
+		pop	rbx
+		pop	rax
+		mov	[%1_dispatched], rsi
+		pop	rsi
 		ret
 %endmacro
 
@@ -286,20 +259,20 @@
 %macro mbin_dispatch_init6 6
 	section .text
 	%1_dispatch_init:
-		push	mbin_rsi
-		push	mbin_rax
-		push	mbin_rbx
-		push	mbin_rcx
-		push	mbin_rdx
-		push	mbin_rdi
-		lea	mbin_rsi, [%2 WRT_OPT] ; Default - use base function
+		push	rsi
+		push	rax
+		push	rbx
+		push	rcx
+		push	rdx
+		push	rdi
+		lea	rsi, [%2 WRT_OPT] ; Default - use base function
 
 		mov	eax, 1
 		cpuid
 		mov	ebx, ecx ; save cpuid1.ecx
 		test	ecx, FLAG_CPUID1_ECX_SSE4_2
 		je	_%1_init_done	  ; Use base function if no SSE4_2
-		lea	mbin_rsi, [%3 WRT_OPT] ; SSE possible so use 00/01 opt
+		lea	rsi, [%3 WRT_OPT] ; SSE possible so use 00/01 opt
 
 		;; Test for XMM_YMM support/AVX
 		test	ecx, FLAG_CPUID1_ECX_OSXSAVE
@@ -313,7 +286,7 @@
 		jne	_%1_init_done
 		test	ebx, FLAG_CPUID1_ECX_AVX
 		je	_%1_init_done
-		lea	mbin_rsi, [%4 WRT_OPT] ; AVX/02 opt
+		lea	rsi, [%4 WRT_OPT] ; AVX/02 opt
 
 		;; Test for AVX2
 		xor	ecx, ecx
@@ -321,7 +294,7 @@
 		cpuid
 		test	ebx, FLAG_CPUID7_EBX_AVX2
 		je	_%1_init_done		; No AVX2 possible
-		lea	mbin_rsi, [%5 WRT_OPT] 	; AVX2/04 opt func
+		lea	rsi, [%5 WRT_OPT] 	; AVX2/04 opt func
 
 		;; Test for AVX512
 		and	edi, FLAG_XGETBV_EAX_ZMM_OPM
@@ -329,17 +302,17 @@
 		jne	_%1_init_done	  ; No AVX512 possible
 		and	ebx, FLAGS_CPUID7_EBX_AVX512_G1
 		cmp	ebx, FLAGS_CPUID7_EBX_AVX512_G1
-		lea	mbin_rbx, [%6 WRT_OPT] ; AVX512/06 opt
-		cmove	mbin_rsi, mbin_rbx
+		lea	rbx, [%6 WRT_OPT] ; AVX512/06 opt
+		cmove	rsi, rbx
 
 	_%1_init_done:
-		pop	mbin_rdi
-		pop	mbin_rdx
-		pop	mbin_rcx
-		pop	mbin_rbx
-		pop	mbin_rax
-		mov	[%1_dispatched], mbin_rsi
-		pop	mbin_rsi
+		pop	rdi
+		pop	rdx
+		pop	rcx
+		pop	rbx
+		pop	rax
+		mov	[%1_dispatched], rsi
+		pop	rsi
 		ret
 %endmacro
 
@@ -356,20 +329,20 @@
 %macro mbin_dispatch_init7 7
 	section .text
 	%1_dispatch_init:
-		push	mbin_rsi
-		push	mbin_rax
-		push	mbin_rbx
-		push	mbin_rcx
-		push	mbin_rdx
-		push	mbin_rdi
-		lea	mbin_rsi, [%2 WRT_OPT] ; Default - use base function
+		push	rsi
+		push	rax
+		push	rbx
+		push	rcx
+		push	rdx
+		push	rdi
+		lea	rsi, [%2 WRT_OPT] ; Default - use base function
 
 		mov	eax, 1
 		cpuid
 		mov	ebx, ecx ; save cpuid1.ecx
 		test	ecx, FLAG_CPUID1_ECX_SSE4_2
 		je	_%1_init_done	  ; Use base function if no SSE4_2
-		lea	mbin_rsi, [%3 WRT_OPT] ; SSE possible so use 00/01 opt
+		lea	rsi, [%3 WRT_OPT] ; SSE possible so use 00/01 opt
 
 		;; Test for XMM_YMM support/AVX
 		test	ecx, FLAG_CPUID1_ECX_OSXSAVE
@@ -383,7 +356,7 @@
 		jne	_%1_init_done
 		test	ebx, FLAG_CPUID1_ECX_AVX
 		je	_%1_init_done
-		lea	mbin_rsi, [%4 WRT_OPT] ; AVX/02 opt
+		lea	rsi, [%4 WRT_OPT] ; AVX/02 opt
 
 		;; Test for AVX2
 		xor	ecx, ecx
@@ -391,7 +364,7 @@
 		cpuid
 		test	ebx, FLAG_CPUID7_EBX_AVX2
 		je	_%1_init_done		; No AVX2 possible
-		lea	mbin_rsi, [%5 WRT_OPT] 	; AVX2/04 opt func
+		lea	rsi, [%5 WRT_OPT] 	; AVX2/04 opt func
 
 		;; Test for AVX512
 		and	edi, FLAG_XGETBV_EAX_ZMM_OPM
@@ -399,22 +372,22 @@
 		jne	_%1_init_done	  ; No AVX512 possible
 		and	ebx, FLAGS_CPUID7_EBX_AVX512_G1
 		cmp	ebx, FLAGS_CPUID7_EBX_AVX512_G1
-		lea	mbin_rbx, [%6 WRT_OPT] ; AVX512/06 opt
-		cmove	mbin_rsi, mbin_rbx
+		lea	rbx, [%6 WRT_OPT] ; AVX512/06 opt
+		cmove	rsi, rbx
 
 		and	ecx, FLAGS_CPUID7_ECX_AVX512_G2
 		cmp	ecx, FLAGS_CPUID7_ECX_AVX512_G2
-		lea	mbin_rbx, [%7 WRT_OPT] ; AVX512/06 opt
-		cmove	mbin_rsi, mbin_rbx
+		lea	rbx, [%7 WRT_OPT] ; AVX512/06 opt
+		cmove	rsi, rbx
 
 	_%1_init_done:
-		pop	mbin_rdi
-		pop	mbin_rdx
-		pop	mbin_rcx
-		pop	mbin_rbx
-		pop	mbin_rax
-		mov	[%1_dispatched], mbin_rsi
-		pop	mbin_rsi
+		pop	rdi
+		pop	rdx
+		pop	rcx
+		pop	rbx
+		pop	rax
+		mov	[%1_dispatched], rsi
+		pop	rsi
 		ret
 %endmacro
 
@@ -432,20 +405,20 @@
 %macro mbin_dispatch_init8 8
 	section .text
 	%1_dispatch_init:
-		push	mbin_rsi
-		push	mbin_rax
-		push	mbin_rbx
-		push	mbin_rcx
-		push	mbin_rdx
-		push	mbin_rdi
-		lea	mbin_rsi, [%2 WRT_OPT] ; Default - use base function
+		push	rsi
+		push	rax
+		push	rbx
+		push	rcx
+		push	rdx
+		push	rdi
+		lea	rsi, [%2 WRT_OPT] ; Default - use base function
 
 		mov	eax, 1
 		cpuid
 		mov	ebx, ecx ; save cpuid1.ecx
 		test	ecx, FLAG_CPUID1_ECX_SSE4_2
 		je	_%1_init_done	  ; Use base function if no SSE4_2
-		lea	mbin_rsi, [%3 WRT_OPT] ; SSE possible so use 00/01 opt
+		lea	rsi, [%3 WRT_OPT] ; SSE possible so use 00/01 opt
 
 		;; Test for XMM_YMM support/AVX
 		test	ecx, FLAG_CPUID1_ECX_OSXSAVE
@@ -459,7 +432,7 @@
 		jne	_%1_init_done
 		test	ebx, FLAG_CPUID1_ECX_AVX
 		je	_%1_init_done
-		lea	mbin_rsi, [%4 WRT_OPT] ; AVX/02 opt
+		lea	rsi, [%4 WRT_OPT] ; AVX/02 opt
 
 		;; Test for AVX2
 		xor	ecx, ecx
@@ -467,7 +440,7 @@
 		cpuid
 		test	ebx, FLAG_CPUID7_EBX_AVX2
 		je	_%1_init_done		; No AVX2 possible
-		lea	mbin_rsi, [%5 WRT_OPT] 	; AVX2/04 opt func
+		lea	rsi, [%5 WRT_OPT] 	; AVX2/04 opt func
 
 		;; Test for AVX512
 		and	edi, FLAG_XGETBV_EAX_ZMM_OPM
@@ -475,30 +448,30 @@
 		jne	_%1_check_avx2_g2	  ; No AVX512 possible
 		and	ebx, FLAGS_CPUID7_EBX_AVX512_G1
 		cmp	ebx, FLAGS_CPUID7_EBX_AVX512_G1
-		lea	mbin_rbx, [%6 WRT_OPT] ; AVX512/06 opt
-		cmove	mbin_rsi, mbin_rbx
+		lea	rbx, [%6 WRT_OPT] ; AVX512/06 opt
+		cmove	rsi, rbx
 
 		and	ecx, FLAGS_CPUID7_ECX_AVX512_G2
 		cmp	ecx, FLAGS_CPUID7_ECX_AVX512_G2
-		lea	mbin_rbx, [%8 WRT_OPT] ; AVX512/10 opt
-		cmove	mbin_rsi, mbin_rbx
+		lea	rbx, [%8 WRT_OPT] ; AVX512/10 opt
+		cmove	rsi, rbx
 		jmp     _%1_init_done
 
 	_%1_check_avx2_g2:
 		;; Test for AVX2 Gen 2
 		and	ecx, FLAGS_CPUID7_ECX_AVX2_G2
 		cmp	ecx, FLAGS_CPUID7_ECX_AVX2_G2
-		lea	mbin_rbx, [%7 WRT_OPT] ; AVX2/7 opt
-		cmove	mbin_rsi, mbin_rbx
+		lea	rbx, [%7 WRT_OPT] ; AVX2/7 opt
+		cmove	rsi, rbx
 
 	_%1_init_done:
-		pop	mbin_rdi
-		pop	mbin_rdx
-		pop	mbin_rcx
-		pop	mbin_rbx
-		pop	mbin_rax
-		mov	[%1_dispatched], mbin_rsi
-		pop	mbin_rsi
+		pop	rdi
+		pop	rdx
+		pop	rcx
+		pop	rbx
+		pop	rax
+		mov	[%1_dispatched], rsi
+		pop	rsi
 		ret
 %endmacro
 
