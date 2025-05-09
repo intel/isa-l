@@ -28,7 +28,11 @@
 **********************************************************************/
 .text
 .align		6
+#ifdef __APPLE__
+.arch		armv8-a+sme
+#else
 .arch		armv8-a+sve
+#endif
 
 #include "../include/aarch64_label.h"
 
@@ -78,6 +82,9 @@ q_gft1_lo	.req	q6
 q_gft1_hi	.req	q7
 
 cdecl(gf_vect_mul_sve):
+#ifdef __APPLE__
+	smstart	sm
+#endif
 	/* len not aligned to 32B, return_fail */
 	and	x_tmp, x_len, #0x1f
 	cmp	x_tmp, #0
@@ -92,7 +99,7 @@ cdecl(gf_vect_mul_sve):
 	/* vector length agnostic */
 .Lloopsve_vl:
 	whilelo	p0.b, x_pos, x_len
-	b.none	.return_pass
+	b.eq	.return_pass
 
 	/* load src data, governed by p0 */
 	ld1b	z_src.b,  p0/z, [x_src, x_pos]
@@ -116,8 +123,14 @@ cdecl(gf_vect_mul_sve):
 
 .return_pass:
 	mov	w_ret, #0
+#ifdef __APPLE__
+	smstop	sm
+#endif
 	ret
 
 .return_fail:
 	mov	w_ret, #1
+#ifdef __APPLE__
+	smstop	sm
+#endif
 	ret
