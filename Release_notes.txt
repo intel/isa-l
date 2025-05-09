@@ -151,6 +151,12 @@ v2.32
   - Added new x86 AVX2+GFNI and AVX512+GFNI pq_gen implementations.
   - Added new RVV xor_gen, pq_gen implementations.
 
+* Erasure coding improvements:
+  - Added new RVV ec_encode_data, gf_vect_dot_prod, gf_vect_mul implementations.
+
+* Zero-memory detection improvements:
+  - Added new RVV implementations.
+
 v2.31
 
 * API changes:
