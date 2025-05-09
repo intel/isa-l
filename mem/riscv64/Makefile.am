@@ -1,5 +1,5 @@
 ########################################################################
-#  Copyright(c) 2011-2018 Intel Corporation All rights reserved.
+#  Copyright (c) 2025 Institute of Software Chinese Academy of Sciences (ISCAS).
 #
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
 #      notice, this list of conditions and the following disclaimer in
 #      the documentation and/or other materials provided with the
 #      distribution.
-#    * Neither the name of Intel Corporation nor the names of its
+#    * Neither the name of ISCAS nor the names of its
 #      contributors may be used to endorse or promote products derived
 #      from this software without specific prior written permission.
 #
@@ -27,25 +27,7 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ########################################################################
 
-include mem/aarch64/Makefile.am
-
-include mem/riscv64/Makefile.am
-
-lsrc        += 	mem/mem_zero_detect_base.c
-
-lsrc_base_aliases += mem/mem_zero_detect_base_aliases.c
-lsrc_ppc64le      += mem/mem_zero_detect_base_aliases.c
-
-lsrc_x86_64 += 	mem/mem_zero_detect_avx512.asm \
-		mem/mem_zero_detect_avx2.asm \
-		mem/mem_zero_detect_avx.asm \
-		mem/mem_zero_detect_sse.asm \
-		mem/mem_multibinary.asm
-
-extern_hdrs +=	include/mem_routines.h
-
-other_src   +=  include/test.h
-
-check_tests  +=  mem/mem_zero_detect_test
-
-perf_tests  +=  mem/mem_zero_detect_perf
+lsrc_riscv64 += \
+	mem/riscv64/mem_multibinary_riscv64_dispatcher.c \
+	mem/riscv64/mem_multibinary_riscv64.S \
+	mem/riscv64/mem_zero_detect_rvv.S
