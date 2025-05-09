@@ -151,6 +151,10 @@ v2.32
   - Added new x86 AVX2+GFNI and AVX512+GFNI pq_gen implementations.
   - Added new RVV xor_gen, pq_gen implementations.
 
+* CRC improvements:
+  - CRC64 Rocksoft implementation on aarch64 optimized similar to other CRC64
+    implementations.
+
 v2.31
 
 * API changes:
