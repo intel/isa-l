@@ -28,7 +28,11 @@
 **********************************************************************/
 .text
 .align		6
+#ifdef __APPLE__
+.arch		armv8-a+sme
+#else
 .arch		armv8-a+sve
+#endif
 
 #include "../include/aarch64_label.h"
 
@@ -94,6 +98,9 @@ z_dest2		.req	z27
 z_dest3		.req	z28
 
 cdecl(gf_3vect_dot_prod_sve):
+#ifdef __APPLE__
+	smstart	sm
+#endif
 	/* less than 16 bytes, return_fail */
 	cmp	x_len, #16
 	blt	.return_fail
@@ -107,7 +114,7 @@ cdecl(gf_3vect_dot_prod_sve):
 /* Loop 1: x_len, vector length */
 .Lloopsve_vl:
 	whilelo	p0.b, x_pos, x_len
-	b.none	.return_pass
+	b.eq	.return_pass
 
 	mov	x_vec_i, #0			/* clear x_vec_i */
 	ldr	x_ptr, [x_src, x_vec_i]		/* x_ptr: src base addr. */
@@ -182,8 +189,14 @@ cdecl(gf_3vect_dot_prod_sve):
 
 .return_pass:
 	mov	w_ret, #0
+#ifdef __APPLE__
+	smstop	sm
+#endif
 	ret
 
 .return_fail:
 	mov	w_ret, #1
+#ifdef __APPLE__
+	smstop	sm
+#endif
 	ret
