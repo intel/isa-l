@@ -59,7 +59,6 @@
 .equ	br_high_b2, 0x0000
 .equ	br_high_b3, 0xb000
 
-	.text
 ASM_DEF_RODATA
 	.align	4
 	.set	.lanchor_crc_tab,. + 0
