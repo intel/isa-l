@@ -25,4 +25,15 @@ libtool
 isa-l.h
 /libisal.la
 libisal.pc
+crc/*_perf
+crc/*_test
+erasure_code/*_perf
+erasure_code/*_test
+erasure_code/gf_vect_dot_prod_1tbl
+igzip/*_perf
+igzip/*_test
+mem/*_perf
+mem/*_test
 programs/igzip
+raid/*_perf
+raid/*_test
