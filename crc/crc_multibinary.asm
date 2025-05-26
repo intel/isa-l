@@ -32,8 +32,8 @@ default rel
 
 %include "reg_sizes.asm"
 
-extern crc32_iscsi_00
 extern crc32_iscsi_01
+extern crc32_iscsi_by8_02
 extern crc32_iscsi_base
 
 extern crc32_ieee_01
@@ -65,9 +65,6 @@ section .data
 ;;; *_mbinit are initial values for *_dispatched; is updated on first call.
 ;;; Therefore, *_dispatch_init is only executed on first call.
 
-crc32_iscsi_dispatched:
-	dq	crc32_iscsi_mbinit
-
 crc32_ieee_dispatched:
 	dq	crc32_ieee_mbinit
 
@@ -75,80 +72,6 @@ crc16_t10dif_dispatched:
 	dq	crc16_t10dif_mbinit
 
 section .text
-;;;;
-; crc32_iscsi multibinary function
-;;;;
-mk_global crc32_iscsi, function
-crc32_iscsi_mbinit:
-	endbranch
-	call	crc32_iscsi_dispatch_init
-crc32_iscsi:
-	endbranch
-	jmp	qword [crc32_iscsi_dispatched]
-
-crc32_iscsi_dispatch_init:
-	push 	rax
-	push	rbx
-	push	rcx
-	push	rdx
-	push	rsi
-	push	rdi
-	lea     rsi, [crc32_iscsi_base WRT_OPT] ; Default
-
-	mov	eax, 1
-	cpuid
-	mov	ebx, ecx ; save cpuid1.ecx
-	test    ecx, FLAG_CPUID1_ECX_SSE4_2
-	jz      .crc_iscsi_init_done ; use iscsi_base
-	lea     rsi, [crc32_iscsi_00 WRT_OPT]
-	test    ecx, FLAG_CPUID1_ECX_CLMUL
-	jz	.crc_iscsi_init_done ; use ieee_base
-	lea	rsi, [crc32_iscsi_01 WRT_OPT]
-
-	;; Test for XMM_YMM support/AVX
-	test	ecx, FLAG_CPUID1_ECX_OSXSAVE
-	je	.crc_iscsi_init_done
-	xor	ecx, ecx
-	xgetbv	; xcr -> edx:eax
-	mov	edi, eax	  ; save xgetvb.eax
-
-	and	eax, FLAG_XGETBV_EAX_XMM_YMM
-	cmp	eax, FLAG_XGETBV_EAX_XMM_YMM
-	jne	.crc_iscsi_init_done
-	test	ebx, FLAG_CPUID1_ECX_AVX
-	je	.crc_iscsi_init_done
-	;; AVX/02 opt if available
-
-	;; Test for AVX2
-	xor	ecx, ecx
-	mov	eax, 7
-	cpuid
-	test	ebx, FLAG_CPUID7_EBX_AVX2
-	je	.crc_iscsi_init_done		; No AVX2 possible
-
-	;; Test for AVX512
-	and	edi, FLAG_XGETBV_EAX_ZMM_OPM
-	cmp	edi, FLAG_XGETBV_EAX_ZMM_OPM
-	jne	.crc_iscsi_init_done	  ; No AVX512 possible
-	and	ebx, FLAGS_CPUID7_EBX_AVX512_G1
-	cmp	ebx, FLAGS_CPUID7_EBX_AVX512_G1
-	jne	.crc_iscsi_init_done
-
-	and	ecx, FLAGS_CPUID7_ECX_AVX512_G2
-	cmp	ecx, FLAGS_CPUID7_ECX_AVX512_G2
-	lea	rbx, [crc32_iscsi_by16_10 WRT_OPT] ; AVX512/10 opt
-	cmove	rsi, rbx
-
-.crc_iscsi_init_done:
-	mov	[crc32_iscsi_dispatched], rsi
-	pop	rdi
-	pop	rsi
-	pop	rdx
-	pop	rcx
-	pop	rbx
-	pop	rax
-	ret
-
 ;;;;
 ; crc32_ieee multibinary function
 ;;;;
@@ -306,6 +229,9 @@ crc16_t10dif_dispatch_init:
 	pop     rbx
 	pop     rax
 	ret
+
+mbin_interface			crc32_iscsi
+mbin_dispatch_init_clmul	crc32_iscsi, crc32_iscsi_base, crc32_iscsi_01, crc32_iscsi_by8_02, crc32_iscsi_by16_10
 
 mbin_interface			crc32_gzip_refl
 mbin_dispatch_init_clmul	crc32_gzip_refl, crc32_gzip_refl_base, crc32_gzip_refl_by8, crc32_gzip_refl_by8_02, crc32_gzip_refl_by16_10
