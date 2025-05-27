@@ -51,11 +51,11 @@
 %include "reg_sizes.asm"
 
 %ifndef fetch_dist
-%define	fetch_dist	1024
+%define	fetch_dist	4096
 %endif
 
 %ifndef PREFETCH
-%define PREFETCH        prefetcht0
+%define PREFETCH        prefetcht1
 %endif
 
 [bits 64]

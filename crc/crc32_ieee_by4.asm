@@ -45,7 +45,13 @@
 
 %include "reg_sizes.asm"
 
-%define	fetch_dist	1024
+%ifndef fetch_dist
+%define	fetch_dist	4096
+%endif
+
+%ifndef PREFETCH
+%define PREFETCH        prefetcht1
+%endif
 
 [bits 64]
 default rel
@@ -136,7 +142,7 @@ _fold_64_B_loop:
 	;update the buffer pointer
 	add arg2, 64
 
-	prefetchnta [arg2+fetch_dist+0]
+	PREFETCH [arg2+fetch_dist+0]
 	movdqa xmm4, xmm0
 	movdqa xmm5, xmm1
 
@@ -149,7 +155,7 @@ _fold_64_B_loop:
 	pxor xmm0, xmm4
    	pxor xmm1, xmm5
 
-	prefetchnta [arg2+fetch_dist+32]
+	PREFETCH [arg2+fetch_dist+32]
 	movdqa xmm4, xmm2
 	movdqa xmm5, xmm3
 

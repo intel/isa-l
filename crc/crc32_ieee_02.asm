@@ -44,7 +44,14 @@
 
 %include "reg_sizes.asm"
 
-%define	fetch_dist	1024
+%ifndef fetch_dist
+%define	fetch_dist	4096
+%endif
+
+%ifndef PREFETCH
+%define PREFETCH        prefetcht1
+%endif
+
 [bits 64]
 default rel
 
@@ -145,7 +152,7 @@ _fold_128_B_loop:
 	; update the buffer pointer
 	add	arg2, 128		;    buf += 128;
 
-	prefetchnta [arg2+fetch_dist+0]
+	PREFETCH [arg2+fetch_dist+0]
 	vmovdqu	xmm9, [arg2+16*0]
 	vmovdqu	xmm12, [arg2+16*1]
 	vpshufb	xmm9, xmm11
@@ -161,7 +168,7 @@ _fold_128_B_loop:
 	vpxor	xmm1, xmm12
 	vxorps	xmm1, xmm13
 
-	prefetchnta [arg2+fetch_dist+32]
+	PREFETCH [arg2+fetch_dist+32]
 	vmovdqu	xmm9, [arg2+16*2]
 	vmovdqu	xmm12, [arg2+16*3]
 	vpshufb	xmm9, xmm11
@@ -177,7 +184,7 @@ _fold_128_B_loop:
 	vpxor	xmm3, xmm12
 	vxorps	xmm3, xmm13
 
-	prefetchnta [arg2+fetch_dist+64]
+	PREFETCH [arg2+fetch_dist+64]
 	vmovdqu	xmm9, [arg2+16*4]
 	vmovdqu	xmm12, [arg2+16*5]
 	vpshufb	xmm9, xmm11
@@ -193,7 +200,7 @@ _fold_128_B_loop:
 	vpxor	xmm5, xmm12
 	vxorps	xmm5, xmm13
 
-	prefetchnta [arg2+fetch_dist+96]
+	PREFETCH [arg2+fetch_dist+96]
 	vmovdqu	xmm9, [arg2+16*6]
 	vmovdqu	xmm12, [arg2+16*7]
 	vpshufb	xmm9, xmm11
