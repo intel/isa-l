@@ -41,7 +41,13 @@
 %define FUNCTION_NAME crc64_iso_refl_by16_10
 %endif
 
-%define	fetch_dist	1024
+%ifndef fetch_dist
+%define	fetch_dist	1536
+%endif
+
+%ifndef PREFETCH
+%define PREFETCH        prefetcht0
+%endif
 
 [bits 64]
 default rel
@@ -112,18 +118,22 @@ FUNCTION_NAME:
 
 _fold_256_B_loop:
 	add		arg2, 256
+	PREFETCH [arg2+fetch_dist+0]
 	vpclmulqdq	zmm1, zmm0, zmm16, 0x10
 	vpclmulqdq	zmm0, zmm0, zmm16, 0x01
 	vpternlogq	zmm0, zmm1, [arg2+16*0], 0x96
 
+	PREFETCH [arg2+fetch_dist+64]
 	vpclmulqdq	zmm2, zmm4, zmm16, 0x10
 	vpclmulqdq	zmm4, zmm4, zmm16, 0x01
 	vpternlogq	zmm4, zmm2, [arg2+16*4], 0x96
 
+	PREFETCH [arg2+fetch_dist+64*2]
 	vpclmulqdq	zmm3, zmm7, zmm16, 0x10
 	vpclmulqdq	zmm7, zmm7, zmm16, 0x01
 	vpternlogq	zmm7, zmm3, [arg2+16*8], 0x96
 
+	PREFETCH [arg2+fetch_dist+64*3]
 	vpclmulqdq	zmm5, zmm8, zmm16, 0x10
 	vpclmulqdq	zmm8, zmm8, zmm16, 0x01
 	vpternlogq	zmm8, zmm5, [arg2+16*12], 0x96
