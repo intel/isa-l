@@ -50,6 +50,9 @@
 #define EFENCE_TEST_MIN_SIZE 16
 #define EFENCE_TEST_MAX_SIZE EFENCE_TEST_MIN_SIZE + 0x100
 
+#if HAVE_RVV
+#define EC_ALIGNED_ADDR
+#endif
 #ifdef EC_ALIGNED_ADDR
 // Define power of 2 range to check ptr, len alignment
 #define PTR_ALIGN_CHK_B 0

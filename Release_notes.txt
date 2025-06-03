@@ -152,7 +152,7 @@ v2.32
   - Added new RVV xor_gen, pq_gen implementations.
 
 * Erasure coding improvements:
-  - Added new RVV ec_encode_data, gf_vect_dot_prod, gf_vect_mul implementations.
+  - Added new RVV ec_encode_data,ec_encode_data_update,gf_vect_mad, gf_vect_dot_prod, gf_vect_mul implementations.
 
 * Zero-memory detection improvements:
   - Added new RVV implementations.

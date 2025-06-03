@@ -67,8 +67,13 @@ case "${CPU}" in
 			])],
 			[AC_DEFINE([HAVE_RVV], [1], [Enable RVV instructions])
 			AM_CONDITIONAL([HAVE_RVV], [true]) rvv=yes],
-			[AM_CONDITIONAL([HAVE_RVV], [false]) rvv=no]
+			[AC_DEFINE([HAVE_RVV], [0], [Disable RVV instructions])
+			AM_CONDITIONAL([HAVE_RVV], [false]) rvv=no]
 		)
+		if test "x$rvv" = "xyes"; then
+		  CFLAGS+=" -march=rv64gcv"
+		  CCASFLAGS+=" -march=rv64gcv"
+		fi
 		AC_MSG_RESULT([$rvv])
 		;;
 
