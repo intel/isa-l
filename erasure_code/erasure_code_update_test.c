@@ -35,7 +35,12 @@
 #include "test.h"
 
 #ifndef ALIGN_SIZE
+#if HAVE_RVV
+#define EC_ALIGNED_ADDR
+#define ALIGN_SIZE 32
+#else
 #define ALIGN_SIZE 16
+#endif
 #endif
 
 // By default, test multibinary version
