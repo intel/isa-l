@@ -75,7 +75,6 @@ main(int argc, char *argv[])
                 ret = -1;
 exit:
         for (i = 0; i < TEST_SOURCES + 1; i++)
-                free(buffs[i]);
-
+                aligned_free(buffs[i]);
         return ret;
 }

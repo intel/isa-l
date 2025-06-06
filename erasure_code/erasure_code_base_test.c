@@ -763,5 +763,16 @@ main(int argc, char *argv[])
         }
 
         printf("done EC tests: Pass\n");
+
+        for (i = 0; i < TEST_SOURCES; i++) {
+                aligned_free(buffs[i]);
+        }
+        for (i = 0; i < TEST_SOURCES; i++) {
+                aligned_free(temp_buffs[i]);
+        }
+        free(encode_matrix);
+        free(decode_matrix);
+        free(invert_matrix);
+        free(g_tbls);
         return 0;
 }

@@ -437,6 +437,18 @@ main(int argc, char *argv[])
         }
         printf(" } done all: Pass\n");
 
+        free(encode_matrix);
+        free(decode_matrix);
+        free(invert_matrix);
+        free(temp_matrix);
+        free(g_tbls);
+        for (i = 0; i < k; i++)
+                free(frag_ptrs[i]);
+        for (i = 0; i < p2; i++)
+                free(parity_ptrs[i]);
+        for (i = 0; i < p2; i++)
+                free(recover_outp[i]);
+
         return 0;
 }
 

@@ -114,5 +114,10 @@ main(int argc, char *argv[])
         perf_print(start, (long long) sizeof(blks->data) * NBLOCKS);
 
         printf("finish 0x%x\n", crc);
+
+        // Free allocated memory
+        aligned_free(blks);
+        aligned_free(blks_ext);
+
         return 0;
 }

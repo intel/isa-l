@@ -105,5 +105,8 @@ main(int argc, char *argv[])
                 printf("finish 0x%" PRIx64 "\n", crc);
         }
 
+        // Free allocated memory
+        aligned_free(buf);
+
         return 0;
 }

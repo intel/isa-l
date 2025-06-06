@@ -210,6 +210,22 @@ main(int argc, char *argv[])
         }
 
         printf(" } done all: Pass\n");
+
+        // Free allocated memory
+        free(encode_matrix);
+        free(decode_matrix);
+        free(invert_matrix);
+        free(temp_matrix);
+        free(g_tbls);
+
+        for (i = 0; i < m; i++) {
+                free(frag_ptrs[i]);
+        }
+
+        for (i = 0; i < p; i++) {
+                free(recover_outp[i]);
+        }
+
         return 0;
 }
 

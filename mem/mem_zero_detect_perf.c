@@ -55,5 +55,6 @@ main(int argc, char *argv[])
         printf("mem_zero_detect_perf" TEST_TYPE_STR ": ");
         perf_print(start, (long long) TEST_LEN);
 
+        aligned_free(buf);
         return 0;
 }

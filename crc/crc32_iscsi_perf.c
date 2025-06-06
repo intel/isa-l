@@ -77,5 +77,9 @@ main(int argc, char *argv[])
         perf_print(start, (long long) TEST_LEN);
 
         printf("finish 0x%x\n", crc);
+
+        // Free allocated memory
+        aligned_free(buf);
+
         return 0;
 }

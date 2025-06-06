@@ -295,5 +295,14 @@ main(int argc, char *argv[])
         }
 
         printf("done all: Pass\n");
+
+        // Free allocated memory
+        for (i = 0; i < TEST_SOURCES; i++) {
+                aligned_free(buffs[i]);
+        }
+        aligned_free(dest);
+        aligned_free(dest_ref);
+        aligned_free(temp_buff);
+
         return 0;
 }

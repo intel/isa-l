@@ -84,5 +84,8 @@ main(int argc, char *argv[])
         printf("pq_gen" TEST_TYPE_STR ": ");
         perf_print(start, (long long) TEST_MEM);
 
+        for (i = 0; i < TEST_SOURCES + 2; i++)
+                aligned_free(buffs[i]);
+
         return 0;
 }

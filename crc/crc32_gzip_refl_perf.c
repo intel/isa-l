@@ -88,5 +88,6 @@ main(int argc, char *argv[])
 
         printf("finish 0x%x\n", crc);
 
+        aligned_free(buf);
         return 0;
 }

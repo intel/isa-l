@@ -174,5 +174,14 @@ main(int argc, char *argv[])
         perf_print(start, (long long) (TEST_LEN(m)) * (k + nerrs));
 
         printf("done all: Pass\n");
+
+        // Free allocated buffers
+        for (i = 0; i < m; i++) {
+                aligned_free(buffs[i]);
+        }
+        for (i = 0; i < (m - k); i++) {
+                aligned_free(temp_buffs[i]);
+        }
+
         return 0;
 }
