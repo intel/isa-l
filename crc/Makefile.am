@@ -87,7 +87,8 @@ check_tests +=  crc/crc16_t10dif_test \
 perf_tests  +=  crc/crc16_t10dif_perf crc/crc16_t10dif_copy_perf \
 		crc/crc16_t10dif_op_perf \
 		crc/crc32_ieee_perf crc/crc32_iscsi_perf \
-		crc/crc64_funcs_perf crc/crc32_gzip_refl_perf
+		crc/crc64_funcs_perf crc/crc32_gzip_refl_perf \
+		crc/crc_funcs_perf
 
 examples    +=  crc/crc_simple_test crc/crc64_example
 

@@ -122,22 +122,23 @@ get_res(void)
 #define BENCHMARK_TIME 3
 #endif
 #ifdef _MSC_VER
+#include <windows.h>
 #define UNIT_SCALE     get_res()
 #define CALIBRATE_TIME (UNIT_SCALE / 4)
 static inline long long
 get_time(void)
 {
-        long long ret = 0;
+        LARGE_INTEGER ret;
         QueryPerformanceCounter(&ret);
-        return ret;
+        return ret.QuadPart;
 }
 
 static inline long long
 get_res(void)
 {
-        long long ret = 0;
+        LARGE_INTEGER ret;
         QueryPerformanceFrequency(&ret);
-        return ret;
+        return ret.QuadPart;
 }
 #else
 #define NANO_SCALE     1000000000

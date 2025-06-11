@@ -331,6 +331,7 @@ perfs = \
 	crc32_iscsi_perf.exe \
 	crc64_funcs_perf.exe \
 	crc32_gzip_refl_perf.exe \
+	crc_funcs_perf.exe \
 	adler32_perf.exe \
 	mem_zero_detect_perf.exe
 

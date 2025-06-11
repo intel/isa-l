@@ -161,6 +161,9 @@ v2.32
   - CRC64 Rocksoft implementation on aarch64 optimized similar to other CRC64
     implementations.
 
+* Performance applications:
+  - Add consolidated CRC performance application.
+
 v2.31
 
 * API changes:
