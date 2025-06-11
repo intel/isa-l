@@ -524,5 +524,16 @@ main(int argc, char *argv[])
         }
 
         printf("Pass\n");
+
+        // Free allocated memory
+        for (i = 0; i < TEST_SOURCES; i++) {
+                aligned_free(buffs[i]);
+        }
+        aligned_free(g_tbls);
+        for (i = 0; i < vector; i++) {
+                aligned_free(dest_ptrs[i]);
+                aligned_free(dest_ref[i]);
+        }
+
         return 0;
 }

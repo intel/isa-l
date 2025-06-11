@@ -70,5 +70,6 @@ main(int argc, char *argv[])
         printf("adler32" TEST_TYPE_STR ": ");
         perf_print(start, (long long) TEST_LEN);
 
+        aligned_free(buf);
         return 0;
 }

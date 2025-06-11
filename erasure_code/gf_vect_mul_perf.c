@@ -89,5 +89,9 @@ main(int argc, char *argv[])
         printf("gf_vect_mul" TEST_TYPE_STR ": ");
         perf_print(start, (long long) TEST_LEN);
 
+        // Free allocated memory
+        free(buff1);
+        free(buff2);
+
         return 0;
 }
