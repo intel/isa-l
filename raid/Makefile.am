@@ -56,6 +56,6 @@ other_src   +=  include/test.h
 
 check_tests +=  raid/xor_gen_test raid/pq_gen_test raid/xor_check_test raid/pq_check_test
 
-perf_tests  +=  raid/xor_gen_perf raid/pq_gen_perf
+perf_tests  +=  raid/xor_gen_perf raid/pq_gen_perf raid/raid_funcs_perf
 
 examples    += 	raid/xor_example

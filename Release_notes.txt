@@ -163,6 +163,7 @@ v2.32
 
 * Performance applications:
   - Add consolidated CRC performance application.
+  - Add consolidated RAID performance application.
 
 v2.31
 
