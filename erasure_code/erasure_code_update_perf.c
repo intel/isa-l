@@ -150,6 +150,24 @@ decode_test(int m, int k, u8 **update_buffs, u8 **recov, u8 *a, u8 *src_in_err, 
         return 0;
 }
 
+// Helper function for single source benchmark
+void
+encode_single_src_test(const int m, const int k, u8 *g_tbls, u8 **perf_update_buffs, u8 *a)
+{
+        // Make parity vects
+        ec_init_tables(k, m - k, &a[k * k], g_tbls);
+        FUNCTION_UNDER_TEST(TEST_LEN(m), k, m - k, 0, g_tbls, perf_update_buffs[0],
+                            &perf_update_buffs[k]);
+}
+
+// Helper function for simple single source benchmark
+void
+encode_single_src_simple_test(const int m, const int k, u8 *g_tbls, u8 **perf_update_buffs, u8 *a)
+{
+        FUNCTION_UNDER_TEST(TEST_LEN(m), k, m - k, 0, g_tbls, perf_update_buffs[0],
+                            &perf_update_buffs[k]);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -327,18 +345,13 @@ main(int argc, char *argv[])
 
         // Start encode test
         BENCHMARK(&start, BENCHMARK_TIME,
-                  // Make parity vects
-                  ec_init_tables(k, m - k, &a[k * k], g_tbls);
-                  FUNCTION_UNDER_TEST(TEST_LEN(m), k, m - k, 0, g_tbls, perf_update_buffs[0],
-                                      &perf_update_buffs[k]));
+                  encode_single_src_test(m, k, g_tbls, perf_update_buffs, a));
         printf(xstr(FUNCTION_UNDER_TEST) "_single_src" TEST_TYPE_STR ": ");
         perf_print(start, (long long) (TEST_LEN(m)) * (m - k + 1));
 
         // Start encode test
         BENCHMARK(&start, BENCHMARK_TIME,
-                  // Make parity vects
-                  FUNCTION_UNDER_TEST(TEST_LEN(m), k, m - k, 0, g_tbls, perf_update_buffs[0],
-                                      &perf_update_buffs[k]));
+                  encode_single_src_simple_test(m, k, g_tbls, perf_update_buffs, a));
         printf(xstr(FUNCTION_UNDER_TEST) "_single_src_simple" TEST_TYPE_STR ": ");
         perf_print(start, (long long) (TEST_LEN(m)) * (m - k + 1));
 

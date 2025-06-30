@@ -240,63 +240,64 @@ estimate_perf_iterations(struct perf *p, unsigned long long runs, unsigned long 
 }
 
 #define CALIBRATE(PERF, FUNC_CALL)                                                                 \
-        {                                                                                          \
+        do {                                                                                       \
                 unsigned long long _i, _iter = 1;                                                  \
-                perf_start(PERF);                                                                  \
-                FUNC_CALL;                                                                         \
-                perf_pause(PERF);                                                                  \
+                perf_start((PERF));                                                                \
+                (FUNC_CALL);                                                                       \
+                perf_pause((PERF));                                                                \
                                                                                                    \
-                while (get_base_elapsed(PERF) < CALIBRATE_TIME) {                                  \
-                        _iter = estimate_perf_iterations(PERF, _iter, 2 * CALIBRATE_TIME);         \
-                        perf_start(PERF);                                                          \
+                while (get_base_elapsed((PERF)) < CALIBRATE_TIME) {                                \
+                        _iter = estimate_perf_iterations((PERF), _iter, 2 * CALIBRATE_TIME);       \
+                        perf_start((PERF));                                                        \
                         for (_i = 0; _i < _iter; _i++) {                                           \
-                                FUNC_CALL;                                                         \
+                                (FUNC_CALL);                                                       \
                         }                                                                          \
-                        perf_stop(PERF);                                                           \
+                        perf_stop((PERF));                                                         \
                 }                                                                                  \
-                (PERF)->iterations = _iter;                                                        \
-        }
+                ((PERF))->iterations = _iter;                                                      \
+        } while (0)
 
 #define PERFORMANCE_TEST(PERF, RUN_TIME, FUNC_CALL)                                                \
-        {                                                                                          \
-                unsigned long long _i, _iter = (PERF)->iterations;                                 \
-                unsigned long long _run_total = RUN_TIME;                                          \
+        do {                                                                                       \
+                unsigned long long _i, _iter = ((PERF))->iterations;                               \
+                unsigned long long _run_total = (RUN_TIME);                                        \
                 _run_total *= UNIT_SCALE;                                                          \
-                _iter = estimate_perf_iterations(PERF, _iter, _run_total);                         \
-                (PERF)->iterations = 0;                                                            \
-                perf_start(PERF);                                                                  \
+                _iter = estimate_perf_iterations((PERF), _iter, _run_total);                       \
+                ((PERF))->iterations = 0;                                                          \
+                perf_start((PERF));                                                                \
                 for (_i = 0; _i < _iter; _i++) {                                                   \
-                        FUNC_CALL;                                                                 \
+                        (FUNC_CALL);                                                               \
                 }                                                                                  \
-                perf_pause(PERF);                                                                  \
-                (PERF)->iterations += _iter;                                                       \
+                perf_pause((PERF));                                                                \
+                ((PERF))->iterations += _iter;                                                     \
                                                                                                    \
-                if (get_base_elapsed(PERF) < _run_total && BENCHMARK_TYPE == BENCHMARK_MIN_TIME) { \
-                        _iter = estimate_perf_iterations(PERF, _iter,                              \
-                                                         _run_total - get_base_elapsed(PERF) +     \
+                if (get_base_elapsed((PERF)) < _run_total &&                                       \
+                    BENCHMARK_TYPE == BENCHMARK_MIN_TIME) {                                        \
+                        _iter = estimate_perf_iterations((PERF), _iter,                            \
+                                                         _run_total - get_base_elapsed((PERF)) +   \
                                                                  (UNIT_SCALE / 16));               \
-                        perf_continue(PERF);                                                       \
+                        perf_continue((PERF));                                                     \
                         for (_i = 0; _i < _iter; _i++) {                                           \
-                                FUNC_CALL;                                                         \
+                                (FUNC_CALL);                                                       \
                         }                                                                          \
-                        perf_pause(PERF);                                                          \
-                        (PERF)->iterations += _iter;                                               \
+                        perf_pause((PERF));                                                        \
+                        ((PERF))->iterations += _iter;                                             \
                 }                                                                                  \
-        }
+        } while (0)
 
 #define BENCHMARK(PERF, RUN_TIME, FUNC_CALL)                                                       \
-        {                                                                                          \
+        do {                                                                                       \
                 if ((RUN_TIME) > 0) {                                                              \
-                        CALIBRATE(PERF, FUNC_CALL);                                                \
-                        PERFORMANCE_TEST(PERF, RUN_TIME, FUNC_CALL);                               \
+                        CALIBRATE((PERF), (FUNC_CALL));                                            \
+                        PERFORMANCE_TEST((PERF), (RUN_TIME), (FUNC_CALL));                         \
                                                                                                    \
                 } else {                                                                           \
-                        (PERF)->iterations = 1;                                                    \
-                        perf_start(PERF);                                                          \
-                        FUNC_CALL;                                                                 \
-                        perf_stop(PERF);                                                           \
+                        ((PERF))->iterations = 1;                                                  \
+                        perf_start((PERF));                                                        \
+                        (FUNC_CALL);                                                               \
+                        perf_stop((PERF));                                                         \
                 }                                                                                  \
-        }
+        } while (0)
 
 #ifdef USE_CYCLES
 static inline void
