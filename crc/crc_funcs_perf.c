@@ -90,68 +90,200 @@ static const crc_type_t CRC64_TYPES[] = { CRC64_ECMA_REFL,     CRC64_ECMA_NORM, 
                                           CRC64_ROCKSOFT_REFL, CRC64_ROCKSOFT_NORM };
 static const size_t CRC64_TYPES_LEN = 8;
 
+#define COLD_CACHE_TEST_MEM (1024 * 1024 * 1024)
+#define COLD_CACHE_MIN_LEN  (1024)
+
+// Define function pointer types for CRC functions with standard parameter format (seed, buffer,
+// len)
+typedef uint32_t (*crc32_func_t)(uint32_t seed, const uint8_t *buf, uint64_t len);
+typedef uint16_t (*crc16_func_t)(uint16_t seed, const uint8_t *buf, uint64_t len);
+typedef uint64_t (*crc64_func_t)(uint64_t seed, const uint8_t *buf, uint64_t len);
+
+// Result type enumeration
+typedef enum { RESULT_CRC32 = 0, RESULT_CRC16, RESULT_CRC64 } crc_result_type_t;
+
+// Structure to define CRC function tables with standard parameter signature
+typedef struct {
+        crc_type_t type;               // CRC type ID
+        const char *name;              // Function name for output
+        void *func;                    // Regular optimized function
+        void *func_base;               // Base (non-optimized) function
+        crc_result_type_t result_type; // Type of result value
+} crc_func_info_t;
+
+// Wrapper functions for CRC functions with non-standard parameter order
+// ISCSI CRC wrapper that adapts (buffer, len, seed) to standard (seed, buffer, len) format
+static uint32_t
+crc32_iscsi_wrapped(const uint32_t seed, const uint8_t *buf, const uint64_t len)
+{
+        // Cast to match the expected function signature
+        return crc32_iscsi((unsigned char *) buf, (int) len, seed);
+}
+
+static uint32_t
+crc32_iscsi_base_wrapped(const uint32_t seed, const uint8_t *buf, const uint64_t len)
+{
+        // Cast to match the expected function signature
+        return crc32_iscsi_base((unsigned char *) buf, (int) len, seed);
+}
+
+// Table of CRC functions with standard parameter format (seed, buffer, len)
+static const crc_func_info_t CRC_FUNCS_TABLE[] = {
+        // CRC32 functions
+        { CRC32_GZIP_REFL, "crc32_gzip_refl", (void *) crc32_gzip_refl,
+          (void *) crc32_gzip_refl_base, RESULT_CRC32 },
+        { CRC32_IEEE, "crc32_ieee", (void *) crc32_ieee, (void *) crc32_ieee_base, RESULT_CRC32 },
+        { CRC32_ISCSI, "crc32_iscsi", (void *) crc32_iscsi_wrapped,
+          (void *) crc32_iscsi_base_wrapped, RESULT_CRC32 },
+        // CRC16 functions
+        { CRC16_T10DIF, "crc16_t10dif", (void *) crc16_t10dif, (void *) crc16_t10dif_base,
+          RESULT_CRC16 },
+        // CRC64 functions
+        { CRC64_ECMA_REFL, "crc64_ecma_refl", (void *) crc64_ecma_refl,
+          (void *) crc64_ecma_refl_base, RESULT_CRC64 },
+        { CRC64_ECMA_NORM, "crc64_ecma_norm", (void *) crc64_ecma_norm,
+          (void *) crc64_ecma_norm_base, RESULT_CRC64 },
+        { CRC64_ISO_REFL, "crc64_iso_refl", (void *) crc64_iso_refl, (void *) crc64_iso_refl_base,
+          RESULT_CRC64 },
+        { CRC64_ISO_NORM, "crc64_iso_norm", (void *) crc64_iso_norm, (void *) crc64_iso_norm_base,
+          RESULT_CRC64 },
+        { CRC64_JONES_REFL, "crc64_jones_refl", (void *) crc64_jones_refl,
+          (void *) crc64_jones_refl_base, RESULT_CRC64 },
+        { CRC64_JONES_NORM, "crc64_jones_norm", (void *) crc64_jones_norm,
+          (void *) crc64_jones_norm_base, RESULT_CRC64 },
+        { CRC64_ROCKSOFT_REFL, "crc64_rocksoft_refl", (void *) crc64_rocksoft_refl,
+          (void *) crc64_rocksoft_refl_base, RESULT_CRC64 },
+        { CRC64_ROCKSOFT_NORM, "crc64_rocksoft_norm", (void *) crc64_rocksoft_norm,
+          (void *) crc64_rocksoft_norm_base, RESULT_CRC64 },
+};
+
+// Number of entries in the CRC function table
+static const size_t CRC_FUNCS_TABLE_SIZE = sizeof(CRC_FUNCS_TABLE) / sizeof(CRC_FUNCS_TABLE[0]);
+
+// Helper function to run benchmark for standard CRC function
+static void
+run_standard_crc_benchmark(struct perf *start, const crc_func_info_t *func_info,
+                           const int run_base_version, const uint8_t *buffer, const size_t len,
+                           const int csv_output, const int use_cold_cache, uint8_t **buffer_list,
+                           const size_t num_buffers)
+{
+        const char *function_suffix = run_base_version ? "_base" : "";
+        const char *crc_type_str = func_info->name;
+
+        union {
+                crc32_func_t crc32;
+                crc16_func_t crc16;
+                crc64_func_t crc64;
+                void *ptr;
+        } func;
+
+        // Get appropriate function pointer based on base version flag
+        func.ptr = run_base_version ? func_info->func_base : func_info->func;
+
+        // Execute benchmark based on result type with appropriate benchmark macro
+        if (use_cold_cache && buffer_list) {
+                size_t current_buffer_idx = 0;
+
+                switch (func_info->result_type) {
+                case RESULT_CRC32:
+                        BENCHMARK_COLD(start, BENCHMARK_TIME,
+                                       current_buffer_idx = (current_buffer_idx + 1) % num_buffers,
+                                       func.crc32(TEST_SEED, buffer_list[current_buffer_idx], len));
+                        break;
+                case RESULT_CRC16:
+                        BENCHMARK_COLD(start, BENCHMARK_TIME,
+                                       current_buffer_idx = (current_buffer_idx + 1) % num_buffers,
+                                       func.crc16(TEST_SEED, buffer_list[current_buffer_idx], len));
+                        break;
+                case RESULT_CRC64:
+                        BENCHMARK_COLD(start, BENCHMARK_TIME,
+                                       current_buffer_idx = (current_buffer_idx + 1) % num_buffers,
+                                       func.crc64(TEST_SEED, buffer_list[current_buffer_idx], len));
+                        break;
+                }
+        } else {
+                // Standard warm-cache benchmark
+                switch (func_info->result_type) {
+                case RESULT_CRC32:
+                        BENCHMARK(start, BENCHMARK_TIME, func.crc32(TEST_SEED, buffer, len));
+                        break;
+                case RESULT_CRC16:
+                        BENCHMARK(start, BENCHMARK_TIME, func.crc16(TEST_SEED, buffer, len));
+                        break;
+                case RESULT_CRC64:
+                        BENCHMARK(start, BENCHMARK_TIME, func.crc64(TEST_SEED, buffer, len));
+                        break;
+                }
+        }
+
+        // Print results in appropriate format
+        if (csv_output) {
+#ifdef USE_RDTSC
+                // When USE_RDTSC is defined, report total cycles per buffer
+                double cycles = (double) get_base_elapsed(start);
+                double cycles_per_buffer = cycles / (double) start->iterations;
+                printf("%s%s,%zu,%.0f\n", crc_type_str, function_suffix, len, cycles_per_buffer);
+#else
+                // Calculate throughput in MB/s
+                double time_elapsed = get_time_elapsed(start);
+                long long total_units = start->iterations * (long long) len;
+                double throughput = ((double) total_units) / (1000000 * time_elapsed);
+                printf("%s%s,%zu,%.2f\n", crc_type_str, function_suffix, len, throughput);
+#endif
+        } else {
+                printf("%s%s : ", crc_type_str, function_suffix);
+                perf_print(*start, (long long) len);
+        }
+}
+
 // Function to run a specific CRC benchmark
 static void
-run_benchmark(void *buf, size_t len, crc_type_t type, int run_base_version, int csv_output)
+run_benchmark(const void *buf, const size_t len, const crc_type_t type, const int run_base_version,
+              const int csv_output, const int use_cold_cache)
 {
         struct perf start;
+        perf_init(&start);
         uint8_t *buffer = (uint8_t *) buf; // Proper casting to match function signatures
         const char *crc_type_str = "";
         const char *function_suffix = run_base_version ? "_base" : "";
 
-        // For result storage
-        uint32_t crc32_result = 0;
-        uint16_t crc16_result = 0;
-        uint64_t crc64_result = 0;
+        // For cold cache benchmarking
+        uint8_t **buffer_list = NULL;
+        size_t num_buffers = 0;
 
+        // Create list of random buffer address within the large memory space already allocated for
+        // cold cache tests
+        if (use_cold_cache) {
+                num_buffers = COLD_CACHE_TEST_MEM / len;
+
+                buffer_list = (uint8_t **) malloc(num_buffers * sizeof(uint8_t *));
+                if (!buffer_list) {
+                        printf("Failed to allocate memory for cold cache buffers\n");
+                        return;
+                }
+
+                for (size_t i = 0; i < num_buffers; i++)
+                        buffer_list[i] = buffer + len * (rand() % num_buffers);
+        }
+
+        // First check if this is a standard CRC function that can use the table
+        for (size_t i = 0; i < CRC_FUNCS_TABLE_SIZE; i++) {
+                if (CRC_FUNCS_TABLE[i].type == type) {
+                        run_standard_crc_benchmark(&start, &CRC_FUNCS_TABLE[i], run_base_version,
+                                                   buffer, len, csv_output, use_cold_cache,
+                                                   buffer_list, num_buffers);
+                        if (buffer_list)
+                                free(buffer_list);
+                        return;
+                }
+        }
+
+        if (buffer_list)
+                free(buffer_list);
+
+        // Handle special cases that don't fit the standard parameter format
         switch (type) {
-        // CRC32 types
-        case CRC32_GZIP_REFL:
-                crc_type_str = "crc32_gzip_refl";
-                if (run_base_version) {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc32_result = crc32_gzip_refl_base(TEST_SEED, buffer, len));
-                } else {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc32_result = crc32_gzip_refl(TEST_SEED, buffer, len));
-                }
-                break;
-
-        case CRC32_IEEE:
-                crc_type_str = "crc32_ieee";
-                if (run_base_version) {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc32_result = crc32_ieee_base(TEST_SEED, buffer, len));
-                } else {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc32_result = crc32_ieee(TEST_SEED, buffer, len));
-                }
-                break;
-
-        case CRC32_ISCSI:
-                crc_type_str = "crc32_iscsi";
-                if (run_base_version) {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc32_result = crc32_iscsi_base(buffer, (int) len, TEST_SEED));
-                } else {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc32_result = crc32_iscsi(buffer, (int) len, TEST_SEED));
-                }
-                break;
-
-        // CRC16 types
-        case CRC16_T10DIF:
-                crc_type_str = "crc16_t10dif";
-                if (run_base_version) {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc16_result = crc16_t10dif_base(TEST_SEED, buffer, len));
-                } else {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc16_result = crc16_t10dif(TEST_SEED, buffer, len));
-                }
-                break;
-
-        case CRC16_T10DIF_COPY: {
+        case CRC16_T10DIF_COPY:
                 crc_type_str = "crc16_t10dif_copy";
                 uint8_t *dst_buf = malloc(len);
                 if (!dst_buf) {
@@ -163,107 +295,15 @@ run_benchmark(void *buf, size_t len, crc_type_t type, int run_base_version, int 
 
                 if (run_base_version) {
                         BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc16_result =
-                                          crc16_t10dif_copy_base(TEST_SEED, dst_buf, buffer, len));
+                                  crc16_t10dif_copy_base(TEST_SEED, dst_buf, buffer, len));
                 } else {
                         BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc16_result =
-                                          crc16_t10dif_copy(TEST_SEED, dst_buf, buffer, len));
+                                  crc16_t10dif_copy(TEST_SEED, dst_buf, buffer, len));
                 }
                 free(dst_buf);
-        } break;
-
-        // CRC64 types
-        case CRC64_ECMA_REFL:
-                crc_type_str = "crc64_ecma_refl";
-                if (run_base_version) {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc64_result = crc64_ecma_refl_base(TEST_SEED, buffer, len));
-                } else {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc64_result = crc64_ecma_refl(TEST_SEED, buffer, len));
-                }
                 break;
-
-        case CRC64_ECMA_NORM:
-                crc_type_str = "crc64_ecma_norm";
-                if (run_base_version) {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc64_result = crc64_ecma_norm_base(TEST_SEED, buffer, len));
-                } else {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc64_result = crc64_ecma_norm(TEST_SEED, buffer, len));
-                }
-                break;
-
-        case CRC64_ISO_REFL:
-                crc_type_str = "crc64_iso_refl";
-                if (run_base_version) {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc64_result = crc64_iso_refl_base(TEST_SEED, buffer, len));
-                } else {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc64_result = crc64_iso_refl(TEST_SEED, buffer, len));
-                }
-                break;
-
-        case CRC64_ISO_NORM:
-                crc_type_str = "crc64_iso_norm";
-                if (run_base_version) {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc64_result = crc64_iso_norm_base(TEST_SEED, buffer, len));
-                } else {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc64_result = crc64_iso_norm(TEST_SEED, buffer, len));
-                }
-                break;
-
-        case CRC64_JONES_REFL:
-                crc_type_str = "crc64_jones_refl";
-                if (run_base_version) {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc64_result = crc64_jones_refl_base(TEST_SEED, buffer, len));
-                } else {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc64_result = crc64_jones_refl(TEST_SEED, buffer, len));
-                }
-                break;
-
-        case CRC64_JONES_NORM:
-                crc_type_str = "crc64_jones_norm";
-                if (run_base_version) {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc64_result = crc64_jones_norm_base(TEST_SEED, buffer, len));
-                } else {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc64_result = crc64_jones_norm(TEST_SEED, buffer, len));
-                }
-                break;
-
-        case CRC64_ROCKSOFT_REFL:
-                crc_type_str = "crc64_rocksoft_refl";
-                if (run_base_version) {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc64_result = crc64_rocksoft_refl_base(TEST_SEED, buffer, len));
-                } else {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc64_result = crc64_rocksoft_refl(TEST_SEED, buffer, len));
-                }
-                break;
-
-        case CRC64_ROCKSOFT_NORM:
-                crc_type_str = "crc64_rocksoft_norm";
-                if (run_base_version) {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc64_result = crc64_rocksoft_norm_base(TEST_SEED, buffer, len));
-                } else {
-                        BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc64_result = crc64_rocksoft_norm(TEST_SEED, buffer, len));
-                }
-                break;
-
         default:
-                printf("Invalid CRC type\n");
+                printf("Error: CRC type %d not found or not implemented\n", type);
                 return;
         }
 
@@ -284,11 +324,6 @@ run_benchmark(void *buf, size_t len, crc_type_t type, int run_base_version, int 
                 printf("%s%s : ", crc_type_str, function_suffix);
                 perf_print(start, (long long) len);
         }
-
-        // Prevent results from being unused
-        (void) crc32_result;
-        (void) crc16_result;
-        (void) crc64_result;
 }
 
 static void
@@ -323,12 +358,12 @@ print_help(void)
 {
         printf("Usage: crc_funcs_perf [options]\n");
         printf("  -h, --help          Show this help message\n");
-        printf("  -t, --type=TYPE     CRC type to benchmark\n");
+        printf("  -t, --type TYPE     CRC type to benchmark\n");
         print_crc_types();
         printf("                            If no value is provided, lists available types and "
                "exits\n");
         printf("  -b, --base          Include base (non-optimized) versions in benchmark\n");
-        printf("  -r, --range=MIN:STEP:MAX  Run tests with buffer sizes from MIN to MAX in STEP "
+        printf("  -r, --range MIN:STEP:MAX  Run tests with buffer sizes from MIN to MAX in STEP "
                "increments\n");
         printf("                      If STEP starts with '*', it's treated as a multiplier\n");
         printf("                      Size values can include K (KB) or M (MB) suffix\n");
@@ -336,7 +371,7 @@ print_help(void)
         printf("                        --range=1K:1K:16K (1KB to 16KB in 1KB steps)\n");
         printf("                        --range=1K:*2:16K (1KB, 2KB, 4KB, 8KB, 16KB)\n");
         printf("                        --range=1M:1M:32M (1MB to 32MB in 1MB steps)\n");
-        printf("  -s, --sizes=SIZE1,SIZE2,...  Run tests with specified comma-separated buffer "
+        printf("  -s, --sizes SIZE1,SIZE2,...  Run tests with specified comma-separated buffer "
                "sizes\n");
         printf("                      Example: --sizes=1024,4096,8192,16384\n");
         printf("                      Size values can include K (KB) or M (MB) suffix\n");
@@ -344,6 +379,8 @@ print_help(void)
         printf("                      If no size option is provided, default size (%d) is used\n",
                DEFAULT_TEST_LEN);
         printf("  -c, --csv           Output results in CSV format\n");
+        printf("      --cold          Use cold cache for benchmarks (buffer not in cache, "
+               "t10dif_copy not supported)\n");
 }
 
 // Helper function to parse string input for CRC type
@@ -413,7 +450,7 @@ parse_size_value(const char *const size_str)
         char *str_copy = strdup(size_str);
 
         // Check for size suffixes (K for KB, M for MB)
-        int len = strlen(str_copy);
+        const int len = strlen(str_copy);
         if (len > 0) {
                 // Convert to uppercase for case-insensitive comparison
                 char last_char = toupper(str_copy[len - 1]);
@@ -446,9 +483,9 @@ parse_size_value(const char *const size_str)
 
 // Helper function to run benchmarks for a specific CRC type (range version)
 static void
-run_crc_type_range(crc_type_t type, void *buf, size_t min_len, size_t max_len,
-                   const int is_multiplicative, const size_t abs_step, int csv_output,
-                   int include_base)
+run_crc_type_range(const crc_type_t type, const void *buf, const size_t min_len,
+                   const size_t max_len, const int is_multiplicative, const size_t abs_step,
+                   const int csv_output, const int include_base, const int use_cold_cache)
 {
         static const char *const type_names[] = {
                 "GZIP Reflected CRC32",  "IEEE CRC32",          "iSCSI CRC32",
@@ -467,9 +504,9 @@ run_crc_type_range(crc_type_t type, void *buf, size_t min_len, size_t max_len,
                         printf("\n  Buffer size: %zu bytes\n", len);
                 }
 
-                run_benchmark(buf, len, type, 0, csv_output);
+                run_benchmark(buf, len, type, 0, csv_output, use_cold_cache);
                 if (include_base)
-                        run_benchmark(buf, len, type, 1, csv_output);
+                        run_benchmark(buf, len, type, 1, csv_output, use_cold_cache);
 
                 // Update length based on step type
                 if (is_multiplicative) {
@@ -482,8 +519,9 @@ run_crc_type_range(crc_type_t type, void *buf, size_t min_len, size_t max_len,
 
 // Helper function to run benchmarks for a specific CRC type with range of sizes
 static void
-benchmark_crc_type_range(crc_type_t crc_type, void *buf, size_t min_len, size_t max_len,
-                         ssize_t step_len, int csv_output, int include_base)
+benchmark_crc_type_range(const crc_type_t crc_type, const void *buf, const size_t min_len,
+                         const size_t max_len, const ssize_t step_len, const int csv_output,
+                         const int include_base, const int use_cold_cache)
 {
         const int is_multiplicative = (step_len < 0);
         const size_t abs_step = is_multiplicative ? -step_len : step_len;
@@ -495,7 +533,7 @@ benchmark_crc_type_range(crc_type_t crc_type, void *buf, size_t min_len, size_t 
 
                 for (size_t i = 0; i < CRC32_TYPES_LEN; i++) {
                         run_crc_type_range(CRC32_TYPES[i], buf, min_len, max_len, is_multiplicative,
-                                           abs_step, csv_output, include_base);
+                                           abs_step, csv_output, include_base, use_cold_cache);
                 }
         }
 
@@ -505,7 +543,7 @@ benchmark_crc_type_range(crc_type_t crc_type, void *buf, size_t min_len, size_t 
 
                 for (size_t i = 0; i < CRC16_TYPES_LEN; i++) {
                         run_crc_type_range(CRC16_TYPES[i], buf, min_len, max_len, is_multiplicative,
-                                           abs_step, csv_output, include_base);
+                                           abs_step, csv_output, include_base, use_cold_cache);
                 }
         }
 
@@ -515,7 +553,7 @@ benchmark_crc_type_range(crc_type_t crc_type, void *buf, size_t min_len, size_t 
 
                 for (size_t i = 0; i < CRC64_TYPES_LEN; i++) {
                         run_crc_type_range(CRC64_TYPES[i], buf, min_len, max_len, is_multiplicative,
-                                           abs_step, csv_output, include_base);
+                                           abs_step, csv_output, include_base, use_cold_cache);
                 }
         }
 
@@ -523,14 +561,15 @@ benchmark_crc_type_range(crc_type_t crc_type, void *buf, size_t min_len, size_t 
         if (crc_type != CRC_ALL && crc_type != CRC32_ALL && crc_type != CRC16_ALL &&
             crc_type != CRC64_ALL) {
                 run_crc_type_range(crc_type, buf, min_len, max_len, is_multiplicative, abs_step,
-                                   csv_output, include_base);
+                                   csv_output, include_base, use_cold_cache);
         }
 }
 
 // Helper function to run benchmarks for a specific CRC type with list of sizes
 static void
-run_crc_type_size_list(crc_type_t type, void *buf, const size_t *size_list, const int size_count,
-                       int csv_output, int include_base)
+run_crc_type_size_list(const crc_type_t type, const void *buf, const size_t *size_list,
+                       const int size_count, const int csv_output, const int include_base,
+                       const int use_cold_cache)
 {
         static const char *const type_names[] = {
                 "GZIP Reflected CRC32",  "IEEE CRC32",          "iSCSI CRC32",
@@ -549,16 +588,16 @@ run_crc_type_size_list(crc_type_t type, void *buf, const size_t *size_list, cons
                         printf("\n  Buffer size: %zu bytes\n", size_list[i]);
                 }
 
-                run_benchmark(buf, size_list[i], type, 0, csv_output);
+                run_benchmark(buf, size_list[i], type, 0, csv_output, use_cold_cache);
                 if (include_base)
-                        run_benchmark(buf, size_list[i], type, 1, csv_output);
+                        run_benchmark(buf, size_list[i], type, 1, csv_output, use_cold_cache);
         }
 }
 
 // Helper function to run benchmarks for a specific CRC type with default size
 static void
-run_crc_type_default(crc_type_t type, void *buf, const size_t test_len, int csv_output,
-                     int include_base)
+run_crc_type_default(const crc_type_t type, const void *buf, const size_t test_len,
+                     const int csv_output, const int include_base, const int use_cold_cache)
 {
         static const char *const type_names[] = {
                 "GZIP Reflected CRC32",  "IEEE CRC32",          "iSCSI CRC32",
@@ -576,15 +615,15 @@ run_crc_type_default(crc_type_t type, void *buf, const size_t test_len, int csv_
                 printf("\n  Buffer size: %zu bytes\n", test_len);
         }
 
-        run_benchmark(buf, test_len, type, 0, csv_output);
+        run_benchmark(buf, test_len, type, 0, csv_output, use_cold_cache);
         if (include_base)
-                run_benchmark(buf, test_len, type, 1, csv_output);
+                run_benchmark(buf, test_len, type, 1, csv_output, use_cold_cache);
 }
 
 // Helper function to run benchmarks for a specific CRC type with default size
 static void
-benchmark_crc_type_default(crc_type_t crc_type, void *buf, const size_t test_len, int csv_output,
-                           int include_base)
+benchmark_crc_type_default(const crc_type_t crc_type, const void *buf, const size_t test_len,
+                           const int csv_output, const int include_base, const int use_cold_cache)
 {
         // Run selected benchmarks based on crc_type
         if (crc_type == CRC_ALL || crc_type == CRC32_ALL) {
@@ -593,7 +632,7 @@ benchmark_crc_type_default(crc_type_t crc_type, void *buf, const size_t test_len
 
                 for (size_t i = 0; i < CRC32_TYPES_LEN; i++) {
                         run_crc_type_default(CRC32_TYPES[i], buf, test_len, csv_output,
-                                             include_base);
+                                             include_base, use_cold_cache);
                 }
         }
 
@@ -603,7 +642,7 @@ benchmark_crc_type_default(crc_type_t crc_type, void *buf, const size_t test_len
 
                 for (size_t i = 0; i < CRC16_TYPES_LEN; i++) {
                         run_crc_type_default(CRC16_TYPES[i], buf, test_len, csv_output,
-                                             include_base);
+                                             include_base, use_cold_cache);
                 }
         }
 
@@ -613,21 +652,23 @@ benchmark_crc_type_default(crc_type_t crc_type, void *buf, const size_t test_len
 
                 for (size_t i = 0; i < CRC64_TYPES_LEN; i++) {
                         run_crc_type_default(CRC64_TYPES[i], buf, test_len, csv_output,
-                                             include_base);
+                                             include_base, use_cold_cache);
                 }
         }
 
         // If none of the above, run just the specific CRC type
         if (crc_type != CRC_ALL && crc_type != CRC32_ALL && crc_type != CRC16_ALL &&
             crc_type != CRC64_ALL) {
-                run_crc_type_default(crc_type, buf, test_len, csv_output, include_base);
+                run_crc_type_default(crc_type, buf, test_len, csv_output, include_base,
+                                     use_cold_cache);
         }
 }
 
 // Helper function to run benchmarks for a specific CRC type with list of sizes
 static void
-benchmark_crc_type_size_list(crc_type_t crc_type, void *buf, const size_t *size_list,
-                             const int size_count, int csv_output, int include_base)
+benchmark_crc_type_size_list(const crc_type_t crc_type, const void *buf, const size_t *size_list,
+                             const int size_count, const int csv_output, const int include_base,
+                             const int use_cold_cache)
 {
         // Run selected benchmarks based on crc_type
         if (crc_type == CRC_ALL || crc_type == CRC32_ALL) {
@@ -636,7 +677,7 @@ benchmark_crc_type_size_list(crc_type_t crc_type, void *buf, const size_t *size_
 
                 for (size_t i = 0; i < CRC32_TYPES_LEN; i++) {
                         run_crc_type_size_list(CRC32_TYPES[i], buf, size_list, size_count,
-                                               csv_output, include_base);
+                                               csv_output, include_base, use_cold_cache);
                 }
         }
 
@@ -646,7 +687,7 @@ benchmark_crc_type_size_list(crc_type_t crc_type, void *buf, const size_t *size_
 
                 for (size_t i = 0; i < CRC16_TYPES_LEN; i++) {
                         run_crc_type_size_list(CRC16_TYPES[i], buf, size_list, size_count,
-                                               csv_output, include_base);
+                                               csv_output, include_base, use_cold_cache);
                 }
         }
 
@@ -656,7 +697,7 @@ benchmark_crc_type_size_list(crc_type_t crc_type, void *buf, const size_t *size_
 
                 for (size_t i = 0; i < CRC64_TYPES_LEN; i++) {
                         run_crc_type_size_list(CRC64_TYPES[i], buf, size_list, size_count,
-                                               csv_output, include_base);
+                                               csv_output, include_base, use_cold_cache);
                 }
         }
 
@@ -664,20 +705,24 @@ benchmark_crc_type_size_list(crc_type_t crc_type, void *buf, const size_t *size_
         if (crc_type != CRC_ALL && crc_type != CRC32_ALL && crc_type != CRC16_ALL &&
             crc_type != CRC64_ALL) {
                 run_crc_type_size_list(crc_type, buf, size_list, size_count, csv_output,
-                                       include_base);
+                                       include_base, use_cold_cache);
         }
 }
 
 int
-main(int argc, const char *const *argv)
+main(const int argc, char *const argv[])
 {
-        void *buf;
-        crc_type_t crc_type = CRC_ALL;
-        int include_base = 0;
-        int csv_output = 0; // Flag for CSV output mode
         size_t test_len = DEFAULT_TEST_LEN;
+        int csv_output = 0;            // Default to human-readable output
+        int include_base = 0;          // Don't include base versions by default
+        int use_cold_cache = 0;        // Don't use cold cache by default
+        crc_type_t crc_type = CRC_ALL; // Default to all CRC types
+        void *buf = NULL;
+
+        // Size range options
+        size_t min_len = DEFAULT_TEST_LEN;
+        size_t max_len = DEFAULT_TEST_LEN;
         int use_range = 0;
-        size_t min_len = 0, max_len = 0;
         ssize_t step_len = 0; // Using signed type to indicate additive vs multiplicative
 
         // For comma-separated sizes option
@@ -701,6 +746,12 @@ main(int argc, const char *const *argv)
                 // Base option
                 else if (strcmp(argv[i], "-b") == 0 || strcmp(argv[i], "--base") == 0) {
                         include_base = 1;
+                }
+
+                // Cold cache option
+                else if (strcmp(argv[i], "--cold") == 0) {
+                        use_cold_cache = 1;
+                        printf("Cold cache option enabled\n");
                 }
 
                 // Type option
@@ -869,6 +920,9 @@ main(int argc, const char *const *argv)
 #endif
         }
 
+        if (use_cold_cache)
+                test_len = COLD_CACHE_TEST_MEM;
+
         if (posix_memalign(&buf, 64, test_len)) {
                 printf("alloc error: Fail\n");
                 return -1;
@@ -880,6 +934,11 @@ main(int argc, const char *const *argv)
 
         // Process according to chosen CRC type and size options
         if (use_range) {
+                if (use_cold_cache && min_len <= COLD_CACHE_MIN_LEN)
+                        printf("Error: Cold cache tests require buffer sizes larger than "
+                               "%u bytes.",
+                               COLD_CACHE_MIN_LEN);
+
                 // Use range-based sizes
                 if (!csv_output) {
                         printf("Running benchmarks with size range from %zu to %zu\n", min_len,
@@ -888,20 +947,26 @@ main(int argc, const char *const *argv)
 
                 // Call the benchmark function for specific type with range parameters
                 benchmark_crc_type_range(crc_type, buf, min_len, max_len, step_len, csv_output,
-                                         include_base);
+                                         include_base, use_cold_cache);
 
         } else if (use_size_list) {
+                if (use_cold_cache && size_list[0] <= COLD_CACHE_MIN_LEN)
+                        printf("Error: Cold cache tests require buffer sizes larger than "
+                               "%u bytes.",
+                               COLD_CACHE_MIN_LEN);
+
                 // Use list of specific sizes
 
                 // Call the benchmark function for specific type with size list parameters
                 benchmark_crc_type_size_list(crc_type, buf, size_list, size_count, csv_output,
-                                             include_base);
+                                             include_base, use_cold_cache);
 
         } else {
                 // Use default size or single size specified
 
                 // Call the benchmark function for specific type with default size
-                benchmark_crc_type_default(crc_type, buf, test_len, csv_output, include_base);
+                benchmark_crc_type_default(crc_type, buf, test_len, csv_output, include_base,
+                                           use_cold_cache);
         }
 
         if (!csv_output) {

@@ -188,6 +188,7 @@ perf_init(struct perf *p)
         p->start = 0;
         p->stop = 0;
         p->run_total = 0;
+        p->iterations = 0;
 }
 
 static inline void
@@ -294,6 +295,71 @@ estimate_perf_iterations(struct perf *p, unsigned long long runs, unsigned long 
                 } else {                                                                           \
                         ((PERF))->iterations = 1;                                                  \
                         perf_start((PERF));                                                        \
+                        (FUNC_CALL);                                                               \
+                        perf_stop((PERF));                                                         \
+                }                                                                                  \
+        } while (0)
+
+#define CALIBRATE_COLD(PERF, SETUP_CODE, FUNC_CALL)                                                \
+        do {                                                                                       \
+                unsigned long long _i, _iter = 1;                                                  \
+                perf_start((PERF));                                                                \
+                (SETUP_CODE);                                                                      \
+                (FUNC_CALL);                                                                       \
+                perf_pause((PERF));                                                                \
+                                                                                                   \
+                while (get_base_elapsed((PERF)) < CALIBRATE_TIME) {                                \
+                        _iter = estimate_perf_iterations((PERF), _iter, 2 * CALIBRATE_TIME);       \
+                        perf_start((PERF));                                                        \
+                        for (_i = 0; _i < _iter; _i++) {                                           \
+                                (SETUP_CODE);                                                      \
+                                (FUNC_CALL);                                                       \
+                        }                                                                          \
+                        perf_stop((PERF));                                                         \
+                }                                                                                  \
+                ((PERF))->iterations = _iter;                                                      \
+        } while (0)
+
+#define PERFORMANCE_TEST_COLD(PERF, RUN_TIME, SETUP_CODE, FUNC_CALL)                               \
+        do {                                                                                       \
+                unsigned long long _i, _iter = ((PERF))->iterations;                               \
+                unsigned long long _run_total = (RUN_TIME);                                        \
+                _run_total *= UNIT_SCALE;                                                          \
+                _iter = estimate_perf_iterations((PERF), _iter, _run_total);                       \
+                ((PERF))->iterations = 0;                                                          \
+                perf_start((PERF));                                                                \
+                for (_i = 0; _i < _iter; _i++) {                                                   \
+                        (SETUP_CODE);                                                              \
+                        (FUNC_CALL);                                                               \
+                }                                                                                  \
+                perf_pause((PERF));                                                                \
+                ((PERF))->iterations += _iter;                                                     \
+                                                                                                   \
+                if (get_base_elapsed((PERF)) < _run_total &&                                       \
+                    BENCHMARK_TYPE == BENCHMARK_MIN_TIME) {                                        \
+                        _iter = estimate_perf_iterations((PERF), _iter,                            \
+                                                         _run_total - get_base_elapsed((PERF)) +   \
+                                                                 (UNIT_SCALE / 16));               \
+                        perf_continue((PERF));                                                     \
+                        for (_i = 0; _i < _iter; _i++) {                                           \
+                                (SETUP_CODE);                                                      \
+                                (FUNC_CALL);                                                       \
+                        }                                                                          \
+                        perf_pause((PERF));                                                        \
+                        ((PERF))->iterations += _iter;                                             \
+                }                                                                                  \
+        } while (0)
+
+#define BENCHMARK_COLD(PERF, RUN_TIME, SETUP_CODE, FUNC_CALL)                                      \
+        do {                                                                                       \
+                if ((RUN_TIME) > 0) {                                                              \
+                        CALIBRATE_COLD((PERF), (SETUP_CODE), (FUNC_CALL));                         \
+                        PERFORMANCE_TEST_COLD((PERF), (RUN_TIME), (SETUP_CODE), (FUNC_CALL));      \
+                                                                                                   \
+                } else {                                                                           \
+                        ((PERF))->iterations = 1;                                                  \
+                        perf_start((PERF));                                                        \
+                        (SETUP_CODE);                                                              \
                         (FUNC_CALL);                                                               \
                         perf_stop((PERF));                                                         \
                 }                                                                                  \
