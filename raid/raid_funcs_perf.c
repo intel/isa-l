@@ -50,6 +50,8 @@
 #define DEFAULT_SOURCES  10
 #define DEFAULT_TEST_LEN 8 * 1024
 
+#define COLD_CACHE_TEST_MEM (1024 * 1024 * 1024)
+
 // Define RAID function types
 typedef enum {
         // XOR function
@@ -60,8 +62,25 @@ typedef enum {
         RAID_ALL = 2
 } raid_type_t;
 
+// Function pointer type for RAID functions
+typedef int (*raid_func_t)(int vects, int len, void **array);
+
+// Helper function to get buffer count for a specific RAID type
+static int
+get_buffer_count(const raid_type_t type, const int sources)
+{
+        switch (type) {
+        case XOR_GEN:
+                return sources + 1; // +1 for destination buffer
+        case PQ_GEN:
+        default:
+                return sources + 2; // +2 for P and Q buffers
+        }
+}
+
 void
-run_benchmark(void *buffs[], size_t len, int sources, raid_type_t type, int csv_output);
+run_benchmark(void *buffs[], const size_t len, const int sources, const raid_type_t type,
+              const int csv_output, const int use_cold_cache);
 void
 print_help(void);
 void
@@ -72,55 +91,119 @@ size_t
 parse_size_value(const char *size_str);
 
 static void
-run_raid_type_range(raid_type_t type, void *buffs[], size_t min_len, size_t max_len,
-                    int is_multiplicative, size_t abs_step, int sources, int csv_output);
+run_raid_type_range(const raid_type_t type, void *buffs[], const size_t min_len,
+                    const size_t max_len, const int is_multiplicative, const size_t abs_step,
+                    const int sources, const int csv_output, const int use_cold_cache);
 static void
-run_raid_type_size_list(raid_type_t type, void *buffs[], size_t *size_list, int size_count,
-                        int sources, int csv_output);
+run_raid_type_size_list(const raid_type_t type, void *buffs[], const size_t *size_list,
+                        const int size_count, const int sources, const int csv_output,
+                        const int use_cold_cache);
 
 void
-benchmark_raid_type_range(raid_type_t raid_type, void *buffs[], size_t min_len, size_t max_len,
-                          ssize_t step_len, int sources, int csv_output);
+benchmark_raid_type_range(const raid_type_t raid_type, void *buffs[], const size_t min_len,
+                          const size_t max_len, const ssize_t step_len, const int sources,
+                          const int csv_output, const int use_cold_cache);
 void
-benchmark_raid_type_size_list(raid_type_t raid_type, void *buffs[], size_t *size_list,
-                              int size_count, int sources, int csv_output);
+benchmark_raid_type_size_list(const raid_type_t raid_type, void *buffs[], const size_t *size_list,
+                              const int size_count, const int sources, const int csv_output,
+                              const int use_cold_cache);
 
 // Function to run a specific RAID benchmark
+// len is the block size for each source and destination buffer, in bytes
 void
-run_benchmark(void *buffs[], size_t len, int sources, raid_type_t type, int csv_output)
+run_benchmark(void *buffs[], const size_t len, const int num_sources_dest, const raid_type_t type,
+              const int csv_output, const int use_cold_cache)
 {
         struct perf start;
         const char *raid_type_str = "";
+        raid_func_t raid_func = NULL;
 
+        // Set up function pointer and type string based on RAID type
         switch (type) {
-        // XOR function
         case XOR_GEN:
                 raid_type_str = "xor_gen";
-                BENCHMARK(&start, BENCHMARK_TIME, xor_gen(sources, len, buffs));
+                raid_func = xor_gen;
                 break;
-
-        // P+Q function
         case PQ_GEN:
                 raid_type_str = "pq_gen";
-                BENCHMARK(&start, BENCHMARK_TIME, pq_gen(sources, len, buffs));
+                raid_func = pq_gen;
                 break;
-
         default:
-                printf("Invalid RAID function type\n");
-                return;
+                fprintf(stderr, "Invalid RAID function type\n");
+                exit(1);
+        }
+
+        // Create list of random buffer addresses within the large memory space for cold cache tests
+        if (use_cold_cache) {
+                const size_t buffer_size_each =
+                        COLD_CACHE_TEST_MEM / (num_sources_dest + 2); // +2 for max buffers needed
+                const size_t num_buffer_sets = buffer_size_each / len;
+
+                if (num_buffer_sets == 0) {
+                        fprintf(stderr, "Buffer size too large for cold cache test\n");
+                        exit(1);
+                }
+
+                void ***buffer_set_list = (void ***) malloc(num_buffer_sets * sizeof(void **));
+                if (!buffer_set_list) {
+                        fprintf(stderr, "Failed to allocate memory for cold cache buffer list\n");
+                        exit(1);
+                }
+
+                // For each buffer set, create pointers to random offsets within the allocated
+                // memory
+                for (size_t i = 0; i < num_buffer_sets; i++) {
+                        buffer_set_list[i] = (void **) malloc(num_sources_dest * sizeof(void *));
+                        if (!buffer_set_list[i]) {
+                                fprintf(stderr,
+                                        "Failed to allocate memory for cold cache buffer set %zu\n",
+                                        i);
+                                // Clean up previously allocated sets
+                                for (size_t j = 0; j < i; j++)
+                                        free(buffer_set_list[j]);
+                                free(buffer_set_list);
+                                exit(1);
+                        }
+
+                        // Calculate random offset for this buffer set, ensuring we don't exceed
+                        // buffer bounds
+                        const size_t offset = len * (rand() % num_buffer_sets);
+
+                        for (int j = 0; j < num_sources_dest; j++)
+                                buffer_set_list[i][j] = (uint8_t *) buffs[j] + offset;
+                }
+
+                size_t current_buffer_idx = 0;
+                BENCHMARK_COLD(
+                        &start, BENCHMARK_TIME,
+                        current_buffer_idx = (current_buffer_idx + 1) % num_buffer_sets,
+                        raid_func(num_sources_dest, len, buffer_set_list[current_buffer_idx]));
+
+                for (size_t i = 0; i < num_buffer_sets; i++)
+                        free(buffer_set_list[i]);
+                free(buffer_set_list);
+
+        } else {
+                BENCHMARK(&start, BENCHMARK_TIME, raid_func(num_sources_dest, len, buffs));
         }
 
         if (csv_output) {
+#ifdef USE_RDTSC
+                // When USE_RDTSC is defined, report total cycles per buffer
+                const double cycles = (double) get_base_elapsed(&start);
+                const double cycles_per_buffer = cycles / (double) start.iterations;
+                printf("%s,%zu,%d,%.0f\n", raid_type_str, len, num_sources_dest, cycles_per_buffer);
+#else
                 // Calculate throughput in MB/s
-                double time_elapsed = get_time_elapsed(&start);
-                long long total_sources = start.iterations * sources;
-                long long total_units = total_sources * (long long) len;
-                double throughput = ((double) total_units) / (1000000 * time_elapsed);
-
-                printf("%s,%zu,%d,%.2f\n", raid_type_str, len, sources, throughput);
+                const double time_elapsed = get_time_elapsed(&start);
+                const long long total_sources_dest = start.iterations * num_sources_dest;
+                const long long total_units = total_sources_dest * (long long) len;
+                const double throughput = ((double) total_units) / (1000000 * time_elapsed);
+                printf("%s,%zu,%d,%.2f\n", raid_type_str, len, num_sources_dest, throughput);
+#endif
         } else {
                 printf("%s: ", raid_type_str);
-                perf_print(start, (long long) len * sources);
+                perf_print(start, (long long) len * num_sources_dest);
         }
 }
 
@@ -151,6 +234,7 @@ print_help(void)
         printf("                       Example: --sizes 1024,4096,8192,16384\n");
         printf("                       Size values can include K (KB) or M (MB) suffix\n");
         printf("  -c, --csv           Output results in CSV format\n");
+        printf("      --cold          Use cold cache for benchmarks (buffer not in cache)\n");
 }
 
 void
@@ -173,12 +257,11 @@ parse_raid_type(const char *type_str)
 
         // Try as integer first
         char *endptr;
-        long val = strtol(type_str, &endptr, 10);
+        const long val = strtol(type_str, &endptr, 10);
 
         // If the entire string was parsed as an integer and it's within range
-        if (*type_str != '\0' && *endptr == '\0' && val >= 0 && val <= RAID_ALL) {
+        if (*type_str != '\0' && *endptr == '\0' && val >= 0 && val <= RAID_ALL)
                 return (raid_type_t) val;
-        }
 
         // XOR function
         if (strcasecmp(type_str, "xor_gen") == 0)
@@ -203,13 +286,14 @@ parse_size_value(const char *size_str)
         size_t size_val;
         char *endptr;
         size_t multiplier = 1;
-        char *str_copy = strdup(size_str);
+        char *const str_copy = strdup(size_str); // Check for size suffixes (K for KB, M for MB)
+        if (!str_copy)
+                return 0;
 
-        // Check for size suffixes (K for KB, M for MB)
-        int len = strlen(str_copy);
+        const int len = strlen(str_copy);
         if (len > 0) {
                 // Convert to uppercase for case-insensitive comparison
-                char last_char = toupper(str_copy[len - 1]);
+                const char last_char = toupper(str_copy[len - 1]);
 
                 if (last_char == 'K') {
                         multiplier = 1024;
@@ -236,14 +320,15 @@ parse_size_value(const char *size_str)
 }
 
 #define MAX_SIZE_COUNT 32 // Maximum number of buffer sizes that can be specified
-#define MAX_BUFFERS    20 // Maximum number of source buffers
+#define MAX_SRC_BUFS   20 // Maximum number of source buffers
 
 int
 main(int argc, char *argv[])
 {
         void **buffs;
         raid_type_t raid_type = RAID_ALL;
-        int csv_output = 0; // Flag for CSV output mode
+        int csv_output = 0;     // Flag for CSV output mode
+        int use_cold_cache = 0; // Flag for cold cache mode
         size_t test_len = DEFAULT_TEST_LEN;
         int use_range = 0;
         size_t min_len = 0, max_len = 0;
@@ -271,8 +356,9 @@ main(int argc, char *argv[])
                                 // Check if value is outside valid range for individual RAID types
                                 // or group types
                                 if (raid_type > RAID_ALL) {
-                                        printf("Invalid RAID type: '%s'. Using default (all).\n",
-                                               argv[i + 1]);
+                                        fprintf(stderr,
+                                                "Invalid RAID type: '%s'. Using default (all).\n",
+                                                argv[i + 1]);
                                         raid_type = RAID_ALL;
                                 }
                                 i++; // Skip the argument value in the next iteration
@@ -288,19 +374,21 @@ main(int argc, char *argv[])
                         if (i + 1 < argc && argv[i + 1][0] != '-') {
                                 sources = atoi(argv[i + 1]);
                                 if (sources <= 0) {
-                                        printf("Invalid number of sources: %s. Using default "
-                                               "(%d).\n",
-                                               argv[i + 1], DEFAULT_SOURCES);
+                                        fprintf(stderr,
+                                                "Invalid number of sources: %s. Using default "
+                                                "(%d).\n",
+                                                argv[i + 1], DEFAULT_SOURCES);
                                         sources = DEFAULT_SOURCES;
-                                } else if (sources > MAX_BUFFERS) {
-                                        printf("Number of sources too large: %d. Using maximum "
-                                               "(%d).\n",
-                                               sources, MAX_BUFFERS);
-                                        sources = MAX_BUFFERS;
+                                } else if (sources > MAX_SRC_BUFS) {
+                                        fprintf(stderr,
+                                                "Number of sources too large: %d. Using maximum "
+                                                "(%d).\n",
+                                                sources, MAX_SRC_BUFS);
+                                        sources = MAX_SRC_BUFS;
                                 }
                                 i++; // Skip the argument value in the next iteration
                         } else {
-                                printf("Option --sources requires an argument.\n");
+                                fprintf(stderr, "Option --sources requires an argument.\n");
                                 print_help();
                                 return 0;
                         }
@@ -311,9 +399,12 @@ main(int argc, char *argv[])
                         if (i + 1 < argc && argv[i + 1][0] != '-') {
                                 // Range specified, parse it
                                 char *range_arg = strdup(argv[i + 1]);
-                                char *min_str = strtok(range_arg, ":");
-                                char *step_str = strtok(NULL, ":");
-                                char *max_str = strtok(NULL, ":");
+                                char *const min_str = strtok(range_arg, ":");
+                                char *const step_str = strtok(NULL, ":");
+                                char *const max_str = strtok(NULL, ":");
+
+                                if (!range_arg)
+                                        return 1;
 
                                 if (min_str && step_str && max_str) {
                                         min_len = parse_size_value(min_str);
@@ -323,12 +414,11 @@ main(int argc, char *argv[])
                                         int step_is_multiplicative = 0;
                                         if (step_str[0] == '*') {
                                                 step_is_multiplicative = 1;
-                                                if (strlen(step_str) > 1) {
+                                                if (strlen(step_str) > 1)
                                                         step_len = parse_size_value(
                                                                 step_str + 1); // Skip the '*'
-                                                } else {
+                                                else
                                                         step_len = 0; // Invalid step
-                                                }
                                         } else {
                                                 step_len = parse_size_value(step_str);
                                         }
@@ -346,15 +436,17 @@ main(int argc, char *argv[])
                                                         step_len = -step_len;
                                                 }
                                         } else {
-                                                printf("Invalid range values. Ensure MIN > 0, MAX "
-                                                       ">= MIN, "
-                                                       "and STEP > 0.\n");
+                                                fprintf(stderr,
+                                                        "Invalid range values. Ensure MIN > 0, MAX "
+                                                        ">= MIN, "
+                                                        "and STEP > 0.\n");
                                                 free(range_arg);
                                                 return 1;
                                         }
                                 } else {
-                                        printf("Invalid range format. Use MIN:STEP:MAX (e.g., "
-                                               "1024:1024:16384 or 1024:*2:16384)\n");
+                                        fprintf(stderr,
+                                                "Invalid range format. Use MIN:STEP:MAX (e.g., "
+                                                "1024:1024:16384 or 1024:*2:16384)\n");
                                         free(range_arg);
                                         return 1;
                                 }
@@ -362,7 +454,7 @@ main(int argc, char *argv[])
                                 free(range_arg);
                                 i++; // Skip the argument value in the next iteration
                         } else {
-                                printf("Option -r requires an argument.\n");
+                                fprintf(stderr, "Option -r requires an argument.\n");
                                 print_help();
                                 return 0;
                         }
@@ -381,20 +473,22 @@ main(int argc, char *argv[])
 
                                         if (size_val > 0) {
                                                 if (prev_size > 0 && size_val <= prev_size) {
-                                                        printf("Invalid size value: %zu. Sizes "
-                                                               "must be in "
-                                                               "ascending order.\n",
-                                                               size_val);
+                                                        fprintf(stderr,
+                                                                "Invalid size value: %zu. Sizes "
+                                                                "must be in "
+                                                                "ascending order.\n",
+                                                                size_val);
                                                         free(sizes_arg);
                                                         return 1;
                                                 }
                                                 prev_size = size_val;
                                         } else {
-                                                printf("Invalid size value: '%s'. Sizes must be "
-                                                       "positive "
-                                                       "integers with optional K (KB) or M (MB) "
-                                                       "suffix.\n",
-                                                       size_str);
+                                                fprintf(stderr,
+                                                        "Invalid size value: '%s'. Sizes must be "
+                                                        "positive "
+                                                        "integers with optional K (KB) or M (MB) "
+                                                        "suffix.\n",
+                                                        size_str);
                                                 free(sizes_arg);
                                                 return 1;
                                         }
@@ -424,7 +518,7 @@ main(int argc, char *argv[])
                                 free(sizes_arg);
                                 i++; // Skip the argument value in the next iteration
                         } else {
-                                printf("Option -s requires an argument.\n");
+                                fprintf(stderr, "Option -s requires an argument.\n");
                                 print_help();
                                 return 0;
                         }
@@ -435,9 +529,15 @@ main(int argc, char *argv[])
                         csv_output = 1;
                 }
 
+                // Cold cache option
+                else if (strcmp(argv[i], "--cold") == 0) {
+                        use_cold_cache = 1;
+                        printf("Cold cache option enabled\n");
+                }
+
                 // Unknown option
                 else if (argv[i][0] == '-') {
-                        printf("Unknown option: %s\n", argv[i]);
+                        fprintf(stderr, "Unknown option: %s\n", argv[i]);
                         print_help();
                         return 1;
                 }
@@ -446,28 +546,38 @@ main(int argc, char *argv[])
         if (!csv_output) {
                 printf("RAID Functions Performance Benchmark\n");
         } else {
+#ifdef USE_RDTSC
+                printf("raid_type,buffer_size,sources+dest,cycles\n");
+#else
                 printf("raid_type,buffer_size,sources+dest,throughput\n");
+#endif
         }
 
         // For XOR and P+Q, we need sources + 1 or sources + 2 buffers
-        int max_needed_buffs = sources + 2;
-        if (max_needed_buffs > MAX_BUFFERS) {
-                printf("Error: Source count too large for buffer allocation\n");
+        const int max_needed_buffs =
+                get_buffer_count(PQ_GEN, sources); // PQ_GEN needs the most buffers
+        if (max_needed_buffs > MAX_SRC_BUFS) {
+                fprintf(stderr, "Error: Source count too large for buffer allocation\n");
                 return 1;
         }
+
+        // For cold cache, we need larger buffers to accommodate the full memory space
+        if (use_cold_cache)
+                test_len = COLD_CACHE_TEST_MEM / max_needed_buffs;
 
         // Allocate buffer pointers
         buffs = (void **) malloc(sizeof(void *) * max_needed_buffs);
         if (!buffs) {
-                printf("Error: Failed to allocate buffer pointers\n");
+                fprintf(stderr, "Error: Failed to allocate buffer pointers\n");
                 return 1;
         }
 
+        srand(20250707);
         // Allocate the actual buffers
         for (int i = 0; i < max_needed_buffs; i++) {
                 int ret = posix_memalign(&buffs[i], 64, test_len);
                 if (ret) {
-                        printf("Error: Failed to allocate buffer memory\n");
+                        fprintf(stderr, "Error: Failed to allocate buffer memory\n");
                         // Free previously allocated buffers
                         for (int j = 0; j < i; j++) {
                                 aligned_free(buffs[j]);
@@ -475,8 +585,9 @@ main(int argc, char *argv[])
                         free(buffs);
                         return 1;
                 }
-                // Initialize buffer with zeros
-                memset(buffs[i], 0, test_len);
+                // Initialize buffer with random data
+                for (size_t j = 0; j < test_len; j++)
+                        ((uint8_t *) buffs[i])[j] = rand() & 0xFF;
         }
 
         // Process according to chosen RAID type and size options
@@ -489,13 +600,13 @@ main(int argc, char *argv[])
 
                 // Call the benchmark function for specific type with range parameters
                 benchmark_raid_type_range(raid_type, buffs, min_len, max_len, step_len, sources,
-                                          csv_output);
+                                          csv_output, use_cold_cache);
         } else {
                 // Use list of specific sizes
 
                 // Call the benchmark function for specific type with size list parameters
                 benchmark_raid_type_size_list(raid_type, buffs, size_list, size_count, sources,
-                                              csv_output);
+                                              csv_output, use_cold_cache);
         }
 
         if (!csv_output) {
@@ -513,31 +624,25 @@ main(int argc, char *argv[])
 
 /* Helper function to process a specific RAID type for benchmark_raid_type_range */
 static void
-run_raid_type_range(raid_type_t type, void *buffs[], size_t min_len, size_t max_len,
-                    int is_multiplicative, size_t abs_step, int sources, int csv_output)
+run_raid_type_range(const raid_type_t type, void *buffs[], const size_t min_len,
+                    const size_t max_len, const int is_multiplicative, const size_t abs_step,
+                    const int sources, const int csv_output, const int use_cold_cache)
 {
         const char *type_names[] = { "XOR Generation", "P+Q Generation" };
         size_t len;
-        int buffer_count;
+        const int buffer_count = get_buffer_count(type, sources);
 
         if (!csv_output && type < RAID_ALL) {
                 printf("\n%s (%d sources):\n", type_names[type], sources);
         }
 
-        /* We need to adjust the buffer count based on function type */
-        buffer_count = sources;
-        if (type == XOR_GEN) {
-                buffer_count = sources + 1; /* +1 for destination buffer */
-        } else if (type == PQ_GEN) {
-                buffer_count = sources + 2; /* +2 for P and Q buffers */
-        }
-
         for (len = min_len; len <= max_len;) {
+
                 if (!csv_output) {
                         printf("\n  Buffer size: %zu bytes\n", len);
                 }
 
-                run_benchmark(buffs, len, buffer_count, type, csv_output);
+                run_benchmark(buffs, len, buffer_count, type, csv_output, use_cold_cache);
 
                 /* Update length based on step type */
                 if (is_multiplicative) {
@@ -550,11 +655,12 @@ run_raid_type_range(raid_type_t type, void *buffs[], size_t min_len, size_t max_
 
 /* Helper function to run benchmarks for a specific RAID type with range of sizes */
 void
-benchmark_raid_type_range(raid_type_t raid_type, void *buffs[], size_t min_len, size_t max_len,
-                          ssize_t step_len, int sources, int csv_output)
+benchmark_raid_type_range(const raid_type_t raid_type, void *buffs[], const size_t min_len,
+                          const size_t max_len, const ssize_t step_len, const int sources,
+                          const int csv_output, const int use_cold_cache)
 {
-        int is_multiplicative = (step_len < 0);
-        size_t abs_step = is_multiplicative ? -step_len : step_len;
+        const int is_multiplicative = (step_len < 0);
+        const size_t abs_step = is_multiplicative ? -step_len : step_len;
 
         /* Process according to the chosen RAID type */
         if (raid_type == RAID_ALL) {
@@ -562,39 +668,32 @@ benchmark_raid_type_range(raid_type_t raid_type, void *buffs[], size_t min_len, 
                 if (!csv_output)
                         printf("\n=========== XOR FUNCTION ===========\n");
                 run_raid_type_range(XOR_GEN, buffs, min_len, max_len, is_multiplicative, abs_step,
-                                    sources, csv_output);
+                                    sources, csv_output, use_cold_cache);
 
                 if (!csv_output)
                         printf("\n=========== P+Q FUNCTION ===========\n");
                 run_raid_type_range(PQ_GEN, buffs, min_len, max_len, is_multiplicative, abs_step,
-                                    sources, csv_output);
+                                    sources, csv_output, use_cold_cache);
         } else {
                 /* Run just the specific RAID type */
                 run_raid_type_range(raid_type, buffs, min_len, max_len, is_multiplicative, abs_step,
-                                    sources, csv_output);
+                                    sources, csv_output, use_cold_cache);
         }
 }
 
 /* Helper function to process a specific RAID type for benchmark_raid_type_size_list */
 static void
-run_raid_type_size_list(raid_type_t type, void *buffs[], size_t *size_list, int size_count,
-                        int sources, int csv_output)
+run_raid_type_size_list(const raid_type_t type, void *buffs[], const size_t *size_list,
+                        const int size_count, const int sources, const int csv_output,
+                        const int use_cold_cache)
 {
         const char *type_names[] = { "XOR Generation", "P+Q Generation" };
-        int buffer_count;
+        const int buffer_count = get_buffer_count(type, sources);
         int i;
         size_t len;
 
         if (!csv_output && type < RAID_ALL) {
                 printf("\n%s (%d sources):\n", type_names[type], sources);
-        }
-
-        /* We need to adjust the buffer count based on function type */
-        buffer_count = sources;
-        if (type == XOR_GEN) {
-                buffer_count = sources + 1; /* +1 for destination buffer */
-        } else if (type == PQ_GEN) {
-                buffer_count = sources + 2; /* +2 for P and Q buffers */
         }
 
         for (i = 0; i < size_count; i++) {
@@ -603,28 +702,31 @@ run_raid_type_size_list(raid_type_t type, void *buffs[], size_t *size_list, int 
                         printf("\n  Buffer size: %zu bytes\n", len);
                 }
 
-                run_benchmark(buffs, len, buffer_count, type, csv_output);
+                run_benchmark(buffs, len, buffer_count, type, csv_output, use_cold_cache);
         }
 }
 
 /* Helper function to run benchmarks for a specific RAID type with list of sizes */
 void
-benchmark_raid_type_size_list(raid_type_t raid_type, void *buffs[], size_t *size_list,
-                              int size_count, int sources, int csv_output)
+benchmark_raid_type_size_list(const raid_type_t raid_type, void *buffs[], const size_t *size_list,
+                              const int size_count, const int sources, const int csv_output,
+                              const int use_cold_cache)
 {
         /* Process according to the chosen RAID type */
         if (raid_type == RAID_ALL) {
                 /* Run all RAID types */
                 if (!csv_output)
                         printf("\n=========== XOR FUNCTION ===========\n");
-                run_raid_type_size_list(XOR_GEN, buffs, size_list, size_count, sources, csv_output);
+                run_raid_type_size_list(XOR_GEN, buffs, size_list, size_count, sources, csv_output,
+                                        use_cold_cache);
 
                 if (!csv_output)
                         printf("\n=========== P+Q FUNCTION ===========\n");
-                run_raid_type_size_list(PQ_GEN, buffs, size_list, size_count, sources, csv_output);
+                run_raid_type_size_list(PQ_GEN, buffs, size_list, size_count, sources, csv_output,
+                                        use_cold_cache);
         } else {
                 /* Run just the specific RAID type */
                 run_raid_type_size_list(raid_type, buffs, size_list, size_count, sources,
-                                        csv_output);
+                                        csv_output, use_cold_cache);
         }
 }
