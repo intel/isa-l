@@ -135,8 +135,66 @@ crc32_ieee_by4:
 	; buffer. The _fold_64_B_loop loop will fold 64B at a time until we
 	;  have 64+y Bytes of buffer
 
+%if fetch_dist != 0
+	; check if there is another 4KB (fetch distance) + 128B in the buffer
+        cmp     arg3, (fetch_dist + 64)
+	jge	_fold_and_prefetch_64_B_loop
 
 	; fold 64B at a time. This section of the code folds 4 xmm registers in parallel
+align 16
+_fold_and_prefetch_64_B_loop:
+	;update the buffer pointer
+	add arg2, 64
+
+	movdqa xmm4, xmm0
+	movdqa xmm5, xmm1
+
+	pclmulqdq xmm0, xmm6 , 0x11
+	pclmulqdq xmm1, xmm6 , 0x11
+
+	pclmulqdq xmm4, xmm6, 0x0
+	pclmulqdq xmm5, xmm6, 0x0
+
+	pxor xmm0, xmm4
+   	pxor xmm1, xmm5
+
+	movdqa xmm4, xmm2
+	movdqa xmm5, xmm3
+
+	pclmulqdq xmm2, xmm6, 0x11
+	pclmulqdq xmm3, xmm6, 0x11
+
+	pclmulqdq xmm4, xmm6, 0x0
+	pclmulqdq xmm5, xmm6, 0x0
+
+	pxor xmm2, xmm4
+	pxor xmm3, xmm5
+
+	movdqu xmm4, [arg2]
+	movdqu xmm5, [arg2+16]
+	pshufb xmm4, xmm7
+	pshufb xmm5, xmm7
+	pxor xmm0, xmm4
+	pxor xmm1, xmm5
+
+	movdqu xmm4, [arg2+32]
+	movdqu xmm5, [arg2+48]
+	pshufb xmm4, xmm7
+	pshufb xmm5, xmm7
+
+	pxor xmm2, xmm4
+	pxor xmm3, xmm5
+
+	sub	arg3, 64
+
+	; check if there is another 4KB (fetch distance) + 64B in the buffer
+        cmp     arg3, (fetch_dist + 64)
+	jge	_fold_and_prefetch_64_B_loop
+
+%endif ; fetch_dist != 0
+
+	; fold 64B at a time. This section of the code folds 4 xmm registers in parallel
+align 16
 _fold_64_B_loop:
 
 	;update the buffer pointer
@@ -155,7 +213,6 @@ _fold_64_B_loop:
 	pxor xmm0, xmm4
    	pxor xmm1, xmm5
 
-	PREFETCH [arg2+fetch_dist+32]
 	movdqa xmm4, xmm2
 	movdqa xmm5, xmm3
 

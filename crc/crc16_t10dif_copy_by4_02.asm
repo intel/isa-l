@@ -139,10 +139,15 @@ crc16_t10dif_copy_by4_02:
 	; buffer. The _fold_64_B_loop
 	; loop will fold 64B at a time until we have 64+y Bytes of buffer
 
+%if fetch_dist != 0
+	; check if there is at least 4KB (fetch distance) + 64B in the buffer
+        cmp     arg4, (fetch_dist + 64)
+        jb     _fold_64_B_loop
 
 	; fold 64B at a time. This section of the code folds 4 xmm
 	; registers in parallel
-_fold_64_B_loop:
+align 16
+_fold_and_prefetch_64_B_loop:
 
 	; update the buffer pointer
 	add	arg3, 64		;    buf += 64;
@@ -161,7 +166,66 @@ _fold_64_B_loop:
 	vpxor	xmm0, xmm4
 	vpxor	xmm1, xmm5
 
-	PREFETCH [arg3+fetch_dist+32]
+	vmovdqu	xmm4, xmm2
+	vmovdqu	xmm5, xmm3
+
+	vpclmulqdq	xmm2, xmm6, 0x11
+	vpclmulqdq	xmm3, xmm6, 0x11
+
+	vpclmulqdq	xmm4, xmm6, 0x0
+	vpclmulqdq	xmm5, xmm6, 0x0
+
+	vpxor	xmm2, xmm4
+	vpxor	xmm3, xmm5
+
+	vmovdqu	xmm4, [arg3]
+	vmovdqu	xmm5, [arg3+16]
+	vmovdqu	[arg2], xmm4
+	vmovdqu	[arg2+16], xmm5
+	vpshufb	xmm4, xmm7
+	vpshufb	xmm5, xmm7
+	vpxor	xmm0, xmm4
+	vpxor	xmm1, xmm5
+
+	vmovdqu	xmm4, [arg3+32]
+	vmovdqu	xmm5, [arg3+48]
+	vmovdqu	[arg2+32], xmm4
+	vmovdqu	[arg2+48], xmm5
+	vpshufb	xmm4, xmm7
+	vpshufb	xmm5, xmm7
+
+	vpxor	xmm2, xmm4
+	vpxor	xmm3, xmm5
+
+	sub	arg4, 64
+
+	; check if there is another 64B in the buffer to be able to fold
+        cmp     arg4, (fetch_dist + 64)
+	jge	_fold_and_prefetch_64_B_loop
+
+%endif ; fetch_dist != 0
+
+	; fold 64B at a time. This section of the code folds 4 xmm
+	; registers in parallel
+align 16
+_fold_64_B_loop:
+
+	; update the buffer pointer
+	add	arg3, 64		;    buf += 64;
+	add	arg2, 64
+
+	vmovdqu	xmm4, xmm0
+	vmovdqu	xmm5, xmm1
+
+	vpclmulqdq	xmm0, xmm6 , 0x11
+	vpclmulqdq	xmm1, xmm6 , 0x11
+
+	vpclmulqdq	xmm4, xmm6, 0x0
+	vpclmulqdq	xmm5, xmm6, 0x0
+
+	vpxor	xmm0, xmm4
+	vpxor	xmm1, xmm5
+
 	vmovdqu	xmm4, xmm2
 	vmovdqu	xmm5, xmm3
 

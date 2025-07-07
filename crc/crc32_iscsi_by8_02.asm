@@ -139,9 +139,14 @@ crc32_iscsi_by8_02:
 	; at this section of the code, there is 128*x+y (0<=y<128) bytes of buffer. The _fold_128_B_loop
 	; loop will fold 128B at a time until we have 128+y Bytes of buffer
 
+%if fetch_dist != 0
+	; check if there is at least 4kb (fetch distance) + 128b in the buffer
+        cmp     buf_len, (fetch_dist + 128)
+        jb     _fold_128_B_loop
 
 	; fold 128B at a time. This section of the code folds 8 xmm registers in parallel
-_fold_128_B_loop:
+align 16
+_fold_and_prefetch_128_B_loop:
 
 	; update the buffer pointer
 	add	in_buf, 128		;    buf += 128;
@@ -158,7 +163,6 @@ _fold_128_B_loop:
 	vpxor	xmm1, xmm12
 	vpxor 	xmm1, xmm13
 
-	PREFETCH [in_buf+fetch_dist+32]
 	vmovdqu	xmm9, [in_buf+16*2]
 	vmovdqu	xmm12, [in_buf+16*3]
 	vpclmulqdq	xmm8, xmm2, xmm10, 0x10
@@ -182,7 +186,72 @@ _fold_128_B_loop:
 	vpxor	xmm5, xmm12
 	vpxor 	xmm5, xmm13
 
-	PREFETCH [in_buf+fetch_dist+96]
+	vmovdqu	xmm9, [in_buf+16*6]
+	vmovdqu	xmm12, [in_buf+16*7]
+	vmovdqa	xmm8, xmm6
+	vmovdqa	xmm13, xmm7
+	vpclmulqdq	xmm6, xmm10, 0x10
+	vpclmulqdq	xmm8, xmm10 , 0x1
+	vpclmulqdq	xmm7, xmm10, 0x10
+	vpclmulqdq	xmm13, xmm10 , 0x1
+	vpxor	xmm6, xmm9
+	vxorps	xmm6, xmm8
+	vpxor	xmm7, xmm12
+	vxorps	xmm7, xmm13
+
+	sub	buf_len, 128
+
+	; check if there is another 4KB (fetch distance) + 128B in the buffer
+        cmp     buf_len, (fetch_dist + 128)
+	jge	_fold_and_prefetch_128_B_loop
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%endif ; fetch_dist != 0
+
+align 16
+_fold_128_B_loop:
+
+	; update the buffer pointer
+	add	in_buf, 128		;    buf += 128;
+
+	vmovdqu	xmm9, [in_buf+16*0]
+	vmovdqu	xmm12, [in_buf+16*1]
+	vmovdqa	xmm8, xmm0
+	vmovdqa	xmm13, xmm1
+	vpclmulqdq	xmm0, xmm10, 0x10
+	vpclmulqdq	xmm8, xmm10 , 0x1
+	vpclmulqdq	xmm1, xmm10, 0x10
+	vpclmulqdq	xmm13, xmm10 , 0x1
+	vpxor	xmm0, xmm9
+	vxorps	xmm0, xmm8
+	vpxor	xmm1, xmm12
+	vxorps	xmm1, xmm13
+
+	vmovdqu	xmm9, [in_buf+16*2]
+	vmovdqu	xmm12, [in_buf+16*3]
+	vmovdqa	xmm8, xmm2
+	vmovdqa	xmm13, xmm3
+	vpclmulqdq	xmm2, xmm10, 0x10
+	vpclmulqdq	xmm8, xmm10 , 0x1
+	vpclmulqdq	xmm3, xmm10, 0x10
+	vpclmulqdq	xmm13, xmm10 , 0x1
+	vpxor	xmm2, xmm9
+	vxorps	xmm2, xmm8
+	vpxor	xmm3, xmm12
+	vxorps	xmm3, xmm13
+
+	vmovdqu	xmm9, [in_buf+16*4]
+	vmovdqu	xmm12, [in_buf+16*5]
+	vmovdqa	xmm8, xmm4
+	vmovdqa	xmm13, xmm5
+	vpclmulqdq	xmm4, xmm10, 0x10
+	vpclmulqdq	xmm8, xmm10 , 0x1
+	vpclmulqdq	xmm5, xmm10, 0x10
+	vpclmulqdq	xmm13, xmm10 , 0x1
+	vpxor	xmm4, xmm9
+	vxorps	xmm4, xmm8
+	vpxor	xmm5, xmm12
+	vxorps	xmm5, xmm13
+
 	vmovdqu	xmm9, [in_buf+16*6]
 	vmovdqu	xmm12, [in_buf+16*7]
 	vpclmulqdq	xmm8, xmm6, xmm10, 0x10
@@ -198,8 +267,6 @@ _fold_128_B_loop:
 
 	; check if there is another 128B in the buffer to be able to fold
 	jge	_fold_128_B_loop
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 
 	add	in_buf, 128
 	; at this point, the buffer pointer is pointing at the last y Bytes of the buffer
