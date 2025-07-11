@@ -30,6 +30,40 @@
 #include "erasure_code.h"
 #include "gf_vect_mul.h"
 
+#ifdef __ARM_FEATURE_SVE
+// If the compiler defines SVE intrinsics, include that header
+#include <arm_sve.h>
+
+#elif defined(__linux__)
+// Otherwise include these headers and define these constants as a fallback for Linux only
+#include <stddef.h>
+#include <sys/auxv.h>
+#include <sys/prctl.h>
+#ifndef PR_SVE_GET_VL
+#define PR_SVE_GET_VL 51
+#endif
+#ifndef PR_SVE_VL_LEN_MASK
+#define PR_SVE_VL_LEN_MASK 0xffff
+#endif
+
+#endif
+
+static inline size_t
+get_sve_vector_length_bytes(void)
+{
+#ifdef __ARM_FEATURE_SVE
+        // Use intrinsic if available at compile time
+        return svcntb();
+#elif defined(__linux__)
+        // Fall back to prctl on Linux
+        long sve_vl = prctl(PR_SVE_GET_VL);
+        if (sve_vl != -1) {
+                return sve_vl & PR_SVE_VL_LEN_MASK;
+        }
+#endif
+        return 0; // Unknown or unavailable
+}
+
 extern void
 gf_vect_dot_prod_sve(int, int, unsigned char *, unsigned char **, unsigned char *);
 extern void
@@ -94,8 +128,16 @@ DEFINE_INTERFACE_DISPATCHER(ec_encode_data)
 #if defined(__linux__)
         unsigned long auxval = getauxval(AT_HWCAP);
 
-        if (auxval & HWCAP_SVE)
+        if (auxval & HWCAP_SVE) {
+                size_t vector_length = get_sve_vector_length_bytes();
+
+                // If 128-bit SVE (16 bytes), use NEON instead
+                if (vector_length == 16 && (auxval & HWCAP_ASIMD)) {
+                        return ec_encode_data_neon;
+                }
+
                 return ec_encode_data_sve;
+        }
         if (auxval & HWCAP_ASIMD)
                 return ec_encode_data_neon;
 #elif defined(__APPLE__)
