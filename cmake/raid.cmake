@@ -89,3 +89,22 @@ set(RAID_HEADERS
 
 # Add to main extern headers list
 list(APPEND EXTERN_HEADERS ${RAID_HEADERS})
+
+# Add test applications for raid module
+if(BUILD_TESTS)
+    # Check tests (unit tests that are run by CTest)
+    set(RAID_CHECK_TESTS
+        xor_gen_test
+        pq_gen_test
+        xor_check_test
+        pq_check_test
+    )
+
+    # Create check test executables
+    foreach(test ${RAID_CHECK_TESTS})
+        add_executable(${test} raid/${test}.c)
+        target_link_libraries(${test} PRIVATE isal)
+        target_include_directories(${test} PRIVATE include)
+        add_test(NAME ${test} COMMAND ${test})
+    endforeach()
+endif()

@@ -38,6 +38,13 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "
     enable_language(ASM_NASM)
 endif()
 
+# Enable testing
+option(BUILD_TESTS "Build the testing tree" ON)
+if(BUILD_TESTS)
+    enable_testing()
+    include(CTest)
+endif()
+
 # Set default build type
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)

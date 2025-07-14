@@ -191,3 +191,50 @@ set(ERASURE_CODE_HEADERS
 
 # Add to main extern headers list
 list(APPEND EXTERN_HEADERS ${ERASURE_CODE_HEADERS})
+
+# Add test applications for erasure_code module
+if(BUILD_TESTS)
+    # Check tests (unit tests that are run by CTest)
+    set(ERASURE_CODE_CHECK_TESTS
+        gf_vect_mul_test
+        erasure_code_test
+        gf_inverse_test
+        erasure_code_update_test
+    )
+
+    # Unit tests (additional unit tests)
+    set(ERASURE_CODE_UNIT_TESTS
+        gf_vect_mul_base_test
+        gf_vect_dot_prod_base_test
+        gf_vect_dot_prod_test
+        gf_vect_mad_test
+        erasure_code_base_test
+    )
+
+    # Other tests
+    set(ERASURE_CODE_OTHER_TESTS
+        gen_rs_matrix_limits
+    )
+
+    # Create check test executables
+    foreach(test ${ERASURE_CODE_CHECK_TESTS})
+        add_executable(${test} erasure_code/${test}.c)
+        target_link_libraries(${test} PRIVATE isal)
+        target_include_directories(${test} PRIVATE include)
+        add_test(NAME ${test} COMMAND ${test})
+    endforeach()
+
+    # Create unit test executables
+    foreach(test ${ERASURE_CODE_UNIT_TESTS})
+        add_executable(${test} erasure_code/${test}.c)
+        target_link_libraries(${test} PRIVATE isal)
+        target_include_directories(${test} PRIVATE include)
+    endforeach()
+
+    # Create other test executables
+    foreach(test ${ERASURE_CODE_OTHER_TESTS})
+        add_executable(${test} erasure_code/${test}.c)
+        target_link_libraries(${test} PRIVATE isal)
+        target_include_directories(${test} PRIVATE include)
+    endforeach()
+endif()

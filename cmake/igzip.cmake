@@ -115,3 +115,21 @@ set(IGZIP_HEADERS
 
 # Add to main extern headers list
 list(APPEND EXTERN_HEADERS ${IGZIP_HEADERS})
+
+# Add test applications for igzip module
+if(BUILD_TESTS)
+    # Check tests (unit tests that are run by CTest)
+    set(IGZIP_CHECK_TESTS
+        igzip_rand_test
+        igzip_wrapper_hdr_test
+        checksum32_funcs_test
+    )
+
+    # Create check test executables
+    foreach(test ${IGZIP_CHECK_TESTS})
+        add_executable(${test} igzip/${test}.c)
+        target_link_libraries(${test} PRIVATE isal)
+        target_include_directories(${test} PRIVATE include igzip)
+        add_test(NAME ${test} COMMAND ${test})
+    endforeach()
+endif()

@@ -118,3 +118,22 @@ set(CRC_HEADERS
 
 # Add to main extern headers list
 list(APPEND EXTERN_HEADERS ${CRC_HEADERS})
+
+# Add test applications for crc module
+if(BUILD_TESTS)
+    # Check tests (unit tests that are run by CTest)
+    set(CRC_CHECK_TESTS
+        crc16_t10dif_test
+        crc16_t10dif_copy_test
+        crc64_funcs_test
+        crc32_funcs_test
+    )
+
+    # Create check test executables
+    foreach(test ${CRC_CHECK_TESTS})
+        add_executable(${test} crc/${test}.c)
+        target_link_libraries(${test} PRIVATE isal)
+        target_include_directories(${test} PRIVATE include)
+        add_test(NAME ${test} COMMAND ${test})
+    endforeach()
+endif()
