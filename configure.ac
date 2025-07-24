@@ -38,6 +38,11 @@ AM_CONDITIONAL([CPU_PPC64LE], [test "$CPU" = "ppc64le"])
 AM_CONDITIONAL([CPU_RISCV64], [test "$CPU" = "riscv64"])
 AM_CONDITIONAL([CPU_UNDEFINED], [test "x$CPU" = "x"])
 AM_CONDITIONAL([HAVE_RVV], [false])
+AM_CONDITIONAL([HAVE_ZBC], [false])
+AM_CONDITIONAL([HAVE_ZBB], [false])
+AM_CONDITIONAL([HAVE_ZVBC], [false])
+AM_CONDITIONAL([HAVE_SYS_HWPROBE_H], [false])
+AM_CONDITIONAL([HAVE_ASM_HWPROBE_H], [false])
 
 # Check for programs
 AC_PROG_CC_STDC
@@ -57,18 +62,92 @@ case "${CPU}" in
 
 	riscv64)
 
+		sys_hwprobe_h=no
+		asm_hwprobe_h=no
+		AC_CHECK_HEADER([sys/hwprobe.h], [sys_hwprobe_h=yes])
+		if test "x$sys_hwprobe_h" = "xno"; then
+			AC_CHECK_HEADER([asm/hwprobe.h], [asm_hwprobe_h=yes])
+		fi
+		if test "x$sys_hwprobe_h" = "xyes"; then
+			AC_DEFINE([HAVE_SYS_HWPROBE_H], [1], [Define if sys/hwprobe.h exists])
+			AM_CONDITIONAL([HAVE_SYS_HWPROBE_H], [true])
+		else
+			AC_DEFINE([HAVE_SYS_HWPROBE_H], [0], [Define if sys/hwprobe.h not exists])
+			AM_CONDITIONAL([HAVE_SYS_HWPROBE_H], [false])
+		fi
+		if test "x$asm_hwprobe_h" = "xyes"; then
+			AC_DEFINE([HAVE_ASM_HWPROBE_H], [1], [Define if asm/hwprobe.h exists])
+			AM_CONDITIONAL([HAVE_ASM_HWPROBE_H], [true])
+		else
+			AC_DEFINE([HAVE_ASM_HWPROBE_H], [0], [Define if asm/hwprobe.h not exists])
+			AM_CONDITIONAL([HAVE_ASM_HWPROBE_H], [false])
+		fi
+		if test "x$sys_hwprobe_h" = "xyes" -o "x$asm_hwprobe_h" = "xyes"; then
+			AC_MSG_CHECKING([whether compiler supports RISC-V Extension (ZBC)])
+			AC_COMPILE_IFELSE(
+				[AC_LANG_PROGRAM([#include <asm/hwprobe.h>], [
+					int a = RISCV_HWPROBE_EXT_ZBC;
+					__asm__ volatile(
+						".option arch, +zbc\n"
+						"clmul zero, zero, zero\n"
+					);
+				])],
+				[AC_DEFINE([HAVE_ZBC], [1], [Enable ZBC instructions])
+				AM_CONDITIONAL([HAVE_ZBC], [true]) zbc=yes],
+				[AC_DEFINE([HAVE_ZBC], [0], [Disable ZBC instructions])
+				AM_CONDITIONAL([HAVE_ZBC], [false]) zbc=no]
+			)
+			AC_MSG_RESULT([$zbc])
+			AC_MSG_CHECKING([whether compiler supports RISC-V Extension (ZBB)])
+			AC_COMPILE_IFELSE(
+				[AC_LANG_PROGRAM([#include <asm/hwprobe.h>], [
+					int a = RISCV_HWPROBE_EXT_ZBB;
+					__asm__ volatile(
+						".option arch, +zbb\n"
+						"rev8 zero, zero\n"
+					);
+				])],
+				[AC_DEFINE([HAVE_ZBB], [1], [Enable ZBB instructions])
+				AM_CONDITIONAL([HAVE_ZBB], [true]) zbb=yes],
+				[AC_DEFINE([HAVE_ZBB], [0], [Disable ZBB instructions])
+				AM_CONDITIONAL([HAVE_ZBB], [false]) zbb=no]
+			)
+			AC_MSG_RESULT([$zbb])
+			AC_MSG_CHECKING([whether compiler supports RISC-V Vector Extension (ZVBC)])
+			AC_COMPILE_IFELSE(
+				[AC_LANG_PROGRAM([#include <asm/hwprobe.h>], [
+					int a = RISCV_HWPROBE_EXT_ZVBC;
+					__asm__ volatile(
+						".option arch, +v, +zvbc\n"
+						"vsetivli zero, 2, e64, m1, ta, ma\n"
+						"vclmul.vv v0, v0, v0\n"
+					);
+				])],
+				[AC_DEFINE([HAVE_ZVBC], [1], [Enable ZVBC instructions])
+				AM_CONDITIONAL([HAVE_ZVBC], [true]) zvbc=yes],
+				[AC_DEFINE([HAVE_ZVBC], [0], [Disable ZVBC instructions])
+				AM_CONDITIONAL([HAVE_ZVBC], [false]) zvbc=no]
+			)
+			AC_MSG_RESULT([$zvbc])
+		fi
 		AC_MSG_CHECKING([whether compiler supports RISC-V Vector Extension (RVV)])
-		AC_COMPILE_IFELSE(
-			[AC_LANG_PROGRAM([], [
-				__asm__ volatile(
-					".option arch, +v\n"
-					"vsetivli zero, 0, e8, m1, ta, ma\n"
-				);
-			])],
+		AS_IF([test "x$zvbc" = "xno"],
+			[
+				AC_COMPILE_IFELSE(
+					[AC_LANG_PROGRAM([], [
+						__asm__ volatile(
+							".option arch, +v\n"
+							"vsetivli zero, 0, e8, m1, ta, ma\n"
+						);
+					])],
+					[AC_DEFINE([HAVE_RVV], [1], [Enable RVV instructions])
+					AM_CONDITIONAL([HAVE_RVV], [true]) rvv=yes],
+					[AC_DEFINE([HAVE_RVV], [0], [Disable RVV instructions])
+					AM_CONDITIONAL([HAVE_RVV], [false]) rvv=no]
+				)
+			],
 			[AC_DEFINE([HAVE_RVV], [1], [Enable RVV instructions])
-			AM_CONDITIONAL([HAVE_RVV], [true]) rvv=yes],
-			[AC_DEFINE([HAVE_RVV], [0], [Disable RVV instructions])
-			AM_CONDITIONAL([HAVE_RVV], [false]) rvv=no]
+			AM_CONDITIONAL([HAVE_RVV], [true]) rvv=yes]
 		)
 		AC_MSG_RESULT([$rvv])
 		;;
