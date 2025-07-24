@@ -178,6 +178,7 @@ v2.32
   - CRC32 ISCSI AVX512+VCLMUL optimized for small buffers.
   - CRC64 Rocksoft implementation on aarch64 optimized similar to other CRC64
     implementations.
+  - Added new RVV CRC64/32/16 implementations.
 
 * Performance applications:
   - Add consolidated CRC performance application.
