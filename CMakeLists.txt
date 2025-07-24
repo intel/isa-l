@@ -45,6 +45,9 @@ if(BUILD_TESTS)
     include(CTest)
 endif()
 
+# Enable building ISAL shim library
+option(BUILD_ISAL_SHIM "Build the ISAL shim library" OFF)
+
 # Set default build type
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -106,6 +109,11 @@ include(cmake/raid.cmake)
 include(cmake/crc.cmake)
 include(cmake/igzip.cmake)
 include(cmake/mem.cmake)
+
+# Conditionally build ISAL shim library
+if(BUILD_ISAL_SHIM)
+    add_subdirectory(igzip/shim)
+endif()
 
 # Add test.h to extern headers (used by all modules)
 list(APPEND EXTERN_HEADERS include/test.h)

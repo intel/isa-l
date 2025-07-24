@@ -32,6 +32,7 @@ erasure_code/*_test
 erasure_code/gf_vect_dot_prod_1tbl
 igzip/*_perf
 igzip/*_test
+igzip/shim/build
 mem/*_perf
 mem/*_test
 programs/igzip
