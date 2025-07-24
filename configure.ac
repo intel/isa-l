@@ -38,6 +38,11 @@ AM_CONDITIONAL([CPU_PPC64LE], [test "$CPU" = "ppc64le"])
 AM_CONDITIONAL([CPU_RISCV64], [test "$CPU" = "riscv64"])
 AM_CONDITIONAL([CPU_UNDEFINED], [test "x$CPU" = "x"])
 AM_CONDITIONAL([HAVE_RVV], [false])
+AM_CONDITIONAL([HAVE_ZBC], [false])
+AM_CONDITIONAL([HAVE_ZBB], [false])
+AM_CONDITIONAL([HAVE_ZVBC], [false])
+AM_CONDITIONAL([HAVE_SYS_HWPROBE_H], [false])
+AM_CONDITIONAL([HAVE_ASM_HWPROBE_H], [false])
 
 # Check for programs
 AC_PROG_CC_STDC
@@ -57,18 +62,67 @@ case "${CPU}" in
 
 	riscv64)
 
+		sys_hwprobe_h=no
+		asm_hwprobe_h=no
+		AC_CHECK_HEADER([sys/hwprobe.h], [sys_hwprobe_h=yes])
+		if test "x$sys_hwprobe_h" = "xno"; then
+			AC_CHECK_HEADER([asm/hwprobe.h], [asm_hwprobe_h=yes])
+		fi
+		AM_CONDITIONAL([HAVE_SYS_HWPROBE_H], [test "x$sys_hwprobe_h" = "xyes"])
+		AM_CONDITIONAL([HAVE_ASM_HWPROBE_H], [test "x$asm_hwprobe_h" = "xyes"])
+		AS_IF([test "x$sys_hwprobe_h" = "xyes"],
+			[AC_DEFINE([HAVE_SYS_HWPROBE_H], [1], [Define if sys/hwprobe.h exists])])
+		AS_IF([test "x$asm_hwprobe_h" = "xyes"],
+			[AC_DEFINE([HAVE_ASM_HWPROBE_H], [1], [Define if asm/hwprobe.h exists])])
+
+		AC_DEFUN([CHECK_RISCV_EXT], [
+			AC_MSG_CHECKING([whether compiler supports RISC-V Extension ($1)])
+			AC_COMPILE_IFELSE(
+				[AC_LANG_PROGRAM([#include <asm/hwprobe.h>], [
+					int a = RISCV_HWPROBE_EXT_$1;
+					__asm__ volatile(
+						".option arch, $2\n"
+						$3
+					);
+				])],
+				[AC_DEFINE([HAVE_$1], [1], [Enable $1 instructions])
+				AM_CONDITIONAL([HAVE_$1], [true]) $4=yes],
+				[AC_DEFINE([HAVE_$1], [0], [Disable $1 instructions])
+				AM_CONDITIONAL([HAVE_$1], [false]) $4=no]
+			)
+			AC_MSG_RESULT([$$4])
+		])
+
+		if test "x$sys_hwprobe_h" = "xyes" -o "x$asm_hwprobe_h" = "xyes"; then
+			CHECK_RISCV_EXT([ZBC], [+zbc],
+				["clmul zero, zero, zero\n"], [zbc])
+			CHECK_RISCV_EXT([ZBB], [+zbb],
+				["rev8 zero, zero\n"], [zbb])
+			CHECK_RISCV_EXT([ZVBC], [+v, +zvbc],
+				["vsetivli zero, 2, e64, m1, ta, ma\n"
+				 "vclmul.vv v0, v0, v0\n"], [zvbc])
+		else
+			# If hwprobe is not available, set zvbc=no to prevent unconditional rvv=yes
+			zvbc=no
+		fi
 		AC_MSG_CHECKING([whether compiler supports RISC-V Vector Extension (RVV)])
-		AC_COMPILE_IFELSE(
-			[AC_LANG_PROGRAM([], [
-				__asm__ volatile(
-					".option arch, +v\n"
-					"vsetivli zero, 0, e8, m1, ta, ma\n"
-				);
-			])],
+		AS_IF([test "x$zvbc" = "xno"],
+			[
+				AC_COMPILE_IFELSE(
+					[AC_LANG_PROGRAM([], [
+						__asm__ volatile(
+							".option arch, +v\n"
+							"vsetivli zero, 0, e8, m1, ta, ma\n"
+						);
+					])],
+					[AC_DEFINE([HAVE_RVV], [1], [Enable RVV instructions])
+					AM_CONDITIONAL([HAVE_RVV], [true]) rvv=yes],
+					[AC_DEFINE([HAVE_RVV], [0], [Disable RVV instructions])
+					AM_CONDITIONAL([HAVE_RVV], [false]) rvv=no]
+				)
+			],
 			[AC_DEFINE([HAVE_RVV], [1], [Enable RVV instructions])
-			AM_CONDITIONAL([HAVE_RVV], [true]) rvv=yes],
-			[AC_DEFINE([HAVE_RVV], [0], [Disable RVV instructions])
-			AM_CONDITIONAL([HAVE_RVV], [false]) rvv=no]
+			AM_CONDITIONAL([HAVE_RVV], [true]) rvv=yes]
 		)
 		AC_MSG_RESULT([$rvv])
 		;;
