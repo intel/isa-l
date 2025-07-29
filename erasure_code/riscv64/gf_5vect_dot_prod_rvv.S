@@ -96,7 +96,6 @@ gf_5vect_dot_prod_rvv:
     sd s5, 40(sp)
 
     vsetvli a5, x0, e8, m1
-
     /* Initialize position */
     li x_pos, 0
 
@@ -131,7 +130,7 @@ gf_5vect_dot_prod_rvv:
 .Llooprvv_vl_vects:
     /* Load source data */
     slli a6, x_vec_i, 3
-    add a6,x_src,a6
+    add a6, x_src, a6
     ld x_ptr, 0(a6)
     add x_ptr, x_ptr, x_pos
     vle8.v v_src, (x_ptr)

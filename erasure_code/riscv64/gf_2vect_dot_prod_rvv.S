@@ -75,8 +75,9 @@ gf_2vect_dot_prod_rvv:
     blt x_len, t6, .return_fail
 
     vsetvli a5, x0, e8, m1  /* Set vector length to maximum */
-
     li x_pos, 0
+    slli x_vec, x_vec, 3
+
     ld x_dest1, 0(x_dest)
     ld x_dest2, 8(x_dest)
 
@@ -92,15 +93,12 @@ gf_2vect_dot_prod_rvv:
 
     /* gf_tbl base = (x_tbl + dest_idx * x_vec * 32) */
     mv x_tbl1, x_tbl           /* reset x_tbl1 */
-    slli t6, x_vec, 5
+    slli t6, x_vec, 2
     add x_tbl2, x_tbl1, t6     /* reset x_tbl2 */
 
 /* Loop 2: x_vec, number of source vectors (ie. data blocks) */
 .Llooprvv_vl_vects:
     /* load src data */
-    slli a6, x_vec_i, 3
-    add a6,x_src,a6
-    ld x_ptr, 0(a6)
     add x_ptr,x_ptr,x_pos
 
     vle8.v v_src, (x_ptr)      /* load from: src base + pos offset */
@@ -120,6 +118,11 @@ gf_2vect_dot_prod_rvv:
     vle8.v v_gft2_hi, (x_tbl2)
     addi x_tbl2, x_tbl2, 16
 
+    /* calc for next */
+    addi x_vec_i, x_vec_i, 8   /* move x_vec_i to next */
+    add a6, x_src, x_vec_i
+    ld x_ptr, 0(a6)
+
     /* dest 1 */
     /* table indexing, ie. gf(2^8) multiplication */
     vrgather.vv v26, v_gft1_lo, v_src_lo
@@ -134,8 +137,6 @@ gf_2vect_dot_prod_rvv:
     vxor.vv v_dest2, v_dest2, v26
     vxor.vv v_dest2, v_dest2, v27
 
-    /* calc for next */
-    addi x_vec_i, x_vec_i, 1   /* move x_vec_i to next */
     blt x_vec_i, x_vec, .Llooprvv_vl_vects
 /* end of Loop 2 */
 

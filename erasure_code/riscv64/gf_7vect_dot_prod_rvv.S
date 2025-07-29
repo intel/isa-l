@@ -113,7 +113,6 @@ gf_7vect_dot_prod_rvv:
     sd s8, 64(sp)
 
     vsetvli t0, x0, e8, m1
-
     /* initialize position */
     li x_pos, 0
 
@@ -160,7 +159,7 @@ gf_7vect_dot_prod_rvv:
 .Llooprvv_vl_vects:
     /* load source data */
     slli a5, x_vec_i, 3
-    add a5,x_src,a5
+    add a5, x_src, a5
     ld x_ptr, 0(a5)
     add x_ptr,x_ptr,x_pos
 
@@ -205,7 +204,6 @@ gf_7vect_dot_prod_rvv:
     addi x_tbl7, x_tbl7, 16
     vle8.v v_gft7_hi, (x_tbl7)
     addi x_tbl7, x_tbl7, 16
-
 
     /* dest 1 */
     vrgather.vv v26, v_gft1_lo, v_src_lo
