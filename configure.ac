@@ -71,8 +71,8 @@ case "${CPU}" in
 			AM_CONDITIONAL([HAVE_RVV], [false]) rvv=no]
 		)
 		if test "x$rvv" = "xyes"; then
-		  CFLAGS+=" -march=rv64gcv"
-		  CCASFLAGS+=" -march=rv64gcv"
+			CFLAGS+=" -march=rv64gcv"
+			CCASFLAGS+=" -march=rv64gcv"
 		fi
 		AC_MSG_RESULT([$rvv])
 		;;

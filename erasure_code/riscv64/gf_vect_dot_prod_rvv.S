@@ -63,7 +63,6 @@ gf_vect_dot_prod_rvv:
     blt a0, t4, .return_fail
 
     vsetvli t5, zero, e8, m1  # Set vector length to maximum
-
     # Initialize pos = 0
     li t2, 0
 

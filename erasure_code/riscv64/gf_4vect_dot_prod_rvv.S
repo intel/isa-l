@@ -91,10 +91,13 @@ gf_4vect_dot_prod_rvv:
     sd s2, 16(sp)
     sd s3, 24(sp)
 
-    vsetvli t0, x0, e8, m1  /* Set vector length to maximum */
-
+  #  vsetvli t0, x0, e8, m1  /* Set vector length to maximum */
+    vsetvli t0, x0, e8, m1
     li x_pos, 0
-    slli t_offset, x_vec, 5
+
+    slli x_vec, x_vec, 3
+    slli t_offset, x_vec, 2
+
     ld x_dest1, 0(x_dest)
     ld x_dest2, 8(x_dest)
     ld x_dest3, 16(x_dest)
@@ -111,19 +114,20 @@ gf_4vect_dot_prod_rvv:
     vmv.v.i v_dest3, 0
     vmv.v.i v_dest4, 0
 
+    /*  x_vec, number of source vectors (ie. data blocks) */
+    li x_vec_i, 0
+
+    /* load source pointer */
+    ld x_ptr, 0(x_src)
+
     /* Reset table pointers */
     mv x_tbl1, x_tbl
     add x_tbl2, x_tbl1, t_offset
     add x_tbl3, x_tbl2, t_offset
     add x_tbl4, x_tbl3, t_offset
 
-    /* Loop 2: x_vec, number of source vectors (ie. data blocks) */
-    li x_vec_i, 0
 .Lloop_rvv_vl_vects:
     /* Load source data */
-    slli a6, x_vec_i, 3
-    add a6,x_src,a6
-    ld x_ptr, 0(a6)
     add x_ptr,x_ptr,x_pos
 
     vle8.v v_src, (x_ptr)
@@ -142,6 +146,10 @@ gf_4vect_dot_prod_rvv:
     vle8.v v_gft2_hi, (x_tbl2)
     addi x_tbl2, x_tbl2, 16
 
+    /* Move to next source vector */
+    addi x_vec_i, x_vec_i, 8
+    add a6, x_src, x_vec_i
+    ld x_ptr, 0(a6)
 
     /* Load next gf_table's */
     vle8.v v_gft3_lo, (x_tbl3)
@@ -178,9 +186,6 @@ gf_4vect_dot_prod_rvv:
     vxor.vv v_dest4, v_dest4, v26
     vxor.vv v_dest4, v_dest4, v27
 
-    /* Move to next source vector */
-    addi x_vec_i, x_vec_i, 1
-
     /* Check if we have processed all vectors */
     blt x_vec_i, x_vec, .Lloop_rvv_vl_vects
 
@@ -198,7 +203,7 @@ gf_4vect_dot_prod_rvv:
     j .Lloop_rvv_vl
 
 .return_pass:
-/* restore callee-saved registers */
+    /* restore callee-saved registers */
     ld s0, 0(sp)
     ld s1, 8(sp)
     ld s2, 16(sp)

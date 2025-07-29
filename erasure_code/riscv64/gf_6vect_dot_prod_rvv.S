@@ -107,6 +107,8 @@ gf_6vect_dot_prod_rvv:
     /* initialize position */
     li x_pos, 0
 
+    slli x_vec, x_vec, 3
+
     /* load destination pointers */
     ld x_dest1, 0(x14)  #  a4 is also x14
     ld x_dest2, 8(x_dest)
@@ -136,7 +138,7 @@ gf_6vect_dot_prod_rvv:
     /* initialize table pointers */
     /* gf_tbl base = (x_tbl + dest_idx * x_vec * 32) */
     mv x_tbl1, x_tbl
-    slli t0, x_vec, 5
+    slli t0, x_vec, 2
     add x_tbl2, x_tbl1, t0
     add x_tbl3, x_tbl2, t0
     add x_tbl4, x_tbl3, t0
@@ -145,11 +147,7 @@ gf_6vect_dot_prod_rvv:
 
 .Llooprvv_vl_vects:
     /* load source data */
-    slli a6, x_vec_i, 3
-    add a6,x_src,a6
-    ld x_ptr, 0(a6)
     add x_ptr,x_ptr,x_pos
-
     vle8.v v_src, (x_ptr)
 
 
@@ -167,6 +165,11 @@ gf_6vect_dot_prod_rvv:
     addi x_tbl2, x_tbl2, 16
     vle8.v v_gft2_hi, (x_tbl2)
     addi x_tbl2, x_tbl2, 16
+
+    /* load next source pointer */
+    addi x_vec_i, x_vec_i,8
+    add a6, x_src, x_vec_i
+    ld x_ptr, 0(a6)
 
     vle8.v v_gft3_lo, (x_tbl3)
     addi x_tbl3, x_tbl3, 16
@@ -187,7 +190,6 @@ gf_6vect_dot_prod_rvv:
     addi x_tbl6, x_tbl6, 16
     vle8.v v_gft6_hi, (x_tbl6)
     addi x_tbl6, x_tbl6, 16
-
 
     /* dest 1 */
     vrgather.vv v26, v_gft1_lo, v_src_lo
@@ -224,10 +226,6 @@ gf_6vect_dot_prod_rvv:
     vrgather.vv v27, v_gft6_hi, v_src_hi
     vxor.vv v_dest6, v_dest6, v26
     vxor.vv v_dest6, v_dest6, v27
-
-
-    /* load next source pointer */
-    addi x_vec_i, x_vec_i,1
 
     /* check if we have processed all vectors */
     blt x_vec_i, x_vec, .Llooprvv_vl_vects
