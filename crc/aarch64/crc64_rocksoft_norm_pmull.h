@@ -28,47 +28,47 @@
 #########################################################################
 
 # rk15
-.equ	p4_low_b0, 0x488c
-.equ	p4_low_b1, 0x0488
-.equ	p4_low_b2, 0x4e6a
-.equ	p4_low_b3, 0xb441
+#define	p4_low_b0 0x488c
+#define	p4_low_b1 0x0488
+#define	p4_low_b2 0x4e6a
+#define	p4_low_b3 0xb441
 # rk16
-.equ	p4_high_b0, 0x9860
-.equ	p4_high_b1, 0x9b66
-.equ	p4_high_b2, 0x30f1
-.equ	p4_high_b3, 0xa42a
+#define	p4_high_b0 0x9860
+#define	p4_high_b1 0x9b66
+#define	p4_high_b2 0x30f1
+#define	p4_high_b3 0xa42a
 
 # rk1
-.equ	p1_low_b0, 0x2f08
-.equ	p1_low_b1, 0xf0dd
-.equ	p1_low_b2, 0xc948
-.equ	p1_low_b3, 0x6b08
+#define	p1_low_b0 0x2f08
+#define	p1_low_b1 0xf0dd
+#define	p1_low_b2 0xc948
+#define	p1_low_b3 0x6b08
 # rk2
-.equ	p1_high_b0, 0x76ae
-.equ	p1_high_b1, 0x7f04
-.equ	p1_high_b2, 0x8ba9
-.equ	p1_high_b3, 0x0857
+#define	p1_high_b0 0x76ae
+#define	p1_high_b1 0x7f04
+#define	p1_high_b2 0x8ba9
+#define	p1_high_b3 0x0857
 
 # rk1
-.equ	p0_low_b0, 0x2f08
-.equ	p0_low_b1, 0xf0dd
-.equ	p0_low_b2, 0xc948
-.equ	p0_low_b3, 0x6b08
-.equ	p0_high_b0, 0x0000
-.equ	p0_high_b1, 0x0000
-.equ	p0_high_b2, 0x0000
-.equ	p0_high_b3, 0x0000
+#define	p0_low_b0 0x2f08
+#define	p0_low_b1 0xf0dd
+#define	p0_low_b2 0xc948
+#define	p0_low_b3 0x6b08
+#define	p0_high_b0 0x0000
+#define	p0_high_b1 0x0000
+#define	p0_high_b2 0x0000
+#define	p0_high_b3 0x0000
 
 # rk7
-.equ	br_low_b0, 0x6fc8
-.equ	br_low_b1, 0x98be
-.equ	br_low_b2, 0xeeb2
-.equ	br_low_b3, 0xddf3
+#define	br_low_b0 0x6fc8
+#define	br_low_b1 0x98be
+#define	br_low_b2 0xeeb2
+#define	br_low_b3 0xddf3
 # rk8
-.equ	br_high_b0, 0x3659
-.equ	br_high_b1, 0x94c9
-.equ	br_high_b2, 0xd235
-.equ	br_high_b3, 0xad93
+#define	br_high_b0 0x3659
+#define	br_high_b1 0x94c9
+#define	br_high_b2 0xd235
+#define	br_high_b3 0xad93
 
 ASM_DEF_RODATA
 	.align	4

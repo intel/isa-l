@@ -27,37 +27,37 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #########################################################################
 
-.equ	p4_low_b0, 0x0001
-.equ	p4_low_b1, 0xb000
-.equ	p4_low_b2, 0x01b1
-.equ	p4_low_b3, 0x01b0
-.equ	p4_high_b0, 0x0001
-.equ	p4_high_b1, 0x0000
-.equ	p4_high_b2, 0x0101
-.equ	p4_high_b3, 0xb100
+#define	p4_low_b0 0x0001
+#define	p4_low_b1 0xb000
+#define	p4_low_b2 0x01b1
+#define	p4_low_b3 0x01b0
+#define	p4_high_b0 0x0001
+#define	p4_high_b1 0x0000
+#define	p4_high_b2 0x0101
+#define	p4_high_b3 0xb100
 
-.equ	p1_low_b0, 0x0001
-.equ	p1_low_b1, 0x0000
-.equ	p1_low_b2, 0x0000
-.equ	p1_low_b3, 0x6b70
-.equ	p1_high_b0, 0x0001
-.equ	p1_high_b1, 0x0000
-.equ	p1_high_b2, 0x0000
-.equ	p1_high_b3, 0xf500
+#define	p1_low_b0 0x0001
+#define	p1_low_b1 0x0000
+#define	p1_low_b2 0x0000
+#define	p1_low_b3 0x6b70
+#define	p1_high_b0 0x0001
+#define	p1_high_b1 0x0000
+#define	p1_high_b2 0x0000
+#define	p1_high_b3 0xf500
 
-.equ	p0_low_b0, 0x0001
-.equ	p0_low_b1, 0x0000
-.equ	p0_low_b2, 0x0000
-.equ	p0_low_b3, 0xf500
+#define	p0_low_b0 0x0001
+#define	p0_low_b1 0x0000
+#define	p0_low_b2 0x0000
+#define	p0_low_b3 0xf500
 
-.equ	br_low_b0, 0x0001
-.equ	br_low_b1, 0x0000
-.equ	br_low_b2, 0x0000
-.equ	br_low_b3, 0xb000
-.equ	br_high_b0, 0x0001
-.equ	br_high_b1, 0x0000
-.equ	br_high_b2, 0x0000
-.equ	br_high_b3, 0xb000
+#define	br_low_b0 0x0001
+#define	br_low_b1 0x0000
+#define	br_low_b2 0x0000
+#define	br_low_b3 0xb000
+#define	br_high_b0 0x0001
+#define	br_high_b1 0x0000
+#define	br_high_b2 0x0000
+#define	br_high_b3 0xb000
 
 ASM_DEF_RODATA
 	.align	4
