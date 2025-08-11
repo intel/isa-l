@@ -116,24 +116,56 @@ FUNCTION_NAME:
 	vbroadcasti32x4 zmm16, [rk_1]	;zmm16 has rk-1 and rk-2
 	sub		arg3, 256
 
-_fold_256_B_loop:
+%if fetch_dist != 0
+	; check if there is at least 1.5KB (fetch distance) + 256B in the buffer
+        cmp             arg3, (fetch_dist + 256)
+        jb              _fold_256_B_loop
+
+align 16
+_fold_and_prefetch_256_B_loop:
 	add		arg2, 256
-	PREFETCH [arg2+fetch_dist+0]
+	PREFETCH        [arg2+fetch_dist+0]
 	vpclmulqdq	zmm1, zmm0, zmm16, 0x10
 	vpclmulqdq	zmm0, zmm0, zmm16, 0x01
 	vpternlogq	zmm0, zmm1, [arg2+16*0], 0x96
 
-	PREFETCH [arg2+fetch_dist+64]
+	PREFETCH        [arg2+fetch_dist+64]
 	vpclmulqdq	zmm2, zmm4, zmm16, 0x10
 	vpclmulqdq	zmm4, zmm4, zmm16, 0x01
 	vpternlogq	zmm4, zmm2, [arg2+16*4], 0x96
 
-	PREFETCH [arg2+fetch_dist+64*2]
+	PREFETCH        [arg2+fetch_dist+64*2]
 	vpclmulqdq	zmm3, zmm7, zmm16, 0x10
 	vpclmulqdq	zmm7, zmm7, zmm16, 0x01
 	vpternlogq	zmm7, zmm3, [arg2+16*8], 0x96
 
-	PREFETCH [arg2+fetch_dist+64*3]
+	PREFETCH        [arg2+fetch_dist+64*3]
+	vpclmulqdq	zmm5, zmm8, zmm16, 0x10
+	vpclmulqdq	zmm8, zmm8, zmm16, 0x01
+	vpternlogq	zmm8, zmm5, [arg2+16*12], 0x96
+
+	sub		arg3, 256
+
+	; check if there is another 1.5KB (fetch distance) + 256B in the buffer
+        cmp             arg3, (fetch_dist + 256)
+	jge     	_fold_and_prefetch_256_B_loop
+%endif
+
+align 16
+_fold_256_B_loop:
+	add		arg2, 256
+	vpclmulqdq	zmm1, zmm0, zmm16, 0x10
+	vpclmulqdq	zmm0, zmm0, zmm16, 0x01
+	vpternlogq	zmm0, zmm1, [arg2+16*0], 0x96
+
+	vpclmulqdq	zmm2, zmm4, zmm16, 0x10
+	vpclmulqdq	zmm4, zmm4, zmm16, 0x01
+	vpternlogq	zmm4, zmm2, [arg2+16*4], 0x96
+
+	vpclmulqdq	zmm3, zmm7, zmm16, 0x10
+	vpclmulqdq	zmm7, zmm7, zmm16, 0x01
+	vpternlogq	zmm7, zmm3, [arg2+16*8], 0x96
+
 	vpclmulqdq	zmm5, zmm8, zmm16, 0x10
 	vpclmulqdq	zmm8, zmm8, zmm16, 0x01
 	vpternlogq	zmm8, zmm5, [arg2+16*12], 0x96

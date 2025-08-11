@@ -115,30 +115,70 @@ FUNCTION_NAME:
 	vbroadcasti32x4 zmm16, [rk_1]	;zmm16 has rk-1 and rk-2
 	sub		arg3, 256
 
-_fold_256_B_loop:
+%if fetch_dist != 0
+	; check if there is at least 1.5KB (fetch distance) + 256B in the buffer
+        cmp     arg3, (fetch_dist + 256)
+        jb      _fold_256_B_loop
+
+align 16
+_fold_and_prefetch_256_B_loop:
 	add		arg2, 256
-	PREFETCH [arg2+fetch_dist+0]
+	PREFETCH        [arg2+fetch_dist+0]
 	vmovdqu8	zmm3, [arg2+16*0]
 	vpshufb		zmm3, zmm3, zmm18
 	vpclmulqdq	zmm1, zmm0, zmm16, 0x00
 	vpclmulqdq	zmm0, zmm0, zmm16, 0x11
 	vpternlogq	zmm0, zmm1, zmm3, 0x96
 
-	PREFETCH [arg2+fetch_dist+64]
+	PREFETCH        [arg2+fetch_dist+64]
 	vmovdqu8	zmm9, [arg2+16*4]
 	vpshufb		zmm9, zmm9, zmm18
 	vpclmulqdq	zmm5, zmm4, zmm16, 0x00
 	vpclmulqdq	zmm4, zmm4, zmm16, 0x11
 	vpternlogq	zmm4, zmm5, zmm9, 0x96
 
-	PREFETCH [arg2+fetch_dist+64*2]
+	PREFETCH        [arg2+fetch_dist+64*2]
 	vmovdqu8	zmm11, [arg2+16*8]
 	vpshufb		zmm11, zmm11, zmm18
 	vpclmulqdq	zmm12, zmm7, zmm16, 0x00
 	vpclmulqdq	zmm7, zmm7, zmm16, 0x11
 	vpternlogq	zmm7, zmm12, zmm11, 0x96
 
-	PREFETCH [arg2+fetch_dist+64*3]
+	PREFETCH        [arg2+fetch_dist+64*3]
+	vmovdqu8	zmm17, [arg2+16*12]
+	vpshufb		zmm17, zmm17, zmm18
+	vpclmulqdq	zmm14, zmm8, zmm16, 0x00
+	vpclmulqdq	zmm8, zmm8, zmm16, 0x11
+	vpternlogq	zmm8, zmm14, zmm17, 0x96
+
+	sub		arg3, 256
+
+	; check if there is another 1.5KB (fetch distance) + 256B in the buffer
+        cmp             arg3, (fetch_dist + 256)
+	jge		_fold_and_prefetch_256_B_loop
+%endif
+
+align 16
+_fold_256_B_loop:
+	add		arg2, 256
+	vmovdqu8	zmm3, [arg2+16*0]
+	vpshufb		zmm3, zmm3, zmm18
+	vpclmulqdq	zmm1, zmm0, zmm16, 0x00
+	vpclmulqdq	zmm0, zmm0, zmm16, 0x11
+	vpternlogq	zmm0, zmm1, zmm3, 0x96
+
+	vmovdqu8	zmm9, [arg2+16*4]
+	vpshufb		zmm9, zmm9, zmm18
+	vpclmulqdq	zmm5, zmm4, zmm16, 0x00
+	vpclmulqdq	zmm4, zmm4, zmm16, 0x11
+	vpternlogq	zmm4, zmm5, zmm9, 0x96
+
+	vmovdqu8	zmm11, [arg2+16*8]
+	vpshufb		zmm11, zmm11, zmm18
+	vpclmulqdq	zmm12, zmm7, zmm16, 0x00
+	vpclmulqdq	zmm7, zmm7, zmm16, 0x11
+	vpternlogq	zmm7, zmm12, zmm11, 0x96
+
 	vmovdqu8	zmm17, [arg2+16*12]
 	vpshufb		zmm17, zmm17, zmm18
 	vpclmulqdq	zmm14, zmm8, zmm16, 0x00
