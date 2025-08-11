@@ -61,6 +61,7 @@ inflateInit2_(z_streamp strm, int windowBits)
 
         inflate_state2 *s = (inflate_state2 *) malloc(sizeof(inflate_state2));
         if (!s) {
+                free(isal_strm_inflate);
                 fprintf(stderr, "Error: Memory allocation for inflate_state2 failed\n");
                 return -1;
         }
@@ -210,6 +211,7 @@ inflateEnd(z_streamp strm)
         }
 
         inflate_state2 *s = (inflate_state2 *) strm->state;
+        free(s->isal_strm_inflate);
         free(s);
 
         strm->state = NULL;

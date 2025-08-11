@@ -81,8 +81,15 @@ deflateInit2_(z_streamp strm, int level, int method, int windowBits, int memLeve
                 return -1;
         }
 
+        if (!isal_strm->level_buf) {
+                free(isal_strm);
+                fprintf(stderr, "Error: Memory allocation for level_buf failed\n");
+                return -1;
+        }
         deflate_state *s = (deflate_state *) malloc(sizeof(deflate_state));
         if (!s) {
+                free(isal_strm->level_buf);
+                free(isal_strm);
                 fprintf(stderr, "Error: Memory allocation for deflate_state failed\n");
                 return -1;
         }
