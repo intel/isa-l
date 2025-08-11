@@ -626,8 +626,10 @@ zlib_inflate_perf(uint8_t *inbuf, uint64_t inbuf_size, uint8_t *outbuf, uint64_t
                 return 1;
 
         check = zlib_inflate_round(&gstream, inbuf, inbuf_size, outbuf, outbuf_size);
-        if (check || gstream.total_out != file_size || memcmp(outbuf, filebuf, file_size))
+        if (check || gstream.total_out != file_size || memcmp(outbuf, filebuf, file_size)) {
+                inflateEnd(&gstream);
                 return 1;
+        }
 
         BENCHMARK(start, time,
                   zlib_inflate_round(&gstream, inbuf, inbuf_size, outbuf, outbuf_size));

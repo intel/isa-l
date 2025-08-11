@@ -1436,8 +1436,11 @@ compress_ver_rep_buf(uint8_t *data, uint32_t data_size, uint64_t data_rep_size,
 
                         ret = isal_deflate(&stream);
 
-                        if (ret)
+                        if (ret) {
+                                if (level_buf != NULL)
+                                        free(level_buf);
                                 return COMPRESS_GENERAL_ERROR;
+                        }
                 }
 
                 /* Verify the compressed buffer */
@@ -1458,8 +1461,11 @@ compress_ver_rep_buf(uint8_t *data, uint32_t data_size, uint64_t data_rep_size,
                         avail_out_start = state.avail_out;
 
                         ret = isal_inflate(&state);
-                        if (ret)
+                        if (ret) {
+                                if (level_buf != NULL)
+                                        free(level_buf);
                                 return inflate_ret_to_code(ret);
+                        }
 
                         /* Check data accuracy */
                         index = data_verified % data_size;
@@ -1471,8 +1477,11 @@ compress_ver_rep_buf(uint8_t *data, uint32_t data_size, uint64_t data_rep_size,
                         ret |= memcmp(decomp_buf + data_size - index, data, cmp_size);
                         out_size -= cmp_size;
                         ret |= memcmp(decomp_buf, decomp_buf + data_size, out_size);
-                        if (ret)
+                        if (ret) {
+                                if (level_buf != NULL)
+                                        free(level_buf);
                                 return RESULT_ERROR;
+                        }
 
                         data_verified += avail_out_start - state.avail_out;
                 }
