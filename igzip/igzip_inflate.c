@@ -2145,7 +2145,7 @@ isal_inflate_set_dict(struct inflate_state *state, uint8_t *dict, uint32_t dict_
 int
 isal_inflate_stateless(struct inflate_state *state)
 {
-        uint32_t ret = 0;
+        int ret = 0;
         uint8_t *start_out = state->next_out;
 
         state->read_in = 0;
