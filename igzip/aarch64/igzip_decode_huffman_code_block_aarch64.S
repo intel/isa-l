@@ -292,7 +292,7 @@ declare Macros
 	declare_generic_reg	block_state,	8,w
 	declare_generic_reg	block_state_adr,9,x
 	declare_generic_reg	look_back_dist,	10,w
-	declare_generic_reg	bfinal,		22,x
+	declare_generic_reg	bfinal,		22,w
 
 	declare_generic_reg	next_out,	12,x
 	declare_generic_reg	avail_out,	13,w
@@ -607,8 +607,8 @@ next_lit_eq_256:
 				ISAL_BLOCK_INPUT_DONE : ISAL_BLOCK_NEW_HDR;
 	*/
 	mov	block_state, ISAL_BLOCK_INPUT_DONE
-	cmp	w_bfinal,0
-	csel	block_state, block_state, w_bfinal, ne
+	cmp	bfinal,0
+	csel	block_state, block_state, bfinal, ne
 	str	block_state, [block_state_adr]
 
 	b	block_state_loop
