@@ -100,52 +100,49 @@ default rel
 
 section .text
 
-align 16
+align 32
 mk_global  xor_check_sse, function
 func(xor_check_sse)
 	FUNC_SAVE
 	sub	vec, 1			; Keep as offset to last source
-
 	jng	return_fail		;Must have at least 2 sources
-	cmp	len, 0
+	test	len, len
 	je	return_pass
-	test	len, (128-1)		;Check alignment of length
+	test	BYTE(len), (128-1)		;Check alignment of length
 	jnz	len_not_aligned
 
 
 len_aligned_128bytes:
-	sub	len, 128
-	mov	pos, 0
-	mov	tmp, vec		;Preset to last vector
+	add	len, -128		; shorter encoding for sub len, 128
+	xor	DWORD(pos), DWORD(pos)
 
 loop128:
-	mov	tmp2, [arg2+tmp*PS]	;Fetch last pointer in array
-	sub	tmp, 1			;Next vect
-	XLDR	xmm0, [tmp2+pos]	;Start with end of array in last vector
-	XLDR	xmm1, [tmp2+pos+16]	;Keep xor parity in xmm0-7
-	XLDR	xmm2, [tmp2+pos+(2*16)]
-	XLDR	xmm3, [tmp2+pos+(3*16)]
-	XLDR	xmm4, [tmp2+pos+(4*16)]
-	XLDR	xmm5, [tmp2+pos+(5*16)]
-	XLDR	xmm6, [tmp2+pos+(6*16)]
-	XLDR	xmm7, [tmp2+pos+(7*16)]
+	mov	tmp, [arg2+vec*PS]	;Fetch last pointer in array
+	XLDR	xmm0, [tmp+pos]	;Start with end of array in last vector
+	XLDR	xmm1, [tmp+pos+16]	;Keep xor parity in xmm0-7
+	XLDR	xmm2, [tmp+pos+(2*16)]
+	XLDR	xmm3, [tmp+pos+(3*16)]
+	XLDR	xmm4, [tmp+pos+(4*16)]
+	XLDR	xmm5, [tmp+pos+(5*16)]
+	XLDR	xmm6, [tmp+pos+(6*16)]
+	XLDR	xmm7, [tmp+pos+(7*16)]
+	lea	tmp, [vec-1]
 
 next_vect:
 	mov 	ptr, [arg2+tmp*PS]
-	sub	tmp, 1
-	xorpd	xmm0, [ptr+pos]		;Get next vector (source)
-	xorpd	xmm1, [ptr+pos+16]
-	xorpd	xmm2, [ptr+pos+(2*16)]
-	xorpd	xmm3, [ptr+pos+(3*16)]
-	xorpd	xmm4, [ptr+pos+(4*16)]
-	xorpd	xmm5, [ptr+pos+(5*16)]
-	xorpd	xmm6, [ptr+pos+(6*16)]
-	xorpd	xmm7, [ptr+pos+(7*16)]
+	xorps	xmm0, [ptr+pos]		;Get next vector (source)
+	xorps	xmm1, [ptr+pos+16]
+	xorps	xmm2, [ptr+pos+(2*16)]
+	xorps	xmm3, [ptr+pos+(3*16)]
+	xorps	xmm4, [ptr+pos+(4*16)]
+	xorps	xmm5, [ptr+pos+(5*16)]
+	xorps	xmm6, [ptr+pos+(6*16)]
+	xorps	xmm7, [ptr+pos+(7*16)]
 ;;;  	prefetch [ptr+pos+(8*16)]
+	sub	tmp, 1
 	jge	next_vect		;Loop for each vect
 
 	;; End of vects, check that all parity regs = 0
-	mov	tmp, vec		;Back to last vector
 	por	xmm0, xmm1
 	por	xmm2, xmm3
 	por	xmm4, xmm5
@@ -156,13 +153,13 @@ next_vect:
 	ptest	xmm0, xmm0
 	jnz	return_fail
 
-	add	pos, 128
+	sub	pos, -128
 	cmp	pos, len
 	jle	loop128
 
 return_pass:
 	FUNC_RESTORE
-	mov	return, 0
+	xor	DWORD(return), DWORD(return)
 	ret
 
 

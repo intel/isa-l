@@ -120,29 +120,29 @@ default rel
 [bits 64]
 section .text
 
-align 16
+align 32
 mk_global  pq_gen_avx512, function
 func(pq_gen_avx512)
 	FUNC_SAVE
 	sub	vec, 3			;Keep as offset to last source
 	jng	return_fail		;Must have at least 2 sources
-	cmp	len, 0
+	test	len, len
 	je	return_pass
-	test	len, (32-1)		;Check alignment of length
+	test	BYTE(len), (32-1)		;Check alignment of length
 	jnz	return_fail
-	mov	pos, 0
-	mov	tmp, 0x1d
-	vpbroadcastb xpoly, tmp
-	vpxorq	xzero, xzero, xzero
-	cmp	len, 128
-	jl	loop32
+	mov	DWORD(pos), 0x1d1d1d1d
+	vpbroadcastd xpoly, DWORD(pos)
+	xor	DWORD(pos), DWORD(pos)
+	vpxor	xzeroy, xzeroy, xzeroy
+	cmp	len, 127
+	jle	loop32
 
 len_aligned_32bytes:
 	sub	len, 2*64		;Len points to last block
 
 loop128:
 	mov	ptr, [arg2+vec*8] 	;Fetch last source pointer
-	mov	tmp, vec		;Set tmp to point back to last vector
+	lea	tmp, [vec-1]		;Set tmp to point back to last vector
 	XLDR	xs1, [ptr+pos]		;Preload last vector (source)
 	XLDR	xs2, [ptr+pos+64]	;Preload last vector (source)
 	vpxorq	xp1, xp1, xp1		;p1 = 0
@@ -151,7 +151,6 @@ loop128:
 	vpxorq	xq2, xq2, xq2		;q2 = 0
 
 next_vect:
-	sub	tmp, 1		  	;Inner loop for each source vector
 	mov 	ptr, [arg2+tmp*8] 	; get pointer to next vect
 	vpxorq	xq1, xq1, xs1		; q1 ^= s1
 	vpxorq	xq2, xq2, xs2		; q2 ^= s2
@@ -167,7 +166,8 @@ next_vect:
 	vpaddb	xq2, xq2, xq2		; q2 = q2<<1
 	vpxorq	xq1, xq1, xtmp1		; q1 = q1<<1 ^ poly_masked
 	vpxorq	xq2, xq2, xtmp2		; q2 = q2<<1 ^ poly_masked
-	jg	next_vect		; Loop for each vect except 0
+	sub	tmp, 1		  	;Inner loop for each source vector
+	jge	next_vect		; Loop for each vect
 
 	mov	ptr, [arg2+8+vec*8]	;Get address of P parity vector
 	mov	tmp, [arg2+(2*8)+vec*8]	;Get address of Q parity vector
@@ -191,26 +191,26 @@ next_vect:
 
 loop32:
 	mov 	ptr, [arg2+vec*8] 	;Fetch last source pointer
-	mov	tmp, vec		;Set tmp to point back to last vector
+	lea	tmp, [vec-1]		;Set tmp to point back to last vector
 	XLDR	xs1y, [ptr+pos]		;Preload last vector (source)
-	vpxorq	xp1y, xp1y, xp1y	;p = 0
-	vpxorq	xq1y, xq1y, xq1y	;q = 0
+	vpxor	xp1y, xp1y, xp1y	;p = 0
+	vpxor	xq1y, xq1y, xq1y	;q = 0
 
 next_vect32:
-	sub	tmp, 1		  	;Inner loop for each source vector
 	mov 	ptr, [arg2+tmp*8] 	; get pointer to next vect
-	vpxorq	xq1y, xq1y, xs1y	; q1 ^= s1
+	vpxor	xq1y, xq1y, xs1y	; q1 ^= s1
 	vpblendvb xtmp1y, xzeroy, xpolyy, xq1y ; xtmp1 = poly or 0x00
-	vpxorq	xp1y, xp1y, xs1y	; p ^= s
+	vpxor	xp1y, xp1y, xs1y	; p ^= s
 	vpaddb	xq1y, xq1y, xq1y	; q = q<<1
-	vpxorq	xq1y, xq1y, xtmp1y	; q = q<<1 ^ poly_masked
+	vpxor	xq1y, xq1y, xtmp1y	; q = q<<1 ^ poly_masked
 	XLDR	xs1y, [ptr+pos]		; Get next vector (source data)
-	jg	next_vect32		; Loop for each vect except 0
+	sub	tmp, 1		  	;Inner loop for each source vector
+	jg	next_vect32		; Loop for each vect
 
 	mov	ptr, [arg2+8+vec*8]	;Get address of P parity vector
 	mov	tmp, [arg2+(2*8)+vec*8]	;Get address of Q parity vector
-	vpxorq	xp1y, xp1y, xs1y	;p ^= s[0] - last source is already loaded
-	vpxorq	xq1y, xq1y, xs1y	;q ^= 1 * s[0]
+	vpxor	xp1y, xp1y, xs1y	;p ^= s[0] - last source is already loaded
+	vpxor	xq1y, xq1y, xs1y	;q ^= 1 * s[0]
 	XSTR	[ptr+pos], xp1y		;Write parity P vector
 	XSTR	[tmp+pos], xq1y		;Write parity Q vector
 	add	pos, 32
@@ -219,7 +219,7 @@ next_vect32:
 
 
 return_pass:
-	mov	return, 0
+	xor	DWORD(return), DWORD(return)
 	FUNC_RESTORE
 	ret
 

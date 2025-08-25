@@ -99,27 +99,26 @@ default rel
 
 section .text
 
-align 16
+align 32
 mk_global  xor_gen_avx, function
 func(xor_gen_avx)
 
 	FUNC_SAVE
 	sub	vec, 2			;Keep as offset to last source
 	jng	return_fail		;Must have at least 2 sources
-	cmp	len, 0
+	test	len, len
 	je	return_pass
-	test	len, (128-1)		;Check alignment of length
+	test	BYTE(len), (128-1)	;Check alignment of length
 	jnz	len_not_aligned
 
 
 len_aligned_128bytes:
-	sub	len, 128
-	mov	pos, 0
+	add	len, -128
+	mov	DWORD(pos), DWORD(pos)
 
 loop128:
-	mov	tmp, vec		;Back to last vector
 	mov	tmp2, [arg2+vec*PS]	;Fetch last pointer in array
-	sub	tmp, 1			;Next vect
+	lea	tmp, [vec-1]		;Next vect
 	XLDR	ymm0, [tmp2+pos]	;Start with end of array in last vector
 	XLDR	ymm1, [tmp2+pos+32]	;Keep xor parity in xmm0-7
 	XLDR	ymm2, [tmp2+pos+(2*32)]
@@ -127,15 +126,15 @@ loop128:
 
 next_vect:
 	mov 	ptr, [arg2+tmp*PS]
-	sub	tmp, 1
 	XLDR	ymm4, [ptr+pos]		;Get next vector (source)
 	XLDR	ymm5, [ptr+pos+32]
 	XLDR	ymm6, [ptr+pos+(2*32)]
 	XLDR	ymm7, [ptr+pos+(3*32)]
-	vxorpd	ymm0, ymm0, ymm4	;Add to xor parity
-	vxorpd	ymm1, ymm1, ymm5
-	vxorpd	ymm2, ymm2, ymm6
-	vxorpd	ymm3, ymm3, ymm7
+	vpxor	ymm0, ymm0, ymm4	;Add to xor parity
+	vpxor	ymm1, ymm1, ymm5
+	vpxor	ymm2, ymm2, ymm6
+	vpxor	ymm3, ymm3, ymm7
+	sub	tmp, 1
 	jge	next_vect		;Loop for each source
 
 	mov	ptr, [arg2+PS+vec*PS]	;Address of parity vector
@@ -149,7 +148,7 @@ next_vect:
 
 return_pass:
 	FUNC_RESTORE
-	mov	return, 0
+	xor	DWORD(return), DWORD(return)
 	ret
 
 
@@ -165,17 +164,16 @@ nextvect_1byte:
 	sub	tmp, 1
 	jge	nextvect_1byte
 
-	mov	tmp, vec
-	add	tmp, 1		  	;Add back to point to last vec
+	lea	tmp, [vec+1]	  	;Add back to point to last vec
 	mov	ptr, [arg2+tmp*PS]
 	mov	[ptr+len-1], tmp2.b 	;Write parity
 	sub	len, 1
-	test	len, (PS-1)
+	test	BYTE(len), (PS-1)
 	jnz	loop_1byte
 
-	cmp	len, 0
+	test	len, len
 	je	return_pass
-	test	len, (128-1)		;If not 0 and 128bit aligned
+	test	BYTE(len), (128-1)		;If not 0 and 128bit aligned
 	jz	len_aligned_128bytes	; then do aligned case. len = y * 128
 
 	;; else we are 8-byte aligned so fall through to recheck
@@ -183,7 +181,7 @@ nextvect_1byte:
 
 	;; Unaligned length cases
 len_not_aligned:
-	test	len, (PS-1)
+	test	BYTE(len), (PS-1)
 	jne	loop_1byte
 	mov	tmp3, len
 	and	tmp3, (128-1)		;Do the unaligned bytes 8 at a time
@@ -208,10 +206,10 @@ nextvect_8bytes:
 	sub	tmp3, PS
 	jg	loop8_bytes
 
-	cmp	len, 128		;Now len is aligned to 128B
-	jge	len_aligned_128bytes	;We can do the rest aligned
+	cmp	len, 127		;Now len is aligned to 128B
+	jg	len_aligned_128bytes	;We can do the rest aligned
 
-	cmp	len, 0
+	test	len, len
 	je	return_pass
 
 return_fail:

@@ -100,47 +100,46 @@ default rel
 
 section .text
 
-align 16
+align 32
 mk_global  xor_gen_avx512, function
 func(xor_gen_avx512)
 	FUNC_SAVE
 	sub	vec, 2			;Keep as offset to last source
 	jng	return_fail		;Must have at least 2 sources
-	cmp	len, 0
+	test	len, len
 	je	return_pass
-	test	len, (128-1)		;Check alignment of length
+	test	BYTE(len), (128-1)		;Check alignment of length
 	jnz	len_not_aligned
 
 len_aligned_128bytes:
-	sub	len, 128
-	mov	pos, 0
+	add	len, -128		; shorter opcode for sub len, 128
+	xor	DWORD(pos), DWORD(pos)
 
 loop128:
-	mov	tmp, vec		;Back to last vector
 	mov	tmp2, [arg2+vec*PS]	;Fetch last pointer in array
-	sub	tmp, 1			;Next vect
+	lea	tmp, [vec-1]		;Next vect
 	XLDR	zmm0, [tmp2+pos]	;Start with end of array in last vector
 	XLDR	zmm1, [tmp2+pos+64]	;Keep xor parity in xmm0-7
 
 next_vect:
 	mov 	ptr, [arg2+tmp*PS]
-	sub	tmp, 1
 	XLDR	zmm4, [ptr+pos]		;Get next vector (source)
 	XLDR	zmm5, [ptr+pos+64]
 	vpxorq	zmm0, zmm0, zmm4	;Add to xor parity
 	vpxorq	zmm1, zmm1, zmm5
+	sub	tmp, 1
 	jge	next_vect		;Loop for each source
 
 	mov	ptr, [arg2+PS+vec*PS]	;Address of parity vector
 	XSTR	[ptr+pos], zmm0		;Write parity xor vector
 	XSTR	[ptr+pos+64], zmm1
-	add	pos, 128
+	sub	pos, -128
 	cmp	pos, len
 	jle	loop128
 
 return_pass:
 	FUNC_RESTORE
-	mov	return, 0
+	xor	DWORD(return), DWORD(return)
 	ret
 
 
