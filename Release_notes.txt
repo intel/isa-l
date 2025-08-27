@@ -147,6 +147,9 @@ v2.32
 * Igzip compression improvements:
   - Added new RVV adler32 implementations.
 
+* Igzip:
+  - Added experimental ISA-L shim library to provide drop-in compatibility with zlib.
+
 * RAID improvements:
   - Added new x86 AVX2+GFNI and AVX512+GFNI pq_gen implementations.
   - Added new RVV xor_gen, pq_gen implementations.
