@@ -94,7 +94,6 @@
 #define v_gft7_lo v23
 #define v_gft7_hi v24
 
-
 gf_7vect_dot_prod_rvv:
     /* less than 16 bytes, return_fail */
     li t0, 16
@@ -112,7 +111,7 @@ gf_7vect_dot_prod_rvv:
     sd s7, 56(sp)
     sd s8, 64(sp)
 
-    vsetvli t0, x0, e8, m1
+    vsetvli t0, x0, e8, m1, ta, ma
     /* initialize position */
     li x_pos, 0
 
@@ -161,7 +160,7 @@ gf_7vect_dot_prod_rvv:
     slli a5, x_vec_i, 3
     add a5, x_src, a5
     ld x_ptr, 0(a5)
-    add x_ptr,x_ptr,x_pos
+    add x_ptr, x_ptr, x_pos
 
     vle8.v v_src, (x_ptr)
 
@@ -241,7 +240,6 @@ gf_7vect_dot_prod_rvv:
     vxor.vv v_dest6, v_dest6, v26
     vxor.vv v_dest6, v_dest6, v27
 
-
     /* GF multiplication and accumulation for dest7 */
     vrgather.vv v26, v_gft7_lo, v_src_lo
     vrgather.vv v27, v_gft7_hi, v_src_hi
@@ -261,13 +259,13 @@ gf_7vect_dot_prod_rvv:
     vse8.v v_dest6, (x_dest6)
     vse8.v v_dest7, (x_dest7)
 
-    add x_dest1,x_dest1, t0
-    add x_dest2,x_dest2, t0
-    add x_dest3,x_dest3, t0
-    add x_dest4,x_dest4, t0
-    add x_dest5,x_dest5, t0
-    add x_dest6,x_dest6, t0
-    add x_dest7,x_dest7, t0
+    add x_dest1, x_dest1, t0
+    add x_dest2, x_dest2, t0
+    add x_dest3, x_dest3, t0
+    add x_dest4, x_dest4, t0
+    add x_dest5, x_dest5, t0
+    add x_dest6, x_dest6, t0
+    add x_dest7, x_dest7, t0
 
     /* increment one vector length */
     add x_pos, x_pos, t0

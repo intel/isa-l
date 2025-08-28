@@ -83,7 +83,7 @@ gf_5vect_mad_rvv:
     li t6, 16
     blt x_len, t6, .return_fail
 
-    vsetvli a7, x0, e8, m1
+    vsetvli a7, x0, e8, m1, ta, ma
 
     /* Load table 1 */
     slli a6, x_vec_i, 5

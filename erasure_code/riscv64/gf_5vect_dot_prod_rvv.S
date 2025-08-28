@@ -95,7 +95,7 @@ gf_5vect_dot_prod_rvv:
     sd s4, 32(sp)
     sd s5, 40(sp)
 
-    vsetvli a5, x0, e8, m1
+    vsetvli a5, x0, e8, m1, ta, ma
     /* Initialize position */
     li x_pos, 0
 
@@ -203,7 +203,6 @@ gf_5vect_dot_prod_rvv:
     /* Check if we have processed all vectors */
     blt x_vec_i, x_vec, .Llooprvv_vl_vects
 
-
     vse8.v v_dest1, (x_dest1)
     vse8.v v_dest2, (x_dest2)
     vse8.v v_dest3, (x_dest3)
@@ -211,11 +210,11 @@ gf_5vect_dot_prod_rvv:
     vse8.v v_dest5, (x_dest5)
 
     /* Store destination data */
-    add x_dest1,x_dest1,a5
-    add x_dest2,x_dest2,a5
-    add x_dest3,x_dest3,a5
-    add x_dest4,x_dest4,a5
-    add x_dest5,x_dest5,a5
+    add x_dest1, x_dest1, a5
+    add x_dest2, x_dest2, a5
+    add x_dest3, x_dest3, a5
+    add x_dest4, x_dest4, a5
+    add x_dest5, x_dest5, a5
 
     /* Increment position */
     add x_pos, x_pos, a5

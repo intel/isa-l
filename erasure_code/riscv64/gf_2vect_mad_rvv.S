@@ -71,7 +71,7 @@ gf_2vect_mad_rvv:
     li t3, 16
     blt x_len, t3, .return_fail
 
-    vsetvli t4, x0, e8, m1
+    vsetvli t4, x0, e8, m1, ta, ma
 
     /* load table 1 */
     slli t3, x_vec_i, 5

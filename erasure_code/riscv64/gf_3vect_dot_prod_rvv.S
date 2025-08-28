@@ -57,7 +57,6 @@
 #define x_dest3 a5
 #define t_offset a6
 
-
 /* vectors */
 #define v_src v1
 #define v_src_lo v2
@@ -84,7 +83,7 @@ gf_3vect_dot_prod_rvv:
     sd s0, 0(sp)
     sd s1, 8(sp)
 
-    vsetvli a7, x0, e8, m1  /* Set vector length to maximum */
+    vsetvli a7, x0, e8, m1, ta, ma  /* Set vector length to maximum */
     li x_pos, 0
     slli x_vec, x_vec, 3
 
@@ -114,7 +113,7 @@ gf_3vect_dot_prod_rvv:
 
 .Lloop_rvv_vl_vects:
     /* load source data */
-    add x_ptr,x_ptr,x_pos
+    add x_ptr, x_ptr, x_pos
     vle8.v v_src, (x_ptr)
 
     /* Split 4-bit lo; 4-bit hi */
@@ -167,9 +166,9 @@ gf_3vect_dot_prod_rvv:
     vse8.v v_dest1, (x_dest1)
     vse8.v v_dest2, (x_dest2)
     vse8.v v_dest3, (x_dest3)
-    add x_dest1,x_dest1, a7
-    add x_dest2,x_dest2, a7
-    add x_dest3,x_dest3, a7
+    add x_dest1, x_dest1, a7
+    add x_dest2, x_dest2, a7
+    add x_dest3, x_dest3, a7
 
     add x_pos, x_pos, a7
     j .Lloop_rvv_vl

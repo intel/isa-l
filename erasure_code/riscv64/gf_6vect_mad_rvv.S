@@ -91,7 +91,7 @@ gf_6vect_mad_rvv:
     addi sp, sp, -16
     sd s8, 0(sp)
 
-    vsetvli a6, x0, e8, m1
+    vsetvli a6, x0, e8, m1, ta, ma
 
     /* Load table 1 */
     slli s8, x_vec_i, 5

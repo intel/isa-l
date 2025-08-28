@@ -65,7 +65,7 @@ gf_vect_mad_rvv:
     li t1, 16
     blt x_len, t1, .return_fail
 
-    vsetvli t2, x0, e8, m1
+    vsetvli t2, x0, e8, m1, ta, ma
 
     /* x_tbl += x_vec_i * 2^5 */
     slli t1, x_vec_i, 5
