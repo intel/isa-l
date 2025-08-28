@@ -74,7 +74,7 @@ gf_2vect_dot_prod_rvv:
     li t6, 16
     blt x_len, t6, .return_fail
 
-    vsetvli a5, x0, e8, m1  /* Set vector length to maximum */
+    vsetvli a5, x0, e8, m1, ta, ma  /* Set vector length to maximum */
     li x_pos, 0
     slli x_vec, x_vec, 3
 
@@ -91,7 +91,7 @@ gf_2vect_dot_prod_rvv:
     vmv.v.i v_dest1, 0         /* clear v_dest1 */
     vmv.v.i v_dest2, 0         /* clear v_dest2 */
 
-    /* gf_tbl base = (x_tbl + dest_idx * x_vec * 32) */
+    /* gf_tbl base = (x_tbl + dest_idx * x_vec * 32) shifting left 5 is split shifting 3 then shifting 2 */
     mv x_tbl1, x_tbl           /* reset x_tbl1 */
     slli t6, x_vec, 2
     add x_tbl2, x_tbl1, t6     /* reset x_tbl2 */
@@ -99,7 +99,7 @@ gf_2vect_dot_prod_rvv:
 /* Loop 2: x_vec, number of source vectors (ie. data blocks) */
 .Llooprvv_vl_vects:
     /* load src data */
-    add x_ptr,x_ptr,x_pos
+    add x_ptr, x_ptr, x_pos
 
     vle8.v v_src, (x_ptr)      /* load from: src base + pos offset */
     /* split 4-bit lo; 4-bit hi */
@@ -143,8 +143,8 @@ gf_2vect_dot_prod_rvv:
     /* store dest data */
     vse8.v v_dest1, (x_dest1)
     vse8.v v_dest2, (x_dest2)
-    add x_dest1,x_dest1,a5
-    add x_dest2,x_dest2,a5
+    add x_dest1, x_dest1, a5
+    add x_dest2, x_dest2, a5
 
     /* increment one vector length */
     add x_pos, x_pos, a5

@@ -91,8 +91,7 @@ gf_4vect_dot_prod_rvv:
     sd s2, 16(sp)
     sd s3, 24(sp)
 
-  #  vsetvli t0, x0, e8, m1  /* Set vector length to maximum */
-    vsetvli t0, x0, e8, m1
+    vsetvli t0, x0, e8, m1, ta, ma
     li x_pos, 0
 
     slli x_vec, x_vec, 3
@@ -128,7 +127,7 @@ gf_4vect_dot_prod_rvv:
 
 .Lloop_rvv_vl_vects:
     /* Load source data */
-    add x_ptr,x_ptr,x_pos
+    add x_ptr, x_ptr, x_pos
 
     vle8.v v_src, (x_ptr)
 
@@ -194,10 +193,10 @@ gf_4vect_dot_prod_rvv:
     vse8.v v_dest2, (x_dest2)
     vse8.v v_dest3, (x_dest3)
     vse8.v v_dest4, (x_dest4)
-    add x_dest1,x_dest1, t0
-    add x_dest2,x_dest2, t0
-    add x_dest3,x_dest3, t0
-    add x_dest4,x_dest4, t0
+    add x_dest1, x_dest1, t0
+    add x_dest2, x_dest2, t0
+    add x_dest3, x_dest3, t0
+    add x_dest4, x_dest4, t0
     /* Increment position */
     add x_pos, x_pos, t0
     j .Lloop_rvv_vl

@@ -67,7 +67,7 @@ gf_vect_mul_rvv:
     andi x_tmp, x_len, 0x1F
     bnez x_tmp, .return_fail
 
-    vsetvli t6, x0, e8, m1
+    vsetvli t6, x0, e8, m1, ta, ma
 
     /* Load pre-calculated constants into v_gft1_lo and v_gft1_hi */
     vle8.v v_gft1_lo, (x_tbl)
@@ -79,7 +79,7 @@ gf_vect_mul_rvv:
 
 .Llooprvv_vl:
     /* Load source data into v_src */
-    add x_ptr,x_src,x_pos
+    add x_ptr, x_src, x_pos
     vle8.v v_src, (x_ptr)
 
     /* Split 4-bit lo and 4-bit hi */

@@ -102,7 +102,7 @@ gf_6vect_dot_prod_rvv:
     sd s7, 56(sp)
 
     li t0, 0x0F
-    vsetvli a5, x0, e8, m1
+    vsetvli a5, x0, e8, m1, ta, ma
 
     /* initialize position */
     li x_pos, 0
@@ -136,7 +136,7 @@ gf_6vect_dot_prod_rvv:
     vmv.v.i v_dest6, 0
 
     /* initialize table pointers */
-    /* gf_tbl base = (x_tbl + dest_idx * x_vec * 32) */
+    /* gf_tbl base = (x_tbl + dest_idx * x_vec * 32) shifting left 5 is split shifting 3 then shifting 2 */
     mv x_tbl1, x_tbl
     slli t0, x_vec, 2
     add x_tbl2, x_tbl1, t0
@@ -147,9 +147,8 @@ gf_6vect_dot_prod_rvv:
 
 .Llooprvv_vl_vects:
     /* load source data */
-    add x_ptr,x_ptr,x_pos
+    add x_ptr, x_ptr, x_pos
     vle8.v v_src, (x_ptr)
-
 
     /* split 4-bit lo; 4-bit hi */
     vand.vi v_src_lo, v_src, 0x0F
@@ -167,7 +166,7 @@ gf_6vect_dot_prod_rvv:
     addi x_tbl2, x_tbl2, 16
 
     /* load next source pointer */
-    addi x_vec_i, x_vec_i,8
+    addi x_vec_i, x_vec_i, 8
     add a6, x_src, x_vec_i
     ld x_ptr, 0(a6)
 
@@ -238,12 +237,12 @@ gf_6vect_dot_prod_rvv:
     vse8.v v_dest5, (x_dest5)  # x_dest5
     vse8.v v_dest6, (x_dest6)  # x_dest6
 
-    add x_dest1,x_dest1, a5
-    add x_dest2,x_dest2, a5
-    add x_dest3,x_dest3, a5
-    add x_dest4,x_dest4, a5
-    add x_dest5,x_dest5, a5
-    add x_dest6,x_dest6, a5
+    add x_dest1, x_dest1, a5
+    add x_dest2, x_dest2, a5
+    add x_dest3, x_dest3, a5
+    add x_dest4, x_dest4, a5
+    add x_dest5, x_dest5, a5
+    add x_dest6, x_dest6, a5
 
     /* increment position */
     add x_pos, x_pos, a5
