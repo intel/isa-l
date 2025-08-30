@@ -113,7 +113,7 @@ func(xor_gen_avx)
 
 
 len_aligned_128bytes:
-	add	len, -128
+	sub	len, 128
 	mov	DWORD(pos), DWORD(pos)
 
 loop128:
@@ -130,10 +130,10 @@ next_vect:
 	XLDR	ymm5, [ptr+pos+32]
 	XLDR	ymm6, [ptr+pos+(2*32)]
 	XLDR	ymm7, [ptr+pos+(3*32)]
-	vpxor	ymm0, ymm0, ymm4	;Add to xor parity
-	vpxor	ymm1, ymm1, ymm5
-	vpxor	ymm2, ymm2, ymm6
-	vpxor	ymm3, ymm3, ymm7
+	vxorpd	ymm0, ymm0, ymm4	;Add to xor parity
+	vxorpd	ymm1, ymm1, ymm5
+	vxorpd	ymm2, ymm2, ymm6
+	vxorpd	ymm3, ymm3, ymm7
 	sub	tmp, 1
 	jge	next_vect		;Loop for each source
 

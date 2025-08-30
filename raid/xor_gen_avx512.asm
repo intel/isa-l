@@ -112,7 +112,7 @@ func(xor_gen_avx512)
 	jnz	len_not_aligned
 
 len_aligned_128bytes:
-	add	len, -128		; shorter opcode for sub len, 128
+	sub	len, 128
 	xor	DWORD(pos), DWORD(pos)
 
 loop128:
@@ -133,7 +133,7 @@ next_vect:
 	mov	ptr, [arg2+PS+vec*PS]	;Address of parity vector
 	XSTR	[ptr+pos], zmm0		;Write parity xor vector
 	XSTR	[ptr+pos+64], zmm1
-	sub	pos, -128
+	add	pos, 128
 	cmp	pos, len
 	jle	loop128
 
