@@ -220,7 +220,7 @@ next_vect32:
 	vpxor	xq1, xq1, xtmp1		; q = q<<1 ^ poly_masked
 	XLDR	xs1, [ptr+pos]		; Get next vector (source data)
 	sub	tmp, 1		  	;Inner loop for each source vector
-	jg	next_vect32		; Loop for each vect
+	jge	next_vect32		; Loop for each vect
 
 	mov	ptr, [arg2+8+vec*8]	;Get address of P parity vector
 	mov	tmp, [arg2+(2*8)+vec*8]	;Get address of Q parity vector
