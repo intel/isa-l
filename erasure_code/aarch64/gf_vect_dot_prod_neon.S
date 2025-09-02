@@ -169,9 +169,6 @@ cdecl(gf_vect_dot_prod_neon):
 	ldp	q_data_4, q_data_5, [x_ptr], #32
 	ldp	q_data_6, q_data_7, [x_ptr]
 
-	prfm	pldl1keep, [x_tbl1]
-	prfm	pldl1strm, [x_ptr]
-
 	and	v_data_0_lo.16b, v_data_0.16b, v_mask0f.16b
 	and	v_data_1_lo.16b, v_data_1.16b, v_mask0f.16b
 	and	v_data_2_lo.16b, v_data_2.16b, v_mask0f.16b
@@ -209,20 +206,20 @@ cdecl(gf_vect_dot_prod_neon):
 	tbl	v_data_7_hi.16b, {v_gft1_hi.16b}, v_data_7_hi.16b
 
 	eor	v_p0.16b, v_data_0_lo.16b, v_p0.16b
-	eor	v_p0.16b, v_p0.16b, v_data_0_hi.16b
 	eor	v_p1.16b, v_data_1_lo.16b, v_p1.16b
-	eor	v_p1.16b, v_p1.16b, v_data_1_hi.16b
 	eor	v_p2.16b, v_data_2_lo.16b, v_p2.16b
-	eor	v_p2.16b, v_p2.16b, v_data_2_hi.16b
 	eor	v_p3.16b, v_data_3_lo.16b, v_p3.16b
-	eor	v_p3.16b, v_p3.16b, v_data_3_hi.16b
 	eor	v_p4.16b, v_data_4_lo.16b, v_p4.16b
-	eor	v_p4.16b, v_p4.16b, v_data_4_hi.16b
 	eor	v_p5.16b, v_data_5_lo.16b, v_p5.16b
-	eor	v_p5.16b, v_p5.16b, v_data_5_hi.16b
 	eor	v_p6.16b, v_data_6_lo.16b, v_p6.16b
-	eor	v_p6.16b, v_p6.16b, v_data_6_hi.16b
 	eor	v_p7.16b, v_data_7_lo.16b, v_p7.16b
+	eor	v_p0.16b, v_p0.16b, v_data_0_hi.16b
+	eor	v_p1.16b, v_p1.16b, v_data_1_hi.16b
+	eor	v_p2.16b, v_p2.16b, v_data_2_hi.16b
+	eor	v_p3.16b, v_p3.16b, v_data_3_hi.16b
+	eor	v_p4.16b, v_p4.16b, v_data_4_hi.16b
+	eor	v_p5.16b, v_p5.16b, v_data_5_hi.16b
+	eor	v_p6.16b, v_p6.16b, v_data_6_hi.16b
 	eor	v_p7.16b, v_p7.16b, v_data_7_hi.16b
 
 	cmp	x_vec_i, x_vec
