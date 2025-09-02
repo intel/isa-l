@@ -186,128 +186,124 @@ cdecl(gf_2vect_dot_prod_neon):
 	add	x_vec_i, x_vec_i, #8
 	add	x_ptr, x_ptr, x_pos
 
-	ldp	q_data_0, q_data_1, [x_ptr], #32
-	ldp	q_data_2, q_data_3, [x_ptr], #32
+	ld1	{v_data_0.16b, v_data_1.16b, v_data_2.16b, v_data_3.16b}, [x_ptr], #64
+	ld1	{v_gft1_lo.16b, v_gft1_hi.16b}, [x_tbl1], #32
+	ld1	{v_gft2_lo.16b, v_gft2_hi.16b}, [x_tbl2], #32
 
-	ldp	q_gft1_lo, q_gft1_hi, [x_tbl1], #32
-	ldp	q_gft2_lo, q_gft2_hi, [x_tbl2], #32
-	ldp	q_data_4, q_data_5, [x_ptr], #32
-	ldp	q_data_6, q_data_7, [x_ptr], #32
-	prfm	pldl1strm, [x_ptr]
-	prfm	pldl1keep, [x_tbl1]
-	prfm	pldl1keep, [x_tbl2]
-
-	/* data_0 */
+	/* data_0 - use data_4,5,6,7 as temporaries */
 	and	v_tmp1.16b, v_data_0.16b, v_mask0f.16b
 	ushr	v_data_0.16b, v_data_0.16b, #4
 
 	tbl	v_tmp1_lo.16b, {v_gft1_lo.16b}, v_tmp1.16b
 	tbl	v_tmp1_hi.16b, {v_gft1_hi.16b}, v_data_0.16b
+	tbl	v_data_4.16b, {v_gft2_lo.16b}, v_tmp1.16b
+	tbl	v_data_5.16b, {v_gft2_hi.16b}, v_data_0.16b
+
 	eor	v_p1_0.16b, v_tmp1_lo.16b, v_p1_0.16b
+	eor	v_p2_0.16b, v_data_4.16b, v_p2_0.16b
 	eor	v_p1_0.16b, v_p1_0.16b, v_tmp1_hi.16b
+	eor	v_p2_0.16b, v_p2_0.16b, v_data_5.16b
 
-	tbl	v_tmp1_lo.16b, {v_gft2_lo.16b}, v_tmp1.16b
-	tbl	v_tmp1_hi.16b, {v_gft2_hi.16b}, v_data_0.16b
-	eor	v_p2_0.16b, v_tmp1_lo.16b, v_p2_0.16b
-	eor	v_p2_0.16b, v_p2_0.16b, v_tmp1_hi.16b
-
-	/* data_1 */
+	/* data_1 - use data_4,5,6,7 as temporaries */
 	and	v_tmp1.16b, v_data_1.16b, v_mask0f.16b
 	ushr	v_data_1.16b, v_data_1.16b, #4
 
 	tbl	v_tmp1_lo.16b, {v_gft1_lo.16b}, v_tmp1.16b
 	tbl	v_tmp1_hi.16b, {v_gft1_hi.16b}, v_data_1.16b
+	tbl	v_data_4.16b, {v_gft2_lo.16b}, v_tmp1.16b
+	tbl	v_data_5.16b, {v_gft2_hi.16b}, v_data_1.16b
+
 	eor	v_p1_1.16b, v_tmp1_lo.16b, v_p1_1.16b
+	eor	v_p2_1.16b, v_data_4.16b, v_p2_1.16b
 	eor	v_p1_1.16b, v_p1_1.16b, v_tmp1_hi.16b
+	eor	v_p2_1.16b, v_p2_1.16b, v_data_5.16b
 
-	tbl	v_tmp1_lo.16b, {v_gft2_lo.16b}, v_tmp1.16b
-	tbl	v_tmp1_hi.16b, {v_gft2_hi.16b}, v_data_1.16b
-	eor	v_p2_1.16b, v_tmp1_lo.16b, v_p2_1.16b
-	eor	v_p2_1.16b, v_p2_1.16b, v_tmp1_hi.16b
-
-	/* data_2 */
+	/* data_2 - use data_6,7 as temporaries */
 	and	v_tmp1.16b, v_data_2.16b, v_mask0f.16b
 	ushr	v_data_2.16b, v_data_2.16b, #4
 
 	tbl	v_tmp1_lo.16b, {v_gft1_lo.16b}, v_tmp1.16b
 	tbl	v_tmp1_hi.16b, {v_gft1_hi.16b}, v_data_2.16b
+	tbl	v_data_6.16b, {v_gft2_lo.16b}, v_tmp1.16b
+	tbl	v_data_7.16b, {v_gft2_hi.16b}, v_data_2.16b
+
 	eor	v_p1_2.16b, v_tmp1_lo.16b, v_p1_2.16b
+	eor	v_p2_2.16b, v_data_6.16b, v_p2_2.16b
 	eor	v_p1_2.16b, v_p1_2.16b, v_tmp1_hi.16b
+	eor	v_p2_2.16b, v_p2_2.16b, v_data_7.16b
 
-	tbl	v_tmp1_lo.16b, {v_gft2_lo.16b}, v_tmp1.16b
-	tbl	v_tmp1_hi.16b, {v_gft2_hi.16b}, v_data_2.16b
-	eor	v_p2_2.16b, v_tmp1_lo.16b, v_p2_2.16b
-	eor	v_p2_2.16b, v_p2_2.16b, v_tmp1_hi.16b
-
-	/* data_3 */
+	/* data_3 - use data_6,7 as temporaries */
 	and	v_tmp1.16b, v_data_3.16b, v_mask0f.16b
 	ushr	v_data_3.16b, v_data_3.16b, #4
 
 	tbl	v_tmp1_lo.16b, {v_gft1_lo.16b}, v_tmp1.16b
 	tbl	v_tmp1_hi.16b, {v_gft1_hi.16b}, v_data_3.16b
+	tbl	v_data_6.16b, {v_gft2_lo.16b}, v_tmp1.16b
+	tbl	v_data_7.16b, {v_gft2_hi.16b}, v_data_3.16b
+
 	eor	v_p1_3.16b, v_tmp1_lo.16b, v_p1_3.16b
+	eor	v_p2_3.16b, v_data_6.16b, v_p2_3.16b
 	eor	v_p1_3.16b, v_p1_3.16b, v_tmp1_hi.16b
+	eor	v_p2_3.16b, v_p2_3.16b, v_data_7.16b
 
-	tbl	v_tmp1_lo.16b, {v_gft2_lo.16b}, v_tmp1.16b
-	tbl	v_tmp1_hi.16b, {v_gft2_hi.16b}, v_data_3.16b
-	eor	v_p2_3.16b, v_tmp1_lo.16b, v_p2_3.16b
-	eor	v_p2_3.16b, v_p2_3.16b, v_tmp1_hi.16b
+	/* Load data_4-7 now that we need them */
+	ld1	{v_data_4.16b, v_data_5.16b, v_data_6.16b, v_data_7.16b}, [x_ptr], #64
 
-	/* data_4 */
+	/* data_4 - use data_0,1 as temporaries */
 	and	v_tmp1.16b, v_data_4.16b, v_mask0f.16b
 	ushr	v_data_4.16b, v_data_4.16b, #4
 
 	tbl	v_tmp1_lo.16b, {v_gft1_lo.16b}, v_tmp1.16b
 	tbl	v_tmp1_hi.16b, {v_gft1_hi.16b}, v_data_4.16b
+	tbl	v_data_0.16b, {v_gft2_lo.16b}, v_tmp1.16b
+	tbl	v_data_1.16b, {v_gft2_hi.16b}, v_data_4.16b
+
 	eor	v_p1_4.16b, v_tmp1_lo.16b, v_p1_4.16b
+	eor	v_p2_4.16b, v_data_0.16b, v_p2_4.16b
 	eor	v_p1_4.16b, v_p1_4.16b, v_tmp1_hi.16b
+	eor	v_p2_4.16b, v_p2_4.16b, v_data_1.16b
 
-	tbl	v_tmp1_lo.16b, {v_gft2_lo.16b}, v_tmp1.16b
-	tbl	v_tmp1_hi.16b, {v_gft2_hi.16b}, v_data_4.16b
-	eor	v_p2_4.16b, v_tmp1_lo.16b, v_p2_4.16b
-	eor	v_p2_4.16b, v_p2_4.16b, v_tmp1_hi.16b
-
-	/* data_5 */
+	/* data_5 - use data_0,1 as temporaries */
 	and	v_tmp1.16b, v_data_5.16b, v_mask0f.16b
 	ushr	v_data_5.16b, v_data_5.16b, #4
 
 	tbl	v_tmp1_lo.16b, {v_gft1_lo.16b}, v_tmp1.16b
 	tbl	v_tmp1_hi.16b, {v_gft1_hi.16b}, v_data_5.16b
+	tbl	v_data_0.16b, {v_gft2_lo.16b}, v_tmp1.16b
+	tbl	v_data_1.16b, {v_gft2_hi.16b}, v_data_5.16b
+
 	eor	v_p1_5.16b, v_tmp1_lo.16b, v_p1_5.16b
+	eor	v_p2_5.16b, v_data_0.16b, v_p2_5.16b
 	eor	v_p1_5.16b, v_p1_5.16b, v_tmp1_hi.16b
+	eor	v_p2_5.16b, v_p2_5.16b, v_data_1.16b
 
-	tbl	v_tmp1_lo.16b, {v_gft2_lo.16b}, v_tmp1.16b
-	tbl	v_tmp1_hi.16b, {v_gft2_hi.16b}, v_data_5.16b
-	eor	v_p2_5.16b, v_tmp1_lo.16b, v_p2_5.16b
-	eor	v_p2_5.16b, v_p2_5.16b, v_tmp1_hi.16b
-
-	/* data_6 */
+	/* data_6 - use data_2,3 as temporaries */
 	and	v_tmp1.16b, v_data_6.16b, v_mask0f.16b
 	ushr	v_data_6.16b, v_data_6.16b, #4
 
 	tbl	v_tmp1_lo.16b, {v_gft1_lo.16b}, v_tmp1.16b
 	tbl	v_tmp1_hi.16b, {v_gft1_hi.16b}, v_data_6.16b
+	tbl	v_data_2.16b, {v_gft2_lo.16b}, v_tmp1.16b
+	tbl	v_data_3.16b, {v_gft2_hi.16b}, v_data_6.16b
+
 	eor	v_p1_6.16b, v_tmp1_lo.16b, v_p1_6.16b
+	eor	v_p2_6.16b, v_data_2.16b, v_p2_6.16b
 	eor	v_p1_6.16b, v_p1_6.16b, v_tmp1_hi.16b
+	eor	v_p2_6.16b, v_p2_6.16b, v_data_3.16b
 
-	tbl	v_tmp1_lo.16b, {v_gft2_lo.16b}, v_tmp1.16b
-	tbl	v_tmp1_hi.16b, {v_gft2_hi.16b}, v_data_6.16b
-	eor	v_p2_6.16b, v_tmp1_lo.16b, v_p2_6.16b
-	eor	v_p2_6.16b, v_p2_6.16b, v_tmp1_hi.16b
-
-	/* data_7 */
+	/* data_7 - use data_2,3 as temporaries */
 	and	v_tmp1.16b, v_data_7.16b, v_mask0f.16b
 	ushr	v_data_7.16b, v_data_7.16b, #4
 
 	tbl	v_tmp1_lo.16b, {v_gft1_lo.16b}, v_tmp1.16b
 	tbl	v_tmp1_hi.16b, {v_gft1_hi.16b}, v_data_7.16b
-	eor	v_p1_7.16b, v_tmp1_lo.16b, v_p1_7.16b
-	eor	v_p1_7.16b, v_p1_7.16b, v_tmp1_hi.16b
+	tbl	v_data_2.16b, {v_gft2_lo.16b}, v_tmp1.16b
+	tbl	v_data_3.16b, {v_gft2_hi.16b}, v_data_7.16b
 
-	tbl	v_tmp1_lo.16b, {v_gft2_lo.16b}, v_tmp1.16b
-	tbl	v_tmp1_hi.16b, {v_gft2_hi.16b}, v_data_7.16b
-	eor	v_p2_7.16b, v_tmp1_lo.16b, v_p2_7.16b
-	eor	v_p2_7.16b, v_p2_7.16b, v_tmp1_hi.16b
+	eor	v_p1_7.16b, v_tmp1_lo.16b, v_p1_7.16b
+	eor	v_p2_7.16b, v_data_2.16b, v_p2_7.16b
+	eor	v_p1_7.16b, v_p1_7.16b, v_tmp1_hi.16b
+	eor	v_p2_7.16b, v_p2_7.16b, v_data_3.16b
 
 	cmp	x_vec_i, x_vec
 	blt	.Lloop128_vects
