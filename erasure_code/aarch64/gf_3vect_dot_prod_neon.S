@@ -170,95 +170,93 @@ cdecl(gf_3vect_dot_prod_neon):
 	add	x_vec_i, x_vec_i, #8
 	add	x_ptr, x_ptr, x_pos
 
-	ldr	q_data_0, [x_ptr], #16
-	ldr	q_data_1, [x_ptr], #16
-
 	ldp	q_gft1_lo, q_gft1_hi, [x_tbl1], #32
 	ldp	q_gft2_lo, q_gft2_hi, [x_tbl2], #32
 	ldp	q_gft3_lo, q_gft3_hi, [x_tbl3], #32
 
-	ldr	q_data_2, [x_ptr], #16
-	ldr	q_data_3, [x_ptr], #16
-	prfm	pldl1strm, [x_ptr]
-	prfm	pldl1keep, [x_tbl1]
-	prfm	pldl1keep, [x_tbl2]
-	prfm	pldl1keep, [x_tbl3]
-
-	/* data_0 */
+	/* data_0 - load immediately before use */
+	ldr	q_data_0, [x_ptr], #16
 	and	v_tmp1.16b, v_data_0.16b, v_mask0f.16b
 	ushr	v_data_0.16b, v_data_0.16b, #4
 
+	/* Group all tbl instructions for data_0 using data_1, data_2, data_3 as temps */
 	tbl	v_tmp1_lo.16b, {v_gft1_lo.16b}, v_tmp1.16b
 	tbl	v_tmp1_hi.16b, {v_gft1_hi.16b}, v_data_0.16b
+	tbl	v_data_1.16b, {v_gft2_lo.16b}, v_tmp1.16b      // data_1 as temp
+	tbl	v_data_2.16b, {v_gft2_hi.16b}, v_data_0.16b    // data_2 as temp
+	tbl	v_data_3.16b, {v_gft3_lo.16b}, v_tmp1.16b      // data_3 as temp
+	tbl	v_data_0.16b, {v_gft3_hi.16b}, v_data_0.16b    // data_0 as temp
+
+	/* Group all eor instructions for data_0 */
 	eor	v_p1_0.16b, v_tmp1_lo.16b, v_p1_0.16b
+	eor	v_p2_0.16b, v_data_1.16b, v_p2_0.16b
+	eor	v_p3_0.16b, v_data_3.16b, v_p3_0.16b
 	eor	v_p1_0.16b, v_p1_0.16b, v_tmp1_hi.16b
+	eor	v_p2_0.16b, v_p2_0.16b, v_data_2.16b
+	eor	v_p3_0.16b, v_p3_0.16b, v_data_0.16b
 
-	tbl	v_tmp1_lo.16b, {v_gft2_lo.16b}, v_tmp1.16b
-	tbl	v_tmp1_hi.16b, {v_gft2_hi.16b}, v_data_0.16b
-	eor	v_p2_0.16b, v_tmp1_lo.16b, v_p2_0.16b
-	eor	v_p2_0.16b, v_p2_0.16b, v_tmp1_hi.16b
-
-	tbl	v_tmp1_lo.16b, {v_gft3_lo.16b}, v_tmp1.16b
-	tbl	v_tmp1_hi.16b, {v_gft3_hi.16b}, v_data_0.16b
-	eor	v_p3_0.16b, v_tmp1_lo.16b, v_p3_0.16b
-	eor	v_p3_0.16b, v_p3_0.16b, v_tmp1_hi.16b
-
-	/* data_1 */
+	/* data_1 - load immediately before use */
+	ldr	q_data_1, [x_ptr], #16
 	and	v_tmp1.16b, v_data_1.16b, v_mask0f.16b
 	ushr	v_data_1.16b, v_data_1.16b, #4
 
+	/* Group all tbl instructions for data_1 using data_0, data_2, data_3 as temps */
 	tbl	v_tmp1_lo.16b, {v_gft1_lo.16b}, v_tmp1.16b
 	tbl	v_tmp1_hi.16b, {v_gft1_hi.16b}, v_data_1.16b
+	tbl	v_data_0.16b, {v_gft2_lo.16b}, v_tmp1.16b      // data_0 as temp
+	tbl	v_data_2.16b, {v_gft2_hi.16b}, v_data_1.16b    // data_2 as temp
+	tbl	v_data_3.16b, {v_gft3_lo.16b}, v_tmp1.16b      // data_3 as temp
+	tbl	v_data_1.16b, {v_gft3_hi.16b}, v_data_1.16b    // data_1 as temp
+
+	/* Group all eor instructions for data_1 */
 	eor	v_p1_1.16b, v_tmp1_lo.16b, v_p1_1.16b
+	eor	v_p2_1.16b, v_data_0.16b, v_p2_1.16b
+	eor	v_p3_1.16b, v_data_3.16b, v_p3_1.16b
 	eor	v_p1_1.16b, v_p1_1.16b, v_tmp1_hi.16b
+	eor	v_p2_1.16b, v_p2_1.16b, v_data_2.16b
+	eor	v_p3_1.16b, v_p3_1.16b, v_data_1.16b
 
-	tbl	v_tmp1_lo.16b, {v_gft2_lo.16b}, v_tmp1.16b
-	tbl	v_tmp1_hi.16b, {v_gft2_hi.16b}, v_data_1.16b
-	eor	v_p2_1.16b, v_tmp1_lo.16b, v_p2_1.16b
-	eor	v_p2_1.16b, v_p2_1.16b, v_tmp1_hi.16b
-
-	tbl	v_tmp1_lo.16b, {v_gft3_lo.16b}, v_tmp1.16b
-	tbl	v_tmp1_hi.16b, {v_gft3_hi.16b}, v_data_1.16b
-	eor	v_p3_1.16b, v_tmp1_lo.16b, v_p3_1.16b
-	eor	v_p3_1.16b, v_p3_1.16b, v_tmp1_hi.16b
-
-	/* data_2 */
+	/* data_2 - load immediately before use */
+	ldr	q_data_2, [x_ptr], #16
 	and	v_tmp1.16b, v_data_2.16b, v_mask0f.16b
 	ushr	v_data_2.16b, v_data_2.16b, #4
 
+	/* Group all tbl instructions for data_2 using data_0, data_1, data_3 as temps */
 	tbl	v_tmp1_lo.16b, {v_gft1_lo.16b}, v_tmp1.16b
 	tbl	v_tmp1_hi.16b, {v_gft1_hi.16b}, v_data_2.16b
+	tbl	v_data_0.16b, {v_gft2_lo.16b}, v_tmp1.16b      // data_0 as temp
+	tbl	v_data_1.16b, {v_gft2_hi.16b}, v_data_2.16b    // data_1 as temp
+	tbl	v_data_3.16b, {v_gft3_lo.16b}, v_tmp1.16b      // data_3 as temp
+	tbl	v_data_2.16b, {v_gft3_hi.16b}, v_data_2.16b    // data_2 as temp
+
+	/* Group all eor instructions for data_2 */
 	eor	v_p1_2.16b, v_tmp1_lo.16b, v_p1_2.16b
+	eor	v_p2_2.16b, v_data_0.16b, v_p2_2.16b
+	eor	v_p3_2.16b, v_data_3.16b, v_p3_2.16b
 	eor	v_p1_2.16b, v_p1_2.16b, v_tmp1_hi.16b
+	eor	v_p2_2.16b, v_p2_2.16b, v_data_1.16b
+	eor	v_p3_2.16b, v_p3_2.16b, v_data_2.16b
 
-	tbl	v_tmp1_lo.16b, {v_gft2_lo.16b}, v_tmp1.16b
-	tbl	v_tmp1_hi.16b, {v_gft2_hi.16b}, v_data_2.16b
-	eor	v_p2_2.16b, v_tmp1_lo.16b, v_p2_2.16b
-	eor	v_p2_2.16b, v_p2_2.16b, v_tmp1_hi.16b
-
-	tbl	v_tmp1_lo.16b, {v_gft3_lo.16b}, v_tmp1.16b
-	tbl	v_tmp1_hi.16b, {v_gft3_hi.16b}, v_data_2.16b
-	eor	v_p3_2.16b, v_tmp1_lo.16b, v_p3_2.16b
-	eor	v_p3_2.16b, v_p3_2.16b, v_tmp1_hi.16b
-
-	/* data_3 */
+	/* data_3 - load immediately before use */
+	ldr	q_data_3, [x_ptr], #16
 	and	v_tmp1.16b, v_data_3.16b, v_mask0f.16b
 	ushr	v_data_3.16b, v_data_3.16b, #4
 
+	/* Group all tbl instructions for data_3 using data_0, data_1, data_2 as temps */
 	tbl	v_tmp1_lo.16b, {v_gft1_lo.16b}, v_tmp1.16b
 	tbl	v_tmp1_hi.16b, {v_gft1_hi.16b}, v_data_3.16b
+	tbl	v_data_0.16b, {v_gft2_lo.16b}, v_tmp1.16b      // data_0 as temp
+	tbl	v_data_1.16b, {v_gft2_hi.16b}, v_data_3.16b    // data_1 as temp
+	tbl	v_data_2.16b, {v_gft3_lo.16b}, v_tmp1.16b      // data_2 as temp
+	tbl	v_data_3.16b, {v_gft3_hi.16b}, v_data_3.16b    // data_3 as temp
+
+	/* Group all eor instructions for data_3 */
 	eor	v_p1_3.16b, v_tmp1_lo.16b, v_p1_3.16b
+	eor	v_p2_3.16b, v_data_0.16b, v_p2_3.16b
+	eor	v_p3_3.16b, v_data_2.16b, v_p3_3.16b
 	eor	v_p1_3.16b, v_p1_3.16b, v_tmp1_hi.16b
-
-	tbl	v_tmp1_lo.16b, {v_gft2_lo.16b}, v_tmp1.16b
-	tbl	v_tmp1_hi.16b, {v_gft2_hi.16b}, v_data_3.16b
-	eor	v_p2_3.16b, v_tmp1_lo.16b, v_p2_3.16b
-	eor	v_p2_3.16b, v_p2_3.16b, v_tmp1_hi.16b
-
-	tbl	v_tmp1_lo.16b, {v_gft3_lo.16b}, v_tmp1.16b
-	tbl	v_tmp1_hi.16b, {v_gft3_hi.16b}, v_data_3.16b
-	eor	v_p3_3.16b, v_tmp1_lo.16b, v_p3_3.16b
-	eor	v_p3_3.16b, v_p3_3.16b, v_tmp1_hi.16b
+	eor	v_p2_3.16b, v_p2_3.16b, v_data_1.16b
+	eor	v_p3_3.16b, v_p3_3.16b, v_data_3.16b
 
 	cmp	x_vec_i, x_vec
 	blt	.Lloop64_vects
