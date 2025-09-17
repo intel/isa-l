@@ -484,6 +484,7 @@ main(int argc, char *argv[])
                 }
 #ifdef TEST_VERBOSE
                 putchar('.');
+                fflush(stdout);
 #endif
         }
 
@@ -703,6 +704,7 @@ main(int argc, char *argv[])
 
 #ifdef TEST_VERBOSE
                 putchar('.');
+                fflush(stdout);
 #endif
         }
 
@@ -781,6 +783,10 @@ main(int argc, char *argv[])
                                 goto exit;
                         }
                 }
+#ifdef TEST_VERBOSE
+                putchar('.');
+                fflush(stdout);
+#endif
         }
 
         printf("done EC tests: Pass\n");
