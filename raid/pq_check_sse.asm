@@ -130,7 +130,7 @@ func(pq_check_sse)
 	je	return_pass
 	test	len, (16-1)		;Check alignment of length
 	jnz	return_fail
-	mov	pos, 0
+	xor	DWORD(pos), DWORD(pos)
 	movdqa	xpoly, [poly]
 	cmp	len, 48
 	jl	loop16
@@ -148,13 +148,12 @@ loop48:
 	pxor	xq3, xq3		;q3 = 0
 
 	mov 	ptr, [arg2+vec*8] 	;Fetch last source pointer
-	mov	tmp, vec		;Set tmp to point back to last vector
+	lea	tmp, [vec-1]		;Set tmp to point back to last vector
 	XLDR	xs1, [ptr+pos]		;Preload last vector (source)
 	XLDR	xs2, [ptr+pos+16]	;Preload last vector (source)
 	XLDR	xs3, [ptr+pos+32]	;Preload last vector (source)
 
 next_vect:
-	sub	tmp, 1		  	;Inner loop for each source vector
 	mov 	ptr, [arg2+tmp*8] 	; get pointer to next vect
 	pxor	xp1, xs1		; p1 ^= s1
 	pxor	xp2, xs2		; p2 ^= s2
@@ -180,7 +179,8 @@ next_vect:
 	pxor	xq1, xtmp1		; q1 = q1<<1 ^ poly_masked
 	pxor	xq2, xtmp2		; q2 = q2<<1 ^ poly_masked
 	pxor	xq3, xtmp3		; q3 = q3<<1 ^ poly_masked
-	jg	next_vect		; Loop for each vect except 0
+	sub	tmp, 1		  	;Inner loop for each source vector
+	jae	next_vect		; Loop for each vect except 0
 
 	pxor	xp1, xs1		;p1 ^= s1[0] - last source is already loaded
 	pxor	xq1, xs1		;q1 ^= 1 * s1[0]
@@ -222,11 +222,10 @@ loop16:
 	XLDR	xp1, [ptr+pos]		;Initialize xp1 with P1 src
 	pxor	xq1, xq1		;q = 0
 	mov 	ptr, [arg2+vec*8] 	;Fetch last source pointer
-	mov	tmp, vec		;Set tmp to point back to last vector
+	lea	tmp, [vec-1]		;Set tmp to point back to last vector
 	XLDR	xs1, [ptr+pos]		;Preload last vector (source)
 
 next_vect16:
-	sub	tmp, 1		  	;Inner loop for each source vector
 	mov 	ptr, [arg2+tmp*8] 	; get pointer to next vect
 	pxor	xq1, xs1		; q ^= s
 	pxor	xtmp1, xtmp1		; xtmp = 0
@@ -236,7 +235,8 @@ next_vect16:
 	paddb	xq1, xq1		; q = q<<1
 	pxor	xq1, xtmp1		; q = q<<1 ^ poly_masked
 	XLDR	xs1, [ptr+pos]		; Get next vector (source data)
-	jg	next_vect16		; Loop for each vect except 0
+	sub	tmp, 1		  	;Inner loop for each source vector
+	jae	next_vect16		; Loop for each vect except 0
 
 	pxor	xp1, xs1		;p ^= s[0] - last source is already loaded
 	pxor	xq1, xs1		;q ^= 1 * s[0]
@@ -254,7 +254,7 @@ next_vect16:
 
 
 return_pass:
-	mov	return, 0
+	xor	DWORD(return), DWORD(return)
 	FUNC_RESTORE
 	ret
 
