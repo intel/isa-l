@@ -114,12 +114,11 @@ func(xor_gen_avx)
 
 len_aligned_128bytes:
 	sub	len, 128
-	mov	pos, 0
+	xor	DWORD(pos), DWORD(pos)
 
 loop128:
-	mov	tmp, vec		;Back to last vector
 	mov	tmp2, [arg2+vec*PS]	;Fetch last pointer in array
-	sub	tmp, 1			;Next vect
+	lea	tmp, [vec-1]		;Next vect
 	XLDR	ymm0, [tmp2+pos]	;Start with end of array in last vector
 	XLDR	ymm1, [tmp2+pos+32]	;Keep xor parity in xmm0-7
 	XLDR	ymm2, [tmp2+pos+(2*32)]
@@ -127,7 +126,6 @@ loop128:
 
 next_vect:
 	mov 	ptr, [arg2+tmp*PS]
-	sub	tmp, 1
 	XLDR	ymm4, [ptr+pos]		;Get next vector (source)
 	XLDR	ymm5, [ptr+pos+32]
 	XLDR	ymm6, [ptr+pos+(2*32)]
@@ -136,7 +134,8 @@ next_vect:
 	vxorpd	ymm1, ymm1, ymm5
 	vxorpd	ymm2, ymm2, ymm6
 	vxorpd	ymm3, ymm3, ymm7
-	jge	next_vect		;Loop for each source
+	sub	tmp, 1
+	jae	next_vect		;Loop for each source
 
 	mov	ptr, [arg2+PS+vec*PS]	;Address of parity vector
 	XSTR	[ptr+pos], ymm0		;Write parity xor vector
@@ -149,7 +148,7 @@ next_vect:
 
 return_pass:
 	FUNC_RESTORE
-	mov	return, 0
+	xor	DWORD(return), DWORD(return)
 	ret
 
 

@@ -135,7 +135,7 @@ func(pq_gen_avx2)
 	je	return_pass
 	test	len, (32-1)		;Check alignment of length
 	jnz	return_fail
-	mov	pos, 0
+	xor	DWORD(pos), DWORD(pos)
 	vmovdqa	xpoly, [poly]
 	vpxor	xzero, xzero, xzero
 	cmp	len, 96
@@ -146,7 +146,7 @@ len_aligned_32bytes:
 
 loop96:
 	mov	ptr, [arg2+vec*8] 	;Fetch last source pointer
-	mov	tmp, vec		;Set tmp to point back to last vector
+	lea	tmp, [vec-1]		;Set tmp to point back to last vector
 	XLDR	xs1, [ptr+pos]		;Preload last vector (source)
 	XLDR	xs2, [ptr+pos+32]	;Preload last vector (source)
 	XLDR	xs3, [ptr+pos+64]	;Preload last vector (source)
@@ -158,7 +158,6 @@ loop96:
 	vpxor	xq3, xq3, xq3		;q3 = 0
 
 next_vect:
-	sub	tmp, 1		  	;Inner loop for each source vector
 	mov 	ptr, [arg2+tmp*8] 	; get pointer to next vect
 	vpxor	xq1, xq1, xs1		; q1 ^= s1
 	vpxor	xq2, xq2, xs2		; q2 ^= s2
@@ -178,7 +177,8 @@ next_vect:
 	vpxor	xq1, xq1, xtmp1		; q1 = q1<<1 ^ poly_masked
 	vpxor	xq2, xq2, xtmp2		; q2 = q2<<1 ^ poly_masked
 	vpxor	xq3, xq3, xtmp3		; q3 = q3<<1 ^ poly_masked
-	jg	next_vect		; Loop for each vect except 0
+	sub	tmp, 1
+	jae	next_vect		; Loop for each vect except 0
 
 	mov	ptr, [arg2+8+vec*8]	;Get address of P parity vector
 	mov	tmp, [arg2+(2*8)+vec*8]	;Get address of Q parity vector
@@ -206,13 +206,12 @@ next_vect:
 
 loop32:
 	mov 	ptr, [arg2+vec*8] 	;Fetch last source pointer
-	mov	tmp, vec		;Set tmp to point back to last vector
+	lea	tmp, [vec-1]		;Set tmp to point back to last vector
 	XLDR	xs1, [ptr+pos]		;Preload last vector (source)
 	vpxor	xp1, xp1, xp1		;p = 0
 	vpxor	xq1, xq1, xq1		;q = 0
 
 next_vect32:
-	sub	tmp, 1		  	;Inner loop for each source vector
 	mov 	ptr, [arg2+tmp*8] 	; get pointer to next vect
 	vpxor	xq1, xq1, xs1		; q1 ^= s1
 	vpblendvb xtmp1, xzero, xpoly, xq1 ; xtmp1 = poly or 0x00
@@ -220,7 +219,8 @@ next_vect32:
 	vpaddb	xq1, xq1, xq1		; q = q<<1
 	vpxor	xq1, xq1, xtmp1		; q = q<<1 ^ poly_masked
 	XLDR	xs1, [ptr+pos]		; Get next vector (source data)
-	jg	next_vect32		; Loop for each vect except 0
+	sub	tmp, 1
+	jae	next_vect32		; Loop for each vect except 0
 
 	mov	ptr, [arg2+8+vec*8]	;Get address of P parity vector
 	mov	tmp, [arg2+(2*8)+vec*8]	;Get address of Q parity vector
@@ -234,7 +234,7 @@ next_vect32:
 
 
 return_pass:
-	mov	return, 0
+	xor	DWORD(return), DWORD(return)
 	FUNC_RESTORE
 	ret
 
