@@ -37,15 +37,25 @@ This library provides an experimental shim layer that implements the zlib API wh
     make
     ```
 
-3. Preload the shim library in your project:
-    ```bash
-    LD_PRELOAD=libraries.performance.storage.isa-l/shim/build/isal-shim.so  ./app
-    LD_PRELOAD=libraries.performance.storage.isa-l/shim/build/isal-shim.so  python test.py
-    ```
-
 ## Usage
 
-Replace your existing zlib library with this shim library. The API remains the same, so no additional changes are required in the application code.
+To use the ISA-L shim library with your application:
+
+1. Use LD_PRELOAD
+    ```bash
+    LD_PRELOAD=/path/to/isa-l/shim/build/isal-shim.so  ./app
+    LD_PRELOAD=/path/to/isa-l/shim/build/isal-shim.so  python test.py
+    ```
+
+2. Set LD_PRELOAD environment variable
+    ```bash
+    export LD_PRELOAD=/path/to/isa-l/shim/build/isal-shim.so
+    ./your_application
+    ```
+
+## API Compatibility
+
+The API remains compatible with zlib for the supported functions listed in the "Intercepted Zlib Functions" section. For unsupported zlib functions, the system's zlib implementation will be used.
 
 ## Scope/Constraints
 
