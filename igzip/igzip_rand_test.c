@@ -160,7 +160,7 @@ usage(void)
                         "  -r <iter>   number of randoms for each test\n"
                         "  -s <seed>   set rand() test seed\n"
                         "  -v          enable verbose test log\n");
-        exit(0);
+        exit(1);
 }
 
 size_t
@@ -657,7 +657,7 @@ inflate_multi_pass(uint8_t *compress_buf, uint64_t compress_len, uint8_t *uncomp
         state = malloc(sizeof(struct inflate_state));
         if (state == NULL) {
                 printf("Failed to allocate memory\n");
-                exit(0);
+                exit(1);
         }
 
         create_rand_repeat_data((uint8_t *) state, sizeof(*state));

@@ -56,7 +56,7 @@ usage(void)
                 "  -s <size> sample size default=%d\n"
                 "  -o <file> output file\n",
                 DEFAULT_SEG_SIZE, DEFAULT_SAMPLE_SIZE);
-        exit(0);
+        exit(1);
 }
 
 int
@@ -241,19 +241,23 @@ main(int argc, char *argv[])
          */
         infile_size = get_filesize(in);
         if (infile_size == 0) {
-                printf("Input file has zero length\n");
-                usage();
+                /* Check if it's a real error or just an empty file */
+                if (fseek(in, 0, SEEK_END) != 0 || ftell(in) < 0)
+                        fprintf(stderr, "Failed to get file size\n");
+                else
+                        fprintf(stderr, "Input file has zero length\n");
+                exit(1);
         }
 
         outbuf_size = infile_size * 1.30 > MIN_BUF_SIZE ? infile_size * 1.30 : MIN_BUF_SIZE;
 
         if (NULL == (inbuf = malloc(infile_size))) {
                 fprintf(stderr, "Can't allocate input buffer memory\n");
-                exit(0);
+                exit(1);
         }
         if (NULL == (outbuf = malloc(outbuf_size))) {
                 fprintf(stderr, "Can't allocate output buffer memory\n");
-                exit(0);
+                exit(1);
         }
 
         int hist_size = sample_size > segment_size ? segment_size : sample_size;
@@ -266,7 +270,7 @@ main(int argc, char *argv[])
         stream.avail_in = (uint32_t) fread(inbuf, 1, infile_size, in);
         if (stream.avail_in != infile_size) {
                 fprintf(stderr, "Couldn't fit all of input file into buffer\n");
-                exit(0);
+                exit(1);
         }
 
         struct perf start;
@@ -308,7 +312,7 @@ main(int argc, char *argv[])
 
                 if (NULL == (inflate_buf = malloc(infile_size))) {
                         fprintf(stderr, "Can't allocate reconstruct buffer memory\n");
-                        exit(0);
+                        exit(1);
                 }
                 isal_inflate_init(&istate);
                 istate.next_in = outbuf;

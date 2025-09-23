@@ -44,17 +44,17 @@ main(int argc, char *argv[])
 
         if (argc != 3) {
                 fprintf(stderr, "Usage: igzip_sync_flush_example infile outfile\n");
-                exit(0);
+                exit(1);
         }
         in = fopen(argv[1], "rb");
         if (!in) {
                 fprintf(stderr, "Can't open %s for reading\n", argv[1]);
-                exit(0);
+                exit(1);
         }
         out = fopen(argv[2], "wb");
         if (!out) {
                 fprintf(stderr, "Can't open %s for writing\n", argv[2]);
-                exit(0);
+                exit(1);
         }
 
         printf("igzip_sync_flush_example\nWindow Size: %d K\n", IGZIP_HIST_SIZE / 1024);

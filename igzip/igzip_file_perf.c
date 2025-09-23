@@ -103,7 +103,7 @@ usage(void)
                         "  -d <file> dictionary file used by compression\n"
                         "  -w <size> log base 2 size of history window, between 8 and 15\n");
 
-        exit(0);
+        exit(1);
 }
 
 void
@@ -206,13 +206,13 @@ main(int argc, char *argv[])
 
         if (!in) {
                 fprintf(stderr, "Can't open %s for reading\n", in_file_name);
-                exit(0);
+                exit(1);
         }
         if (out_file_name != NULL) {
                 out = fopen(out_file_name, "wb");
                 if (!out) {
                         fprintf(stderr, "Can't open %s for writing\n", out_file_name);
-                        exit(0);
+                        exit(1);
                 }
                 printf("outfile=%s\n", out_file_name);
         }
@@ -221,7 +221,7 @@ main(int argc, char *argv[])
                 dict = fopen(dict_file_name, "rb");
                 if (!dict) {
                         fprintf(stderr, "Can't open %s for reading\n", dict_file_name);
-                        exit(0);
+                        exit(1);
                 }
                 printf("outfile=%s\n", dict_file_name);
         }
@@ -241,27 +241,39 @@ main(int argc, char *argv[])
          * (assuming some possible expansion on output size)
          */
         infile_size = get_filesize(in);
+        if (infile_size == 0) {
+                /* Check if it's a real error or just an empty file */
+                if (fseek(in, 0, SEEK_END) != 0 || ftell(in) < 0)
+                        fprintf(stderr, "Failed to get file size\n");
+                else
+                        fprintf(stderr, "Input file has zero length\n");
+                exit(1);
+        }
 
         outbuf_size = 2 * infile_size + BUF_SIZE;
 
         dictfile_size = (dict_file_name != NULL) ? get_filesize(dict) : 0;
+        if (dict_file_name != NULL && dictfile_size == 0) {
+                fprintf(stderr, "Failed to get dictionary file size or dictionary is empty\n");
+                exit(1);
+        }
 
         inbuf = malloc(infile_size);
         if (inbuf == NULL) {
                 fprintf(stderr, "Can't allocate input buffer memory\n");
-                exit(0);
+                exit(1);
         }
         outbuf = malloc(outbuf_size);
         if (outbuf == NULL) {
                 fprintf(stderr, "Can't allocate output buffer memory\n");
-                exit(0);
+                exit(1);
         }
 
         if (dictfile_size != 0) {
                 dictbuf = malloc(dictfile_size);
                 if (dictbuf == NULL) {
                         fprintf(stderr, "Can't allocate dictionary buffer memory\n");
-                        exit(0);
+                        exit(1);
                 }
         }
 
@@ -269,7 +281,7 @@ main(int argc, char *argv[])
                 level_buf = malloc(level_size);
                 if (level_buf == NULL) {
                         fprintf(stderr, "Can't allocate level buffer memory\n");
-                        exit(0);
+                        exit(1);
                 }
         }
 
@@ -281,13 +293,13 @@ main(int argc, char *argv[])
         stream.avail_in = (uint32_t) fread(inbuf, 1, infile_size, in);
         if (stream.avail_in != infile_size) {
                 fprintf(stderr, "Couldn't fit all of input file into buffer\n");
-                exit(0);
+                exit(1);
         }
 
         /* Read complete dictionary into buffer */
         if ((dictfile_size != 0) && (dictfile_size != fread(dictbuf, 1, dictfile_size, dict))) {
                 fprintf(stderr, "Couldn't fit all of dictionary file into buffer\n");
-                exit(0);
+                exit(1);
         }
 
         struct isal_dict dict_str;
@@ -307,7 +319,7 @@ main(int argc, char *argv[])
         }
         if (stream.avail_in != 0) {
                 fprintf(stderr, "Could not compress all of inbuf\n");
-                exit(0);
+                exit(1);
         }
 
         printf("  file %s - in_size=%lu out_size=%d ratio=%3.1f%%", in_file_name, infile_size,
@@ -329,7 +341,7 @@ main(int argc, char *argv[])
 
         if (stream.avail_in != 0) {
                 fprintf(stderr, "Could not compress all of inbuf\n");
-                exit(0);
+                exit(1);
         }
 
         printf("igzip_file: ");

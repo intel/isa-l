@@ -82,12 +82,12 @@ main(int argc, char *argv[])
                 fprintf(stderr, "Usage: igzip_file_perf  infile [outfile]\n"
                                 "\t - Runs multiple iterations of igzip on a file to "
                                 "get more accurate time results.\n");
-                exit(0);
+                exit(1);
         }
         in = fopen(argv[1], "rb");
         if (!in) {
                 fprintf(stderr, "Can't open %s for reading\n", argv[1]);
-                exit(0);
+                exit(1);
         }
 
         /* Allocate space for entire input file and output
@@ -106,14 +106,14 @@ main(int argc, char *argv[])
         inbuf = malloc(infile_size);
         if (inbuf == NULL) {
                 fprintf(stderr, "Can't allocate input buffer memory\n");
-                exit(0);
+                exit(1);
         }
 
         avail_in = fread(inbuf, 1, infile_size, in);
         if (avail_in != infile_size) {
                 free(inbuf);
                 fprintf(stderr, "Couldn't fit all of input file into buffer\n");
-                exit(0);
+                exit(1);
         }
 
         struct perf start;

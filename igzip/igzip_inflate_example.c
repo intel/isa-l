@@ -46,20 +46,20 @@ main(int argc, char *argv[])
 
         if (argc != 3) {
                 fprintf(stderr, "Usage: igzip_inflate_example infile outfile\n");
-                exit(0);
+                exit(1);
         }
 
         in = fopen(argv[1], "rb");
         if (!in) {
                 fprintf(stderr, "Can't open %s for reading\n", argv[1]);
-                exit(0);
+                exit(1);
         }
 
         out = fopen(argv[2], "wb");
         if (!out) {
                 fprintf(stderr, "Can't open %s for writing\n", argv[2]);
                 fclose(in);
-                exit(0);
+                exit(1);
         }
 
         printf("igzip_inflate_example\n");

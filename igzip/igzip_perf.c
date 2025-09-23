@@ -167,7 +167,7 @@ usage(void)
                                                                                                          "  -b <size>   input buffer size, applies to stateful options (-f,-z,-s)\n"
                                                                                                          "  -y <type>   flush type: 0 (default: no flush), 1 (sync flush), 2 (full flush)\n"
                                                                                                          "  -w <size>   log base 2 size of history window, between 9 and 15\n");
-        exit(0);
+        exit(1);
 }
 
 void
@@ -664,14 +664,14 @@ main(int argc, char *argv[])
                 case 'l':
                         if (compression_queue_size >= COMPRESSION_QUEUE_LIMIT) {
                                 printf("Too many levels specified");
-                                exit(0);
+                                exit(1);
                         }
 
                         compress_strat.mode = ISAL_STATELESS;
                         compress_strat.level = atoi(optarg);
                         if (compress_strat.level > ISAL_DEF_MAX_LEVEL) {
                                 printf("Unsupported isa-l compression level\n");
-                                exit(0);
+                                exit(1);
                         }
 
                         compression_queue[compression_queue_size] = compress_strat;
@@ -680,14 +680,14 @@ main(int argc, char *argv[])
                 case 'f':
                         if (compression_queue_size >= COMPRESSION_QUEUE_LIMIT) {
                                 printf("Too many levels specified");
-                                exit(0);
+                                exit(1);
                         }
 
                         compress_strat.mode = ISAL_STATEFUL;
                         compress_strat.level = atoi(optarg);
                         if (compress_strat.level > ISAL_DEF_MAX_LEVEL) {
                                 printf("Unsupported isa-l compression level\n");
-                                exit(0);
+                                exit(1);
                         }
 
                         compression_queue[compression_queue_size] = compress_strat;
@@ -696,14 +696,14 @@ main(int argc, char *argv[])
                 case 'z':
                         if (compression_queue_size >= COMPRESSION_QUEUE_LIMIT) {
                                 printf("Too many levels specified");
-                                exit(0);
+                                exit(1);
                         }
 
                         compress_strat.mode = ZLIB;
                         compress_strat.level = atoi(optarg);
                         if (compress_strat.level > Z_BEST_COMPRESSION) {
                                 printf("Unsupported zlib compression level\n");
-                                exit(0);
+                                exit(1);
                         }
                         compression_queue[compression_queue_size] = compress_strat;
                         compression_queue_size++;
@@ -722,17 +722,17 @@ main(int argc, char *argv[])
                         dict_fn = fopen(optarg, "rb");
                         if (!dict_fn) {
                                 printf("Can't open dictionary for reading\n");
-                                exit(0);
+                                exit(1);
                         }
                         dict_file_size = get_filesize(dict_fn);
                         dict_buf = malloc(dict_file_size);
                         if (dict_buf == NULL || dict_file_size == 0) {
                                 printf("Can't allocate mem for dictionary buffer\n");
-                                exit(0);
+                                exit(1);
                         }
                         if (dict_file_size != fread(dict_buf, 1, dict_file_size, dict_fn)) {
                                 printf("Couldn't read all of dictionary file\n");
-                                exit(0);
+                                exit(1);
                         }
                         fclose(dict_fn);
                         break;
@@ -754,7 +754,7 @@ main(int argc, char *argv[])
                         if (info.flush_type != NO_FLUSH && info.flush_type != SYNC_FLUSH &&
                             info.flush_type != FULL_FLUSH) {
                                 printf("Unsupported flush type\n");
-                                exit(0);
+                                exit(1);
                         }
                         break;
 
@@ -790,13 +790,13 @@ main(int argc, char *argv[])
         in = fopen(info.file_name, "rb");
         if (NULL == in) {
                 printf("Error: Can not find file %s\n", info.file_name);
-                exit(0);
+                exit(1);
         }
 
         info.file_size = get_filesize(in);
         if (info.file_size == 0) {
                 printf("Error: input file has 0 size\n");
-                exit(0);
+                exit(1);
         }
 
         decompbuf_size = info.file_size;
@@ -813,7 +813,7 @@ main(int argc, char *argv[])
         filebuf = malloc(info.file_size);
         if (filebuf == NULL) {
                 fprintf(stderr, "Can't allocate temp buffer memory\n");
-                exit(0);
+                exit(1);
         }
 
         block_count = 1;
@@ -829,18 +829,18 @@ main(int argc, char *argv[])
         compressbuf = malloc(compressbuf_size);
         if (compressbuf == NULL) {
                 fprintf(stderr, "Can't allocate input buffer memory\n");
-                exit(0);
+                exit(1);
         }
 
         decompbuf = malloc(decompbuf_size);
         if (decompbuf == NULL) {
                 fprintf(stderr, "Can't allocate output buffer memory\n");
-                exit(0);
+                exit(1);
         }
 
         if (info.file_size != fread(filebuf, 1, info.file_size, in)) {
                 fprintf(stderr, "Could not read in all input\n");
-                exit(0);
+                exit(1);
         }
         fclose(in);
 
@@ -891,7 +891,7 @@ main(int argc, char *argv[])
                         if (out == NULL) {
                                 fprintf(stderr, "Could not write to the output file \"%s\"\n",
                                         outfile);
-                                exit(0);
+                                exit(1);
                         }
                         fwrite(compressbuf, 1, info.deflate_size, out);
                         fclose(out);
