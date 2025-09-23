@@ -401,15 +401,20 @@ get_filesize(FILE *fp)
         uint64_t file_size;
         fpos_t pos, pos_curr;
 
-        fgetpos(fp, &pos_curr); /* Save current position */
+        if (fgetpos(fp, &pos_curr) != 0) /* Save current position */
+                return 0;
 #if defined(_WIN32) || defined(_WIN64)
-        _fseeki64(fp, 0, SEEK_END);
+        if (_fseeki64(fp, 0, SEEK_END) != 0)
+                return 0;
 #else
-        fseeko(fp, 0, SEEK_END);
+        if (fseeko(fp, 0, SEEK_END) != 0)
+                return 0;
 #endif
-        fgetpos(fp, &pos);
+        if (fgetpos(fp, &pos) != 0)
+                return 0;
         file_size = *(uint64_t *) &pos;
-        fsetpos(fp, &pos_curr); /* Restore position */
+        if (fsetpos(fp, &pos_curr) != 0) /* Restore position */
+                return 0;
 
         return file_size;
 }

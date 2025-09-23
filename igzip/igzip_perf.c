@@ -725,8 +725,16 @@ main(int argc, char *argv[])
                                 exit(1);
                         }
                         dict_file_size = get_filesize(dict_fn);
+                        if (dict_file_size == 0) {
+                                /* Check if it's a real error or just an empty file */
+                                if (fseek(dict_fn, 0, SEEK_END) != 0 || ftell(dict_fn) < 0)
+                                        printf("Failed to get dictionary file size\n");
+                                else
+                                        printf("Dictionary file has zero length\n");
+                                exit(1);
+                        }
                         dict_buf = malloc(dict_file_size);
-                        if (dict_buf == NULL || dict_file_size == 0) {
+                        if (dict_buf == NULL) {
                                 printf("Can't allocate mem for dictionary buffer\n");
                                 exit(1);
                         }
@@ -795,7 +803,11 @@ main(int argc, char *argv[])
 
         info.file_size = get_filesize(in);
         if (info.file_size == 0) {
-                printf("Error: input file has 0 size\n");
+                /* Check if it's a real error or just an empty file */
+                if (fseek(in, 0, SEEK_END) != 0 || ftell(in) < 0)
+                        printf("Error: Failed to get file size\n");
+                else
+                        printf("Error: Input file has zero length\n");
                 exit(1);
         }
 

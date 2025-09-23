@@ -2653,6 +2653,15 @@ test_compress_file(char *file_name)
         }
 
         in_size = get_filesize(in_file);
+        if (in_size == 0) {
+                /* Check if it's a real error or just an empty file */
+                if (fseek(in_file, 0, SEEK_END) != 0 || ftell(in_file) < 0)
+                        printf("Failed to get file size for %s\n", file_name);
+                else
+                        printf("File %s has zero length\n", file_name);
+                ret = FILE_READ_FAILED;
+                goto exit_comp_file;
+        }
         if (in_size > MAX_FILE_SIZE)
                 in_size = MAX_FILE_SIZE;
 

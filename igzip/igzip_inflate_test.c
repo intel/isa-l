@@ -240,6 +240,16 @@ main(int argc, char **argv)
                         printf("Starting file %s", argv[i]);
                 fflush(0);
                 file_length = get_filesize(file);
+                if (file_length == 0) {
+                        /* Check if it's a real error or just an empty file */
+                        if (fseek(file, 0, SEEK_END) != 0 || ftell(file) < 0)
+                                printf("\nFailed to get file size.\n");
+                        else
+                                printf("\nFile has zero length.\n");
+                        printf(" ... Fail\n");
+                        fclose(file);
+                        continue;
+                }
                 if (file_length > MAX_INPUT_FILE_SIZE) {
                         printf("\nFile too large to run on this test,"
                                " Max 512MB for 32bit OS, 2GB for 64bit OS.\n");
