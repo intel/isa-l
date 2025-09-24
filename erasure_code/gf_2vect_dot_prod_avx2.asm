@@ -183,23 +183,18 @@ func(gf_2vect_dot_prod_avx2)
 .next_vect:
 	SLDR	src, src_m
 	mov	ptr, [src+vec_i]
-
-	vmovdqu	xgft1_lo, [tmp]		;Load array Ax{00}, Ax{01}, ..., Ax{0f}
-					;     "     Ax{00}, Ax{10}, ..., Ax{f0}
-	vperm2i128 xgft1_hi, xgft1_lo, xgft1_lo, 0x11 ; swapped to hi | hi
-	vperm2i128 xgft1_lo, xgft1_lo, xgft1_lo, 0x00 ; swapped to lo | lo
-	vmovdqu	xgft2_lo, [tmp+vec*(32/PS)]	;Load array Bx{00}, Bx{01}, ..., Bx{0f}
-						;     "     Bx{00}, Bx{10}, ..., Bx{f0}
-	vperm2i128 xgft2_hi, xgft2_lo, xgft2_lo, 0x11 ; swapped to hi | hi
-	vperm2i128 xgft2_lo, xgft2_lo, xgft2_lo, 0x00 ; swapped to lo | lo
-
 	XLDR	x0, [ptr+pos]		;Get next source vector
-	add	tmp, 32
-	add	vec_i, PS
 
 	vpand	xtmpa, x0, xmask0f	;Mask low src nibble in bits 4-0
 	vpsraw	x0, x0, 4		;Shift to put high nibble into bits 4-0
 	vpand	x0, x0, xmask0f		;Mask high src nibble in bits 4-0
+
+	vbroadcasti128	xgft1_lo, [tmp]			;Load array: lo | lo
+	vbroadcasti128	xgft1_hi, [tmp+16]		;            hi | hi
+	add	vec_i, PS
+	vbroadcasti128	xgft2_lo, [tmp+vec*(32/PS)]	;Load array: lo | lo
+	vbroadcasti128	xgft2_hi, [tmp+vec*(32/PS)+16]	;            hi | hi
+	add	tmp, 32
 
 	vpshufb	xgft1_hi, x0		;Lookup mul table of high nibble
 	vpshufb	xgft1_lo, xtmpa		;Lookup mul table of low nibble
