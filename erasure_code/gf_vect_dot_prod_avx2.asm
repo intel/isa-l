@@ -151,12 +151,9 @@ func(gf_vect_dot_prod_avx2)
 
 	mov	ptr, [src+vec_i*PS]
 
-	vmovdqu	xgft_lo, [tmp]		;Load array Cx{00}, Cx{01}, Cx{02}, ...
-					; " Cx{00}, Cx{10}, Cx{20}, ... , Cx{f0}
-	vperm2i128 xgft_hi, xgft_lo, xgft_lo, 0x11 ; swapped to hi | hi
-	vperm2i128 xgft_lo, xgft_lo, xgft_lo, 0x00 ; swapped to lo | lo
-
-	XLDR	x0, [ptr+pos]		;Get next source vector
+	vbroadcasti128	xgft_lo, [tmp]		;Load array: lo | lo
+	vbroadcasti128	xgft_hi, [tmp+16]	;            hi | hi
+	XLDR	x0, [ptr+pos]			;Get next source vector
 
 	add	tmp, 32
 	add	vec_i, 1

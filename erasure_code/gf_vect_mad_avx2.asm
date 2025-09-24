@@ -150,10 +150,8 @@ func(gf_vect_mad_avx2)
 	vpbroadcastb xmask0f, xmask0fx	;Construct mask 0x0f0f0f...
 
 	sal	vec_i, 5		;Multiply by 32
-	vmovdqu	xgft_lo, [vec_i+mul_array]	;Load array Cx{00}, Cx{01}, Cx{02}, ...
-						; " Cx{00}, Cx{10}, Cx{20}, ... , Cx{f0}
-	vperm2i128 xgft_hi, xgft_lo, xgft_lo, 0x11 ; swapped to hi | hi
-	vperm2i128 xgft_lo, xgft_lo, xgft_lo, 0x00 ; swapped to lo | lo
+	vbroadcasti128	xgft_lo, [vec_i+mul_array]	;Load array: lo | lo
+	vbroadcasti128	xgft_hi, [vec_i+mul_array+16]	;            hi | hi
 
 	XLDR	xtmpd, [dest+len]	;backup the last 32 bytes in dest
 
