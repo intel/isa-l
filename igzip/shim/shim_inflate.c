@@ -32,13 +32,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int
 inflateInit2_(z_streamp strm, int windowBits)
 {
         if (!strm) {
                 fprintf(stderr, "Error: z_streamp is NULL\n");
-                return -1;
+                return Z_STREAM_ERROR;
         }
 
         struct inflate_state *isal_strm_inflate =
@@ -52,12 +53,13 @@ inflateInit2_(z_streamp strm, int windowBits)
         fprintf(stderr, "\nInitializing inflate with windowBits: %d", windowBits);
 #endif
 
-        /* Setup ISA-L de-compression context */
+        /* Setup ISA-L decompression context */
         isal_inflate_init(isal_strm_inflate);
 
         isal_strm_inflate->avail_in = 0;
         isal_strm_inflate->next_in = NULL;
         strm->total_out = 0;
+        strm->total_in = 0;
 
         inflate_state2 *s = (inflate_state2 *) malloc(sizeof(inflate_state2));
         if (!s) {
@@ -69,11 +71,14 @@ inflateInit2_(z_streamp strm, int windowBits)
         s->strm = strm;
         s->isal_strm_inflate = isal_strm_inflate;
         s->w_bits = windowBits;
+        s->trailer_overconsumption_fixed = 0; // Initialize the workaround flag
 
         if (windowBits < 0) {
+                // Raw deflate mode - no headers/trailers
                 isal_strm_inflate->crc_flag = IGZIP_DEFLATE;
                 isal_strm_inflate->hist_bits = -windowBits;
         } else {
+                // Standard zlib format
                 isal_strm_inflate->crc_flag = IGZIP_ZLIB;
                 isal_strm_inflate->hist_bits = windowBits;
         }
@@ -89,7 +94,7 @@ inflateInit_(z_streamp strm)
 {
         if (!strm) {
                 fprintf(stderr, "Error: z_streamp is NULL\n");
-                return -1;
+                return Z_STREAM_ERROR;
         }
 
         return inflateInit2_(strm, 15); // hardcoded windowBits
@@ -100,19 +105,19 @@ inflate(z_streamp strm, int flush)
 {
         if (!strm) {
                 fprintf(stderr, "Error: z_streamp is NULL\n");
-                return -1;
+                return Z_STREAM_ERROR;
         }
 
         inflate_state2 *s = (inflate_state2 *) strm->state;
         if (!s) {
                 fprintf(stderr, "Error: inflate_state2 is NULL\n");
-                return -1;
+                return Z_STREAM_ERROR;
         }
 
         struct inflate_state *isal_strm_inflate = s->isal_strm_inflate;
         if (!isal_strm_inflate) {
                 fprintf(stderr, "Error: isal_strm_inflate is NULL\n");
-                return -1;
+                return Z_STREAM_ERROR;
         }
 
         // set stream->avail_in, next_in, avail_out, next_out (from zstream)​
@@ -136,34 +141,113 @@ inflate(z_streamp strm, int flush)
         const int decomp = isal_inflate(isal_strm_inflate);
 
         const unsigned int total_in = strm->total_in;
-        const unsigned int avail_in = strm->avail_in;
+        const unsigned int original_avail_in = strm->avail_in;
+        const unsigned int bytes_consumed = original_avail_in - isal_strm_inflate->avail_in;
 
 #ifdef DEBUG
         fprintf(stderr, "After isal_inflate: avail_in=%u, next_in=%p, avail_out=%u, next_out=%p\n",
                 isal_strm_inflate->avail_in, isal_strm_inflate->next_in,
                 isal_strm_inflate->avail_out, isal_strm_inflate->next_out);
         fprintf(stderr, "Total out: %u, Total_in: %u\n", isal_strm_inflate->total_out,
-                total_in + (avail_in - isal_strm_inflate->avail_in));
-        fprintf(stderr, "Flush: %d\n", flush);
+                total_in + bytes_consumed);
+        fprintf(stderr, "Bytes consumed this call: %u\n", bytes_consumed);
+        fprintf(stderr, "Block state: %d (ISAL_BLOCK_FINISH=%d)\n", isal_strm_inflate->block_state,
+                ISAL_BLOCK_FINISH);
+        fprintf(stderr, "Flush: %d, ISA-L result: %d\n", flush, decomp);
+
+        if (isal_strm_inflate->block_state == ISAL_BLOCK_FINISH &&
+            isal_strm_inflate->avail_in > 0) {
+                fprintf(stderr, "WARNING: BLOCK_FINISH reached but %u bytes remain in input:\n",
+                        isal_strm_inflate->avail_in);
+                for (unsigned int i = 0; i < isal_strm_inflate->avail_in && i < 16; i++) {
+                        fprintf(stderr, " %02x", ((unsigned char *) isal_strm_inflate->next_in)[i]);
+                }
+                fprintf(stderr, "\n");
+        }
 #endif
 
+        // WORKAROUND: ISA-L over-consumption fix for raw deflate mode
+        // When ISA-L reaches BLOCK_FINISH in raw deflate mode, it sometimes over-consumes
+        // input data that should be left for upper-layer protocol handling (like gzip trailer).
+        // 8 bytes have to remain for the gzip trailer.
+        // Only apply this fix once per stream, when we're truly at the end.
+        if (isal_strm_inflate->block_state == ISAL_BLOCK_FINISH &&
+            isal_strm_inflate->crc_flag == 0 &&      // raw deflate mode
+            s->trailer_overconsumption_fixed == 0 && // hasn't been applied yet
+            decomp == ISAL_DECOMP_OK &&              // successful decompression
+            isal_strm_inflate->avail_in < 8 && isal_strm_inflate->avail_in > 0) {
+
+                // Calculate how many bytes were likely over-consumed
+                const unsigned int expected_trailer_bytes = 8;
+                const unsigned int over_consumed =
+                        expected_trailer_bytes - isal_strm_inflate->avail_in;
+
+                // Only apply fix if the over-consumption is reasonable (1-7 bytes)
+                if (over_consumed >= 1 && over_consumed <= 7) {
+#ifdef DEBUG
+                        fprintf(stderr,
+                                "APPLYING WORKAROUND: Detected ISA-L over-consumption of %u "
+                                "bytes\n",
+                                over_consumed);
+                        fprintf(stderr, "Adjusting next_in from %p to %p, avail_in from %u to %u\n",
+                                isal_strm_inflate->next_in,
+                                (unsigned char *) isal_strm_inflate->next_in - over_consumed,
+                                isal_strm_inflate->avail_in,
+                                isal_strm_inflate->avail_in + over_consumed);
+#endif
+                        // Rewind the input pointer to restore over-consumed bytes
+                        isal_strm_inflate->next_in =
+                                (unsigned char *) isal_strm_inflate->next_in - over_consumed;
+                        isal_strm_inflate->avail_in += over_consumed;
+
+                        // Mark that the workaround has been applied
+                        s->trailer_overconsumption_fixed = 1;
+
+                        // Also adjust the byte consumption count to reflect the actual deflate data
+                        // consumed Note: bytes_consumed is calculated later, so we'll need to
+                        // adjust it after the calculation
+                }
+        }
+
+        // Update stream state - handle byte accounting correctly
         strm->avail_out = isal_strm_inflate->avail_out;
         strm->avail_in = isal_strm_inflate->avail_in;
         strm->next_in = isal_strm_inflate->next_in;
         strm->next_out = isal_strm_inflate->next_out;
         strm->total_out = isal_strm_inflate->total_out;
-        strm->total_in = total_in + (avail_in - isal_strm_inflate->avail_in);
+
+        // Calculate bytes consumed by ISA-L from the original input
+        const unsigned int bytes_consumed_by_isal = original_avail_in - isal_strm_inflate->avail_in;
+        strm->total_in = total_in + bytes_consumed_by_isal;
 
         int ret;
+
         if (decomp == ISAL_DECOMP_OK) {
                 if (isal_strm_inflate->block_state == ISAL_BLOCK_FINISH) {
-                        ret = Z_STREAM_END; // Decompression is done
+                        // ISA-L has finished processing the deflate stream AND any format-specific
+                        // trailers
+                        ret = Z_STREAM_END;
                         strm->msg = "ok";
+                } else if (strm->avail_out == 0) {
+                        // Output buffer is full, but stream may not be complete
+                        ret = Z_OK;
+                } else if (strm->avail_in == 0) {
+                        // No more input available
+                        if (isal_strm_inflate->block_state == ISAL_BLOCK_FINISH) {
+                                // Stream is actually complete - ISA-L has reached final state
+                                ret = Z_STREAM_END;
+                        } else {
+                                // ISA-L still needs more input to finish processing
+                                ret = Z_OK;
+                        }
                 } else {
+                        // Still processing, continue
                         ret = Z_OK;
                 }
+        } else if (decomp == ISAL_END_INPUT) {
+                ret = Z_OK;
         } else {
-                ret = Z_ERRNO; // Decompression error
+                ret = Z_DATA_ERROR;
         }
 
 #ifdef DEBUG
@@ -207,12 +291,14 @@ inflateEnd(z_streamp strm)
 {
         if (!strm) {
                 fprintf(stderr, "Error: z_streamp is NULL\n");
-                return -1;
+                return Z_STREAM_ERROR;
         }
 
         inflate_state2 *s = (inflate_state2 *) strm->state;
-        free(s->isal_strm_inflate);
-        free(s);
+        if (s) {
+                free(s->isal_strm_inflate);
+                free(s);
+        }
 
         strm->state = NULL;
 

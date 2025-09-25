@@ -73,6 +73,7 @@ typedef struct internal_state {
 #define Z_ERRNO        (-1)
 #define Z_STREAM_ERROR (-2)
 #define Z_DATA_ERROR   (-3)
+#define Z_MEM_ERROR    (-4)
 #define Z_BUF_ERROR    (-5)
 
 #define Z_DEFAULT_COMPRESSION 6

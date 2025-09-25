@@ -35,4 +35,6 @@ typedef struct internal_state2 {
         int level;
         int w_bits;
         struct inflate_state *isal_strm_inflate;
+        int trailer_overconsumption_fixed; /* Indicates if fix has been applied for gzip trailer
+                                              overconsumption issue */
 } inflate_state2;

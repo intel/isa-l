@@ -41,6 +41,7 @@ deflateInit2_(z_streamp strm, int level, int method, int windowBits, int memLeve
                 fprintf(stderr, "Error: z_streamp is NULL\n");
                 return -1;
         }
+
 #ifdef DEBUG
         fprintf(stderr,
                 "\nInitializing deflate with level: %d, method: %d, windowBits: %d, memLevel: %d, "
@@ -98,20 +99,14 @@ deflateInit2_(z_streamp strm, int level, int method, int windowBits, int memLeve
         s->w_bits = windowBits;
         s->strm = strm;
 
-        strm->avail_out = isal_strm->avail_out;
-        strm->avail_in = isal_strm->avail_in;
-        strm->next_in = isal_strm->next_in;
-        strm->next_out = isal_strm->next_out;
-        strm->total_out = isal_strm->total_out;
-        strm->total_in = isal_strm->total_in;
-
-        // Set stream->gzip_flag to “IGZIP_DEFLATE” if windowsBits is negative (raw deflate) or
-        // “IGZIP_ZLIB” if windowsBits is positive (ZLIB format)
+        // Set stream->gzip_flag and hist_bits
         // Ensure hist_bits are non-negative
         if (windowBits < 0) {
+                // Raw deflate mode - no headers/trailers
                 isal_strm->gzip_flag = IGZIP_DEFLATE;
                 isal_strm->hist_bits = -windowBits;
         } else {
+                // Standard zlib format
                 isal_strm->gzip_flag = IGZIP_ZLIB;
                 isal_strm->hist_bits = windowBits;
         }
@@ -209,7 +204,7 @@ deflate(z_streamp strm, int flush)
 #endif
 
         if (comp == COMP_OK) {
-                if (isal_strm->avail_in == 0 && isal_strm->end_of_stream) {
+                if (isal_strm->end_of_stream && isal_strm->avail_out > 0) {
                         ret = Z_STREAM_END; // Compression is done
                 } else {
                         ret = Z_OK;
@@ -262,8 +257,15 @@ deflateEnd(z_streamp strm)
                 return -1;
         }
 
-        // Free allocated memory for level_buf
+        // Free allocated memory for level_buf and isal_strm
         if (strm->state) {
+                const deflate_state *s = (deflate_state *) strm->state;
+                if (s && s->isal_strm) {
+                        if (s->isal_strm->level_buf) {
+                                free(s->isal_strm->level_buf);
+                        }
+                        free(s->isal_strm);
+                }
                 free(strm->state);
                 strm->state = NULL;
         }
