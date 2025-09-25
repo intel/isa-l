@@ -475,4 +475,128 @@
 		ret
 %endmacro
 
+;;;;;
+; mbin_dispatch_init8_hygon parameters
+; 1-> function name
+; 2-> base function
+; 3-> SSE4_2 or 00/01 optimized function
+; 4-> AVX/02 opt func
+; 5-> AVX2/04 opt func
+; 6-> AVX512/06 opt func
+; 7-> AVX2 Update/07 opt func
+; 8-> AVX512 Update/10 opt func
+;
+; With special case:
+; - Use AVX on Hygon 1/2/3 platform
+;;;;;
+%macro mbin_dispatch_init8_hygon 8
+	section .text
+	%1_dispatch_init:
+		push	rsi
+		push	rax
+		push	rbx
+		push	rcx
+		push	rdx
+		push	rdi
+		lea	rsi, [%2 WRT_OPT] ; Default - use base function
+
+		mov	eax, 1
+		cpuid
+		mov	ebx, ecx ; save cpuid1.ecx
+		test	ecx, FLAG_CPUID1_ECX_SSE4_2
+		je	_%1_init_done	  ; Use base function if no SSE4_2
+		lea	rsi, [%3 WRT_OPT] ; SSE possible so use 00/01 opt
+
+		;; Test for XMM_YMM support/AVX
+		test	ecx, FLAG_CPUID1_ECX_OSXSAVE
+		je	_%1_init_done
+		xor	ecx, ecx
+		xgetbv	; xcr -> edx:eax
+		mov	edi, eax	  ; save xgetvb.eax
+
+		and	eax, FLAG_XGETBV_EAX_XMM_YMM
+		cmp	eax, FLAG_XGETBV_EAX_XMM_YMM
+		jne	_%1_init_done
+		test	ebx, FLAG_CPUID1_ECX_AVX
+		je	_%1_init_done
+		lea	rsi, [%4 WRT_OPT] ; AVX/02 opt
+
+		;; Hygon platform check: Use AVX opt on Hygon 1/2/3 for performance
+		;; Even if the have the ability to use AVX2 opt
+		xor	eax, eax
+		cpuid
+		mov	eax, FLAG_CPUID0_EBX_HYGON
+		cmp	eax, ebx
+		jne	_%1_check_avx2	; Not Hygon. Proceed as normal
+
+		mov	eax, FLAG_CPUID0_EDX_HYGON
+		cmp	eax, edx
+		jne	_%1_check_avx2	; Not Hygon. Proceed as normal
+
+		mov	eax, FLAG_CPUID0_ECX_HYGON
+		cmp	eax, ecx
+		jne	_%1_check_avx2	; Not Hygon. Proceed as normal
+
+		;; All vendor ID matches: Hygon confirmed
+		;; Further family & model check: Identify Hygon 1/2/3
+		mov	eax, 1
+		cpuid
+		and	eax, FLAG_CPUID1_EAX_STEP_MASK
+		mov	ecx, FLAG_CPUID1_EAX_HYGON1
+		mov	edx, FLAG_CPUID1_EAX_HYGON2
+		mov	ebx, FLAG_CPUID1_EAX_HYGON3
+
+		cmp	eax, ecx	; Hygon 1
+		je	_%1_hygon_123_init
+		cmp	eax, edx	; Hygon 2
+		je	_%1_hygon_123_init
+		cmp	eax, ebx	; Hygon 3
+		jne	_%1_check_avx2	; Not any of Hygon 1/2/3: Continue normal procedure
+
+	_%1_hygon_123_init:
+		;; Init complete early for Hygon 1/2/3.
+		jmp	_%1_init_done	; Use AVX opt func registered before
+
+	_%1_check_avx2:
+		;; Test for AVX2
+		xor	ecx, ecx
+		mov	eax, 7
+		cpuid
+		test	ebx, FLAG_CPUID7_EBX_AVX2
+		je	_%1_init_done		; No AVX2 possible
+		lea	rsi, [%5 WRT_OPT] 	; AVX2/04 opt func
+
+		;; Test for AVX512
+		and	edi, FLAG_XGETBV_EAX_ZMM_OPM
+		cmp	edi, FLAG_XGETBV_EAX_ZMM_OPM
+		jne	_%1_check_avx2_g2	  ; No AVX512 possible
+		and	ebx, FLAGS_CPUID7_EBX_AVX512_G1
+		cmp	ebx, FLAGS_CPUID7_EBX_AVX512_G1
+		lea	rbx, [%6 WRT_OPT] ; AVX512/06 opt
+		cmove	rsi, rbx
+
+		and	ecx, FLAGS_CPUID7_ECX_AVX512_G2
+		cmp	ecx, FLAGS_CPUID7_ECX_AVX512_G2
+		lea	rbx, [%8 WRT_OPT] ; AVX512/10 opt
+		cmove	rsi, rbx
+		jmp     _%1_init_done
+
+	_%1_check_avx2_g2:
+		;; Test for AVX2 Gen 2
+		and	ecx, FLAGS_CPUID7_ECX_AVX2_G2
+		cmp	ecx, FLAGS_CPUID7_ECX_AVX2_G2
+		lea	rbx, [%7 WRT_OPT] ; AVX2/7 opt
+		cmove	rsi, rbx
+
+	_%1_init_done:
+		pop	rdi
+		pop	rdx
+		pop	rcx
+		pop	rbx
+		pop	rax
+		mov	[%1_dispatched], rsi
+		pop	rsi
+		ret
+%endmacro
+
 %endif ; ifndef _MULTIBINARY_ASM_
