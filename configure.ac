@@ -38,6 +38,9 @@ AM_CONDITIONAL([CPU_PPC64LE], [test "$CPU" = "ppc64le"])
 AM_CONDITIONAL([CPU_RISCV64], [test "$CPU" = "riscv64"])
 AM_CONDITIONAL([CPU_UNDEFINED], [test "x$CPU" = "x"])
 AM_CONDITIONAL([HAVE_RVV], [false])
+AM_CONDITIONAL([HAVE_ZBC], [false])
+AM_CONDITIONAL([HAVE_ZVBC], [false])
+AM_CONDITIONAL([HAVE_HWPROBE_H], [false])
 
 # Check for programs
 AC_PROG_CC_STDC
@@ -57,24 +60,78 @@ case "${CPU}" in
 
 	riscv64)
 
-		AC_MSG_CHECKING([checking RVV support])
-		AC_COMPILE_IFELSE(
-			[AC_LANG_PROGRAM([], [
-				__asm__ volatile(
-					".option arch, +v\n"
-					"vsetivli zero, 0, e8, m1, ta, ma\n"
-				);
-			])],
-			[AC_DEFINE([HAVE_RVV], [1], [Enable RVV instructions])
-			AM_CONDITIONAL([HAVE_RVV], [true]) rvv=yes],
-			[AC_DEFINE([HAVE_RVV], [0], [Disable RVV instructions])
-			AM_CONDITIONAL([HAVE_RVV], [false]) rvv=no]
+		AC_CHECK_HEADER([asm/hwprobe.h],
+			[AC_DEFINE([HAVE_HWPROBE_H], [1], [Define if asm/hwprobe.h exists])
+			AM_CONDITIONAL([HAVE_HWPROBE_H], [true]) hwprobe_h=yes],
+			[AC_DEFINE([HAVE_HWPROBE_H], [0], [Define if asm/hwprobe.h not exists])
+			AM_CONDITIONAL([HAVE_HWPROBE_H], [false]) hwprobe_h=no]
 		)
-		if test "x$rvv" = "xyes"; then
-		  CFLAGS+=" -march=rv64gcv"
-		  CCASFLAGS+=" -march=rv64gcv"
+		if test "x$hwprobe_h" = "xyes"; then
+			AC_MSG_CHECKING([ZBC support])
+			AC_COMPILE_IFELSE(
+				[AC_LANG_PROGRAM([#include <asm/hwprobe.h>], [
+					int a = RISCV_HWPROBE_EXT_ZBC;
+					__asm__ volatile(
+						".option arch, +zbc\n"
+						"clmul zero, zero, zero\n"
+						"clmulh zero, zero, zero\n"
+					);
+				])],
+				[AC_DEFINE([HAVE_ZBC], [1], [Enable ZBC instructions])
+				AM_CONDITIONAL([HAVE_ZBC], [true]) zbc=yes],
+				[AC_DEFINE([HAVE_ZBC], [0], [Disable ZBC instructions])
+				AM_CONDITIONAL([HAVE_ZBC], [false]) zbc=no]
+			)
+			AC_MSG_RESULT([$zbc])
+			AC_MSG_CHECKING([ZVBC support])
+			AC_COMPILE_IFELSE(
+				[AC_LANG_PROGRAM([#include <asm/hwprobe.h>], [
+					int a = RISCV_HWPROBE_EXT_ZVBC;
+					__asm__ volatile(
+						".option arch, +v, +zvbc\n"
+						"vsetivli zero, 2, e64, m1, ta, ma\n"
+						"vclmul.vv v0, v0, v0\n"
+						"vclmulh.vv v0, v0, v0\n"
+					);
+				])],
+				[AC_DEFINE([HAVE_ZVBC], [1], [Enable ZVBC instructions])
+				AM_CONDITIONAL([HAVE_ZVBC], [true]) zvbc=yes],
+				[AC_DEFINE([HAVE_ZVBC], [0], [Disable ZVBC instructions])
+				AM_CONDITIONAL([HAVE_ZVBC], [false]) zvbc=no]
+			)
+			AC_MSG_RESULT([$zvbc])
 		fi
+		AC_MSG_CHECKING([RVV support])
+		AS_IF([test "x$zvbc" = "xno"],
+			[
+				AC_COMPILE_IFELSE(
+					[AC_LANG_PROGRAM([], [
+						__asm__ volatile(
+							".option arch, +v\n"
+							"vsetivli zero, 0, e8, m1, ta, ma\n"
+						);
+					])],
+					[AC_DEFINE([HAVE_RVV], [1], [Enable RVV instructions])
+					AM_CONDITIONAL([HAVE_RVV], [true]) rvv=yes],
+					[AC_DEFINE([HAVE_RVV], [0], [Disable RVV instructions])
+					AM_CONDITIONAL([HAVE_RVV], [false]) rvv=no]
+				)
+			],
+			[AC_DEFINE([HAVE_RVV], [1], [Enable RVV instructions])
+			AM_CONDITIONAL([HAVE_RVV], [true]) rvv=yes]
+		)
 		AC_MSG_RESULT([$rvv])
+		AS_IF([test "x$zvbc" = "xyes" && test "x$zbc" = "xyes"],
+			[
+				CFLAGS="$CFLAGS -march=rv64gcv_zbc_zvbc"
+				CCASFLAGS="$CCASFLAGS -march=rv64gcv_zbc_zvbc"
+			],
+			[test "x$rvv" = "xyes"],
+			[
+				CFLAGS="$CFLAGS -march=rv64gcv"
+				CCASFLAGS="$CCASFLAGS -march=rv64gcv"
+			]
+		)
 		;;
 
 	*)
