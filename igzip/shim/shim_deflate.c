@@ -347,3 +347,15 @@ compress(uint8_t *dest, unsigned long *dest_len, const uint8_t *source, unsigned
 {
         return compress2(dest, dest_len, source, source_len, Z_DEFAULT_COMPRESSION);
 }
+
+unsigned long
+crc32(unsigned long crc, const unsigned char *buf, unsigned int len)
+{
+        return crc32_gzip_refl(crc, buf, len);
+}
+
+unsigned long
+adler32(unsigned long adler, const unsigned char *buf, unsigned int len)
+{
+        return isal_adler32(adler, buf, len);
+}

@@ -17,8 +17,8 @@ This library provides an experimental shim layer that implements the zlib API wh
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/intel-innersource/libraries.performance.storage.isa-l
-    cd shim
+    git clone https://github.com/intel/isa-l
+    cd isa-l/igzip/shim
     ```
 
 2. Build isal-shim.so:
@@ -73,6 +73,9 @@ deflate/inflate and related functions
 - deflateInit, deflateInit2, deflateSetDictionary, deflate, deflateEnd, deflateSetHeader
 - inflateInit, inflateInit2, inflateSetDictionary, inflate, inflateEnd
 
+checksum functions
+- crc32, adler32
+
 utility functions
 - compress, uncompress
-- compress, uncompress2
+- compress2, uncompress2
