@@ -71,7 +71,7 @@ For production use, thorough testing in your specific environment is recommended
 
 deflate/inflate and related functions
 - deflateInit, deflateInit2, deflateSetDictionary, deflate, deflateEnd, deflateSetHeader
-- inflateInit, inflateInit2, inflateSetDictionary, inflate, inflateEnd
+- inflateInit, inflateInit2, inflateSetDictionary, inflate, inflateEnd, inflateReset
 
 checksum functions
 - crc32, adler32

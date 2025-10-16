@@ -384,3 +384,36 @@ uncompress(uint8_t *dest, unsigned long *dest_len, const uint8_t *source, unsign
 {
         return uncompress2(dest, dest_len, source, &source_len);
 }
+
+int
+inflateReset(z_streamp strm)
+{
+        if (!strm) {
+                fprintf(stderr, "Error: z_streamp is NULL\n");
+                return Z_STREAM_ERROR;
+        }
+
+        inflate_state2 *s = (inflate_state2 *) strm->state;
+        if (!s) {
+                fprintf(stderr, "Error: inflate_state2 is NULL\n");
+                return Z_STREAM_ERROR;
+        }
+
+        struct inflate_state *isal_strm_inflate = s->isal_strm_inflate;
+        if (!isal_strm_inflate) {
+                fprintf(stderr, "Error: isal_strm_inflate is NULL\n");
+                return Z_STREAM_ERROR;
+        }
+
+        // Reset ISA-L inflate state
+        isal_inflate_reset(isal_strm_inflate);
+
+        strm->total_out = 0;
+        strm->total_in = 0;
+        strm->msg = NULL;
+
+        // Reset workaround flag
+        s->trailer_overconsumption_fixed = 0;
+
+        return Z_OK;
+}
