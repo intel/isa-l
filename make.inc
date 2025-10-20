@@ -191,6 +191,8 @@ progs: $(bin_PROGRAMS)
 $(bin_PROGRAMS): CFLAGS += -DVERSION=\"$(version)\"
 $(bin_PROGRAMS): LDLIBS += $(THREAD_LD_y)
 $(bin_PROGRAMS): CFLAGS += $(THREAD_CFLAGS_y)
+$(all_perf_tests): LDLIBS += $(THREAD_LD_y)
+$(all_perf_tests): CFLAGS += $(THREAD_CFLAGS_y)
 sim test trace: $(addsuffix .run,$(all_unit_tests))
 perf: $(addsuffix .run,$(all_perf_tests))
 check: $(addsuffix .run,$(all_check_tests))

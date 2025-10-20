@@ -27,6 +27,10 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
+#if !defined(_WIN32) && !defined(_GNU_SOURCE)
+#define _GNU_SOURCE // Required for CPU affinity functions on Linux
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,18 +43,43 @@
 #include <io.h>
 #define ssize_t    long
 #define strcasecmp _stricmp
+#ifndef strdup
+#define strdup _strdup
+#endif
 #else
 #include <strings.h>
 #include <sys/types.h>
+#include <pthread.h>
+#include <sched.h>
+#include <unistd.h>
 #endif
 
 #include "raid.h"
 #include "test.h"
 
+// Cross-platform threading definitions
+#ifdef _WIN32
+typedef HANDLE thread_t;
+typedef DWORD(WINAPI *thread_func_t)(LPVOID);
+#define THREAD_RETURN     DWORD WINAPI
+#define THREAD_RETURN_VAL 0
+#else
+typedef pthread_t thread_t;
+typedef void *(*thread_func_t)(void *);
+#define THREAD_RETURN     void *
+#define THREAD_RETURN_VAL NULL
+#endif
+
 #define DEFAULT_SOURCES  10
 #define DEFAULT_TEST_LEN 8 * 1024
 
 #define COLD_CACHE_TEST_MEM (1024 * 1024 * 1024)
+
+// Global variables:
+//   g_thread_bufs: Pointer to per-thread buffer arrays for single memory space allocation.
+//   g_coremask: Stores the CPU affinity mask for thread pinning.
+static void ***g_thread_bufs = NULL;
+static unsigned long g_coremask = 0;
 
 // Define RAID function types
 typedef enum {
@@ -64,6 +93,18 @@ typedef enum {
 
 // Function pointer type for RAID functions
 typedef int (*raid_func_t)(int vects, int len, void **array);
+
+// Thread data structure for multi-threaded benchmarking
+typedef struct {
+        int thread_id;
+        int cpu_core; // CPU core number for affinity (-1 = no pinning)
+        void **buffs; // This thread's buffer pointers
+        size_t test_len;
+        int sources;
+        raid_type_t raid_type;
+        int csv_output;
+        int use_cold_cache;
+} thread_data_t;
 
 // Helper function to get buffer count for a specific RAID type
 static int
@@ -93,20 +134,21 @@ parse_size_value(const char *size_str);
 static void
 run_raid_type_range(const raid_type_t type, void *buffs[], const size_t min_len,
                     const size_t max_len, const int is_multiplicative, const size_t abs_step,
-                    const int sources, const int csv_output, const int use_cold_cache);
+                    const int sources, const int csv_output, const int use_cold_cache,
+                    const int num_threads);
 static void
 run_raid_type_size_list(const raid_type_t type, void *buffs[], const size_t *size_list,
                         const int size_count, const int sources, const int csv_output,
-                        const int use_cold_cache);
+                        const int use_cold_cache, const int num_threads);
 
 void
 benchmark_raid_type_range(const raid_type_t raid_type, void *buffs[], const size_t min_len,
                           const size_t max_len, const ssize_t step_len, const int sources,
-                          const int csv_output, const int use_cold_cache);
+                          const int csv_output, const int use_cold_cache, const int num_threads);
 void
 benchmark_raid_type_size_list(const raid_type_t raid_type, void *buffs[], const size_t *size_list,
                               const int size_count, const int sources, const int csv_output,
-                              const int use_cold_cache);
+                              const int use_cold_cache, const int num_threads);
 
 // Function to run a specific RAID benchmark
 // len is the block size for each source and destination buffer, in bytes
@@ -221,6 +263,8 @@ print_help(void)
                "exits\n");
         printf("  --sources N         Number of source buffers to use (default: %d)\n",
                DEFAULT_SOURCES);
+        printf("  --coremask MASK     CPU core mask in hex (e.g., 0xF for 4 threads on cores 0-3, "
+               "0 = single-threaded). Max core ID is 63.\n");
         printf("  -r, --range MIN:STEP:MAX  Run tests with buffer sizes from MIN to MAX in STEP "
                "increments\n");
         printf("                       If STEP starts with '*', it's treated as a multiplier\n");
@@ -321,13 +365,185 @@ parse_size_value(const char *size_str)
 #define MAX_SIZE_COUNT 32 // Maximum number of buffer sizes that can be specified
 #define MAX_SRC_BUFS   20 // Maximum number of source buffers
 
+// Helper function to count set bits in coremask
+static int
+count_coremask_bits(unsigned long coremask)
+{
+        if (coremask == 0)
+                return 1; // Default to single-threaded when no coremask
+
+        int count = 0;
+        for (int bit = 0; bit < 64; bit++) {
+                if (coremask & (1UL << bit))
+                        count++;
+        }
+        return count;
+}
+
+// Helper function to extract core numbers from coremask
+static int
+get_core_from_mask(unsigned long coremask, int thread_index)
+{
+        if (coremask == 0)
+                return -1; // No pinning
+
+        // First count total cores to handle wrap-around efficiently
+        int core_count = count_coremask_bits(coremask);
+
+        if (core_count == 0)
+                return -1; // No cores in mask
+
+        // Use modulo to handle wrap-around without recursion
+        const int target_index = thread_index % core_count;
+        int current_index = 0;
+
+        // Find the core at the target index position
+        for (int bit = 0; bit < 64; bit++) {
+                if (coremask & (1UL << bit)) {
+                        if (current_index == target_index)
+                                return bit;
+                        current_index++;
+                }
+        }
+
+        return -1; // Should never reach here
+}
+
+// Helper function to set CPU affinity for current thread
+static int
+set_cpu_affinity(int cpu_core)
+{
+        if (cpu_core < 0)
+                return 0; // No pinning requested
+
+#ifdef _WIN32
+        DWORD_PTR affinity_mask = 1ULL << cpu_core;
+        HANDLE thread_handle = GetCurrentThread();
+
+        DWORD_PTR result = SetThreadAffinityMask(thread_handle, affinity_mask);
+        if (result == 0) {
+                fprintf(stderr, "Warning: Failed to set CPU affinity to core %d\n", cpu_core);
+                return -1;
+        }
+        return 0;
+#else
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(cpu_core, &cpuset);
+
+        int ret = sched_setaffinity(0, sizeof(cpuset), &cpuset);
+        if (ret != 0) {
+                fprintf(stderr, "Warning: Failed to set CPU affinity to core %d\n", cpu_core);
+                return -1;
+        }
+        return 0;
+#endif
+}
+
+// Thread worker function for multi-threaded benchmarking
+static THREAD_RETURN
+thread_worker(void *arg)
+{
+        thread_data_t *data = (thread_data_t *) arg;
+        const int buffer_count = get_buffer_count(data->raid_type, data->sources);
+
+        // Set CPU affinity if core pinning is requested
+        set_cpu_affinity(data->cpu_core);
+
+        // Run the benchmark with this thread's buffers
+        run_benchmark(data->buffs, data->test_len, buffer_count, data->raid_type, data->csv_output,
+                      data->use_cold_cache);
+
+        return THREAD_RETURN_VAL;
+}
+
+// Multi-threaded wrapper for run_benchmark
+static void
+run_benchmark_multithreaded(const size_t len, const int sources, const raid_type_t type,
+                            const int csv_output, const int use_cold_cache, const int num_threads)
+{
+        if (num_threads == 1 || !g_thread_bufs) {
+                // Single-threaded fallback
+                const int buffer_count = get_buffer_count(type, sources);
+                run_benchmark(g_thread_bufs[0], len, buffer_count, type, csv_output,
+                              use_cold_cache);
+                return;
+        }
+
+        // Multi-threaded execution
+        thread_t *threads = malloc(num_threads * sizeof(thread_t));
+        thread_data_t *thread_data = malloc(num_threads * sizeof(thread_data_t));
+
+        if (!threads || !thread_data) {
+                fprintf(stderr, "Error: Failed to allocate memory for threads\n");
+                free(threads);
+                free(thread_data);
+                return;
+        }
+
+        // Create and start threads
+        for (int i = 0; i < num_threads; i++) {
+                thread_data[i].thread_id = i;
+                thread_data[i].cpu_core = get_core_from_mask(g_coremask, i);
+                thread_data[i].buffs = g_thread_bufs[i];
+                thread_data[i].test_len = len;
+                thread_data[i].sources = sources;
+                thread_data[i].raid_type = type;
+                thread_data[i].csv_output = csv_output;
+                thread_data[i].use_cold_cache = use_cold_cache;
+
+#ifdef _WIN32
+                threads[i] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) thread_worker,
+                                          &thread_data[i], 0, NULL);
+                if (threads[i] == NULL) {
+                        fprintf(stderr, "Error: Failed to create thread %d\n", i);
+                        // Clean up already created threads
+                        for (int j = 0; j < i; j++) {
+                                WaitForSingleObject(threads[j], INFINITE);
+                                CloseHandle(threads[j]);
+                        }
+                        free(threads);
+                        free(thread_data);
+                        return;
+                }
+#else
+                int ret = pthread_create(&threads[i], NULL, thread_worker, &thread_data[i]);
+                if (ret != 0) {
+                        fprintf(stderr, "Error: Failed to create thread %d\n", i);
+                        // Clean up already created threads
+                        for (int j = 0; j < i; j++) {
+                                pthread_join(threads[j], NULL);
+                        }
+                        free(threads);
+                        free(thread_data);
+                        return;
+                }
+#endif
+        }
+
+        // Wait for all threads to complete
+        for (int i = 0; i < num_threads; i++) {
+#ifdef _WIN32
+                WaitForSingleObject(threads[i], INFINITE);
+                CloseHandle(threads[i]);
+#else
+                pthread_join(threads[i], NULL);
+#endif
+        }
+
+        free(threads);
+        free(thread_data);
+}
+
 int
 main(int argc, char *argv[])
 {
         void **buffs;
         raid_type_t raid_type = RAID_ALL;
-        int csv_output = 0;     // Flag for CSV output mode
-        int use_cold_cache = 0; // Flag for cold cache mode
+        int csv_output = 0;         // Flag for CSV output mode
+        int use_cold_cache = 0;     // Flag for cold cache mode
+        int num_threads = 1;        // Number of threads for benchmarking (default: single-threaded)
+        unsigned long coremask = 0; // CPU core mask for thread affinity (0 = no pinning)
         size_t test_len = DEFAULT_TEST_LEN;
         int use_range = 0;
         size_t min_len = 0, max_len = 0;
@@ -388,6 +604,25 @@ main(int argc, char *argv[])
                                 i++; // Skip the argument value in the next iteration
                         } else {
                                 fprintf(stderr, "Option --sources requires an argument.\n");
+                                print_help();
+                                return 0;
+                        }
+                }
+
+                // Check for coremask option
+                else if (strcmp(argv[i], "--coremask") == 0) {
+                        if (i + 1 < argc && argv[i + 1][0] != '-') {
+                                char *endptr;
+                                coremask = strtoul(argv[i + 1], &endptr,
+                                                   0); // 0 = auto-detect base (hex/dec)
+                                if (*endptr != '\0') {
+                                        fprintf(stderr, "Invalid coremask: %s. Using no pinning.\n",
+                                                argv[i + 1]);
+                                        coremask = 0;
+                                }
+                                i++; // Skip the argument value in the next iteration
+                        } else {
+                                fprintf(stderr, "Option --coremask requires an argument.\n");
                                 print_help();
                                 return 0;
                         }
@@ -542,6 +777,9 @@ main(int argc, char *argv[])
                 }
         }
 
+        // Determine number of threads from coremask
+        num_threads = count_coremask_bits(coremask);
+
         if (!csv_output) {
                 printf("RAID Functions Performance Benchmark\n");
         } else {
@@ -564,30 +802,59 @@ main(int argc, char *argv[])
         if (use_cold_cache)
                 test_len = COLD_CACHE_TEST_MEM / max_needed_buffs;
 
-        // Allocate buffer pointers
-        buffs = (void **) malloc(sizeof(void *) * max_needed_buffs);
-        if (!buffs) {
-                fprintf(stderr, "Error: Failed to allocate buffer pointers\n");
+        // Single memory space allocation for all buffers across all threads
+        const size_t allocated_size_per_buf = test_len;
+        const size_t total_memory_size =
+                (size_t) max_needed_buffs * num_threads * allocated_size_per_buf;
+
+        void *shared_memory;
+        int ret = posix_memalign(&shared_memory, 64, total_memory_size);
+        if (ret) {
+                fprintf(stderr, "Error: Failed to allocate shared memory\n");
                 return 1;
         }
 
         srand(20250707);
-        // Allocate the actual buffers
-        for (int i = 0; i < max_needed_buffs; i++) {
-                int ret = posix_memalign(&buffs[i], 64, test_len);
-                if (ret) {
-                        fprintf(stderr, "Error: Failed to allocate buffer memory\n");
-                        // Free previously allocated buffers
-                        for (int j = 0; j < i; j++) {
-                                aligned_free(buffs[j]);
-                        }
-                        free(buffs);
+        // Initialize all memory with incremental data
+        for (size_t j = 0; j < total_memory_size; j++)
+                ((uint8_t *) shared_memory)[j] = j & 0xFF;
+
+        // Create void ***bufs structure for thread management
+        void ***bufs = (void ***) malloc(num_threads * sizeof(void **));
+        if (!bufs) {
+                fprintf(stderr, "Error: Failed to allocate thread buffer pointers\n");
+                free(shared_memory);
+                return 1;
+        }
+
+        // Set up memory layout for each thread
+        for (int thread = 0; thread < num_threads; thread++) {
+                bufs[thread] = (void **) malloc(max_needed_buffs * sizeof(void *));
+                if (!bufs[thread]) {
+                        fprintf(stderr, "Error: Failed to allocate buffer pointers for thread %d\n",
+                                thread);
+                        // Cleanup previously allocated thread buffers
+                        for (int cleanup_thread = 0; cleanup_thread < thread; cleanup_thread++)
+                                free(bufs[cleanup_thread]);
+                        free(bufs);
+                        free(shared_memory);
                         return 1;
                 }
-                // Initialize buffer with incremental data
-                for (size_t j = 0; j < test_len; j++)
-                        ((uint8_t *) buffs[i])[j] = j & 0xFF;
+
+                // Assign memory slices to each thread's buffers
+                for (int buffer = 0; buffer < max_needed_buffs; buffer++) {
+                        size_t offset =
+                                (thread * max_needed_buffs + buffer) * allocated_size_per_buf;
+                        bufs[thread][buffer] = (void *) ((uint8_t *) shared_memory + offset);
+                }
         }
+
+        // For single-threaded case, use the first thread's buffers
+        buffs = bufs[0];
+
+        // Store globally for potential future use by helper functions
+        g_thread_bufs = bufs;
+        g_coremask = coremask;
 
         // Process according to chosen RAID type and size options
         if (use_range) {
@@ -599,13 +866,13 @@ main(int argc, char *argv[])
 
                 // Call the benchmark function for specific type with range parameters
                 benchmark_raid_type_range(raid_type, buffs, min_len, max_len, step_len, sources,
-                                          csv_output, use_cold_cache);
+                                          csv_output, use_cold_cache, num_threads);
         } else {
                 // Use list of specific sizes
 
                 // Call the benchmark function for specific type with size list parameters
                 benchmark_raid_type_size_list(raid_type, buffs, size_list, size_count, sources,
-                                              csv_output, use_cold_cache);
+                                              csv_output, use_cold_cache, num_threads);
         }
 
         if (!csv_output) {
@@ -613,10 +880,14 @@ main(int argc, char *argv[])
         }
 
         // Free allocated memory
-        for (int i = 0; i < max_needed_buffs; i++) {
-                aligned_free(buffs[i]);
+        // Free thread buffer pointers
+        for (int thread = 0; thread < num_threads; thread++) {
+                free(bufs[thread]);
         }
-        free(buffs);
+        free(bufs);
+
+        // Free shared memory
+        aligned_free(shared_memory);
 
         return 0;
 }
@@ -625,11 +896,11 @@ main(int argc, char *argv[])
 static void
 run_raid_type_range(const raid_type_t type, void *buffs[], const size_t min_len,
                     const size_t max_len, const int is_multiplicative, const size_t abs_step,
-                    const int sources, const int csv_output, const int use_cold_cache)
+                    const int sources, const int csv_output, const int use_cold_cache,
+                    const int num_threads)
 {
         const char *type_names[] = { "XOR Generation", "P+Q Generation" };
         size_t len;
-        const int buffer_count = get_buffer_count(type, sources);
 
         if (!csv_output && type < RAID_ALL) {
                 printf("\n%s (%d sources):\n", type_names[type], sources);
@@ -641,7 +912,8 @@ run_raid_type_range(const raid_type_t type, void *buffs[], const size_t min_len,
                         printf("\n  Buffer size: %zu bytes\n", len);
                 }
 
-                run_benchmark(buffs, len, buffer_count, type, csv_output, use_cold_cache);
+                run_benchmark_multithreaded(len, sources, type, csv_output, use_cold_cache,
+                                            num_threads);
 
                 /* Update length based on step type */
                 if (is_multiplicative) {
@@ -656,7 +928,7 @@ run_raid_type_range(const raid_type_t type, void *buffs[], const size_t min_len,
 void
 benchmark_raid_type_range(const raid_type_t raid_type, void *buffs[], const size_t min_len,
                           const size_t max_len, const ssize_t step_len, const int sources,
-                          const int csv_output, const int use_cold_cache)
+                          const int csv_output, const int use_cold_cache, const int num_threads)
 {
         const int is_multiplicative = (step_len < 0);
         const size_t abs_step = is_multiplicative ? -step_len : step_len;
@@ -667,16 +939,16 @@ benchmark_raid_type_range(const raid_type_t raid_type, void *buffs[], const size
                 if (!csv_output)
                         printf("\n=========== XOR FUNCTION ===========\n");
                 run_raid_type_range(XOR_GEN, buffs, min_len, max_len, is_multiplicative, abs_step,
-                                    sources, csv_output, use_cold_cache);
+                                    sources, csv_output, use_cold_cache, num_threads);
 
                 if (!csv_output)
                         printf("\n=========== P+Q FUNCTION ===========\n");
                 run_raid_type_range(PQ_GEN, buffs, min_len, max_len, is_multiplicative, abs_step,
-                                    sources, csv_output, use_cold_cache);
+                                    sources, csv_output, use_cold_cache, num_threads);
         } else {
                 /* Run just the specific RAID type */
                 run_raid_type_range(raid_type, buffs, min_len, max_len, is_multiplicative, abs_step,
-                                    sources, csv_output, use_cold_cache);
+                                    sources, csv_output, use_cold_cache, num_threads);
         }
 }
 
@@ -684,10 +956,9 @@ benchmark_raid_type_range(const raid_type_t raid_type, void *buffs[], const size
 static void
 run_raid_type_size_list(const raid_type_t type, void *buffs[], const size_t *size_list,
                         const int size_count, const int sources, const int csv_output,
-                        const int use_cold_cache)
+                        const int use_cold_cache, const int num_threads)
 {
         const char *type_names[] = { "XOR Generation", "P+Q Generation" };
-        const int buffer_count = get_buffer_count(type, sources);
         int i;
         size_t len;
 
@@ -701,7 +972,8 @@ run_raid_type_size_list(const raid_type_t type, void *buffs[], const size_t *siz
                         printf("\n  Buffer size: %zu bytes\n", len);
                 }
 
-                run_benchmark(buffs, len, buffer_count, type, csv_output, use_cold_cache);
+                run_benchmark_multithreaded(len, sources, type, csv_output, use_cold_cache,
+                                            num_threads);
         }
 }
 
@@ -709,7 +981,7 @@ run_raid_type_size_list(const raid_type_t type, void *buffs[], const size_t *siz
 void
 benchmark_raid_type_size_list(const raid_type_t raid_type, void *buffs[], const size_t *size_list,
                               const int size_count, const int sources, const int csv_output,
-                              const int use_cold_cache)
+                              const int use_cold_cache, const int num_threads)
 {
         /* Process according to the chosen RAID type */
         if (raid_type == RAID_ALL) {
@@ -717,15 +989,15 @@ benchmark_raid_type_size_list(const raid_type_t raid_type, void *buffs[], const 
                 if (!csv_output)
                         printf("\n=========== XOR FUNCTION ===========\n");
                 run_raid_type_size_list(XOR_GEN, buffs, size_list, size_count, sources, csv_output,
-                                        use_cold_cache);
+                                        use_cold_cache, num_threads);
 
                 if (!csv_output)
                         printf("\n=========== P+Q FUNCTION ===========\n");
                 run_raid_type_size_list(PQ_GEN, buffs, size_list, size_count, sources, csv_output,
-                                        use_cold_cache);
+                                        use_cold_cache, num_threads);
         } else {
                 /* Run just the specific RAID type */
                 run_raid_type_size_list(raid_type, buffs, size_list, size_count, sources,
-                                        csv_output, use_cold_cache);
+                                        csv_output, use_cold_cache, num_threads);
         }
 }
