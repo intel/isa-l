@@ -135,8 +135,7 @@ run_benchmark(void *buffs[], const size_t len, const int num_sources_dest, const
 
         // Create list of random buffer addresses within the large memory space for cold cache tests
         if (use_cold_cache) {
-                const size_t buffer_size_each =
-                        COLD_CACHE_TEST_MEM / (num_sources_dest + 2); // +2 for max buffers needed
+                const size_t buffer_size_each = COLD_CACHE_TEST_MEM / num_sources_dest;
                 const size_t num_buffer_sets = buffer_size_each / len;
 
                 if (num_buffer_sets == 0) {
