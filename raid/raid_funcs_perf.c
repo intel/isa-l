@@ -584,9 +584,9 @@ main(int argc, char *argv[])
                         free(buffs);
                         return 1;
                 }
-                // Initialize buffer with random data
+                // Initialize buffer with incremental data
                 for (size_t j = 0; j < test_len; j++)
-                        ((uint8_t *) buffs[i])[j] = rand() & 0xFF;
+                        ((uint8_t *) buffs[i])[j] = j & 0xFF;
         }
 
         // Process according to chosen RAID type and size options
