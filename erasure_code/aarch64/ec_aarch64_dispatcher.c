@@ -99,7 +99,7 @@ DEFINE_INTERFACE_DISPATCHER(gf_vect_dot_prod)
         if (auxval & HWCAP_ASIMD)
                 return gf_vect_dot_prod_neon;
 #elif defined(__APPLE__)
-        if (sysctlEnabled(SYSCTL_SVE_KEY))
+        if (sysctlEnabled(SYSCTL_SME_KEY))
                 return gf_vect_dot_prod_sve;
         return gf_vect_dot_prod_neon;
 #endif
@@ -116,7 +116,7 @@ DEFINE_INTERFACE_DISPATCHER(gf_vect_mad)
         if (auxval & HWCAP_ASIMD)
                 return gf_vect_mad_neon;
 #elif defined(__APPLE__)
-        if (sysctlEnabled(SYSCTL_SVE_KEY))
+        if (sysctlEnabled(SYSCTL_SME_KEY))
                 return gf_vect_mad_sve;
         return gf_vect_mad_neon;
 #endif
@@ -141,7 +141,7 @@ DEFINE_INTERFACE_DISPATCHER(ec_encode_data)
         if (auxval & HWCAP_ASIMD)
                 return ec_encode_data_neon;
 #elif defined(__APPLE__)
-        if (sysctlEnabled(SYSCTL_SVE_KEY))
+        if (sysctlEnabled(SYSCTL_SME_KEY))
                 return ec_encode_data_sve;
         return ec_encode_data_neon;
 #endif
@@ -158,7 +158,7 @@ DEFINE_INTERFACE_DISPATCHER(ec_encode_data_update)
         if (auxval & HWCAP_ASIMD)
                 return ec_encode_data_update_neon;
 #elif defined(__APPLE__)
-        if (sysctlEnabled(SYSCTL_SVE_KEY))
+        if (sysctlEnabled(SYSCTL_SME_KEY))
                 return ec_encode_data_update_sve;
         return ec_encode_data_update_neon;
 #endif
@@ -175,7 +175,7 @@ DEFINE_INTERFACE_DISPATCHER(gf_vect_mul)
         if (auxval & HWCAP_ASIMD)
                 return gf_vect_mul_neon;
 #elif defined(__APPLE__)
-        if (sysctlEnabled(SYSCTL_SVE_KEY))
+        if (sysctlEnabled(SYSCTL_SME_KEY))
                 return gf_vect_mul_sve;
         return gf_vect_mul_neon;
 #endif
