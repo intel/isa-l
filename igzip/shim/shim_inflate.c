@@ -167,12 +167,9 @@ inflate(z_streamp strm, int flush)
 #endif
 
         // WORKAROUND: ISA-L over-consumption fix for raw deflate mode
-        // When ISA-L reaches BLOCK_FINISH in raw deflate mode, it sometimes over-consumes
-        // input data that should be left for upper-layer protocol handling (like gzip trailer).
-        // 8 bytes have to remain for the gzip trailer.
-        // Only apply this fix once per stream, when we're truly at the end.
-        if (isal_strm_inflate->block_state == ISAL_BLOCK_FINISH &&
-            isal_strm_inflate->crc_flag == 0 &&      // raw deflate mode
+        if ((isal_strm_inflate->block_state == ISAL_BLOCK_FINISH ||
+             isal_strm_inflate->block_state == ISAL_BLOCK_INPUT_DONE) &&
+            (isal_strm_inflate->crc_flag == 0) &&    // raw deflate
             s->trailer_overconsumption_fixed == 0 && // hasn't been applied yet
             decomp == ISAL_DECOMP_OK &&              // successful decompression
             isal_strm_inflate->avail_in < 8 && isal_strm_inflate->avail_in > 0) {
@@ -224,22 +221,10 @@ inflate(z_streamp strm, int flush)
 
         if (decomp == ISAL_DECOMP_OK) {
                 if (isal_strm_inflate->block_state == ISAL_BLOCK_FINISH) {
-                        // ISA-L has finished processing the deflate stream AND any format-specific
-                        // trailers
+                        // ISA-L has finished processing the deflate stream including trailer
+                        // validation
                         ret = Z_STREAM_END;
                         strm->msg = "ok";
-                } else if (strm->avail_out == 0) {
-                        // Output buffer is full, but stream may not be complete
-                        ret = Z_OK;
-                } else if (strm->avail_in == 0) {
-                        // No more input available
-                        if (isal_strm_inflate->block_state == ISAL_BLOCK_FINISH) {
-                                // Stream is actually complete - ISA-L has reached final state
-                                ret = Z_STREAM_END;
-                        } else {
-                                // ISA-L still needs more input to finish processing
-                                ret = Z_OK;
-                        }
                 } else {
                         // Still processing, continue
                         ret = Z_OK;
