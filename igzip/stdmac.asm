@@ -210,7 +210,7 @@ ssc:
 %macro	MOVDQU	2
 %define	%%dest	%1
 %define	%%src	%2
-%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
+%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04) || (ARCH == 06))
 	vmovdqu	%%dest, %%src
 %else
 	movdqu	%%dest, %%src
@@ -220,7 +220,7 @@ ssc:
 %macro	MOVDQA	2
 %define	%%dest	%1
 %define	%%src	%2
-%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04))
+%if ((ARCH == 02) || (ARCH == 03) || (ARCH == 04) || (ARCH == 06))
 	vmovdqa	%%dest, %%src
 %else
 	movdqa	%%dest, %%src

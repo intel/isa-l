@@ -89,8 +89,8 @@ crc16_t10dif_copy_by4_02:
 	sub	rsp,16*4+8
 
 	; push the xmm registers into the stack to maintain
-	movdqa [rsp+16*2],xmm6
-	movdqa [rsp+16*3],xmm7
+	vmovdqa [rsp+16*2],xmm6
+	vmovdqa [rsp+16*3],xmm7
 
 	; check if smaller than 128B
 	cmp	arg4, 128

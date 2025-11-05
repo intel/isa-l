@@ -391,7 +391,7 @@ _128_done:
         vpslldq  xmm7, 4
         vpclmulqdq       xmm7, xmm10, 0x10
 
-        pxor    xmm7, xmm0
+        vpxor    xmm7, xmm0
 
 
         ;barrett reduction
