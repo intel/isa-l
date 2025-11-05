@@ -52,6 +52,10 @@
 #include <pthread.h>
 #include <sched.h>
 #include <unistd.h>
+#ifdef __APPLE__
+#include <mach/mach.h>
+#include <mach/thread_policy.h>
+#endif
 #endif
 
 #include "raid.h"
@@ -59,12 +63,12 @@
 
 // Cross-platform threading definitions
 #ifdef _WIN32
-typedef HANDLE thread_t;
+typedef HANDLE perf_thread_t;
 typedef DWORD(WINAPI *thread_func_t)(LPVOID);
 #define THREAD_RETURN     DWORD WINAPI
 #define THREAD_RETURN_VAL 0
 #else
-typedef pthread_t thread_t;
+typedef pthread_t perf_thread_t;
 typedef void *(*thread_func_t)(void *);
 #define THREAD_RETURN     void *
 #define THREAD_RETURN_VAL NULL
@@ -426,6 +430,18 @@ set_cpu_affinity(int cpu_core)
                 return -1;
         }
         return 0;
+#elif defined(__APPLE__)
+        // macOS uses thread affinity policy with affinity tags
+        thread_affinity_policy_data_t policy = { cpu_core };
+        mach_port_t mach_thread = pthread_mach_thread_np(pthread_self());
+
+        kern_return_t ret = thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY,
+                                              (thread_policy_t) &policy, 1);
+        if (ret != KERN_SUCCESS) {
+                fprintf(stderr, "Warning: Failed to set CPU affinity to core %d\n", cpu_core);
+                return -1;
+        }
+        return 0;
 #else
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
@@ -471,7 +487,7 @@ run_benchmark_multithreaded(const size_t len, const int sources, const raid_type
         }
 
         // Multi-threaded execution
-        thread_t *threads = malloc(num_threads * sizeof(thread_t));
+        perf_thread_t *threads = malloc(num_threads * sizeof(perf_thread_t));
         thread_data_t *thread_data = malloc(num_threads * sizeof(thread_data_t));
 
         if (!threads || !thread_data) {
