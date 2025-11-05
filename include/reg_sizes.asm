@@ -70,7 +70,6 @@
 %define FLAG_XGETBV_EAX_XMM_YMM        0x6
 %define FLAG_XGETBV_EAX_ZMM_OPM        0xe0
 
-%define FLAG_CPUID1_EAX_AVOTON     0x000406d0
 %define FLAG_CPUID1_EAX_STEP_MASK  0xfffffff0
 
 ; define d and w variants for registers

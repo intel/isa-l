@@ -37,12 +37,10 @@ extern crc32_iscsi_by8_02
 extern crc32_iscsi_base
 
 extern crc32_ieee_01
-extern crc32_ieee_by4  ;; Optimized for SLM
 extern crc32_ieee_02
 extern crc32_ieee_base
 
 extern crc16_t10dif_01
-extern crc16_t10dif_by4  ;; Optimized for SLM
 extern crc16_t10dif_02
 extern crc16_t10dif_base
 
@@ -100,12 +98,6 @@ crc32_ieee_dispatch_init:
 	test    ecx, FLAG_CPUID1_ECX_CLMUL
 	jz	.crc_ieee_init_done ; use ieee_base
 	lea	rsi, [crc32_ieee_01 WRT_OPT]
-
-	;; Extra Avoton test
-	lea	rdx, [crc32_ieee_by4 WRT_OPT]
-	and     eax, FLAG_CPUID1_EAX_STEP_MASK
-	cmp     eax, FLAG_CPUID1_EAX_AVOTON
-	cmove   rsi, rdx
 
 	;; Test for XMM_YMM support/AVX
 	test	ecx, FLAG_CPUID1_ECX_OSXSAVE
@@ -179,12 +171,6 @@ crc16_t10dif_dispatch_init:
 	test    ecx, FLAG_CPUID1_ECX_CLMUL
 	jz	.t10dif_init_done ; use t10dif_base
 	lea	rsi, [crc16_t10dif_01 WRT_OPT]
-
-	;; Extra Avoton test
-	lea	rdx, [crc16_t10dif_by4 WRT_OPT]
-	and     eax, FLAG_CPUID1_EAX_STEP_MASK
-	cmp     eax, FLAG_CPUID1_EAX_AVOTON
-	cmove   rsi, rdx
 
 	;; Test for XMM_YMM support/AVX
 	test	ecx, FLAG_CPUID1_ECX_OSXSAVE
