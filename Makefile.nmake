@@ -322,7 +322,6 @@ perfs = \
 	erasure_code_update_perf.exe \
 	xor_gen_perf.exe \
 	pq_gen_perf.exe \
-	raid_funcs_perf.exe \
 	crc16_t10dif_perf.exe \
 	crc16_t10dif_copy_perf.exe \
 	crc16_t10dif_op_perf.exe \
