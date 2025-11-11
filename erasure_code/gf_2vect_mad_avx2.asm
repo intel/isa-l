@@ -175,17 +175,14 @@ func(gf_2vect_mad_avx2)
 	vpbroadcastb xmask0f, xmask0fx	;Construct mask 0x0f0f0f...
 
 	sal	vec_i, 5		;Multiply by 32
-	sal	vec, 5
 	lea	tmp, [mul_array + vec_i]
-	vmovdqu	xgft1_lo, [tmp]		;Load array Ax{00}, Ax{01}, ..., Ax{0f}
-					;     "     Ax{00}, Ax{10}, ..., Ax{f0}
-	vmovdqu	xgft2_lo, [tmp+vec]	;Load array Bx{00}, Bx{01}, ..., Bx{0f}
-					;     "     Bx{00}, Bx{10}, ..., Bx{f0}
+	sal	vec, 5
 
-	vperm2i128 xgft1_hi, xgft1_lo, xgft1_lo, 0x11 ; swapped to hi | hi
-	vperm2i128 xgft1_lo, xgft1_lo, xgft1_lo, 0x00 ; swapped to lo | lo
-	vperm2i128 xgft2_hi, xgft2_lo, xgft2_lo, 0x11 ; swapped to hi | hi
-	vperm2i128 xgft2_lo, xgft2_lo, xgft2_lo, 0x00 ; swapped to lo | lo
+	vbroadcasti128	xgft1_lo, [tmp]		;Load array: lo | lo
+	vbroadcasti128	xgft1_hi, [tmp+16]	;            hi | hi
+	vbroadcasti128	xgft2_lo, [tmp+vec]	;Load array: lo | lo
+	vbroadcasti128	xgft2_hi, [tmp+vec+16]	;            hi | hi
+
 	mov	dest2, [dest1+PS]	; reuse mul_array
 	mov	dest1, [dest1]
 

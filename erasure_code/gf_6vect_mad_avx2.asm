@@ -48,9 +48,11 @@
  %define tmp.b  r11b
  %define tmp2   r10
  %define tmp3   r13
+ %define tmp4   rdi
+ %define tmp5   rsi
+ %define tmp6   r14
  %define return rax
- %define return.w eax
- %define stack_size 16*10 + 3*8
+ %define stack_size 16*10 + 7*8
  %define arg(x)      [rsp + stack_size + PS + PS*x]
  %define func(x) proc_frame x
 
@@ -69,6 +71,9 @@
 	save_reg	r12,  10*16 + 0*8
 	save_reg	r13,  10*16 + 1*8
 	save_reg	r15,  10*16 + 2*8
+	save_reg	rdi,  10*16 + 3*8
+	save_reg	rsi,  10*16 + 4*8
+	save_reg	r14,  10*16 + 5*8
 	end_prolog
 	mov	arg4, arg(4)
 	mov	arg5, arg(5)
@@ -88,6 +93,9 @@
 	mov	r12,  [rsp + 10*16 + 0*8]
 	mov	r13,  [rsp + 10*16 + 1*8]
 	mov	r15,  [rsp + 10*16 + 2*8]
+	mov	rdi,  [rsp + 10*16 + 3*8]
+	mov	rsi,  [rsp + 10*16 + 4*8]
+	mov	r14,  [rsp + 10*16 + 5*8]
 	add	rsp, stack_size
 %endmacro
 
@@ -103,15 +111,23 @@
  %define tmp.w r11d
  %define tmp.b r11b
  %define tmp2   r10
- %define tmp3   r12
+ %define tmp3   r12		; must be saved and restored
+ %define tmp4   r13		; must be saved and restored
+ %define tmp5   r14		; must be saved and restored
+ %define tmp6   r15		; must be saved and restored
  %define return rax
- %define return.w eax
 
  %define func(x) x: endbranch
  %macro FUNC_SAVE 0
 	push	r12
+	push	r13
+	push	r14
+	push	r15
  %endmacro
  %macro FUNC_RESTORE 0
+	pop	r15
+	pop	r14
+	pop	r13
 	pop	r12
  %endmacro
 %endif
@@ -125,7 +141,6 @@
 %define	src   arg4
 %define dest1  arg5
 %define pos   return
-%define pos.w return.w
 
 %define dest2 tmp3
 %define dest3 tmp2
@@ -190,6 +205,7 @@ func(gf_6vect_mad_avx2)
 	sal	vec_i, 5		;Multiply by 32
 	sal	vec, 5			;Multiply by 32
 	lea	tmp, [mul_array + vec_i]
+	mov	tmp6, tmp
 	mov	vec_i, vec
 	mov	mul_array, vec
 	sal	vec_i, 1
@@ -197,18 +213,7 @@ func(gf_6vect_mad_avx2)
 	add	vec_i, vec		;vec_i=vec*96
 	add	mul_array, vec_i	;vec_i=vec*160
 
-	vmovdqu	xgft1_lo, [tmp]			;Load array Ax{00}, Ax{01}, ..., Ax{0f}
-						;     "     Ax{00}, Ax{10}, ..., Ax{f0}
-	vmovdqu	xgft2_lo, [tmp+vec]		;Load array Bx{00}, Bx{01}, ..., Bx{0f}
-						;     "     Bx{00}, Bx{10}, ..., Bx{f0}
-	vmovdqu	xgft3_lo, [tmp+2*vec]		;Load array Cx{00}, Cx{01}, ..., Cx{0f}
-						;     "     Cx{00}, Cx{10}, ..., Cx{f0}
-	vmovdqu	xgft4_lo, [tmp+vec_i]		;Load array Fx{00}, Fx{01}, ..., Fx{0f}
-						;     "     Fx{00}, Fx{10}, ..., Fx{f0}
-	vmovdqu	xgft5_lo, [tmp+4*vec]		;Load array Ex{00}, Ex{01}, ..., Ex{0f}
-						;     "     Ex{00}, Ex{10}, ..., Ex{f0}
-	vmovdqu	xgft6_lo, [tmp+mul_array]	;Load array Dx{00}, Dx{01}, ..., Dx{0f}
-						;     "     Dx{00}, Dx{10}, ..., Dx{f0}
+	mov	tmp4, vec
 
 	mov	dest2, [dest1+PS]    ; reuse tmp3
 	mov	dest3, [dest1+2*PS]  ; reuse tmp2
@@ -225,57 +230,70 @@ func(gf_6vect_mad_avx2)
 	XLDR	xd4, [dest4+pos]	;Get next dest vector
 	XLDR	xd5, [dest5+pos]	;Get next dest vector
 
+	lea	tmp5, [tmp4+2*tmp4]	;3*vec, for addressing
+
 	vpand	xtmpl, x0, xmask0f	;Mask low src nibble in bits 4-0
 	vpsraw	x0, x0, 4		;Shift to put high nibble into bits 4-0
 	vpand	x0, x0, xmask0f		;Mask high src nibble in bits 4-0
-	vperm2i128 xtmpa, xtmpl, x0, 0x30 	;swap xtmpa from 1lo|2lo to 1lo|2hi
-	vperm2i128 x0, xtmpl, x0, 0x12	;swap x0 from    1hi|2hi to 1hi|2lo
+
+	vbroadcasti128	xgft1_lo, [tmp]		;Load array: lo | lo
+	vbroadcasti128	xtmph,    [tmp+16]	;            hi | hi
 
 	;dest1
-	vperm2i128 xtmph, xgft1_lo, xgft1_lo, 0x01 ; swapped to hi | lo
-	vpshufb	xtmph, xtmph, x0		;Lookup mul table of high nibble
-	vpshufb	xtmpl, xgft1_lo, xtmpa		;Lookup mul table of low nibble
-	vpxor	xtmph, xtmph, xtmpl		;GF add high and low partials
-	vpxor	xd1, xd1, xtmph		;xd1 += partial
+	vpshufb	xtmph, x0		;Lookup mul table of high nibble
+	vpshufb	xgft1_lo, xtmpl		;Lookup mul table of low nibble
+	vpxor	xtmph, xgft1_lo		;GF add high and low partials
+	vpxor	xd1, xtmph		;xd1 += partial
 
 	XSTR	[dest1+pos], xd1	;Store result into dest1
-
-	;dest2
-	vperm2i128 xtmph, xgft2_lo, xgft2_lo, 0x01 ; swapped to hi | lo
-	vpshufb	xtmph, xtmph, x0		;Lookup mul table of high nibble
-	vpshufb	xtmpl, xgft2_lo, xtmpa		;Lookup mul table of low nibble
-	vpxor	xtmph, xtmph, xtmpl		;GF add high and low partials
-	vpxor	xd2, xd2, xtmph		;xd2 += partial
-
-	;dest3
-	vperm2i128 xtmph, xgft3_lo, xgft3_lo, 0x01 ; swapped to hi | lo
-	vpshufb	xtmph, xtmph, x0		;Lookup mul table of high nibble
-	vpshufb	xtmpl, xgft3_lo, xtmpa		;Lookup mul table of low nibble
-	vpxor	xtmph, xtmph, xtmpl		;GF add high and low partials
-	vpxor	xd3, xd3, xtmph		;xd3 += partial
-
 	XLDR	xd6, [dest6+pos]	;reuse xd1. Get next dest vector
 
+	vbroadcasti128	xgft2_lo, [tmp+tmp4]	;Load array: lo | lo
+	vbroadcasti128	xtmph,    [tmp+tmp4+16]	;            hi | hi
+
+	;dest2
+	vpshufb	xtmph, x0		;Lookup mul table of high nibble
+	vpshufb	xgft2_lo, xtmpl		;Lookup mul table of low nibble
+	vpxor	xtmph, xgft2_lo		;GF add high and low partials
+	vpxor	xd2, xtmph		;xd2 += partial
+
+	vbroadcasti128	xgft3_lo, [tmp+2*tmp4]		;Load array: lo | lo
+	vbroadcasti128	xtmph,    [tmp+2*tmp4+16]	;            hi | hi
+
+	;dest3
+	vpshufb	xtmph, x0		;Lookup mul table of high nibble
+	vpshufb	xgft3_lo, xtmpl		;Lookup mul table of low nibble
+	vpxor	xtmph, xgft3_lo		;GF add high and low partials
+	vpxor	xd3, xtmph		;xd3 += partial
+
+	vbroadcasti128	xgft4_lo, [tmp+tmp5]	;Load array: lo | lo
+	vbroadcasti128	xtmph,    [tmp+tmp5+16]	;            hi | hi
+
+	lea	tmp5, [tmp5+2*tmp4]	;5*vec, for addressing
+
 	;dest4
-	vperm2i128 xtmph, xgft4_lo, xgft4_lo, 0x01 ; swapped to hi | lo
-	vpshufb	xtmph, xtmph, x0		;Lookup mul table of high nibble
-	vpshufb	xtmpl, xgft4_lo, xtmpa		;Lookup mul table of low nibble
-	vpxor	xtmph, xtmph, xtmpl		;GF add high and low partials
-	vpxor	xd4, xd4, xtmph		;xd4 += partial
+	vpshufb	xtmph, x0		;Lookup mul table of high nibble
+	vpshufb	xgft4_lo, xtmpl		;Lookup mul table of low nibble
+	vpxor	xtmph, xgft4_lo		;GF add high and low partials
+	vpxor	xd4, xtmph		;xd4 += partial
+
+	vbroadcasti128	xgft5_lo, [tmp+4*tmp4]		;Load array: lo | lo
+	vbroadcasti128	xtmph,    [tmp+4*tmp4+16]	;            hi | hi
 
 	;dest5
-	vperm2i128 xtmph, xgft5_lo, xgft5_lo, 0x01 ; swapped to hi | lo
-	vpshufb	xtmph, xtmph, x0		;Lookup mul table of high nibble
-	vpshufb	xtmpl, xgft5_lo, xtmpa		;Lookup mul table of low nibble
-	vpxor	xtmph, xtmph, xtmpl		;GF add high and low partials
-	vpxor	xd5, xd5, xtmph		;xd5 += partial
+	vpshufb	xtmph, x0		;Lookup mul table of high nibble
+	vpshufb	xgft5_lo, xtmpl		;Lookup mul table of low nibble
+	vpxor	xtmph, xgft5_lo		;GF add high and low partials
+	vpxor	xd5, xtmph		;xd5 += partial
+
+	vbroadcasti128	xgft6_lo, [tmp+tmp5]	;Load array: lo | lo
+	vbroadcasti128	xtmph,    [tmp+tmp5+16]	;            hi | hi
 
 	;dest6
-	vperm2i128 xtmph, xgft6_lo, xgft6_lo, 0x01 ; swapped to hi | lo
-	vpshufb	xtmph, xtmph, x0		;Lookup mul table of high nibble
-	vpshufb	xtmpl, xgft6_lo, xtmpa		;Lookup mul table of low nibble
-	vpxor	xtmph, xtmph, xtmpl		;GF add high and low partials
-	vpxor	xd6, xd6, xtmph		;xd6 += partial
+	vpshufb	xtmph, x0		;Lookup mul table of high nibble
+	vpshufb	xgft6_lo, xtmpl		;Lookup mul table of low nibble
+	vpxor	xtmph, xgft6_lo		;GF add high and low partials
+	vpxor	xd6, xtmph		;xd6 += partial
 
 	XSTR	[dest2+pos], xd2	;Store result into dest2
 	XSTR	[dest3+pos], xd3	;Store result into dest3
@@ -308,20 +326,21 @@ func(gf_6vect_mad_avx2)
 	XLDR	xd5, [dest5+tmp]	;Get next dest vector
 
 	sub	len, pos
+	lea	tmp5, [tmp4+2*tmp4]	;3*vec, for addressing
 
 	vpinsrb	xtmplx, xtmplx, len.w, 15
 	vinserti128	xtmpl, xtmpl, xtmplx, 1 ;swapped to xtmplx | xtmplx
 	vpshufb	xtmpl, xtmpl, xtmph	;Broadcast len to all bytes. xtmph=0x1f1f1f...
 	vpcmpgtb	xtmpl, xtmpl, [constip32]
 
-	vpand	xtmph, x0, xmask0f	;Mask low src nibble in bits 4-0
+	vpand	xtmpa, x0, xmask0f	;Mask low src nibble in bits 4-0
 	vpsraw	x0, x0, 4		;Shift to put high nibble into bits 4-0
 	vpand	x0, x0, xmask0f		;Mask high src nibble in bits 4-0
-	vperm2i128 xtmpa, xtmph, x0, 0x30 	;swap xtmpa from 1lo|2lo to 1lo|2hi
-	vperm2i128 x0, xtmph, x0, 0x12	;swap x0 from    1hi|2hi to 1hi|2lo
 
 	;dest1
-	vperm2i128 xtmph, xgft1_lo, xgft1_lo, 0x01 ; swapped to hi | lo
+	vbroadcasti128	xgft1_lo, [tmp6]	;Load array: lo | lo
+	vbroadcasti128	xtmph,    [tmp6+16]	;            hi | hi
+
 	vpshufb	xtmph, xtmph, x0		;Lookup mul table of high nibble
 	vpshufb	xgft1_lo, xgft1_lo, xtmpa	;Lookup mul table of low nibble
 	vpxor	xtmph, xtmph, xgft1_lo		;GF add high and low partials
@@ -329,9 +348,12 @@ func(gf_6vect_mad_avx2)
 	vpxor	xd1, xd1, xtmph		;xd1 += partial
 
 	XSTR	[dest1+tmp], xd1	;Store result into dest1
+	XLDR	xd6, [dest6+tmp]	;reuse xd1. Get next dest vector
 
 	;dest2
-	vperm2i128 xtmph, xgft2_lo, xgft2_lo, 0x01 ; swapped to hi | lo
+	vbroadcasti128	xgft2_lo, [tmp6+tmp4]	;Load array: lo | lo
+	vbroadcasti128	xtmph,    [tmp6+tmp4+16];            hi | hi
+
 	vpshufb	xtmph, xtmph, x0		;Lookup mul table of high nibble
 	vpshufb	xgft2_lo, xgft2_lo, xtmpa	;Lookup mul table of low nibble
 	vpxor	xtmph, xtmph, xgft2_lo		;GF add high and low partials
@@ -339,25 +361,31 @@ func(gf_6vect_mad_avx2)
 	vpxor	xd2, xd2, xtmph		;xd2 += partial
 
 	;dest3
-	vperm2i128 xtmph, xgft3_lo, xgft3_lo, 0x01 ; swapped to hi | lo
+	vbroadcasti128	xgft3_lo, [tmp6+2*tmp4]		;Load array: lo | lo
+	vbroadcasti128	xtmph,    [tmp6+2*tmp4+16]	;            hi | hi
+
 	vpshufb	xtmph, xtmph, x0		;Lookup mul table of high nibble
 	vpshufb	xgft3_lo, xgft3_lo, xtmpa	;Lookup mul table of low nibble
 	vpxor	xtmph, xtmph, xgft3_lo		;GF add high and low partials
 	vpand	xtmph, xtmph, xtmpl
 	vpxor	xd3, xd3, xtmph		;xd3 += partial
 
-	XLDR	xd6, [dest6+tmp]	;reuse xd1. Get next dest vector
-
 	;dest4
-	vperm2i128 xtmph, xgft4_lo, xgft4_lo, 0x01 ; swapped to hi | lo
+	vbroadcasti128	xgft4_lo, [tmp6+tmp5]	;Load array: lo | lo
+	vbroadcasti128	xtmph,    [tmp6+tmp5+16];            hi | hi
+
 	vpshufb	xtmph, xtmph, x0		;Lookup mul table of high nibble
 	vpshufb	xgft4_lo, xgft4_lo, xtmpa	;Lookup mul table of low nibble
 	vpxor	xtmph, xtmph, xgft4_lo		;GF add high and low partials
 	vpand	xtmph, xtmph, xtmpl
 	vpxor	xd4, xd4, xtmph		;xd4 += partial
 
+	lea	tmp5, [tmp5+2*tmp4]	; 5*vec, for addressing
+
 	;dest5
-	vperm2i128 xtmph, xgft5_lo, xgft5_lo, 0x01 ; swapped to hi | lo
+	vbroadcasti128	xgft5_lo, [tmp6+4*tmp4]		;Load array: lo | lo
+	vbroadcasti128	xtmph,    [tmp6+4*tmp4+16]	;            hi | hi
+
 	vpshufb	xtmph, xtmph, x0		;Lookup mul table of high nibble
 	vpshufb	xgft5_lo, xgft5_lo, xtmpa	;Lookup mul table of low nibble
 	vpxor	xtmph, xtmph, xgft5_lo		;GF add high and low partials
@@ -365,7 +393,9 @@ func(gf_6vect_mad_avx2)
 	vpxor	xd5, xd5, xtmph		;xd5 += partial
 
 	;dest6
-	vperm2i128 xtmph, xgft6_lo, xgft6_lo, 0x01 ; swapped to hi | lo
+	vbroadcasti128	xgft6_lo, [tmp6+tmp5]	;Load array: lo | lo
+	vbroadcasti128	xtmph,	  [tmp6+tmp5+16];            hi | hi
+
 	vpshufb	xtmph, xtmph, x0		;Lookup mul table of high nibble
 	vpshufb	xgft6_lo, xgft6_lo, xtmpa	;Lookup mul table of low nibble
 	vpxor	xtmph, xtmph, xgft6_lo		;GF add high and low partials

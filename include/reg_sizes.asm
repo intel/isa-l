@@ -70,7 +70,14 @@
 %define FLAG_XGETBV_EAX_XMM_YMM        0x6
 %define FLAG_XGETBV_EAX_ZMM_OPM        0xe0
 
-%define FLAG_CPUID1_EAX_STEP_MASK  0xfffffff0
+%define FLAG_CPUID1_EAX_STEP_MASK	0xfffffff0
+%define FLAG_CPUID1_EAX_HYGON1		0x00900f00
+%define FLAG_CPUID1_EAX_HYGON2		0x00900f10
+%define FLAG_CPUID1_EAX_HYGON3		0x00900f20
+
+%define FLAG_CPUID0_EBX_HYGON	0x6f677948	;"ogyH"
+%define FLAG_CPUID0_EDX_HYGON	0x6e65476e	;"neGn"
+%define FLAG_CPUID0_ECX_HYGON	0x656e6975	;"eniu"
 
 ; define d and w variants for registers
 
