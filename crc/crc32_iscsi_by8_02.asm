@@ -81,6 +81,9 @@ section .text
 %define buf_len arg2
 %define init_crc arg3_low32
 
+%xdefine	tmp	r10
+%xdefine	tmp2	r11
+
 %ifidn __OUTPUT_FORMAT__, win64
         %define XMM_OFFSET 16*2
         %define VARIABLE_OFFSET 16*10+8
@@ -106,6 +109,15 @@ crc32_iscsi_by8_02:
         vmovdqa  [rsp + XMM_OFFSET + 16*6], xmm12
         vmovdqa  [rsp + XMM_OFFSET + 16*7], xmm13
 %endif
+
+	;; fastpath for short data
+	mov	eax, init_crc
+	cmp	buf_len, 4
+	jb	_less_than_4
+	cmp	buf_len, 8
+	jb	_less_than_8
+	cmp	buf_len, 16
+	jbe	_no_more_than_16
 
 	; check if smaller than 256
 	cmp	buf_len, 256
@@ -377,38 +389,13 @@ _get_last_two_xmms:
         vpxor    xmm7, xmm2
 
 _128_done:
-        ; compute crc of a 128-bit value
-        vmovdqa  xmm10, [rk5]
-        vmovdqa  xmm0, xmm7
-
-        ;64b fold
-        vpclmulqdq       xmm7, xmm10, 0
-        vpsrldq  xmm0, 8
-        vpxor    xmm7, xmm0
-
-        ;32b fold
-        vmovdqa  xmm0, xmm7
-        vpslldq  xmm7, 4
-        vpclmulqdq       xmm7, xmm10, 0x10
-
-        vpxor    xmm7, xmm0
-
-
-        ;barrett reduction
-_barrett:
-        vpand    xmm7, [mask2]
-        vmovdqa  xmm1, xmm7
-        vmovdqa  xmm2, xmm7
-        vmovdqa  xmm10, [rk7]
-
-        vpclmulqdq       xmm7, xmm10, 0
-        vpxor    xmm7, xmm2
-        vpand    xmm7, [mask]
-        vmovdqa  xmm2, xmm7
-        vpclmulqdq       xmm7, xmm10, 0x10
-        vpxor    xmm7, xmm2
-        vpxor    xmm7, xmm1
-        vpextrd  eax, xmm7, 2
+	; compute crc of a 128-bit value
+	; using CRC32Q can be easier than barrett reduction
+        vmovq   tmp, xmm7
+        vpextrq tmp2, xmm7, 1
+        xor     rax, rax
+        crc32   rax, tmp
+        crc32   rax, tmp2
 
 _cleanup:
 %ifidn __OUTPUT_FORMAT__, win64
@@ -455,17 +442,9 @@ _less_than_256:
 
 align 16
 _less_than_32:
+	; data length can't be less than 17 bytes. already dealt with these cases in fastpath.
 	; mov initial crc to the return value. this is necessary for zero-length buffers.
-	mov	eax, init_crc
-	test	buf_len, buf_len
-	je	_cleanup
-
 	vmovd	xmm0, init_crc	; get the initial crc value
-
-	cmp	buf_len, 16
-	je	_exact_16_left
-	jl	_less_than_16_left
-
 	vmovdqu	xmm7, [in_buf]	; load the plaintext
 	vpxor	xmm7, xmm0	; xor the initial crc value
 	add	in_buf, 16
@@ -474,123 +453,40 @@ _less_than_32:
 	jmp	_get_last_two_xmms
 
 
+; fastpath for short data
 align 16
-_less_than_16_left:
-	; use stack space to load data less than 16 bytes, zero-out the 16B in memory first.
+_no_more_than_16:
+	test	buf_len, 16		; check if exact 16 bytes
+	jz	_less_than_16		; no, do 8 bytes check
+	crc32	rax, qword[in_buf]
+	crc32	rax, qword[in_buf+8]
+	jmp	_cleanup		; done
 
-	vpxor	xmm1, xmm1
-	mov	r11, rsp
-	vmovdqa	[r11], xmm1
+align 16
+_less_than_16:
+	test	buf_len, 8		; check if 8 bytes remaining at least
+	jz	_less_than_8		; no, do 4 bytes check
+	crc32	rax, qword[in_buf]	; calculate 8 bytes anyway
+	add	in_buf,8
 
-	cmp	buf_len, 4
-	jl	_only_less_than_4
-
-	;	backup the counter value
-	mov	r9, buf_len
-	cmp	buf_len, 8
-	jl	_less_than_8_left
-
-	; load 8 Bytes
-	mov	rax, [in_buf]
-	mov	[r11], rax
-	add	r11, 8
-	sub	buf_len, 8
-	add	in_buf, 8
-_less_than_8_left:
-
-	cmp	buf_len, 4
-	jl	_less_than_4_left
-
-	; load 4 Bytes
-	mov	eax, [in_buf]
-	mov	[r11], eax
-	add	r11, 4
-	sub	buf_len, 4
+_less_than_8:
+	test	buf_len, 4		; check if 4 bytes remaining at least
+	jz	_less_than_4		; no, do 2 bytes check
+	crc32	eax, dword[in_buf]	; calculate 4 bytes anyway
 	add	in_buf, 4
-_less_than_4_left:
 
-	cmp	buf_len, 2
-	jl	_less_than_2_left
+_less_than_4:
+	test	buf_len, 2		; check if 2 bytes remaining at least
+	jz	_less_than_2		; no, do 1 byte check
+	crc32	eax, word[in_buf]	; calculate 2 bytes anyway
+	add	in_buf,2
 
-	; load 2 Bytes
-	mov	ax, [in_buf]
-	mov	[r11], ax
-	add	r11, 2
-	sub	buf_len, 2
-	add	in_buf, 2
-_less_than_2_left:
-	cmp     buf_len, 1
-        jl      _zero_left
+_less_than_2:
+	test	buf_len,1		; check if 1 byte remaining
+	jz	_cleanup		; no, done
+	crc32	eax, byte[in_buf]	; calculate 1 byte
+	jmp	_cleanup		; all done
 
-	; load 1 Byte
-	mov	al, [in_buf]
-	mov	[r11], al
-_zero_left:
-	vmovdqa	xmm7, [rsp]
-	vpxor	xmm7, xmm0	; xor the initial crc value
-
-	lea	rax, [pshufb_shf_table]
-	vmovdqu	xmm0, [rax + r9]
-	vpshufb	xmm7, xmm0
-
-	jmp	_128_done
-
-align 16
-_exact_16_left:
-	vmovdqu	xmm7, [in_buf]
-	vpxor	xmm7, xmm0	; xor the initial crc value
-
-	jmp	_128_done
-
-_only_less_than_4:
-	cmp	buf_len, 3
-	jl	_only_less_than_3
-
-	; load 3 Bytes
-	mov	al, [in_buf]
-	mov	[r11], al
-
-	mov	al, [in_buf+1]
-	mov	[r11+1], al
-
-	mov	al, [in_buf+2]
-	mov	[r11+2], al
-
-	vmovdqa	xmm7, [rsp]
-	vpxor	xmm7, xmm0	; xor the initial crc value
-
-	vpslldq	xmm7, 5
-
-	jmp	_barrett
-_only_less_than_3:
-	cmp	buf_len, 2
-	jl	_only_less_than_2
-
-	; load 2 Bytes
-	mov	al, [in_buf]
-	mov	[r11], al
-
-	mov	al, [in_buf+1]
-	mov	[r11+1], al
-
-	vmovdqa	xmm7, [rsp]
-	vpxor	xmm7, xmm0	; xor the initial crc value
-
-	vpslldq	xmm7, 6
-
-	jmp	_barrett
-_only_less_than_2:
-
-	; load 1 Byte
-	mov	al, [in_buf]
-	mov	[r11], al
-
-	vmovdqa	xmm7, [rsp]
-	vpxor	xmm7, xmm0	; xor the initial crc value
-
-	vpslldq	xmm7, 7
-
-	jmp	_barrett
 
 section .data
 
