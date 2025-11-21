@@ -50,22 +50,20 @@ adler32_rvv:
 unroll_loop_4x:
   vsetvli       t1, a2, e8, m1, ta, ma
   vle8.v        v0, (a1)
-  add           a3, a1, t1
-  vle8.v        v1, (a3)
-  add           a4, a3, t1
-  vle8.v        v2, (a4)
-  add           a5, a4, t1
-  vle8.v        v3, (a5)
-  mv            t5, a2
-  slli          t4, t1, 2
-  add           a1, a1, t4
-  sub           a2, a2, t4
+  add           a1, a1, t1
+  vle8.v        v1, (a1)
+  add           a1, a1, t1
+  vle8.v        v2, (a1)
+  add           a1, a1, t1
+  vle8.v        v3, (a1)
+  add           a1, a1, t1
+  slli          a4, t1, 2
 
-  vsetvli       zero, t1, e32, m4, tu, ma
+  vsetvli       zero, zero, e32, m4, tu, ma
   vzext.vf4     v4, v0
   vzext.vf4     v28, v1
   vid.v         v12                                  // 0, 1, 2, .. vl-1
-  vrsub.vx      v12, v12, t5                         // len, len-1, len-2
+  vrsub.vx      v12, v12, a2                         // len, len-1, len-2
   vadd.vv       v8, v8, v4
   vwmaccu.vv    v16, v12, v4                         // v16: B += weight * next
   vsub.vx       v12, v12, t1                         // len-vl, len-vl-1, len-vl-2
@@ -79,11 +77,11 @@ unroll_loop_4x:
   vsub.vx       v12, v12, t1
   vadd.vv       v8, v8, v28
   vwmaccu.vv    v16, v12, v28
+  sub           a2, a2, a4
   bge           a2, t0, unroll_loop_4x
 
 1:
   beqz          a2, 3f
-  mv            t5, a2
 single:
   vsetvli       t1, a2, e8, m1, ta, ma
   vle8.v        v0, (a1)
@@ -91,9 +89,8 @@ single:
   vzext.vf4     v4, v0
   vid.v         v12                                 // 0, 1, 2, .. vl-1
   vadd.vv       v8, v8, v4
-  vrsub.vx      v12, v12, t5                        // len, len-1, len-2
+  vrsub.vx      v12, v12, a2                        // len, len-1, len-2
   vwmaccu.vv    v16, v12, v4                        // v16: B += weight * next
-  sub           t5, t5, t1
   add           a1, a1, t1
   sub           a2, a2, t1
   bnez          a2, single
@@ -105,9 +102,9 @@ single:
   vsetvli       zero, t6, e64, m8, tu, ma
   vmv.s.x       v0, a7
   vredsum.vs    v0, v16, v0
-  vmv.x.s       a4, v0                               // B = a4
+  vmv.x.s       t4, v0                               // B = t4
   vmv.x.s       t2, v24                              // A = t2
-  add           t3, a4, t3
+  add           t3, t4, t3
 
 4:
   li            t0, 65521
