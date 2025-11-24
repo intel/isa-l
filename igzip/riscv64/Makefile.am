@@ -30,4 +30,5 @@
 lsrc_riscv64 += \
 	igzip/riscv64/igzip_multibinary_riscv64_dispatcher.c \
 	igzip/riscv64/igzip_multibinary_riscv64.S \
-	igzip/riscv64/igzip_isal_adler32_rvv.S
+	igzip/riscv64/igzip_isal_adler32_rvv.S \
+	igzip/riscv64/igzip_isal_adler32_rvv128.S
