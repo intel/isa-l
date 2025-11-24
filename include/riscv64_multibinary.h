@@ -108,7 +108,43 @@
 .endm
 #else /* __ASSEMBLY__ */
 #include <sys/auxv.h>
+#if HAVE_HWPROBE_H
+#include <asm/hwprobe.h>
+#endif
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <string.h>
 #define HWCAP_RV(letter) (1ul << ((letter) - 'A'))
+
+#if HAVE_ZBC && HAVE_ZVBC
+#define EXT_CODE(ext) ( \
+	strcmp(ext, "ZBC")  == 0 ? RISCV_HWPROBE_EXT_ZBC  : \
+	strcmp(ext, "ZVBC") == 0 ? RISCV_HWPROBE_EXT_ZVBC : \
+	-1)
+#endif
+
+#define INIT_PROBE_STRUCT()    \
+	(struct riscv_hwprobe){    \
+		.key = RISCV_HWPROBE_KEY_IMA_EXT_0 \
+	}
+
+#ifdef EXT_CODE
+static inline int check_riscv_extensions(const char **extensions, size_t count)
+{
+	struct riscv_hwprobe _probe = INIT_PROBE_STRUCT();
+	syscall(__NR_riscv_hwprobe, &_probe, 1, 0, NULL, 0);
+	for (size_t i = 0; i < count; i++) {
+		if (!(_probe.value & EXT_CODE(extensions[i]))) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+#define CHECK_RISCV_EXTENSIONS(...) \
+	check_riscv_extensions((const char*[]){ __VA_ARGS__ }, \
+							sizeof((const char*[]){ __VA_ARGS__ })/sizeof(const char*))
+#endif
 
 #define DEFINE_INTERFACE_DISPATCHER(name)                               \
 	void * name##_dispatcher(void)
