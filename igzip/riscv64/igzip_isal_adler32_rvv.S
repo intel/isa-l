@@ -34,9 +34,9 @@ adler32_rvv:
   slli          t2, a0, 48
   srli          t2, t2, 48                           // t2: A = adler32 & 0xffff;
   srliw         t3, a0, 16                           // t3: B = adler32 >> 16;
-  beqz          a2, 2f
+  beqz          a2, 3f
 
-  vsetvli       zero, a2, e64, m8, tu, ma
+  vsetvli       t0, a2, e64, m8, ta, ma
   vmv.v.i       v8, 0
   vmv.v.i       v16, 0
   vmv.s.x       v24, zero
@@ -44,8 +44,46 @@ adler32_rvv:
   vsetvli       zero, zero, e32, m4, tu, ma
   vmv.s.x       v8, t2                               // v8 = adler32 & 0xffff
 
+  slli          t0, t0, 2                            // t0 = 4*vl
+  blt           a2, t0, 1f
+
+unroll_loop_4x:
+  vsetvli       t1, a2, e8, m1, ta, ma
+  vle8.v        v0, (a1)
+  add           a1, a1, t1
+  vle8.v        v1, (a1)
+  add           a1, a1, t1
+  vle8.v        v2, (a1)
+  add           a1, a1, t1
+  vle8.v        v3, (a1)
+  add           a1, a1, t1
+  slli          a4, t1, 2
+
+  vsetvli       zero, zero, e32, m4, tu, ma
+  vzext.vf4     v4, v0
+  vzext.vf4     v28, v1
+  vid.v         v12                                  // 0, 1, 2, .. vl-1
+  vrsub.vx      v12, v12, a2                         // len, len-1, len-2
+  vadd.vv       v8, v8, v4
+  vwmaccu.vv    v16, v12, v4                         // v16: B += weight * next
+  vsub.vx       v12, v12, t1                         // len-vl, len-vl-1, len-vl-2
+  vadd.vv       v8, v8, v28
+  vwmaccu.vv    v16, v12, v28
+  sub           a2, a2, a4
+  vzext.vf4     v4, v2
+  vzext.vf4     v28, v3
+  vsub.vx       v12, v12, t1
+  vadd.vv       v8, v8, v4
+  vwmaccu.vv    v16, v12, v4
+  vsub.vx       v12, v12, t1
+  vadd.vv       v8, v8, v28
+  vwmaccu.vv    v16, v12, v28
+  bge           a2, t0, unroll_loop_4x
+
 1:
-  vsetvli       t1, a2, e8, m1, tu, ma
+  beqz          a2, 2f
+single:
+  vsetvli       t1, a2, e8, m1, ta, ma
   vle8.v        v0, (a1)
   vsetvli       zero, zero, e32, m4, tu, ma
   vzext.vf4     v4, v0
@@ -55,8 +93,9 @@ adler32_rvv:
   vwmaccu.vv    v16, v12, v4                         // v16: B += weight * next
   sub           a2, a2, t1
   add           a1, a1, t1
-  bnez          a2, 1b
+  bnez          a2, single
 
+2:
   vsetvli       zero, t6, e32, m4, tu, ma
   vwredsumu.vs  v24, v8, v24
   mul           a7, t6, t2                           // B += A(init) * len
@@ -67,7 +106,7 @@ adler32_rvv:
   vmv.x.s       t2, v24                              // A = t2
   add           t3, t4, t3
 
-2:
+3:
   li            t0, 65521
   remu          t2, t2, t0                           // A = A % ADLER_MOD
   remu          t3, t3, t0                           // B = B % ADLER_MOD
