@@ -67,7 +67,7 @@ else()
         target_link_libraries(${LIBRARY_NAME} PRIVATE ${ISAL_LIBRARY})
     else()
         # Link the library with isal built and installed in ISAL_INSTALL_DIR
-        find_library(ISAL_LIBRARY isal PATHS "${ISAL_INSTALL_DIR}/lib" NO_DEFAULT_PATH REQUIRED)
+        find_library(ISAL_LIBRARY isal PATHS "${ISAL_INSTALL_DIR}" NO_DEFAULT_PATH REQUIRED)
         target_include_directories(${LIBRARY_NAME} PRIVATE "${ISAL_INSTALL_DIR}/include")
         target_link_libraries(${LIBRARY_NAME} PRIVATE ${ISAL_LIBRARY})
     endif()
