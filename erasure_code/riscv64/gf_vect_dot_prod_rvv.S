@@ -62,7 +62,6 @@ gf_vect_dot_prod_rvv:
     li t4, 16
     blt a0, t4, .return_fail
 
-    vsetvli t5, zero, e8, m1, ta, ma  # Set vector length to maximum
     # Initialize pos = 0
     li t2, 0
 
@@ -72,6 +71,9 @@ gf_vect_dot_prod_rvv:
 .Llooprvv_vl:
     # Check if pos >= len
     bge t2, a0, .return_pass
+
+    sub a5, a0, t2
+    vsetvli t5, a5, e8, m1, ta, ma
 
     # Clear z_dest
     vmv.v.i v4, 0
@@ -94,11 +96,13 @@ gf_vect_dot_prod_rvv:
     # Increment vec_i
     addi t0, t0, 8
 
+    vsetivli zero, 16, e8, m1, ta, ma
     # Load GF table (low and high)
     vle8.v v5, (t3)           # Load low 8 bits of GF table
     addi t3, t3, 16           # Move to next GF table entry
     vle8.v v6, (t3)           # Load high 8 bits of GF table
     addi t3, t3, 16           # Move to next GF table entry
+    vsetvli zero, t5, e8, m1, ta, ma
 
     # Split src into low and high 4 bits
     vand.vi v2, v1, 0x0F      # z_src_lo = z_src & z_mask0f
@@ -120,7 +124,7 @@ gf_vect_dot_prod_rvv:
     add a4, a4, t5           # Move dest pointer to next position
 
     # Increment pos
-    add t2, t2, t5           # pos += 16 (vector length)
+    add t2, t2, t5           # pos += vlenB (vector length)
 
     j .Llooprvv_vl
 

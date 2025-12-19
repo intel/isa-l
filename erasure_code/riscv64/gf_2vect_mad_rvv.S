@@ -53,6 +53,7 @@
 #define x_pos t0
 #define x_dest2 t1
 #define x_dest1 t2
+#define x_remain t5
 
 /* vectors */
 #define v_src v1
@@ -72,7 +73,7 @@ gf_2vect_mad_rvv:
     li t3, 16
     blt x_len, t3, .return_fail
 
-    vsetvli t4, x0, e8, m1, ta, ma
+    vsetivli zero, 16, e8, m1, ta, ma
 
     /* load table 1 */
     slli t3, x_vec_i, 5
@@ -99,6 +100,9 @@ gf_2vect_mad_rvv:
     j .return_pass
 
 .Lloop_body:
+    sub x_remain, x_len, x_pos
+    vsetvli t4, x_remain, e8, m1, ta, ma
+
     /* load src data */
     add t3, x_src, x_pos
     vle8.v v_src, (t3)

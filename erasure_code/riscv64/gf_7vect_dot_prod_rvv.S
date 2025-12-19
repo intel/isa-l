@@ -66,6 +66,7 @@
 #define x_dest5 s5
 #define x_dest6 s6
 #define x_dest7 s7
+#define x_remain s9
 
 /* vectors */
 #define v_src v1
@@ -101,7 +102,7 @@ gf_7vect_dot_prod_rvv:
     blt x_len, t0, .return_fail
 
     /* save callee-saved registers */
-    addi sp, sp, -80
+    addi sp, sp, -88
     sd s0, 0(sp)
     sd s1, 8(sp)
     sd s2, 16(sp)
@@ -111,8 +112,8 @@ gf_7vect_dot_prod_rvv:
     sd s6, 48(sp)
     sd s7, 56(sp)
     sd s8, 64(sp)
+    sd s9, 72(sp)
 
-    vsetvli t0, x0, e8, m1, ta, ma
     /* initialize position */
     li x_pos, 0
 
@@ -129,6 +130,9 @@ gf_7vect_dot_prod_rvv:
 .Llooprvv_vl:
     /* check if we have processed all elements */
     bge x_pos, x_len, .return_pass
+
+    sub x_remain, x_len, x_pos
+    vsetvli t0, x_remain, e8, m1, ta, ma
 
     /* initialize vector loop counter */
     li x_vec_i, 0
@@ -169,6 +173,7 @@ gf_7vect_dot_prod_rvv:
     vand.vi v_src_lo, v_src, 0x0F
     vsrl.vi v_src_hi, v_src, 4
 
+    vsetivli zero, 16, e8, m1, ta, ma
     /* load gf_table's */
     vle8.v v_gft1_lo, (x_tbl1)
     addi x_tbl1, x_tbl1, 16
@@ -204,6 +209,7 @@ gf_7vect_dot_prod_rvv:
     addi x_tbl7, x_tbl7, 16
     vle8.v v_gft7_hi, (x_tbl7)
     addi x_tbl7, x_tbl7, 16
+    vsetvli zero, t0, e8, m1, ta, ma
 
     /* dest 1 */
     vrgather.vv v26, v_gft1_lo, v_src_lo
@@ -283,7 +289,8 @@ gf_7vect_dot_prod_rvv:
     ld s6, 48(sp)
     ld s7, 56(sp)
     ld s8, 64(sp)
-    addi sp, sp, 80
+    ld s9, 72(sp)
+    addi sp, sp, 88
 
     /* Return success */
     li a0, 0
