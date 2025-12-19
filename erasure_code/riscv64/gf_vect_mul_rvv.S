@@ -52,6 +52,7 @@
 #define x_tbl a1
 #define x_src a2
 #define x_dest a3
+#define x_remain a4
 
 /* Vector registers */
 #define v_src v1
@@ -68,7 +69,7 @@ gf_vect_mul_rvv:
     andi x_tmp, x_len, 0x1F
     bnez x_tmp, .return_fail
 
-    vsetvli t6, x0, e8, m1, ta, ma
+    vsetivli zero, 16, e8, m1, ta, ma
 
     /* Load pre-calculated constants into v_gft1_lo and v_gft1_hi */
     vle8.v v_gft1_lo, (x_tbl)
@@ -79,6 +80,9 @@ gf_vect_mul_rvv:
     li x_pos, 0
 
 .Llooprvv_vl:
+    sub x_remain, x_len, x_pos
+    vsetvli t6, x_remain, e8, m1, ta, ma
+
     /* Load source data into v_src */
     add x_ptr, x_src, x_pos
     vle8.v v_src, (x_ptr)

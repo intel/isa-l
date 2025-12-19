@@ -56,6 +56,7 @@
 #define x_dest3 t3
 #define x_dest4 t4
 #define x_dest5 t5
+#define x_remain s0
 
 /* vectors */
 #define v_src v1
@@ -84,7 +85,11 @@ gf_5vect_mad_rvv:
     li t6, 16
     blt x_len, t6, .return_fail
 
-    vsetvli a7, x0, e8, m1, ta, ma
+    /* save callee-saved registers */
+    addi sp, sp, -8
+    sd s0, 0(sp)
+
+    vsetivli zero, 16, e8, m1, ta, ma
 
     /* Load table 1 */
     slli a6, x_vec_i, 5
@@ -136,6 +141,9 @@ gf_5vect_mad_rvv:
     j .return_pass
 
 .Lloop_body:
+    sub x_remain, x_len, x_pos
+    vsetvli a7, x_remain, e8, m1, ta, ma
+
     /* Load source data */
     add t6, x_src, x_pos
     vle8.v v_src, (t6)
@@ -205,6 +213,10 @@ gf_5vect_mad_rvv:
     j .Llooprvv_vl
 
 .return_pass:
+    /* restore callee-saved registers */
+    ld s0, 0(sp)
+    addi sp, sp, 8
+
     li w_ret, 0
     ret
 

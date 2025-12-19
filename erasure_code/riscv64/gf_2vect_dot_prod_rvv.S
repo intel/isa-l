@@ -55,6 +55,7 @@
 #define x_tbl2 t4
 #define x_dest1 t5
 #define x_dest2 a7
+#define x_remain s0
 
 /* vectors */
 #define v_src v1
@@ -75,7 +76,10 @@ gf_2vect_dot_prod_rvv:
     li t6, 16
     blt x_len, t6, .return_fail
 
-    vsetvli a5, x0, e8, m1, ta, ma  /* Set vector length to maximum */
+    /* save callee-saved registers */
+    addi sp, sp, -8
+    sd s0, 0(sp)
+
     li x_pos, 0
     slli x_vec, x_vec, 3
 
@@ -85,6 +89,9 @@ gf_2vect_dot_prod_rvv:
 /* Loop 1: x_len, vector length */
 .Llooprvv_vl:
     bge x_pos, x_len, .return_pass
+
+    sub x_remain, x_len, x_pos
+    vsetvli a5, x_remain, e8, m1, ta, ma
 
     li x_vec_i, 0              /* clear x_vec_i */
     ld x_ptr, 0(x_src)         /* x_ptr: src base addr. */
@@ -107,6 +114,7 @@ gf_2vect_dot_prod_rvv:
     vand.vi v_src_lo, v_src, 0x0F
     vsrl.vi v_src_hi, v_src, 4
 
+    vsetivli zero, 16, e8, m1, ta, ma
     /* gf_tbl addr: (x_tbl + dest_idx * x_vec * 32) + src_vec_idx * 32 */
     /* load gf_table's */
     vle8.v v_gft1_lo, (x_tbl1)
@@ -118,6 +126,7 @@ gf_2vect_dot_prod_rvv:
     addi x_tbl2, x_tbl2, 16
     vle8.v v_gft2_hi, (x_tbl2)
     addi x_tbl2, x_tbl2, 16
+    vsetvli zero, a5, e8, m1, ta, ma
 
     /* calc for next */
     addi x_vec_i, x_vec_i, 8   /* move x_vec_i to next */
@@ -153,6 +162,8 @@ gf_2vect_dot_prod_rvv:
 /* end of Loop 1 */
 
 .return_pass:
+    ld s0, 0(sp)
+    addi sp, sp, 8
     li a0, 0
     ret
 

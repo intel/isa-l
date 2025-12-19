@@ -50,6 +50,7 @@
 
 /* local variables */
 #define x_pos t0
+#define x_remain t3
 
 /* vectors */
 #define v_src v1
@@ -66,7 +67,7 @@ gf_vect_mad_rvv:
     li t1, 16
     blt x_len, t1, .return_fail
 
-    vsetvli t2, x0, e8, m1, ta, ma
+    vsetivli zero, 16, e8, m1, ta, ma
 
     /* x_tbl += x_vec_i * 2^5 */
     slli t1, x_vec_i, 5
@@ -80,6 +81,9 @@ gf_vect_mad_rvv:
     li x_pos, 0
 
 .Lloop_rvv_vl:
+    sub x_remain, x_len, x_pos
+    vsetvli t2, x_remain, e8, m1, ta, ma
+
     /* load src data */
     vle8.v v_src, (x_src)
 

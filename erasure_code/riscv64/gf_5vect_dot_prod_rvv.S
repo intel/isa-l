@@ -61,6 +61,7 @@
 #define x_dest3 s3
 #define x_dest4 s4
 #define x_dest5 s5
+#define x_remain s6
 
 /* vectors */
 #define v_src v1
@@ -88,15 +89,15 @@ gf_5vect_dot_prod_rvv:
     blt x_len, t0, .return_fail
 
     /* save s0-s4 */
-    addi sp, sp, -48
+    addi sp, sp, -56
     sd s0, 0(sp)
     sd s1, 8(sp)
     sd s2, 16(sp)
     sd s3, 24(sp)
     sd s4, 32(sp)
     sd s5, 40(sp)
+    sd s6, 48(sp)
 
-    vsetvli a5, x0, e8, m1, ta, ma
     /* Initialize position */
     li x_pos, 0
 
@@ -110,6 +111,9 @@ gf_5vect_dot_prod_rvv:
 /* Loop 1: x_len, vector length */
 .Llooprvv_vl:
     bge x_pos, x_len, .return_pass
+
+    sub x_remain, x_len, x_pos
+    vsetvli a5, x_remain, e8, m1, ta, ma
 
     /* Clear destination vectors */
     vmv.v.i v_dest1, 0
@@ -140,6 +144,7 @@ gf_5vect_dot_prod_rvv:
     vand.vi v_src_lo, v_src, 0x0F
     vsrl.vi v_src_hi, v_src, 4
 
+    vsetivli zero, 16, e8, m1, ta, ma
     /* Load gf_table's */
     vle8.v v_gft1_lo, (x_tbl1)
     addi x_tbl1, x_tbl1, 16
@@ -150,6 +155,7 @@ gf_5vect_dot_prod_rvv:
     addi x_tbl2, x_tbl2, 16
     vle8.v v_gft2_hi, (x_tbl2)
     addi x_tbl2, x_tbl2, 16
+    vsetvli zero, a5, e8, m1, ta, ma
 
     /* Move to next source vector */
     addi x_vec_i, x_vec_i, 1
@@ -160,6 +166,7 @@ gf_5vect_dot_prod_rvv:
     vxor.vv v_dest1, v_dest1, v26
     vxor.vv v_dest1, v_dest1, v27
 
+    vsetivli zero, 16, e8, m1, ta, ma
     /* Load more gf_table's */
     vle8.v v_gft3_lo, (x_tbl3)
     addi x_tbl3, x_tbl3, 16
@@ -170,6 +177,14 @@ gf_5vect_dot_prod_rvv:
     addi x_tbl4, x_tbl4, 16
     vle8.v v_gft4_hi, (x_tbl4)
     addi x_tbl4, x_tbl4, 16
+
+    /* Load more gf_table's */
+    vle8.v v_gft5_lo, (x_tbl5)
+    addi x_tbl5, x_tbl5, 16
+    vle8.v v_gft5_hi, (x_tbl5)
+    addi x_tbl5, x_tbl5, 16
+
+    vsetvli zero, a5, e8, m1, ta, ma
 
     /* dest 2 */
     vrgather.vv v26, v_gft2_lo, v_src_lo
@@ -182,12 +197,6 @@ gf_5vect_dot_prod_rvv:
     vrgather.vv v27, v_gft3_hi, v_src_hi
     vxor.vv v_dest3, v_dest3, v26
     vxor.vv v_dest3, v_dest3, v27
-
-    /* Load more gf_table's */
-    vle8.v v_gft5_lo, (x_tbl5)
-    addi x_tbl5, x_tbl5, 16
-    vle8.v v_gft5_hi, (x_tbl5)
-    addi x_tbl5, x_tbl5, 16
 
     /* dest 4 */
     vrgather.vv v26, v_gft4_lo, v_src_lo
@@ -229,7 +238,8 @@ gf_5vect_dot_prod_rvv:
     ld s3, 24(sp)
     ld s4, 32(sp)
     ld s5, 40(sp)
-    addi sp, sp, 48
+    ld s6, 48(sp)
+    addi sp, sp, 56
 
     li a0, 0
     ret

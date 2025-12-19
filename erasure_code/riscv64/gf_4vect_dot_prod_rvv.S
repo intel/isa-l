@@ -60,6 +60,7 @@
 #define x_dest3 s2
 #define x_dest4 s3
 #define t_offset a5
+#define x_remain s4
 
 /* vectors */
 #define v_src v1
@@ -86,13 +87,13 @@ gf_4vect_dot_prod_rvv:
     blt x_len, t0, .return_fail
 
 /* save callee-saved registers */
-    addi sp, sp, -32
+    addi sp, sp, -40
     sd s0, 0(sp)
     sd s1, 8(sp)
     sd s2, 16(sp)
     sd s3, 24(sp)
+    sd s4, 32(sp)
 
-    vsetvli t0, x0, e8, m1, ta, ma
     li x_pos, 0
 
     slli x_vec, x_vec, 3
@@ -107,6 +108,9 @@ gf_4vect_dot_prod_rvv:
 .Lloop_rvv_vl:
     /* check if we have processed all elements */
     bge x_pos, x_len, .return_pass
+
+    sub x_remain, x_len, x_pos
+    vsetvli t0, x_remain, e8, m1, ta, ma
 
     /* Clear destination vectors */
     vmv.v.i v_dest1, 0
@@ -136,6 +140,7 @@ gf_4vect_dot_prod_rvv:
     vand.vi v_src_lo, v_src, 0x0F
     vsrl.vi v_src_hi, v_src, 4
 
+    vsetivli zero, 16, e8, m1, ta, ma
     /* Load gf_table's */
     vle8.v v_gft1_lo, (x_tbl1)
     addi x_tbl1, x_tbl1, 16
@@ -146,21 +151,22 @@ gf_4vect_dot_prod_rvv:
     vle8.v v_gft2_hi, (x_tbl2)
     addi x_tbl2, x_tbl2, 16
 
-    /* Move to next source vector */
-    addi x_vec_i, x_vec_i, 8
-    add a6, x_src, x_vec_i
-    ld x_ptr, 0(a6)
-
     /* Load next gf_table's */
     vle8.v v_gft3_lo, (x_tbl3)
     addi x_tbl3, x_tbl3, 16
     vle8.v v_gft3_hi, (x_tbl3)
     addi x_tbl3, x_tbl3, 16
-
     vle8.v v_gft4_lo, (x_tbl4)
     addi x_tbl4, x_tbl4, 16
     vle8.v v_gft4_hi, (x_tbl4)
     addi x_tbl4, x_tbl4, 16
+
+    vsetvli zero, t0, e8, m1, ta, ma
+
+    /* Move to next source vector */
+    addi x_vec_i, x_vec_i, 8
+    add a6, x_src, x_vec_i
+    ld x_ptr, 0(a6)
 
     /* dest 1 */
     vrgather.vv v26, v_gft1_lo, v_src_lo
@@ -208,7 +214,8 @@ gf_4vect_dot_prod_rvv:
     ld s1, 8(sp)
     ld s2, 16(sp)
     ld s3, 24(sp)
-    addi sp, sp, 32
+    ld s4, 32(sp)
+    addi sp, sp, 40
     li a0, 0
     ret
 
