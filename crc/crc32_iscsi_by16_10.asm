@@ -79,7 +79,7 @@ section .text
 	%xdefine	arg1_low32 edx
 %endif
 
-align 16
+align 64
 mk_global FUNCTION_NAME, function
 FUNCTION_NAME:
 	endbranch
@@ -98,6 +98,13 @@ FUNCTION_NAME:
 	vmovdqa		[rsp + 16*8], xmm14
 	vmovdqa		[rsp + 16*9], xmm15
 %endif
+
+	;; fastpath for short data
+	mov		eax, arg1_low32
+	cmp		arg3, 8
+	jb		.less_than_8
+	cmp		arg3, 16
+	jbe		.no_more_than_16
 
 	; check if smaller than 256B
 	cmp		arg3, 256
@@ -314,11 +321,11 @@ align 16
 align 16
 .128_done:
 	; compute crc of a 128-bit value
-        xor             rax, rax
-        vmovq           r11, xmm7
-        crc32           rax, r11
-        vpextrq         r11, xmm7, 1
-        crc32           rax, r11
+	xor		rax, rax
+	vmovq		r11, xmm7
+	vpextrq		r10, xmm7, 1
+	crc32		rax, r11
+	crc32		rax, r10
 
 align 16
 .cleanup:
@@ -420,16 +427,8 @@ align 16
 
 align 16
 .less_than_32:
-	; mov initial crc to the return value. this is necessary for zero-length buffers.
-	mov	eax, arg1_low32
-	test	arg3, arg3
-	je	.cleanup
-
+	;; should be in the range [17, 31] bytes
 	vmovd	xmm0, arg1_low32	; get the initial crc value
-
-	cmp	arg3, 16
-	je	.exact_16_left
-	jl	.less_than_16_left
 
 	vmovdqu	xmm7, [arg2]		; load the plaintext
 	vpxor	xmm7, xmm0		; xor the initial crc value
@@ -438,51 +437,39 @@ align 16
 	vmovdqa	xmm10, [rk1]		; rk1 and rk2 in xmm10
 	jmp	.get_last_two_xmms
 
+; fastpath for short data
 align 16
-.less_than_16_left:
-	cmp	arg3, 4
-	jl	.only_less_than_4
-
-        xor     r10, r10
-        bts     r10, arg3
-        dec     r10
-        kmovw   k2, r10d
-        vmovdqu8 xmm7{k2}{z}, [arg2]
-
-	vpxor	xmm7, xmm0	; xor the initial crc value
-
-	lea	rax, [rel pshufb_shf_table]
-	vmovdqu	xmm0, [rax + arg3]
-	vpshufb	xmm7,xmm0
-	jmp	.128_done
+.no_more_than_16:
+	test	arg3, 16		; check if exact 16 bytes
+	jz	.less_than_16		; no, do 8 bytes check
+	crc32	rax, qword[arg2]
+	crc32	rax, qword[arg2+8]
+	jmp	.cleanup		; done
 
 align 16
-.exact_16_left:
-	vmovdqu	xmm7, [arg2]
-	vpxor	xmm7, xmm0      ; xor the initial crc value
-	jmp	.128_done
+.less_than_16:
+	test	arg3, 8			; check if 8 bytes remaining at least
+	jz	.less_than_8		; no, do 4 bytes check
+	crc32	rax, qword[arg2]	; calculate 8 bytes anyway
+	add	arg2, 8
 
-align 16
-.only_less_than_4:
-        mov     eax, arg1_low32
-	cmp	arg3, 2
-	jb	.only_1_left
-        je      .only_2_left
+.less_than_8:
+	test	arg3, 4			; check if 4 bytes remaining at least
+	jz	.less_than_4		; no, do 2 bytes check
+	crc32	eax, dword[arg2]	; calculate 4 bytes anyway
+	add	arg2, 4
 
-        ; 3 bytes left
-        crc32   eax, word [arg2]
-        crc32   eax, byte [arg2 + 2]
-        jmp     .cleanup
+.less_than_4:
+	test	arg3, 2			; check if 2 bytes remaining at least
+	jz	.less_than_2		; no, do 1 byte check
+	crc32	eax, word[arg2]		; calculate 2 bytes anyway
+	add	arg2, 2
 
-align 16
-.only_2_left:
-        crc32   eax, word [arg2]
-        jmp     .cleanup
-
-align 16
-.only_1_left:
-        crc32   eax, byte [arg2]
-        jmp     .cleanup
+.less_than_2:
+	test	arg3, 1			; check if 1 byte remaining
+	jz	.cleanup		; no, done
+	crc32	eax, byte[arg2]		; calculate 1 byte
+	jmp	.cleanup		; all done
 
 section .data
 align 32
