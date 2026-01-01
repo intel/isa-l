@@ -31,6 +31,7 @@
 .text
 .align 2
 
+.option arch, +v
 .global gf_vect_mul_rvv
 .type gf_vect_mul_rvv, @function
 

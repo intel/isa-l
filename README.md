@@ -46,6 +46,13 @@ aarch64:
 * Assembler: gas v2.24 or later.
 * Compiler: gcc v4.7 or later.
 
+RISC-V 64:
+* Portable base functions:
+	* Supported by most C compilers.
+* For RISC-V Vector (RVV) support:
+	* Assembler: gas v2.39 or later.
+	* Compiler: gcc v12.1 or later.
+
 other:
 * Compiler: Portable base functions are available that build with most C compilers.
 
