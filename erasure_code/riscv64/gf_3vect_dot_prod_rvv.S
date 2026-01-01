@@ -31,6 +31,7 @@
 .text
 .align 2
 
+.option arch, +v
 .global gf_3vect_dot_prod_rvv
 .type gf_3vect_dot_prod_rvv, @function
 

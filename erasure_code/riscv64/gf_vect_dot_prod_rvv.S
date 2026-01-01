@@ -53,6 +53,7 @@
 #   v6: z_gft1_hi (high 8 bits of GF table)
 
 #if HAVE_RVV
+.option arch, +v
 .global gf_vect_dot_prod_rvv
 .type gf_vect_dot_prod_rvv, @function
 
