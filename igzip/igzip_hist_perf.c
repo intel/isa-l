@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <inttypes.h>
 #include "igzip_lib.h"
 #include "test.h"
 
@@ -51,7 +52,7 @@ print_histogram(struct isal_huff_histogram *histogram)
                         printf("\n");
                 else
                         printf(", ");
-                printf("%4lu", histogram->lit_len_histogram[i]);
+                printf("%4" PRIu64, histogram->lit_len_histogram[i]);
         }
         printf("\n");
 
@@ -61,7 +62,7 @@ print_histogram(struct isal_huff_histogram *histogram)
                         printf("\n");
                 else
                         printf(", ");
-                printf("%4lu", histogram->dist_histogram[i]);
+                printf("%4" PRIu64, histogram->dist_histogram[i]);
         }
         printf("\n");
 }
@@ -118,7 +119,7 @@ main(int argc, char *argv[])
 
         struct perf start;
         BENCHMARK(&start, BENCHMARK_TIME, isal_update_histogram(inbuf, infile_size, &histogram1));
-        printf("  file %s - in_size=%lu\n", argv[1], infile_size);
+        printf("  file %s - in_size=%" PRIu64 "\n", argv[1], infile_size);
         printf("igzip_hist_file: ");
         perf_print(start, (long long) infile_size);
 
