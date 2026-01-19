@@ -764,7 +764,7 @@ compress_file(void)
 
                         ret = isal_deflate(&stream);
 
-                        if (ret != ISAL_DECOMP_OK) {
+                        if (ret != COMP_OK) {
                                 log_print(ERROR,
                                           "igzip: Error encountered while compressing file %s\n",
                                           infile_name);
