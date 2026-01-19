@@ -50,6 +50,7 @@
 	; Therefore, *_dispatch_init is only executed on first call.
 	;;;;
 	section .data
+	align 8
 	%1_dispatched:
 		dq	%1_mbinit
 
