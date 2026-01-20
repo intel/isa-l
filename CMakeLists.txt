@@ -45,6 +45,16 @@ if(BUILD_TESTS)
     include(CTest)
 endif()
 
+# Enable fuzz testing (requires Clang)
+option(BUILD_FUZZ_TESTS "Build fuzz tests with LibFuzzer" OFF)
+if(BUILD_FUZZ_TESTS)
+    if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
+        add_subdirectory(tests/fuzz)
+    else()
+        message(WARNING "BUILD_FUZZ_TESTS requires Clang compiler")
+    endif()
+endif()
+
 # Enable building ISAL shim library
 option(BUILD_ISAL_SHIM "Build the ISAL shim library" OFF)
 
