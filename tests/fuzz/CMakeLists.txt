@@ -42,6 +42,14 @@ target_link_libraries(${CRC_FUZZ_APP} PRIVATE isal)
 target_compile_options(${CRC_FUZZ_APP} PRIVATE ${FUZZ_FLAGS})
 target_link_options(${CRC_FUZZ_APP} PRIVATE ${FUZZ_FLAGS})
 
-message(STATUS "CRC Fuzz Test Application: ${CRC_FUZZ_APP}")
+# Erasure Code Fuzz Test Application
+set(EC_FUZZ_APP isal_fuzz_ec)
+add_executable(${EC_FUZZ_APP} ec_fuzz_test.c)
+
+target_link_libraries(${EC_FUZZ_APP} PRIVATE isal)
+target_compile_options(${EC_FUZZ_APP} PRIVATE ${FUZZ_FLAGS})
+target_link_options(${EC_FUZZ_APP} PRIVATE ${FUZZ_FLAGS})
+
+message(STATUS "Fuzz Test Applications: ${CRC_FUZZ_APP}, ${EC_FUZZ_APP}")
 message(STATUS "  Compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "  Sanitizers: fuzzer, address, undefined")
