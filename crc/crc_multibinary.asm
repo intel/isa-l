@@ -34,6 +34,7 @@ default rel
 
 extern crc32_iscsi_01
 extern crc32_iscsi_by8_02
+extern crc32_iscsi_avx2
 extern crc32_iscsi_base
 
 extern crc32_ieee_01
@@ -217,7 +218,7 @@ crc16_t10dif_dispatch_init:
 	ret
 
 mbin_interface			crc32_iscsi
-mbin_dispatch_init_clmul	crc32_iscsi, crc32_iscsi_base, crc32_iscsi_01, crc32_iscsi_by8_02, crc32_iscsi_by16_10
+mbin_dispatch_init_clmul6	crc32_iscsi, crc32_iscsi_base, crc32_iscsi_01, crc32_iscsi_by8_02, crc32_iscsi_avx2, crc32_iscsi_by16_10
 
 mbin_interface			crc32_gzip_refl
 mbin_dispatch_init_clmul	crc32_gzip_refl, crc32_gzip_refl_base, crc32_gzip_refl_by8, crc32_gzip_refl_by8_02, crc32_gzip_refl_by16_10

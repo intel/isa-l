@@ -47,6 +47,7 @@ set(CRC_X86_64_SOURCES
     crc/crc32_iscsi_01.asm
     crc/crc32_iscsi_by8_02.asm
     crc/crc32_iscsi_by16_10.asm
+    crc/crc32_iscsi_avx2.asm
     crc/crc_multibinary.asm
     crc/crc64_multibinary.asm
     crc/crc64_ecma_refl_by8.asm

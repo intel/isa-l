@@ -117,9 +117,8 @@
 		pop	rsi
 		ret
 %endmacro
-
 ;;;;;
-; mbin_dispatch_init_clmul 3 parameters
+; mbin_dispatch_init_clmul 5 parameters
 ; Use this case for CRC which needs both SSE4_1 and CLMUL
 ; 1-> function name
 ; 2-> base function
@@ -190,7 +189,84 @@
 		pop	rsi
 		ret
 %endmacro
+;;;;;
+; mbin_dispatch_init_clmul 6 parameters
+; Use this case for CRC which needs both SSE4_1 and CLMUL
+; 1-> function name
+; 2-> base function
+; 3-> SSE4_1 and CLMUL optimized function
+; 4-> AVX/02 opt func
+; 5-> AVX2 opt func
+; 6-> AVX512/10 opt func
+;;;;;
+%macro mbin_dispatch_init_clmul6 6
+	section .text
+	%1_dispatch_init:
+		push	rsi
+		push	rax
+		push	rbx
+		push	rcx
+		push	rdx
+		push	rdi
+		lea     rsi, [%2 WRT_OPT] ; Default - use base function
 
+		mov     eax, 1
+		cpuid
+		mov	ebx, ecx ; save cpuid1.ecx
+		test	ecx, FLAG_CPUID1_ECX_SSE4_1
+		jz	_%1_init_done
+		test    ecx, FLAG_CPUID1_ECX_CLMUL
+		jz	_%1_init_done
+		lea	rsi, [%3 WRT_OPT] ; SSE possible so use 00/01 opt
+
+		;; Test for XMM_YMM support/AVX
+		test	ecx, FLAG_CPUID1_ECX_OSXSAVE
+		je	_%1_init_done
+		xor	ecx, ecx
+		xgetbv	; xcr -> edx:eax
+		mov	edi, eax	  ; save xgetvb.eax
+
+		and	eax, FLAG_XGETBV_EAX_XMM_YMM
+		cmp	eax, FLAG_XGETBV_EAX_XMM_YMM
+		jne	_%1_init_done
+		test	ebx, FLAG_CPUID1_ECX_AVX
+		je	_%1_init_done
+		lea	rsi, [%4 WRT_OPT] ; AVX/02 opt
+
+		;; Test for AVX2
+		xor	ecx, ecx
+		mov	eax, 7
+		cpuid
+		test	ebx, FLAG_CPUID7_EBX_AVX2
+		je	_%1_init_done		; No AVX2 possible
+		and	ecx, FLAGS_CPUID7_ECX_AVX2_G2
+		cmp	ecx, FLAGS_CPUID7_ECX_AVX2_G2
+		lea	rbx, [%5 WRT_OPT]
+		cmove	rsi, rbx
+
+		;; Test for AVX512
+		and	edi, FLAG_XGETBV_EAX_ZMM_OPM
+		cmp	edi, FLAG_XGETBV_EAX_ZMM_OPM
+		jne	_%1_init_done	  ; No AVX512 possible
+		and	ebx, FLAGS_CPUID7_EBX_AVX512_G1
+		cmp	ebx, FLAGS_CPUID7_EBX_AVX512_G1
+		jne	_%1_init_done
+
+		and	ecx, FLAGS_CPUID7_ECX_AVX512_G2
+		cmp	ecx, FLAGS_CPUID7_ECX_AVX512_G2
+		lea	rbx, [%6 WRT_OPT] ; AVX512/10 opt
+		cmove	rsi, rbx
+
+	_%1_init_done:
+		pop	rdi
+		pop	rdx
+		pop	rcx
+		pop	rbx
+		pop	rax
+		mov	[%1_dispatched], rsi
+		pop	rsi
+		ret
+%endmacro
 ;;;;;
 ; mbin_dispatch_init5 parameters
 ; 1-> function name
