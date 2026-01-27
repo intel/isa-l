@@ -119,6 +119,7 @@ include(cmake/raid.cmake)
 include(cmake/crc.cmake)
 include(cmake/igzip.cmake)
 include(cmake/mem.cmake)
+include(cmake/misc.cmake)
 
 # Conditionally build ISAL shim library
 if(BUILD_ISAL_SHIM)
@@ -139,6 +140,7 @@ add_library(isal
     ${CRC_SOURCES}
     ${IGZIP_SOURCES}
     ${MEM_SOURCES}
+    ${MISC_SOURCES}
 )
 
 # Set library properties

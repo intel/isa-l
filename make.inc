@@ -385,6 +385,6 @@ CS_IGNORE_WORDS ?= iinclude,struc,fo,ue,od,ba,padd,hist,unx,sav,datas,ro
 spellcheck:
 	$(CODESPELL) -d -L $(CS_IGNORE_WORDS) \
 	-S "*.obj,*.o,*.a,*.so,*.lib,*~,*.so,*.so.*,*.d" \
-	./erasure_code ./examples ./igzip ./include ./mem ./programs ./raid ./tests README.md SECURITY.md CONTRIBUTING.md \
+	./erasure_code ./examples ./igzip ./include ./mem ./misc ./programs ./raid ./tests README.md SECURITY.md CONTRIBUTING.md \
 	Makefile.unx Makefile.nmake Release_notes.txt LICENSE $(CS_EXTRA_OPTS)
 

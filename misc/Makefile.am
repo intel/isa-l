@@ -1,5 +1,5 @@
 ########################################################################
-#  Copyright(c) 2011-2015 Intel Corporation All rights reserved.
+#  Copyright(c) 2026 Intel Corporation All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions
@@ -27,30 +27,8 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ########################################################################
 
-units     = erasure_code raid crc igzip programs mem misc
+lsrc +=	misc/version.c
 
-default: lib
+extern_hdrs	+= include/isal_api.h
 
-ifeq (,$(findstring crc,$(units)))
- ifneq (,$(findstring igzip,$(units)))
-  override  units += crc
- endif
-endif
-
-include $(foreach unit,$(units), $(unit)/Makefile.am)
-
-ifneq (,$(findstring igzip,$(units)))
- include tests/fuzz/Makefile.am
-endif
-
-ifneq (,$(findstring erasure_code,$(units)))
- include examples/ec/Makefile.am
-endif
-
-# Override individual lib names to make one inclusive library.
-lib_name := bin/isa-l.a
-
-include make.inc
-include tools/gen_nmake.mk
-
-VPATH = . $(units) include tests/fuzz examples/ec
+check_tests	+= misc/version_test

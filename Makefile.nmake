@@ -47,6 +47,7 @@ objs = \
 	bin\huff_codes.obj \
 	bin\igzip_inflate.obj \
 	bin\mem_zero_detect_base.obj \
+	bin\version.obj \
 	bin\ec_highlevel_func.obj \
 	bin\gf_vect_mul_sse.obj \
 	bin\gf_vect_mul_avx.obj \
@@ -190,7 +191,7 @@ objs = \
 	bin\mem_zero_detect_sse.obj \
 	bin\mem_multibinary.obj
 
-INCLUDES   = -I./ -Ierasure_code/ -Iraid/ -Icrc/ -Iigzip/ -Iprograms/ -Imem/ -Iinclude/ -Itests/fuzz/ -Iexamples/ec/
+INCLUDES   = -I./ -Ierasure_code/ -Iraid/ -Icrc/ -Iigzip/ -Iprograms/ -Imem/ -Imisc/ -Iinclude/ -Itests/fuzz/ -Iexamples/ec/
 CFLAGS_REL = -O2 -DNDEBUG /Z7 /Gy
 CFLAGS_DBG = -Od -DDEBUG /Z7
 LINKFLAGS  = -nologo -incremental:no -debug
@@ -255,6 +256,11 @@ isa-l.res: isa-l.h
 {mem}.asm.obj:
 	$(AS) $(AFLAGS) -o $@ $?
 
+{misc}.c.obj:
+	$(CC) $(CFLAGS) /c -Fo$@ $?
+{misc}.asm.obj:
+	$(AS) $(AFLAGS) -o $@ $?
+
 
 # Examples
 ex = \
@@ -294,7 +300,8 @@ checks = \
 	igzip_rand_test.exe \
 	igzip_wrapper_hdr_test.exe \
 	checksum32_funcs_test.exe \
-	mem_zero_detect_test.exe
+	mem_zero_detect_test.exe \
+	version_test.exe
 
 checks: lib $(checks)
 $(checks): $(@B).obj
@@ -367,6 +374,7 @@ isa-l.h:
 	@echo #include ^<isa-l/erasure_code.h^>>> $@
 	@echo #include ^<isa-l/gf_vect_mul.h^>>> $@
 	@echo #include ^<isa-l/igzip_lib.h^>>> $@
+	@echo #include ^<isa-l/isal_api.h^>>> $@
 	@echo #include ^<isa-l/mem_routines.h^>>> $@
 	@echo #include ^<isa-l/raid.h^>>> $@
 	@echo #endif // RC_INVOKED>> $@
