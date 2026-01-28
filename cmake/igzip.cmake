@@ -137,3 +137,27 @@ if(ISAL_BUILD_TESTS)
         add_test(NAME ${test} COMMAND ${test})
     endforeach()
 endif()
+
+# Add performance test applications for igzip module
+if(BUILD_PERF_TESTS)
+    # Performance tests
+    set(IGZIP_PERF_TESTS
+        adler32_perf
+        igzip_file_perf
+        igzip_hist_perf
+        igzip_perf
+        igzip_semi_dyn_file_perf
+        igzip_build_hash_table_perf
+    )
+
+    # Create performance test executables
+    foreach(test ${IGZIP_PERF_TESTS})
+        add_executable(${test} igzip/${test}.c)
+        target_link_libraries(${test} PRIVATE isal)
+        target_include_directories(${test} PRIVATE include igzip)
+    endforeach()
+
+    # Add zlib dependency for igzip_perf
+    find_package(ZLIB REQUIRED)
+    target_link_libraries(igzip_perf PRIVATE ZLIB::ZLIB)
+endif()

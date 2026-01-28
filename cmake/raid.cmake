@@ -108,3 +108,23 @@ if(ISAL_BUILD_TESTS)
         add_test(NAME ${test} COMMAND ${test})
     endforeach()
 endif()
+
+# Add performance test applications for RAID module (only latest RAID performance app)
+if(ISAL_BUILD_PERF_TESTS)
+    # Add pthread dependency for raid_funcs_perf
+    find_package(Threads REQUIRED)
+
+    # Performance tests
+    set(RAID_PERF_TESTS
+        raid_funcs_perf
+    )
+
+    # Create performance test executables
+    foreach(test ${RAID_PERF_TESTS})
+        add_executable(${test} raid/${test}.c)
+        target_link_libraries(${test} PRIVATE isal)
+        target_include_directories(${test} PRIVATE include)
+    endforeach()
+
+    target_link_libraries(raid_funcs_perf PRIVATE Threads::Threads)
+endif()

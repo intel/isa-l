@@ -45,6 +45,9 @@ if(ISAL_BUILD_TESTS)
     include(CTest)
 endif()
 
+# Enable performance tests
+option(BUILD_PERF_TESTS "Build performance tests" ON)
+
 # Enable fuzz testing (requires Clang)
 option(BUILD_FUZZ_TESTS "Build fuzz tests with LibFuzzer" OFF)
 if(BUILD_FUZZ_TESTS)

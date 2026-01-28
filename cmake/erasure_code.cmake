@@ -238,3 +238,23 @@ if(ISAL_BUILD_TESTS)
         target_include_directories(${test} PRIVATE include)
     endforeach()
 endif()
+
+# Add performance test applications for erasure_code module
+if(BUILD_PERF_TESTS)
+    # Performance tests
+    set(ERASURE_CODE_PERF_TESTS
+        gf_vect_mul_perf
+        gf_vect_dot_prod_perf
+        gf_vect_dot_prod_1tbl
+        erasure_code_perf
+        erasure_code_base_perf
+        erasure_code_update_perf
+    )
+
+    # Create performance test executables
+    foreach(test ${ERASURE_CODE_PERF_TESTS})
+        add_executable(${test} erasure_code/${test}.c)
+        target_link_libraries(${test} PRIVATE isal)
+        target_include_directories(${test} PRIVATE include)
+    endforeach()
+endif()

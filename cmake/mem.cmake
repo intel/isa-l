@@ -92,3 +92,18 @@ if(ISAL_BUILD_TESTS)
         add_test(NAME ${test} COMMAND ${test})
     endforeach()
 endif()
+
+# Add performance test applications for mem module
+if(BUILD_PERF_TESTS)
+    # Performance tests
+    set(MEM_PERF_TESTS
+        mem_zero_detect_perf
+    )
+
+    # Create performance test executables
+    foreach(test ${MEM_PERF_TESTS})
+        add_executable(${test} mem/${test}.c)
+        target_link_libraries(${test} PRIVATE isal)
+        target_include_directories(${test} PRIVATE include)
+    endforeach()
+endif()

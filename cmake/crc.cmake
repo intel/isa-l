@@ -135,3 +135,18 @@ if(ISAL_BUILD_TESTS)
         add_test(NAME ${test} COMMAND ${test})
     endforeach()
 endif()
+
+# Add performance test applications for crc module (only latest CRC performance app)
+if(BUILD_PERF_TESTS)
+    # Performance tests
+    set(CRC_PERF_TESTS
+        crc_funcs_perf
+    )
+
+    # Create performance test executables
+    foreach(test ${CRC_PERF_TESTS})
+        add_executable(${test} crc/${test}.c)
+        target_link_libraries(${test} PRIVATE isal)
+        target_include_directories(${test} PRIVATE include)
+    endforeach()
+endif()
