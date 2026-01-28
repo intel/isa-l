@@ -99,11 +99,15 @@ if(CPU_X86_64)
     list(APPEND IGZIP_SOURCES ${IGZIP_X86_64_SOURCES})
 elseif(CPU_AARCH64)
     list(APPEND IGZIP_SOURCES ${IGZIP_AARCH64_SOURCES})
+    # AArch64 lacks assembly implementation for heap operations, use C fallback
+    list(APPEND IGZIP_SOURCES igzip/proc_heap_base.c)
 elseif(CPU_PPC64LE)
     # PPC64LE uses base aliases
     list(APPEND IGZIP_SOURCES ${IGZIP_BASE_ALIASES_SOURCES})
 elseif(CPU_RISCV64)
     list(APPEND IGZIP_SOURCES ${IGZIP_RISCV64_SOURCES})
+    # RISC-V lacks assembly implementation for heap operations, use C fallback
+    list(APPEND IGZIP_SOURCES igzip/proc_heap_base.c)
 elseif(CPU_UNDEFINED)
     list(APPEND IGZIP_SOURCES ${IGZIP_BASE_ALIASES_SOURCES})
 endif()
