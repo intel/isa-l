@@ -58,6 +58,28 @@ target_link_libraries(${RAID_FUZZ_APP} PRIVATE isal)
 target_compile_options(${RAID_FUZZ_APP} PRIVATE ${FUZZ_FLAGS})
 target_link_options(${RAID_FUZZ_APP} PRIVATE ${FUZZ_FLAGS})
 
-message(STATUS "RAID Fuzz Test Application: ${CRC_FUZZ_APP}, ${EC_FUZZ_APP}, ${RAID_FUZZ_APP}")
+# IGZIP Fuzz Test Applications
+set(IGZIP_ROUND_TRIP_FUZZ_APP isal_fuzz_igzip_round_trip)
+add_executable(${IGZIP_ROUND_TRIP_FUZZ_APP} igzip_simple_round_trip_fuzz_test.c)
+
+target_link_libraries(${IGZIP_ROUND_TRIP_FUZZ_APP} PRIVATE isal)
+target_compile_options(${IGZIP_ROUND_TRIP_FUZZ_APP} PRIVATE ${FUZZ_FLAGS})
+target_link_options(${IGZIP_ROUND_TRIP_FUZZ_APP} PRIVATE ${FUZZ_FLAGS})
+
+set(IGZIP_SIMPLE_INFLATE_FUZZ_APP isal_fuzz_igzip_simple_inflate)
+add_executable(${IGZIP_SIMPLE_INFLATE_FUZZ_APP} igzip_simple_inflate_fuzz_test.c)
+
+target_link_libraries(${IGZIP_SIMPLE_INFLATE_FUZZ_APP} PRIVATE isal)
+target_compile_options(${IGZIP_SIMPLE_INFLATE_FUZZ_APP} PRIVATE ${FUZZ_FLAGS})
+target_link_options(${IGZIP_SIMPLE_INFLATE_FUZZ_APP} PRIVATE ${FUZZ_FLAGS})
+
+set(IGZIP_CHECKED_INFLATE_FUZZ_APP isal_fuzz_igzip_checked_inflate)
+add_executable(${IGZIP_CHECKED_INFLATE_FUZZ_APP} igzip_checked_inflate_fuzz_test.c)
+
+target_link_libraries(${IGZIP_CHECKED_INFLATE_FUZZ_APP} PRIVATE isal z)
+target_compile_options(${IGZIP_CHECKED_INFLATE_FUZZ_APP} PRIVATE ${FUZZ_FLAGS})
+target_link_options(${IGZIP_CHECKED_INFLATE_FUZZ_APP} PRIVATE ${FUZZ_FLAGS})
+
+message(STATUS "Fuzz Test Applications: ${CRC_FUZZ_APP}, ${EC_FUZZ_APP}, ${RAID_FUZZ_APP}, ${IGZIP_ROUND_TRIP_FUZZ_APP}, ${IGZIP_SIMPLE_INFLATE_FUZZ_APP}, ${IGZIP_CHECKED_INFLATE_FUZZ_APP}")
 message(STATUS "  Compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "  Sanitizers: fuzzer, address, undefined")
