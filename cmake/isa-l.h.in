@@ -19,6 +19,5 @@
 #include <isa-l/crc64.h>
 #include <isa-l/igzip_lib.h>
 #include <isa-l/mem_routines.h>
-#include <isa-l/test.h>
 
 #endif //_ISAL_H_
