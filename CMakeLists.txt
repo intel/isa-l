@@ -33,11 +33,6 @@ project(ISA-L
     LANGUAGES C
 )
 
-# Auto-export symbols for MSVC since source lacks __declspec(dllexport)
-if(MSVC)
-    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-endif()
-
 # Enable NASM for x86_64 builds
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64")
     enable_language(ASM_NASM)
@@ -146,6 +141,11 @@ list(APPEND EXTERN_HEADERS include/test.h)
 # Build type option
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
+# Use module definition file to explicitly control exported symbols
+if(MSVC AND BUILD_SHARED_LIBS)
+    set(ISAL_DEF_FILE "${CMAKE_CURRENT_SOURCE_DIR}/isa-l.def")
+endif()
+
 # Mirror install layout in build tree to support '#include <isa-l/header.h>' via FetchContent
 set(BUILD_INTERFACE_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/build_include")
 file(MAKE_DIRECTORY "${BUILD_INTERFACE_INCLUDE_DIR}/isa-l")
@@ -154,6 +154,7 @@ file(COPY ${ISAL_HEADERS} DESTINATION "${BUILD_INTERFACE_INCLUDE_DIR}/isa-l")
 
 # Create the main ISA-L library
 add_library(isal
+    ${ISAL_DEF_FILE}
     ${ERASURE_CODE_SOURCES}
     ${RAID_SOURCES}
     ${CRC_SOURCES}
@@ -168,6 +169,11 @@ set_target_properties(isal PROPERTIES
     SOVERSION ${LIBISAL_VERSION_MAJOR}
     PUBLIC_HEADER "${EXTERN_HEADERS}"
 )
+
+# Match Makefile.nmake naming convention
+if(MSVC)
+    set_target_properties(isal PROPERTIES OUTPUT_NAME "isa-l")
+endif()
 
 # Configure include directories for NASM assembly files
 if(CPU_X86_64 AND USE_NASM)
@@ -194,6 +200,9 @@ target_include_directories(isal
 # Generate isa-l.h header
 set(ISAL_HEADER "${CMAKE_CURRENT_BINARY_DIR}/isa-l.h")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/isa-l.h.in ${ISAL_HEADER} @ONLY)
+
+# Copy generated header to build interface dir for FetchContent support
+file(COPY ${ISAL_HEADER} DESTINATION "${BUILD_INTERFACE_INCLUDE_DIR}")
 
 # Install targets
 include(GNUInstallDirs)
