@@ -121,7 +121,7 @@ set(IGZIP_HEADERS
 list(APPEND EXTERN_HEADERS ${IGZIP_HEADERS})
 
 # Add test applications for igzip module
-if(BUILD_TESTS)
+if(ISAL_BUILD_TESTS)
     # Check tests (unit tests that are run by CTest)
     set(IGZIP_CHECK_TESTS
         igzip_rand_test

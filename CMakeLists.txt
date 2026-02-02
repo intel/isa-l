@@ -40,12 +40,6 @@ endif()
 
 # Enable testing
 option(ISAL_BUILD_TESTS "Build the testing tree" ON)
-if(DEFINED BUILD_TESTS)
-    message(STATUS "Note: BUILD_TESTS is deprecated, use ISAL_BUILD_TESTS instead.")
-    set(ISAL_BUILD_TESTS ${BUILD_TESTS})
-endif()
-
-set(BUILD_TESTS ${ISAL_BUILD_TESTS})
 if(ISAL_BUILD_TESTS)
     enable_testing()
     include(CTest)

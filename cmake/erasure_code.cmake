@@ -193,7 +193,7 @@ set(ERASURE_CODE_HEADERS
 list(APPEND EXTERN_HEADERS ${ERASURE_CODE_HEADERS})
 
 # Add test applications for erasure_code module
-if(BUILD_TESTS)
+if(ISAL_BUILD_TESTS)
     # Check tests (unit tests that are run by CTest)
     set(ERASURE_CODE_CHECK_TESTS
         gf_vect_mul_test
