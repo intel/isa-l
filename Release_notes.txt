@@ -11,6 +11,11 @@ RELEASE NOTE CONTENTS
 
 2. FIXED ISSUES
 ---------------
+v2.32
+
+* Fixed RAID performance application for MacOS.
+* Fixed DEFLATE header construction for constant 0x00 and 0xFF blocks in Big-Endian systems.
+
 v2.31.1
 
 * Fixed return type for PowerPC _gf_vect_mul_base function.
@@ -138,6 +143,7 @@ v2.10
 v2.32
 
 * General:
+  - Added CMake build system (only verified for x86_64).
   - Minimum NASM version required for x86 architecture is 2.14.01 now.
   - 32-bit x86 support has been removed.
 
@@ -161,12 +167,16 @@ v2.32
   - Added new RVV implementations.
 
 * CRC improvements:
+  - CRC32 ISCSI AVX512+VCLMUL optimized for small buffers.
   - CRC64 Rocksoft implementation on aarch64 optimized similar to other CRC64
     implementations.
 
 * Performance applications:
   - Add consolidated CRC performance application.
   - Add consolidated RAID performance application.
+
+* Test applications:
+  - Add fuzz test applications for CRC, RAID and Erasure Coding.
 
 v2.31
 
