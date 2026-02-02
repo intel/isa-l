@@ -118,7 +118,7 @@ set(CRC_HEADERS
 list(APPEND EXTERN_HEADERS ${CRC_HEADERS})
 
 # Add test applications for crc module
-if(BUILD_TESTS)
+if(ISAL_BUILD_TESTS)
     # Check tests (unit tests that are run by CTest)
     set(CRC_CHECK_TESTS
         crc16_t10dif_test
