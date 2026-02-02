@@ -43,10 +43,6 @@
 ;       Reference paper titled "Fast CRC Computation for Generic Polynomials Using PCLMULQDQ Instruction"
 ;       URL: http://download.intel.com/design/intarch/papers/323102.pdf
 ;
-;
-;       sample yasm command line:
-;       yasm -f x64 -f elf64 -X gnu -g dwarf2 crc32_gzip_refl_by8
-;
 ;       As explained here:
 ;       http://docs.oracle.com/javase/7/docs/api/java/util/zip/package-summary.html
 ;       CRC-32 checksum is described in RFC 1952
