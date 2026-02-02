@@ -46,20 +46,20 @@ if(ISAL_BUILD_TESTS)
 endif()
 
 # Enable performance tests
-option(BUILD_PERF_TESTS "Build performance tests" ON)
+option(ISAL_BUILD_PERF_TESTS "Build performance tests" ON)
 
 # Enable fuzz testing (requires Clang)
-option(BUILD_FUZZ_TESTS "Build fuzz tests with LibFuzzer" OFF)
-if(BUILD_FUZZ_TESTS)
+option(ISAL_BUILD_FUZZ_TESTS "Build fuzz tests with LibFuzzer" OFF)
+if(ISAL_BUILD_FUZZ_TESTS)
     if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
         add_subdirectory(tests/fuzz)
     else()
-        message(WARNING "BUILD_FUZZ_TESTS requires Clang compiler")
+        message(WARNING "ISAL_BUILD_FUZZ_TESTS requires Clang compiler")
     endif()
 endif()
 
 # Enable building ISAL shim library
-option(BUILD_ISAL_SHIM "Build the ISAL shim library" OFF)
+option(ISAL_BUILD_ISAL_SHIM "Build the ISAL shim library" OFF)
 
 # Set default build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -127,7 +127,7 @@ include(cmake/mem.cmake)
 include(cmake/misc.cmake)
 
 # Conditionally build ISAL shim library
-if(BUILD_ISAL_SHIM)
+if(ISAL_BUILD_ISAL_SHIM)
     add_subdirectory(igzip/shim)
 endif()
 

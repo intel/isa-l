@@ -34,7 +34,7 @@ set(MISC_SOURCES
 list(APPEND EXTERN_HEADERS include/isal_api.h)
 
 # Add test applications for misc module
-if(BUILD_TESTS)
+if(ISAL_BUILD_TESTS)
     # Check tests (unit tests that are run by CTest)
     set(MISC_CHECK_TESTS
         version_test

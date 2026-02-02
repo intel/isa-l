@@ -94,7 +94,7 @@ if(ISAL_BUILD_TESTS)
 endif()
 
 # Add performance test applications for mem module
-if(BUILD_PERF_TESTS)
+if(ISAL_BUILD_PERF_TESTS)
     # Performance tests
     set(MEM_PERF_TESTS
         mem_zero_detect_perf

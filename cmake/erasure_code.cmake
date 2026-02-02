@@ -240,7 +240,7 @@ if(ISAL_BUILD_TESTS)
 endif()
 
 # Add performance test applications for erasure_code module
-if(BUILD_PERF_TESTS)
+if(ISAL_BUILD_PERF_TESTS)
     # Performance tests
     set(ERASURE_CODE_PERF_TESTS
         gf_vect_mul_perf

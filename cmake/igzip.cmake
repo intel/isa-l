@@ -139,7 +139,7 @@ if(ISAL_BUILD_TESTS)
 endif()
 
 # Add performance test applications for igzip module
-if(BUILD_PERF_TESTS)
+if(ISAL_BUILD_PERF_TESTS)
     # Performance tests
     set(IGZIP_PERF_TESTS
         adler32_perf
