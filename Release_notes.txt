@@ -152,6 +152,7 @@ v2.32
 
 * Igzip compression improvements:
   - Added new RVV adler32 implementations.
+  - Added optimized RVV adler32 for VLEN=128.
 
 * Igzip:
   - Added experimental ISA-L shim library to provide drop-in compatibility with zlib.
