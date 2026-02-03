@@ -40,7 +40,9 @@ adler32_rvv128:
     srliw   t6, a0, 16              // t6: B = adler32 >> 16
     li      t0, 32
     bltu    a2, t0, tail_bytes
-
+    vsetvli zero, t0, e32, m8, ta, ma
+    vmv.v.i v8, 0
+    vmv.v.i v24, 0
     vsetvli zero, t0, e8, m2, ta, ma
     la      a7, factors
     vle8.v  v0, (a7)
@@ -49,6 +51,7 @@ adler32_rvv128:
 
 outer_loop:
     beqz    t1, tail_bytes
+    vmv.v.i v24, 0
     li      t2, 173
     bgeu    t1, t2, 1f
     mv      t2, t1
@@ -57,25 +60,29 @@ outer_loop:
     add     a7, a1, a7
 
 inner_loop:
-    vle8.v  v2, (a1)
-    addi    a1, a1, 32
     slli    a5, t5, 5
     add     t6, t6, a5
+    vsetvli zero, t0, e8, m1, ta, ma
+    vle8.v  v2, (a1)
+    addi    a1, a1, 16
+    vle8.v  v3, (a1)
+    addi    a1, a1, 16
     vwredsumu.vs v12, v2, v4
+    vwredsumu.vs v12, v3, v12
     vwmulu.vv v16, v2, v0
+    vwmulu.vv v18, v3, v1
 
-    vsetvli zero, t0, e16, m4, ta, ma
+    vsetvli zero, t0, e16, m2, ta, ma
+    vwaddu.wv v24, v24, v16
+    vwaddu.wv v24, v24, v18
     vmv.x.s a6, v12
     add     t5, t5, a6
-    vwredsumu.vs v20, v16, v4
-
-    vsetvli zero, t0, e32, m4, ta, ma
-    vmv.x.s a6, v20
-    add     t6, t6, a6              // B += weighted_sum
-
-    vsetvli zero, t0, e8, m2, ta, ma
     bne     a1, a7, inner_loop
 
+    vsetvli zero, t0, e32, m4, ta, ma
+    vredsum.vs v16, v24, v4
+    vmv.x.s a6, v16
+    add     t6, t6, a6
     mul     a3, t5, t3
     srli    a3, a3, 47
     mul     a4, a3, t4
