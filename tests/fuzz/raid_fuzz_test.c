@@ -58,24 +58,40 @@ LLVMFuzzerTestOneInput(const uint8_t *, size_t);
  * @return 0 on success, -1 on allocation failure
  */
 static int
-test_raid_generic(uint8_t *buff, int vects, int len,
+test_raid_generic(uint8_t *buff, int vects, int len, int alignment,
                   int (*raid_func)(int vects, int len, void **array))
 {
+        /* gen functions require 32-byte aligned pointers and lengths
+                  check functions require 16-byte alignment */
+        int len_rounded = len & ~(alignment - 1);
+        if (len_rounded == 0)
+                return 0;
 
         /* Allocate array of pointers */
         void **array = malloc(vects * sizeof(void *));
         if (array == NULL)
                 return -1;
 
-        /* Point each vector directly into the fuzz input buffer */
+        /* Allocate properly aligned buffers for each vector */
         for (int i = 0; i < vects; i++) {
-                array[i] = buff + 3 + i * len;
+                /* Use posix_memalign for required alignment */
+                if (posix_memalign(&array[i], alignment, len_rounded)) {
+                        /* Free previously allocated buffers on failure */
+                        for (int j = 0; j < i; j++)
+                                free(array[j]);
+                        free(array);
+                        return -1;
+                }
+                /* Copy data from fuzz input to aligned buffer */
+                memcpy(array[i], buff + 3 + i * len, len_rounded);
         }
 
         /* Execute the RAID function under test */
-        raid_func(vects, len, array);
+        raid_func(vects, len_rounded, array);
 
-        /* Cleanup pointer array */
+        /* Cleanup all allocated buffers */
+        for (int i = 0; i < vects; i++)
+                free(array[i]);
         free(array);
 
         return 0;
@@ -98,7 +114,7 @@ test_xor_gen(uint8_t *buff, size_t dataSize)
         if (dataSize < required_size)
                 return 0;
 
-        return test_raid_generic(buff, vects, len, xor_gen);
+        return test_raid_generic(buff, vects, len, 32, xor_gen);
 }
 
 /**
@@ -114,7 +130,7 @@ test_xor_gen_base(uint8_t *buff, size_t dataSize)
         if (dataSize < required_size)
                 return 0;
 
-        return test_raid_generic(buff, vects, len, xor_gen_base);
+        return test_raid_generic(buff, vects, len, 32, xor_gen_base);
 }
 
 /**
@@ -130,7 +146,7 @@ test_xor_check(uint8_t *buff, size_t dataSize)
         if (dataSize < required_size)
                 return 0;
 
-        return test_raid_generic(buff, vects, len, xor_check);
+        return test_raid_generic(buff, vects, len, 16, xor_check);
 }
 
 /**
@@ -146,7 +162,7 @@ test_xor_check_base(uint8_t *buff, size_t dataSize)
         if (dataSize < required_size)
                 return 0;
 
-        return test_raid_generic(buff, vects, len, xor_check_base);
+        return test_raid_generic(buff, vects, len, 16, xor_check_base);
 }
 
 /**
@@ -162,7 +178,7 @@ test_pq_gen(uint8_t *buff, size_t dataSize)
         if (dataSize < required_size)
                 return 0;
 
-        return test_raid_generic(buff, vects, len, pq_gen);
+        return test_raid_generic(buff, vects, len, 32, pq_gen);
 }
 
 /**
@@ -178,7 +194,7 @@ test_pq_gen_base(uint8_t *buff, size_t dataSize)
         if (dataSize < required_size)
                 return 0;
 
-        return test_raid_generic(buff, vects, len, pq_gen_base);
+        return test_raid_generic(buff, vects, len, 32, pq_gen_base);
 }
 
 /**
@@ -194,7 +210,7 @@ test_pq_check(uint8_t *buff, size_t dataSize)
         if (dataSize < required_size)
                 return 0;
 
-        return test_raid_generic(buff, vects, len, pq_check);
+        return test_raid_generic(buff, vects, len, 16, pq_check);
 }
 
 /**
@@ -210,7 +226,7 @@ test_pq_check_base(uint8_t *buff, size_t dataSize)
         if (dataSize < required_size)
                 return 0;
 
-        return test_raid_generic(buff, vects, len, pq_check_base);
+        return test_raid_generic(buff, vects, len, 16, pq_check_base);
 }
 
 /* ========================================================================== */
