@@ -68,6 +68,7 @@ set(CRC_X86_64_SOURCES
     crc/crc64_rocksoft_norm_by16_10.asm
     crc/crc32_gzip_refl_by8.asm
     crc/crc32_gzip_refl_by8_02.asm
+    crc/crc32_gzip_refl_avx2.asm
     crc/crc32_gzip_refl_by16_10.asm
 )
 
