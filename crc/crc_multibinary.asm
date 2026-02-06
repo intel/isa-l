@@ -41,6 +41,7 @@ extern crc32_iscsi_base
 extern crc32_ieee_01
 extern crc32_ieee_02
 extern crc32_ieee_base
+extern crc32_ieee_avx2
 
 extern crc16_t10dif_01
 extern crc16_t10dif_02
@@ -70,7 +71,6 @@ mbin_interface			crc16_t10dif_copy
 mbin_dispatch_init_clmul	crc16_t10dif_copy, crc16_t10dif_copy_base, crc16_t10dif_copy_by4, crc16_t10dif_copy_by4_02, crc16_t10dif_copy_by4_02, crc16_t10dif_copy_by4_02
 
 mbin_interface			crc32_ieee
-mbin_dispatch_init_clmul	crc32_ieee, crc32_ieee_base, crc32_ieee_01, crc32_ieee_02, crc32_ieee_02, crc32_ieee_by16_10
-
+mbin_dispatch_init_clmul	crc32_ieee, crc32_ieee_base, crc32_ieee_01, crc32_ieee_02, crc32_ieee_avx2, crc32_ieee_by16_10
 mbin_interface			crc16_t10dif
 mbin_dispatch_init_clmul	crc16_t10dif, crc16_t10dif_base, crc16_t10dif_01, crc16_t10dif_02, crc16_t10dif_02, crc16_t10dif_by16_10

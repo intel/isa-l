@@ -45,6 +45,7 @@ lsrc_x86_64 += \
 	crc/crc16_t10dif_copy_by4_02.asm \
 	crc/crc32_ieee_01.asm \
 	crc/crc32_ieee_02.asm \
+	crc/crc32_ieee_avx2.asm \
 	crc/crc32_ieee_by16_10.asm \
 	crc/crc32_iscsi_01.asm \
 	crc/crc32_iscsi_by8_02.asm \
