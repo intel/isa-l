@@ -59,7 +59,10 @@ if(ISAL_BUILD_FUZZ_TESTS)
 endif()
 
 # Enable building ISAL shim library
-option(ISAL_BUILD_ISAL_SHIM "Build the ISAL shim library" OFF)
+option(ISAL_BUILD_ISAL_SHIM "Build the ISAL shim library" ON)
+if(ISAL_BUILD_ISAL_SHIM)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
 
 # Set default build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -126,10 +129,6 @@ include(cmake/igzip.cmake)
 include(cmake/mem.cmake)
 include(cmake/misc.cmake)
 
-# Conditionally build ISAL shim library
-if(ISAL_BUILD_ISAL_SHIM)
-    add_subdirectory(igzip/shim)
-endif()
 
 # Add test.h to extern headers (used by all modules)
 list(APPEND EXTERN_HEADERS include/test.h)
@@ -193,6 +192,11 @@ target_include_directories(isal
         $<BUILD_INTERFACE:${BUILD_INTERFACE_INCLUDE_DIR}>
         $<INSTALL_INTERFACE:include>
 )
+
+# Conditionally build ISAL shim library
+if(ISAL_BUILD_ISAL_SHIM)
+    add_subdirectory(igzip/shim)
+endif()
 
 # Generate isa-l.h header
 set(ISAL_HEADER "${CMAKE_CURRENT_BINARY_DIR}/isa-l.h")
