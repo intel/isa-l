@@ -241,7 +241,7 @@ main(int argc, char *argv[])
         // Start encode test
         ec_encode_perf(m, k, a, g_tbls, buffs, &start);
         printf("erasure_code_encode" TEST_TYPE_STR ": ");
-        perf_print(start, (long long) (TEST_LEN(m)) * (m));
+        perf_print(start, (double) ((TEST_LEN(m)) * (m)));
 
         // Start decode test
         check = ec_decode_perf(m, k, a, g_tbls, buffs, src_in_err, src_err_list, nerrs, temp_buffs,
@@ -261,7 +261,7 @@ main(int argc, char *argv[])
         }
 
         printf("erasure_code_decode" TEST_TYPE_STR ": ");
-        perf_print(start, (long long) (TEST_LEN(m)) * (k + nerrs));
+        perf_print(start, (double) ((TEST_LEN(m)) * (k + nerrs)));
 
         printf("done all: Pass\n");
 

@@ -31,6 +31,126 @@
 #include "ec_base.h" /* for GF tables */
 
 #if __x86_64__ || __i386__ || _M_X64 || _M_IX86
+// Forward declarations for SSE functions
+extern void
+gf_vect_dot_prod_sse(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                     unsigned char *dest);
+extern void
+gf_2vect_dot_prod_sse(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                      unsigned char **dest);
+extern void
+gf_3vect_dot_prod_sse(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                      unsigned char **dest);
+extern void
+gf_4vect_dot_prod_sse(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                      unsigned char **dest);
+extern void
+gf_5vect_dot_prod_sse(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                      unsigned char **dest);
+extern void
+gf_6vect_dot_prod_sse(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                      unsigned char **dest);
+
+// Forward declarations for AVX functions
+extern void
+gf_vect_dot_prod_avx(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                     unsigned char *dest);
+extern void
+gf_2vect_dot_prod_avx(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                      unsigned char **dest);
+extern void
+gf_3vect_dot_prod_avx(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                      unsigned char **dest);
+extern void
+gf_4vect_dot_prod_avx(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                      unsigned char **dest);
+extern void
+gf_5vect_dot_prod_avx(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                      unsigned char **dest);
+extern void
+gf_6vect_dot_prod_avx(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                      unsigned char **dest);
+
+// Forward declarations for AVX2 functions
+extern void
+gf_vect_dot_prod_avx2(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                      unsigned char *dest);
+extern void
+gf_2vect_dot_prod_avx2(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                       unsigned char **dest);
+extern void
+gf_3vect_dot_prod_avx2(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                       unsigned char **dest);
+extern void
+gf_4vect_dot_prod_avx2(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                       unsigned char **dest);
+extern void
+gf_5vect_dot_prod_avx2(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                       unsigned char **dest);
+extern void
+gf_6vect_dot_prod_avx2(int len, int vects, unsigned char *gftbls, unsigned char **data,
+                       unsigned char **dest);
+
+// Forward declarations for SSE MAD (multiply-add) functions
+extern void
+gf_vect_mad_sse(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                unsigned char *dest);
+extern void
+gf_2vect_mad_sse(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                 unsigned char **dest);
+extern void
+gf_3vect_mad_sse(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                 unsigned char **dest);
+extern void
+gf_4vect_mad_sse(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                 unsigned char **dest);
+extern void
+gf_5vect_mad_sse(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                 unsigned char **dest);
+extern void
+gf_6vect_mad_sse(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                 unsigned char **dest);
+
+// Forward declarations for AVX MAD (multiply-add) functions
+extern void
+gf_vect_mad_avx(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                unsigned char *dest);
+extern void
+gf_2vect_mad_avx(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                 unsigned char **dest);
+extern void
+gf_3vect_mad_avx(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                 unsigned char **dest);
+extern void
+gf_4vect_mad_avx(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                 unsigned char **dest);
+extern void
+gf_5vect_mad_avx(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                 unsigned char **dest);
+extern void
+gf_6vect_mad_avx(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                 unsigned char **dest);
+
+// Forward declarations for AVX2 MAD (multiply-add) functions
+extern void
+gf_vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                 unsigned char *dest);
+extern void
+gf_2vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                  unsigned char **dest);
+extern void
+gf_3vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                  unsigned char **dest);
+extern void
+gf_4vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                  unsigned char **dest);
+extern void
+gf_5vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                  unsigned char **dest);
+extern void
+gf_6vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                  unsigned char **dest);
+
 void
 ec_encode_data_sse(int len, int k, int rows, unsigned char *g_tbls, unsigned char **data,
                    unsigned char **coding)

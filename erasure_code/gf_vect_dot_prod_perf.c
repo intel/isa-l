@@ -52,7 +52,7 @@
 #elif defined(COLD_TEST)
 // Uncached test.  Pull from large mem base.
 #define TEST_SOURCES  10
-#define TEST_LEN      ((GT_L3_CACHE / TEST_SOURCES) & ~(64 - 1))
+#define TEST_LEN      ((GT_L3_CACHE / TEST_SOURCES) & ~(64U - 1))
 #define TEST_TYPE_STR "_cold"
 #elif defined(TEST_CUSTOM)
 #define TEST_TYPE_STR "_cus"

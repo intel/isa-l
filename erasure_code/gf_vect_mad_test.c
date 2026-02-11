@@ -459,7 +459,7 @@ main(int argc, char *argv[])
                 memset(dest_ref[0], 0, PTR_ALIGN_CHK_B); // Make reference zero buff
 
                 for (i = 0; i < vector; i++) {
-                        offset = udest_ptrs[i] - dest_ptrs[i];
+                        offset = (unsigned int) (udest_ptrs[i] - dest_ptrs[i]);
                         if (memcmp(dest_ptrs[i], dest_ref[0], offset)) {
                                 printf("Fail rand ualign pad1 start\n");
                                 return -1;

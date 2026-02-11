@@ -341,19 +341,19 @@ main(int argc, char *argv[])
         // Start encode test
         BENCHMARK(&start, BENCHMARK_TIME, encode_update_test(m, k, g_tbls, perf_update_buffs, a));
         printf(xstr(FUNCTION_UNDER_TEST) TEST_TYPE_STR ": ");
-        perf_print(start, (long long) (TEST_LEN(m)) * (m));
+        perf_print(start, (double) (TEST_LEN(m)) * (m));
 
         // Start encode test
         BENCHMARK(&start, BENCHMARK_TIME,
                   encode_single_src_test(m, k, g_tbls, perf_update_buffs, a));
         printf(xstr(FUNCTION_UNDER_TEST) "_single_src" TEST_TYPE_STR ": ");
-        perf_print(start, (long long) (TEST_LEN(m)) * (m - k + 1));
+        perf_print(start, (double) (TEST_LEN(m)) * (m - k + 1));
 
         // Start encode test
         BENCHMARK(&start, BENCHMARK_TIME,
                   encode_single_src_simple_test(m, k, g_tbls, perf_update_buffs, a));
         printf(xstr(FUNCTION_UNDER_TEST) "_single_src_simple" TEST_TYPE_STR ": ");
-        perf_print(start, (long long) (TEST_LEN(m)) * (m - k + 1));
+        perf_print(start, (double) (TEST_LEN(m)) * (m - k + 1));
 
         for (i = k; i < m; i++) {
                 memset(update_buffs[i], 0, TEST_LEN(m)); // initialize the destination buffer to be
@@ -383,7 +383,7 @@ main(int argc, char *argv[])
         }
 
         printf(xstr(FUNCTION_UNDER_TEST) "_decode" TEST_TYPE_STR ": ");
-        perf_print(start, (long long) (TEST_LEN(m)) * (k + nerrs));
+        perf_print(start, (double) (TEST_LEN(m)) * (k + nerrs));
 
         printf("done all: Pass\n");
 

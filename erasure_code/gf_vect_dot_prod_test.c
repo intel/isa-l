@@ -491,7 +491,7 @@ main(int argc, char *argv[])
                 }
                 // Confirm that padding around dests is unchanged
                 memset(dest_ref, 0, PTR_ALIGN_CHK_B); // Make reference zero buff
-                offset = udest_ptr - dest;
+                offset = (unsigned int) (udest_ptr - dest);
 
                 if (memcmp(dest, dest_ref, offset)) {
                         printf("Fail rand ualign pad start\n");

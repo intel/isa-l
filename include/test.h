@@ -272,10 +272,11 @@ estimate_perf_iterations(struct perf *p, unsigned long long runs, unsigned long 
                 perf_pause((PERF));                                                                \
                 ((PERF))->iterations += _iter;                                                     \
                                                                                                    \
-                if (get_base_elapsed((PERF)) < _run_total &&                                       \
+                if (get_base_elapsed((PERF)) < (long long) _run_total &&                           \
                     BENCHMARK_TYPE == BENCHMARK_MIN_TIME) {                                        \
                         _iter = estimate_perf_iterations((PERF), _iter,                            \
-                                                         _run_total - get_base_elapsed((PERF)) +   \
+                                                         (long long) _run_total -                  \
+                                                                 get_base_elapsed((PERF)) +        \
                                                                  (UNIT_SCALE / 16));               \
                         perf_continue((PERF));                                                     \
                         for (_i = 0; _i < _iter; _i++) {                                           \
@@ -335,10 +336,11 @@ estimate_perf_iterations(struct perf *p, unsigned long long runs, unsigned long 
                 perf_pause((PERF));                                                                \
                 ((PERF))->iterations += _iter;                                                     \
                                                                                                    \
-                if (get_base_elapsed((PERF)) < _run_total &&                                       \
+                if (get_base_elapsed((PERF)) < (long long) _run_total &&                           \
                     BENCHMARK_TYPE == BENCHMARK_MIN_TIME) {                                        \
                         _iter = estimate_perf_iterations((PERF), _iter,                            \
-                                                         _run_total - get_base_elapsed((PERF)) +   \
+                                                         (long long) _run_total -                  \
+                                                                 get_base_elapsed((PERF)) +        \
                                                                  (UNIT_SCALE / 16));               \
                         perf_continue((PERF));                                                     \
                         for (_i = 0; _i < _iter; _i++) {                                           \
