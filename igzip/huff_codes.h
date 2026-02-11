@@ -143,7 +143,7 @@ struct tree_node {
 struct heap_tree {
         union {
                 uint64_t heap[HEAP_TREE_SIZE];
-                uint64_t code_len_count[MAX_HUFF_TREE_DEPTH + 1];
+                uint32_t code_len_count[MAX_HUFF_TREE_DEPTH + 1];
                 struct tree_node tree[HEAP_TREE_SIZE];
         };
 };

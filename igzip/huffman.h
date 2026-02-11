@@ -94,7 +94,7 @@ tzbytecnt(uint64_t val)
 
 static void
 compute_dist_code(struct isal_hufftables *hufftables, uint16_t dist, uint64_t *p_code,
-                  uint64_t *p_len)
+                  uint32_t *p_len)
 {
         assert(dist > IGZIP_DIST_TABLE_SIZE);
 
@@ -120,12 +120,12 @@ compute_dist_code(struct isal_hufftables *hufftables, uint16_t dist, uint64_t *p
 }
 
 static inline void
-get_dist_code(struct isal_hufftables *hufftables, uint32_t dist, uint64_t *code, uint64_t *len)
+get_dist_code(struct isal_hufftables *hufftables, uint32_t dist, uint64_t *code, uint32_t *len)
 {
         assert(dist >= 1);
         assert(dist <= 32768);
         if (dist <= IGZIP_DIST_TABLE_SIZE) {
-                uint64_t code_len;
+                uint32_t code_len;
                 code_len = hufftables->dist_table[dist - 1];
                 *code = code_len >> 5;
                 *len = code_len & 0x1F;
@@ -135,19 +135,19 @@ get_dist_code(struct isal_hufftables *hufftables, uint32_t dist, uint64_t *code,
 }
 
 static inline void
-get_len_code(struct isal_hufftables *hufftables, uint32_t length, uint64_t *code, uint64_t *len)
+get_len_code(struct isal_hufftables *hufftables, uint32_t length, uint64_t *code, uint32_t *len)
 {
         assert(length >= 3);
         assert(length <= 258);
 
-        uint64_t code_len;
+        uint32_t code_len;
         code_len = hufftables->len_table[length - 3];
         *code = code_len >> 5;
         *len = code_len & 0x1F;
 }
 
 static inline void
-get_lit_code(struct isal_hufftables *hufftables, uint32_t lit, uint64_t *code, uint64_t *len)
+get_lit_code(struct isal_hufftables *hufftables, uint32_t lit, uint64_t *code, uint32_t *len)
 {
         assert(lit <= 256);
 
@@ -220,7 +220,7 @@ compute_hash(uint32_t data)
         hash *= 0xB2D06057;
         hash >>= 16;
 
-        return hash;
+        return (uint32_t) hash;
 
 #endif /* __SSE4_2__ */
 }
@@ -242,13 +242,6 @@ compute_hash_mad(uint32_t data)
         data = PROD1 * data_low + PROD2 * data_high;
 
         return data;
-}
-
-static inline uint32_t
-compute_long_hash(uint64_t data)
-{
-
-        return compute_hash(data >> 32) ^ compute_hash(data);
 }
 
 /**

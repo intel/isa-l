@@ -16,8 +16,8 @@ update_state(struct isal_zstream *stream, uint8_t *start_in, uint8_t *next_in, u
                 state->has_hist = IGZIP_HIST;
 
         stream->next_in = next_in;
-        stream->total_in += next_in - start_in;
-        stream->avail_in = end_in - next_in;
+        stream->total_in += (uint32_t) (next_in - start_in);
+        stream->avail_in = (uint32_t) (end_in - next_in);
 
         bytes_written = buffer_used(&state->bitbuf);
         stream->total_out += bytes_written;
@@ -32,7 +32,8 @@ isal_deflate_body_base(struct isal_zstream *stream)
         uint8_t *start_in, *next_in, *end_in, *end, *next_hash;
         uint16_t match_length;
         uint32_t dist;
-        uint64_t code, code_len, code2, code_len2;
+        uint64_t code, code2;
+        uint32_t code_len, code_len2;
         struct isal_zstate *state = &stream->internal_state;
         uint16_t *last_seen = state->head;
         uint8_t *file_start = (uint8_t *) ((uintptr_t) stream->next_in - stream->total_in);
@@ -61,7 +62,7 @@ isal_deflate_body_base(struct isal_zstream *stream)
                 literal = load_le_u32(next_in);
                 hash = compute_hash(literal) & hash_mask;
                 dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
-                last_seen[hash] = (uint64_t) (next_in - file_start);
+                last_seen[hash] = (uint16_t) (next_in - file_start);
 
                 /* The -1 are to handle the case when dist = 0 */
                 if (dist - 1 < hist_size) {
@@ -81,7 +82,7 @@ isal_deflate_body_base(struct isal_zstream *stream)
                                 for (; next_hash < end; next_hash++) {
                                         literal = load_le_u32(next_hash);
                                         hash = compute_hash(literal) & hash_mask;
-                                        last_seen[hash] = (uint64_t) (next_hash - file_start);
+                                        last_seen[hash] = (uint16_t) (next_hash - file_start);
                                 }
 
                                 get_len_code(stream->hufftables, match_length, &code, &code_len);
@@ -119,7 +120,8 @@ isal_deflate_finish_base(struct isal_zstream *stream)
         uint8_t *start_in, *next_in, *end_in, *end, *next_hash;
         uint16_t match_length;
         uint32_t dist;
-        uint64_t code, code_len, code2, code_len2;
+        uint64_t code, code2;
+        uint32_t code_len, code_len2;
         struct isal_zstate *state = &stream->internal_state;
         uint16_t *last_seen = state->head;
         uint8_t *file_start = (uint8_t *) ((uintptr_t) stream->next_in - stream->total_in);
@@ -142,12 +144,12 @@ isal_deflate_finish_base(struct isal_zstream *stream)
                         literal = load_le_u32(next_in);
                         hash = compute_hash(literal) & hash_mask;
                         dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
-                        last_seen[hash] = (uint64_t) (next_in - file_start);
+                        last_seen[hash] = (uint16_t) (next_in - file_start);
 
                         if (dist - 1 <
                             hist_size) { /* The -1 are to handle the case when dist = 0 */
-                                match_length =
-                                        compare258(next_in - dist, next_in, end_in - next_in);
+                                match_length = compare258(next_in - dist, next_in,
+                                                          (uint32_t) (end_in - next_in));
 
                                 if (match_length >= SHORTEST_MATCH) {
                                         next_hash = next_in;
@@ -162,7 +164,7 @@ isal_deflate_finish_base(struct isal_zstream *stream)
                                                 literal = load_le_u32(next_hash);
                                                 hash = compute_hash(literal) & hash_mask;
                                                 last_seen[hash] =
-                                                        (uint64_t) (next_hash - file_start);
+                                                        (uint16_t) (next_hash - file_start);
                                         }
 
                                         get_len_code(stream->hufftables, match_length, &code,

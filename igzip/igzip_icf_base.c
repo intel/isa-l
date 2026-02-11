@@ -25,9 +25,9 @@ update_state(struct isal_zstream *stream, uint8_t *start_in, uint8_t *next_in, u
                 stream->internal_state.has_hist = IGZIP_HIST;
 
         stream->next_in = next_in;
-        stream->total_in += next_in - start_in;
+        stream->total_in += (uint32_t) (next_in - start_in);
         stream->internal_state.block_end = stream->total_in;
-        stream->avail_in = end_in - next_in;
+        stream->avail_in = (uint32_t) (end_in - next_in);
 
         level_buf->icf_buf_next = next_out;
         level_buf->icf_buf_avail_out = end_out - next_out;
@@ -76,7 +76,7 @@ isal_deflate_icf_body_hash_hist_base(struct isal_zstream *stream)
                 literal = load_le_u32(next_in);
                 hash = compute_hash(literal) & hash_mask;
                 dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
-                last_seen[hash] = (uint64_t) (next_in - file_start);
+                last_seen[hash] = (uint16_t) (next_in - file_start);
 
                 /* The -1 are to handle the case when dist = 0 */
                 if (dist - 1 < hist_size) {
@@ -96,7 +96,7 @@ isal_deflate_icf_body_hash_hist_base(struct isal_zstream *stream)
                                 for (; next_hash < end; next_hash++) {
                                         literal = load_le_u32(next_hash);
                                         hash = compute_hash(literal) & hash_mask;
-                                        last_seen[hash] = (uint64_t) (next_hash - file_start);
+                                        last_seen[hash] = (uint16_t) (next_hash - file_start);
                                 }
 
                                 get_len_icf_code(match_length, &code);
@@ -171,10 +171,11 @@ isal_deflate_icf_finish_hash_hist_base(struct isal_zstream *stream)
                 literal = load_le_u32(next_in);
                 hash = compute_hash(literal) & hash_mask;
                 dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
-                last_seen[hash] = (uint64_t) (next_in - file_start);
+                last_seen[hash] = (uint16_t) (next_in - file_start);
 
                 if (dist - 1 < hist_size) { /* The -1 are to handle the case when dist = 0 */
-                        match_length = compare258(next_in - dist, next_in, end_in - next_in);
+                        match_length =
+                                compare258(next_in - dist, next_in, (uint32_t) (end_in - next_in));
 
                         if (match_length >= SHORTEST_MATCH) {
                                 next_hash = next_in;
@@ -188,7 +189,7 @@ isal_deflate_icf_finish_hash_hist_base(struct isal_zstream *stream)
                                 for (; next_hash < end - 3; next_hash++) {
                                         literal = load_le_u32(next_hash);
                                         hash = compute_hash(literal) & hash_mask;
-                                        last_seen[hash] = (uint64_t) (next_hash - file_start);
+                                        last_seen[hash] = (uint16_t) (next_hash - file_start);
                                 }
 
                                 get_len_icf_code(match_length, &code);
@@ -280,10 +281,11 @@ isal_deflate_icf_finish_hash_map_base(struct isal_zstream *stream)
                 literal = load_le_u32(next_in);
                 hash = compute_hash_mad(literal) & hash_mask;
                 dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
-                last_seen[hash] = (uint64_t) (next_in - file_start);
+                last_seen[hash] = (uint16_t) (next_in - file_start);
 
                 if (dist - 1 < hist_size) { /* The -1 are to handle the case when dist = 0 */
-                        match_length = compare258(next_in - dist, next_in, end_in - next_in);
+                        match_length =
+                                compare258(next_in - dist, next_in, (uint32_t) (end_in - next_in));
 
                         if (match_length >= SHORTEST_MATCH) {
                                 next_hash = next_in;
@@ -297,7 +299,7 @@ isal_deflate_icf_finish_hash_map_base(struct isal_zstream *stream)
                                 for (; next_hash < end - 3; next_hash++) {
                                         literal = load_le_u32(next_hash);
                                         hash = compute_hash_mad(literal) & hash_mask;
-                                        last_seen[hash] = (uint64_t) (next_hash - file_start);
+                                        last_seen[hash] = (uint16_t) (next_hash - file_start);
                                 }
 
                                 get_len_icf_code(match_length, &code);

@@ -62,7 +62,7 @@ void
 set_long_icf_fg_base(uint8_t *next_in, uint64_t processed, uint64_t input_size,
                      struct deflate_icf *match_lookup);
 
-uint64_t
+uint32_t
 gen_icf_map_h1_base(struct isal_zstream *stream, struct deflate_icf *matches_icf_lookup,
                     uint64_t input_size);
 
@@ -174,7 +174,7 @@ set_long_icf_fg(uint8_t *next_in, uint64_t processed, uint64_t input_size,
         set_long_icf_fg_base(next_in, processed, input_size, match_lookup);
 }
 
-uint64_t
+uint32_t
 gen_icf_map_lh1(struct isal_zstream *stream, struct deflate_icf *matches_icf_lookup,
                 uint64_t input_size)
 {

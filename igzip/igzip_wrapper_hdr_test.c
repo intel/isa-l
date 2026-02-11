@@ -258,18 +258,18 @@ print_zlib_final_verbose(uint8_t *hdr_buf, uint32_t hdr_buf_len,
         return;
 }
 
-int
+uint32_t
 gzip_header_size(struct isal_gzip_header *gz_hdr)
 {
-        int hdr_size = 10;
+        uint32_t hdr_size = 10;
         if (gz_hdr->extra != NULL) {
                 hdr_size += 2 + gz_hdr->extra_len;
         }
         if (gz_hdr->name != NULL) {
-                hdr_size += strnlen(gz_hdr->name, gz_hdr->name_buf_len) + 1;
+                hdr_size += (uint32_t) strnlen(gz_hdr->name, gz_hdr->name_buf_len) + 1;
         }
         if (gz_hdr->comment != NULL) {
-                hdr_size += strnlen(gz_hdr->comment, gz_hdr->comment_buf_len) + 1;
+                hdr_size += (uint32_t) strnlen(gz_hdr->comment, gz_hdr->comment_buf_len) + 1;
         }
 
         if (gz_hdr->hcrc) {
@@ -291,7 +291,7 @@ zlib_header_size(struct isal_zlib_header *z_hdr)
 void
 rand_string(char *string, uint32_t str_len)
 {
-        int i;
+        uint32_t i;
 
         if (str_len == 0 || string == NULL)
                 return;
@@ -304,7 +304,7 @@ rand_string(char *string, uint32_t str_len)
 void
 rand_buf(uint8_t *buf, uint32_t buf_len)
 {
-        int i;
+        uint32_t i;
 
         if (buf_len == 0 || buf == NULL)
                 return;
@@ -826,7 +826,7 @@ main(int argc, char *argv[])
         int i;
 
 #ifndef VERBOSE
-        setbuf(stdout, NULL);
+        setvbuf(stdout, NULL, _IONBF, 0);
 #endif
         printf("Test Seed  : %d\n", TEST_SEED);
         printf("Randoms    : %d\n", RANDOMS);

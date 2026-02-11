@@ -75,7 +75,7 @@ isal_update_histogram_base(uint8_t *, int, struct isal_huff_histogram *);
 
 extern uint64_t
 gen_icf_map_h1_aarch64(struct isal_zstream *, struct deflate_icf *, uint64_t input_size);
-extern uint64_t
+extern uint32_t
 gen_icf_map_h1_base(struct isal_zstream *, struct deflate_icf *, uint64_t input_size);
 
 extern void

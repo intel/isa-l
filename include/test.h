@@ -382,7 +382,7 @@ perf_print(struct perf p, long long unit_count)
 static inline void
 perf_print(struct perf p, double unit_count)
 {
-        long long total_units = p.iterations * unit_count;
+        long long total_units = (long long) (p.iterations * unit_count);
         long long usecs = (long long) (get_time_elapsed(&p) * 1000000);
 
         printf("runtime = %10lld usecs", usecs);
