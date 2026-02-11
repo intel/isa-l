@@ -28,7 +28,11 @@
 **********************************************************************/
 .text
 .align		6
+#ifdef __APPLE__
+.arch		armv8-a+sme
+#else
 .arch		armv8-a+sve
+#endif
 
 #include "../include/aarch64_label.h"
 
@@ -92,7 +96,7 @@ cdecl(gf_vect_mul_sve):
 	/* vector length agnostic */
 .Lloopsve_vl:
 	whilelo	p0.b, x_pos, x_len
-	b.none	.return_pass
+	b.eq	.return_pass
 
 	/* load src data, governed by p0 */
 	ld1b	z_src.b,  p0/z, [x_src, x_pos]
