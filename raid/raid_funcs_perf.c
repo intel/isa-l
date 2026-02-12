@@ -219,23 +219,23 @@ run_benchmark(void *buffs[], const size_t len, const int num_sources_dest, const
                 }
 
                 size_t current_buffer_idx = 0;
-                BENCHMARK_COLD(
-                        &start, BENCHMARK_TIME,
-                        current_buffer_idx = (current_buffer_idx + 1) % num_buffer_sets,
-                        raid_func(num_sources_dest, len, buffer_set_list[current_buffer_idx]));
+                BENCHMARK_COLD(&start, BENCHMARK_TIME,
+                               current_buffer_idx = (current_buffer_idx + 1) % num_buffer_sets,
+                               raid_func(num_sources_dest, (int) len,
+                                         buffer_set_list[current_buffer_idx]));
 
                 for (size_t i = 0; i < num_buffer_sets; i++)
                         free(buffer_set_list[i]);
                 free(buffer_set_list);
 
         } else {
-                BENCHMARK(&start, BENCHMARK_TIME, raid_func(num_sources_dest, len, buffs));
+                BENCHMARK(&start, BENCHMARK_TIME, raid_func(num_sources_dest, (int) len, buffs));
         }
 
         if (csv_output) {
 #ifdef USE_RDTSC
                 // When USE_RDTSC is defined, report total cycles per buffer
-                const double cycles = (double) get_base_elapsed(&start);
+                const double cycles = (double) (long long) get_base_elapsed(&start);
                 const double cycles_per_buffer = cycles / (double) start.iterations;
                 printf("%s,%zu,%d,%.0f\n", raid_type_str, len, num_sources_dest, cycles_per_buffer);
 #else
@@ -248,7 +248,7 @@ run_benchmark(void *buffs[], const size_t len, const int num_sources_dest, const
 #endif
         } else {
                 printf("%s: ", raid_type_str);
-                perf_print(start, (long long) len * num_sources_dest);
+                perf_print(start, (double) (len * num_sources_dest));
         }
 }
 
@@ -337,7 +337,7 @@ parse_size_value(const char *size_str)
         if (!str_copy)
                 return 0;
 
-        const int len = strlen(str_copy);
+        const size_t len = strlen(str_copy);
         if (len > 0) {
                 // Convert to uppercase for case-insensitive comparison
                 const char last_char = toupper(str_copy[len - 1]);
@@ -649,9 +649,16 @@ main(int argc, char *argv[])
                         if (i + 1 < argc && argv[i + 1][0] != '-') {
                                 // Range specified, parse it
                                 char *range_arg = strdup(argv[i + 1]);
+#ifdef _WIN32
+                                char *context = NULL;
+                                char *const min_str = strtok_s(range_arg, ":", &context);
+                                char *const step_str = strtok_s(NULL, ":", &context);
+                                char *const max_str = strtok_s(NULL, ":", &context);
+#else
                                 char *const min_str = strtok(range_arg, ":");
                                 char *const step_str = strtok(NULL, ":");
                                 char *const max_str = strtok(NULL, ":");
+#endif
 
                                 if (!range_arg)
                                         return 1;
@@ -665,12 +672,12 @@ main(int argc, char *argv[])
                                         if (step_str[0] == '*') {
                                                 step_is_multiplicative = 1;
                                                 if (strlen(step_str) > 1)
-                                                        step_len = parse_size_value(
+                                                        step_len = (ssize_t) parse_size_value(
                                                                 step_str + 1); // Skip the '*'
                                                 else
                                                         step_len = 0; // Invalid step
                                         } else {
-                                                step_len = parse_size_value(step_str);
+                                                step_len = (ssize_t) parse_size_value(step_str);
                                         }
 
                                         if (min_len > 0 && max_len >= min_len && step_len > 0) {
@@ -715,7 +722,12 @@ main(int argc, char *argv[])
                         if (i + 1 < argc && argv[i + 1][0] != '-') {
                                 // Sizes specified, parse them as a list
                                 char *sizes_arg = strdup(argv[i + 1]);
+#ifdef _WIN32
+                                char *context = NULL;
+                                char *size_str = strtok_s(sizes_arg, ",", &context);
+#else
                                 char *size_str = strtok(sizes_arg, ",");
+#endif
                                 size_t prev_size = 0;
 
                                 while (size_str) {
@@ -743,7 +755,11 @@ main(int argc, char *argv[])
                                                 return 1;
                                         }
 
+#ifdef _WIN32
+                                        size_str = strtok_s(NULL, ",", &context);
+#else
                                         size_str = strtok(NULL, ",");
+#endif
                                 }
 
                                 // If we parsed some sizes successfully, use them
@@ -751,11 +767,20 @@ main(int argc, char *argv[])
                                         use_range = 0;
                                         size_count = 0;
                                         char *sizes_copy = strdup(argv[i + 1]);
+#ifdef _WIN32
+                                        char *context2 = NULL;
+                                        char *token = strtok_s(sizes_copy, ",", &context2);
+                                        while (token && size_count < MAX_SIZE_COUNT) {
+                                                size_list[size_count++] = parse_size_value(token);
+                                                token = strtok_s(NULL, ",", &context2);
+                                        }
+#else
                                         char *token = strtok(sizes_copy, ",");
                                         while (token && size_count < MAX_SIZE_COUNT) {
                                                 size_list[size_count++] = parse_size_value(token);
                                                 token = strtok(NULL, ",");
                                         }
+#endif
                                         free(sizes_copy);
                                         test_len =
                                                 size_list[size_count -
