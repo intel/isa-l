@@ -56,19 +56,19 @@ typedef struct func_case {
 uint32_t
 crc32_iscsi_wrap(uint32_t seed, const uint8_t *buf, uint64_t len)
 {
-        return crc32_iscsi((uint8_t *) buf, len, seed);
+        return crc32_iscsi((uint8_t *) buf, (int) len, seed);
 }
 
 uint32_t
 crc32_iscsi_base_wrap(uint32_t seed, uint8_t *buf, uint64_t len)
 {
-        return crc32_iscsi_base(buf, len, seed);
+        return crc32_iscsi_base(buf, (int) len, seed);
 }
 
 uint32_t
 crc32_iscsi_ref_wrap(uint32_t seed, uint8_t *buf, uint64_t len)
 {
-        return crc32_iscsi_ref(buf, len, seed);
+        return crc32_iscsi_ref(buf, (int) len, seed);
 }
 
 func_case_t test_funcs[] = {
@@ -203,10 +203,10 @@ simple_pattern_test(func_case_t *test_func)
 int
 seeds_sizes_test(func_case_t *test_func)
 {
-        uint32_t crc_ref, crc_base, crc;
+        uint32_t crc_ref, crc_base, crc, r;
         int fail = 0;
         int i;
-        uint64_t r, s;
+        uint64_t s;
         unsigned char *buf = NULL;
 
         // Do a few random tests
@@ -320,10 +320,9 @@ eob_test(func_case_t *test_func)
 int
 update_test(func_case_t *test_func)
 {
-        uint32_t crc_ref, crc_base, crc;
+        uint32_t crc_ref, crc_base, crc, r;
         int fail = 0;
         int i;
-        uint64_t r;
         unsigned char *buf = NULL;
 
         buf = (unsigned char *) buf_alloc; // reset buf

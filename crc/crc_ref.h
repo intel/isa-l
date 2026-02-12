@@ -46,7 +46,7 @@ extern "C" {
 static inline unsigned int
 crc32_iscsi_ref(unsigned char *buffer, int len, unsigned int crc_init)
 {
-        uint64_t rem = crc_init;
+        unsigned int rem = crc_init;
         int i, j;
 
         uint32_t poly = 0x82F63B78;
@@ -54,7 +54,7 @@ crc32_iscsi_ref(unsigned char *buffer, int len, unsigned int crc_init)
         for (i = 0; i < len; i++) {
                 rem = rem ^ (buffer[i]);
                 for (j = 0; j < MAX_ITER; j++) {
-                        rem = (rem & 0x1ULL) ? (rem >> 1) ^ poly : (rem >> 1);
+                        rem = (rem & 0x1U) ? (rem >> 1) ^ poly : (rem >> 1);
                 }
         }
         return rem;
@@ -76,7 +76,7 @@ crc16_t10dif_ref(uint16_t seed, uint8_t *buf, uint64_t len)
                         rem = (rem & 0x10000) ? rem ^ poly : rem;
                 }
         }
-        return rem;
+        return (uint16_t) rem;
 }
 
 // crc16_t10dif reference function, slow crc16 from the definition.
@@ -96,7 +96,7 @@ crc16_t10dif_copy_ref(uint16_t seed, uint8_t *dst, uint8_t *src, uint64_t len)
                         rem = (rem & 0x10000) ? rem ^ poly : rem;
                 }
         }
-        return rem;
+        return (uint16_t) rem;
 }
 
 // crc32_ieee reference function, slow crc32 from the definition.
@@ -115,7 +115,7 @@ crc32_ieee_ref(uint32_t seed, uint8_t *buf, uint64_t len)
                         rem = (rem & 0x100000000ULL) ? rem ^ poly : rem;
                 }
         }
-        return ~rem;
+        return (uint32_t) ~rem;
 }
 
 // crc32_gzip_refl reference function, slow crc32 from the definition.
@@ -135,7 +135,7 @@ crc32_gzip_refl_ref(uint32_t seed, uint8_t *buf, uint64_t len)
                         rem = (rem & 0x1ULL) ? (rem >> 1) ^ poly : (rem >> 1);
                 }
         }
-        return ~rem;
+        return (uint32_t) ~rem;
 }
 
 #ifdef __cplusplus

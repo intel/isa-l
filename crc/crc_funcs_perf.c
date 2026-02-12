@@ -38,6 +38,7 @@
 #include <Windows.h>
 #include <io.h>
 #define strcasecmp _stricmp
+#define strdup     _strdup
 #define ssize_t    long
 #else
 #include <sys/types.h>
@@ -220,7 +221,7 @@ run_standard_crc_benchmark(struct perf *start, const crc_func_info_t *func_info,
         if (csv_output) {
 #ifdef USE_RDTSC
                 // When USE_RDTSC is defined, report total cycles per buffer
-                double cycles = (double) get_base_elapsed(start);
+                double cycles = (double) (long long) get_base_elapsed(start);
                 double cycles_per_buffer = cycles / (double) start->iterations;
                 printf("%s%s,%zu,%.0f\n", crc_type_str, function_suffix, len, cycles_per_buffer);
 #else
@@ -232,7 +233,7 @@ run_standard_crc_benchmark(struct perf *start, const crc_func_info_t *func_info,
 #endif
         } else {
                 printf("%s%s : ", crc_type_str, function_suffix);
-                perf_print(*start, (long long) len);
+                perf_print(*start, (double) len);
         }
 }
 
@@ -310,7 +311,7 @@ run_benchmark(const void *buf, const size_t len, const crc_type_t type, const in
         if (csv_output) {
 #ifdef USE_RDTSC
                 // When USE_RDTSC is defined, report total cycles per buffer
-                double cycles = (double) get_base_elapsed(&start);
+                double cycles = (double) (long long) get_base_elapsed(&start);
                 double cycles_per_buffer = cycles / (double) start.iterations;
                 printf("%s%s,%zu,%.2f\n", crc_type_str, function_suffix, len, cycles_per_buffer);
 #else
@@ -322,7 +323,7 @@ run_benchmark(const void *buf, const size_t len, const crc_type_t type, const in
 #endif
         } else {
                 printf("%s%s : ", crc_type_str, function_suffix);
-                perf_print(start, (long long) len);
+                perf_print(start, (double) len);
         }
 }
 
@@ -450,7 +451,7 @@ parse_size_value(const char *const size_str)
         char *str_copy = strdup(size_str);
 
         // Check for size suffixes (K for KB, M for MB)
-        const int len = strlen(str_copy);
+        const size_t len = strlen(str_copy);
         if (len > 0) {
                 // Convert to uppercase for case-insensitive comparison
                 char last_char = toupper(str_copy[len - 1]);
@@ -785,9 +786,16 @@ main(const int argc, char *const argv[])
 
                                 // Range specified, parse it
                                 char *range_arg = strdup(range_arg_str);
+#ifdef _WIN32
+                                char *context = NULL;
+                                char *min_str = strtok_s(range_arg, ":", &context);
+                                char *step_str = strtok_s(NULL, ":", &context);
+                                char *max_str = strtok_s(NULL, ":", &context);
+#else
                                 char *min_str = strtok(range_arg, ":");
                                 char *step_str = strtok(NULL, ":");
                                 char *max_str = strtok(NULL, ":");
+#endif
 
                                 if (min_str && step_str && max_str) {
                                         min_len = parse_size_value(min_str);
@@ -798,13 +806,13 @@ main(const int argc, char *const argv[])
                                         if (step_str[0] == '*') {
                                                 step_is_multiplicative = 1;
                                                 if (strlen(step_str) > 1) {
-                                                        step_len = parse_size_value(
+                                                        step_len = (ssize_t) parse_size_value(
                                                                 step_str + 1); // Skip the '*'
                                                 } else {
                                                         step_len = 0; // Invalid step
                                                 }
                                         } else {
-                                                step_len = parse_size_value(step_str);
+                                                step_len = (ssize_t) parse_size_value(step_str);
                                         }
 
                                         if (min_len > 0 && max_len >= min_len && step_len > 0) {
@@ -846,7 +854,12 @@ main(const int argc, char *const argv[])
 
                                 // Sizes specified, parse them as a list
                                 char *sizes_arg = strdup(sizes_arg_str);
+#ifdef _WIN32
+                                char *context = NULL;
+                                char *size_str = strtok_s(sizes_arg, ",", &context);
+#else
                                 char *size_str = strtok(sizes_arg, ",");
+#endif
                                 size_t prev_size = 0;
 
                                 while (size_str) {
@@ -872,7 +885,11 @@ main(const int argc, char *const argv[])
                                                 return 1;
                                         }
 
+#ifdef _WIN32
+                                        size_str = strtok_s(NULL, ",", &context);
+#else
                                         size_str = strtok(NULL, ",");
+#endif
                                 }
 
                                 // If we parsed some sizes successfully, use them
@@ -880,11 +897,20 @@ main(const int argc, char *const argv[])
                                         use_size_list = 1;
                                         size_count = 0;
                                         char *sizes_copy = strdup(sizes_arg_str);
+#ifdef _WIN32
+                                        char *context = NULL;
+                                        char *token = strtok_s(sizes_copy, ",", &context);
+                                        while (token && size_count < MAX_SIZE_COUNT) {
+                                                size_list[size_count++] = parse_size_value(token);
+                                                token = strtok_s(NULL, ",", &context);
+                                        }
+#else
                                         char *token = strtok(sizes_copy, ",");
                                         while (token && size_count < MAX_SIZE_COUNT) {
                                                 size_list[size_count++] = parse_size_value(token);
                                                 token = strtok(NULL, ",");
                                         }
+#endif
                                         free(sizes_copy);
                                         test_len =
                                                 size_list[size_count -
