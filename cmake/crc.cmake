@@ -38,6 +38,7 @@ set(CRC_BASE_ALIASES_SOURCES
 set(CRC_X86_64_SOURCES
     crc/crc16_t10dif_01.asm
     crc/crc16_t10dif_02.asm
+    crc/crc16_t10dif_avx2.asm
     crc/crc16_t10dif_by16_10.asm
     crc/crc16_t10dif_copy_by4.asm
     crc/crc16_t10dif_copy_by4_02.asm

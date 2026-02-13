@@ -134,6 +134,7 @@ objs = \
 	bin\raid_multibinary.obj \
 	bin\crc16_t10dif_01.obj \
 	bin\crc16_t10dif_02.obj \
+	bin\crc16_t10dif_avx2.obj \
 	bin\crc16_t10dif_by16_10.obj \
 	bin\crc16_t10dif_copy_by4.obj \
 	bin\crc16_t10dif_copy_by4_02.obj \

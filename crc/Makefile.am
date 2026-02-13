@@ -40,6 +40,7 @@ lsrc_riscv64      += crc/crc_base_aliases.c
 lsrc_x86_64 += \
 	crc/crc16_t10dif_01.asm \
 	crc/crc16_t10dif_02.asm \
+	crc/crc16_t10dif_avx2.asm \
 	crc/crc16_t10dif_by16_10.asm \
 	crc/crc16_t10dif_copy_by4.asm \
 	crc/crc16_t10dif_copy_by4_02.asm \

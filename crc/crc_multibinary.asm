@@ -45,6 +45,7 @@ extern crc32_ieee_avx2
 
 extern crc16_t10dif_01
 extern crc16_t10dif_02
+extern crc16_t10dif_avx2
 extern crc16_t10dif_base
 
 extern crc32_gzip_refl_by8
@@ -114,8 +115,9 @@ mbin_dispatch_init_clmul	crc16_t10dif_copy, crc16_t10dif_copy_base, crc16_t10dif
 
 mbin_interface			crc32_ieee
 mbin_dispatch_init_clmul	crc32_ieee, crc32_ieee_base, crc32_ieee_01, crc32_ieee_02, crc32_ieee_avx2, crc32_ieee_by16_10
+
 mbin_interface			crc16_t10dif
-mbin_dispatch_init_clmul	crc16_t10dif, crc16_t10dif_base, crc16_t10dif_01, crc16_t10dif_02, crc16_t10dif_02, crc16_t10dif_by16_10
+mbin_dispatch_init_clmul	crc16_t10dif, crc16_t10dif_base, crc16_t10dif_01, crc16_t10dif_02, crc16_t10dif_avx2, crc16_t10dif_by16_10
 
 mbin_interface		        crc64_ecma_refl
 mbin_dispatch_init_clmul    crc64_ecma_refl, crc64_ecma_refl_base, crc64_ecma_refl_by8, crc64_ecma_refl_by8, crc64_ecma_refl_avx2, crc64_ecma_refl_by16_10
@@ -140,4 +142,3 @@ mbin_dispatch_init_clmul    crc64_rocksoft_refl, crc64_rocksoft_refl_base, crc64
 
 mbin_interface			    crc64_rocksoft_norm
 mbin_dispatch_init_clmul	crc64_rocksoft_norm, crc64_rocksoft_norm_base, crc64_rocksoft_norm_by8, crc64_rocksoft_norm_by8, crc64_rocksoft_norm_avx2, crc64_rocksoft_norm_by16_10
-
