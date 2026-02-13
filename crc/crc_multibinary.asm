@@ -67,6 +67,7 @@ extern crc64_ecma_refl_avx2
 
 extern crc64_ecma_norm_by8
 extern crc64_ecma_norm_base
+extern crc64_ecma_norm_avx2
 
 extern crc64_iso_refl_by8
 extern crc64_iso_refl_base
@@ -74,6 +75,7 @@ extern crc64_iso_refl_avx2
 
 extern crc64_iso_norm_by8
 extern crc64_iso_norm_base
+extern crc64_iso_norm_avx2
 
 extern crc64_jones_refl_by8
 extern crc64_jones_refl_base
@@ -81,6 +83,7 @@ extern crc64_jones_refl_avx2
 
 extern crc64_jones_norm_by8
 extern crc64_jones_norm_base
+extern crc64_jones_norm_avx2
 
 extern crc64_rocksoft_refl_by8
 extern crc64_rocksoft_refl_base
@@ -88,6 +91,7 @@ extern crc64_rocksoft_refl_avx2
 
 extern crc64_rocksoft_norm_by8
 extern crc64_rocksoft_norm_base
+extern crc64_rocksoft_norm_avx2
 
 extern crc64_iso_refl_by16_10
 extern crc64_iso_norm_by16_10
@@ -116,24 +120,24 @@ mbin_dispatch_init_clmul	crc16_t10dif, crc16_t10dif_base, crc16_t10dif_01, crc16
 mbin_interface		        crc64_ecma_refl
 mbin_dispatch_init_clmul    crc64_ecma_refl, crc64_ecma_refl_base, crc64_ecma_refl_by8, crc64_ecma_refl_by8, crc64_ecma_refl_avx2, crc64_ecma_refl_by16_10
 
-mbin_interface			crc64_ecma_norm
-mbin_dispatch_init7		crc64_ecma_norm, crc64_ecma_norm_base, crc64_ecma_norm_by8, crc64_ecma_norm_by8, crc64_ecma_norm_by8, crc64_ecma_norm_by8, crc64_ecma_norm_by16_10
+mbin_interface			    crc64_ecma_norm
+mbin_dispatch_init_clmul	crc64_ecma_norm, crc64_ecma_norm_base, crc64_ecma_norm_by8, crc64_ecma_norm_by8, crc64_ecma_norm_avx2, crc64_ecma_norm_by16_10
 
 mbin_interface		        crc64_iso_refl
 mbin_dispatch_init_clmul    crc64_iso_refl, crc64_iso_refl_base, crc64_iso_refl_by8, crc64_iso_refl_by8, crc64_iso_refl_avx2, crc64_iso_refl_by16_10
 
-mbin_interface			crc64_iso_norm
-mbin_dispatch_init7		crc64_iso_norm, crc64_iso_norm_base, crc64_iso_norm_by8, crc64_iso_norm_by8, crc64_iso_norm_by8, crc64_iso_norm_by8, crc64_iso_norm_by16_10
+mbin_interface			    crc64_iso_norm
+mbin_dispatch_init_clmul	crc64_iso_norm, crc64_iso_norm_base, crc64_iso_norm_by8, crc64_iso_norm_by8, crc64_iso_norm_avx2, crc64_iso_norm_by16_10
 
 mbin_interface		        crc64_jones_refl
 mbin_dispatch_init_clmul    crc64_jones_refl, crc64_jones_refl_base, crc64_jones_refl_by8, crc64_jones_refl_by8, crc64_jones_refl_avx2, crc64_jones_refl_by16_10
 
-mbin_interface			crc64_jones_norm
-mbin_dispatch_init7		crc64_jones_norm, crc64_jones_norm_base, crc64_jones_norm_by8, crc64_jones_norm_by8, crc64_jones_norm_by8, crc64_jones_norm_by8, crc64_jones_norm_by16_10
+mbin_interface			    crc64_jones_norm
+mbin_dispatch_init_clmul	crc64_jones_norm, crc64_jones_norm_base, crc64_jones_norm_by8, crc64_jones_norm_by8, crc64_jones_norm_avx2, crc64_jones_norm_by16_10
 
 mbin_interface	            crc64_rocksoft_refl
 mbin_dispatch_init_clmul    crc64_rocksoft_refl, crc64_rocksoft_refl_base, crc64_rocksoft_refl_by8, crc64_rocksoft_refl_by8, crc64_rocksoft_refl_avx2, crc64_rocksoft_refl_by16_10
 
-mbin_interface			crc64_rocksoft_norm
-mbin_dispatch_init7		crc64_rocksoft_norm, crc64_rocksoft_norm_base, crc64_rocksoft_norm_by8, crc64_rocksoft_norm_by8, crc64_rocksoft_norm_by8, crc64_rocksoft_norm_by8, crc64_rocksoft_norm_by16_10
+mbin_interface			    crc64_rocksoft_norm
+mbin_dispatch_init_clmul	crc64_rocksoft_norm, crc64_rocksoft_norm_base, crc64_rocksoft_norm_by8, crc64_rocksoft_norm_by8, crc64_rocksoft_norm_avx2, crc64_rocksoft_norm_by16_10
 
