@@ -245,8 +245,8 @@ func(gf_2vect_mad_avx2_gfni)
         FUNC_SAVE
 
         xor     pos, pos
-        shl     vec_i, 3                ;Multiply by 8
-        shl     vec, 3                  ;Multiply by 8
+        shl     vec_i, 5                ;Multiply by 32
+        shl     vec, 5                  ;Multiply by 32
         lea     tmp, [mul_array + vec_i]
         vbroadcastsd xgft1, [tmp]
         vbroadcastsd xgft2, [tmp + vec]

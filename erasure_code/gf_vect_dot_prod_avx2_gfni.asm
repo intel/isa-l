@@ -166,8 +166,8 @@ section .text
         XLDR    x0x, [ptr + pos + 64]
         add     vec_i, 8
 
-        vbroadcastsd xgft1, [tmp]
-        add     tmp, 8
+        vmovdqu xgft1, [tmp]
+        add     tmp, 32
 
         GF_MUL_XOR VEX, x0l, xgft1, xtmp1, xp1l
         GF_MUL_XOR VEX, x0h, xgft1, xtmp1, xp1h
@@ -197,8 +197,8 @@ section .text
         XLDR    x0h, [ptr + pos + 32]
         add     vec_i, 8
 
-        vbroadcastsd xgft1, [tmp]
-        add     tmp, 8
+        vmovdqu xgft1, [tmp]
+        add     tmp, 32
 
         GF_MUL_XOR VEX, x0l, xgft1, xtmp1, xp1l
         GF_MUL_XOR VEX, x0h, xgft1, xgft1, xp1h
@@ -224,8 +224,8 @@ section .text
         XLDR    x0, [ptr + pos]
         add	    vec_i, 8
 
-        vbroadcastsd xgft1, [tmp]
-        add     tmp, 8
+        vmovdqu xgft1, [tmp]
+        add     tmp, 32
 
         GF_MUL_XOR VEX, x0, xgft1, xgft1, xp1
 
@@ -250,8 +250,8 @@ section .text
         simd_load_avx2 x0, ptr + pos, %%LEN, tmp, tmp3
         add     vec_i, 8
 
-        vbroadcastsd xgft1, [mul_array]
-        add     mul_array, 8
+        vmovdqu xgft1, [mul_array]
+        add     mul_array, 32
 
         GF_MUL_XOR VEX, x0, xgft1, xgft1, xp1
 

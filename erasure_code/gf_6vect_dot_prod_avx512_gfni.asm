@@ -207,13 +207,15 @@ section .text
 %endif
 	add	vec_i, 8
 
-        vbroadcastf32x2 xgft1, [tmp]
-        vbroadcastf32x2 xgft2, [tmp + vec]
-        vbroadcastf32x2 xgft3, [tmp + vec*2]
-        vbroadcastf32x2 xgft4, [tmp + vskip3]
-        vbroadcastf32x2 xgft5, [tmp + vec*4]
-        vbroadcastf32x2 xgft6, [tmp + vskip5]
-	add	tmp, 8
+        vpbroadcastq xgft1, [tmp]
+        vpbroadcastq xgft2, [tmp + vec*4]
+        vpbroadcastq xgft3, [tmp + vec*8]
+        vpbroadcastq xgft4, [tmp + vskip3]
+        shl     vec, 4
+        vpbroadcastq xgft5, [tmp + vec]
+        shr     vec, 4
+        vpbroadcastq xgft6, [tmp + vskip5]
+	add	tmp, 32
 
         GF_MUL_XOR EVEX, x0, xgft1, xgft1, xp1, xgft2, xgft2, xp2, xgft3, xgft3, xp3, \
                        xgft4, xgft4, xp4, xgft5, xgft5, xp5, xgft6, xgft6, xp6
@@ -248,9 +250,9 @@ func(gf_6vect_dot_prod_avx512_gfni)
 
 	xor	pos, pos
 	mov	vskip3, vec
-	imul	vskip3, 3*8
+	imul	vskip3, 3*32
 	mov	vskip5, vec
-	imul	vskip5, 5*8
+	imul	vskip5, 5*32
 	shl	vec, 3		;vec *= 8. Make vec_i count by 8
 	mov	dest2, [dest1 + 8]
 	mov	dest3, [dest1 + 2*8]

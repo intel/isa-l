@@ -146,9 +146,9 @@ section .text
 %endif
 	add	vec_i, 8
 
-        vbroadcastf32x2 xgft1, [tmp]
-        vbroadcastf32x2 xgft2, [tmp + vec]
-	add	tmp, 8
+        vpbroadcastq xgft1, [tmp]
+        vpbroadcastq xgft2, [tmp + vec*4]
+	add	tmp, 32
 
         GF_MUL_XOR EVEX, x0, xgft1, xgft1, xp1, xgft2, xgft2, xp2
 

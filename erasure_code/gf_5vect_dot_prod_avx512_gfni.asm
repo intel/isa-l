@@ -49,21 +49,26 @@
  %define tmp5  r14		; must be saved and restored
  %define tmp6  r15		; must be saved and restored
  %define tmp7  rbp		; must be saved and restored
+ %define tmp8  rbx		; must be saved and restored
 
  %define func(x) x: endbranch
  %macro FUNC_SAVE 0
-	push	r12
-	push	r13
-	push	r14
-	push	r15
-	push	rbp
+        sub     rsp, 6*8
+	mov	[rsp + 0*8], r12
+	mov	[rsp + 1*8], r13
+	mov	[rsp + 2*8], r14
+	mov	[rsp + 3*8], r15
+	mov	[rsp + 4*8], rbp
+	mov	[rsp + 5*8], rbx
  %endmacro
  %macro FUNC_RESTORE 0
-	pop	rbp
-	pop	r15
-	pop	r14
-	pop	r13
-	pop	r12
+	mov	r12, [rsp + 0*8]
+	mov	r13, [rsp + 1*8]
+	mov	r14, [rsp + 2*8]
+	mov	r15, [rsp + 3*8]
+	mov	rbp, [rsp + 4*8]
+	mov	rbx, [rsp + 5*8]
+        add     rsp, 6*8
  %endmacro
 %endif
 
@@ -82,6 +87,7 @@
  %define tmp5   rdi		; must be saved and restored
  %define tmp6   rsi		; must be saved and restored
  %define tmp7   rbp		; must be saved and restored
+ %define tmp8   rbx		; must be saved and restored
  %define stack_size  5*16 + 9*8		; must be an odd multiple of 8
  %define arg(x)      [rsp + stack_size + 8 + 8*x]
 
@@ -100,6 +106,7 @@
 	mov	[rsp + 5*16 + 4*8], rdi
 	mov	[rsp + 5*16 + 5*8], rsi
 	mov	[rsp + 5*16 + 6*8], rbp
+	mov	[rsp + 5*16 + 7*8], rbx
 	end_prolog
 	mov	arg4, arg(4)
  %endmacro
@@ -117,6 +124,7 @@
 	mov	rdi,  [rsp + 5*16 + 4*8]
 	mov	rsi,  [rsp + 5*16 + 5*8]
 	mov	rbp,  [rsp + 5*16 + 6*8]
+	mov	rbx,  [rsp + 5*16 + 7*8]
 	add	rsp, stack_size
  %endmacro
 %endif
@@ -134,6 +142,7 @@
 %define dest4  tmp5
 %define vskip3 tmp6
 %define dest5  tmp7
+%define vskip4 tmp8
 %define pos    rax
 
 
@@ -193,12 +202,12 @@ section .text
 %endif
 	add	vec_i, 8
 
-        vbroadcastf32x2 xgft1, [tmp]
-        vbroadcastf32x2 xgft2, [tmp + vec]
-        vbroadcastf32x2 xgft3, [tmp + vec*2]
-        vbroadcastf32x2 xgft4, [tmp + vskip3]
-        vbroadcastf32x2 xgft5, [tmp + vec*4]
-	add	tmp, 8
+        vpbroadcastq xgft1, [tmp]
+        vpbroadcastq xgft2, [tmp + vec*4]
+        vpbroadcastq xgft3, [tmp + vec*8]
+        vpbroadcastq xgft4, [tmp + vskip3]
+        vpbroadcastq xgft5, [tmp + vskip4]
+	add	tmp, 32
 
         GF_MUL_XOR EVEX, x0, xgft1, xgft1, xp1, xgft2, xgft2, xp2, xgft3, xgft3, xp3, \
                        xgft4, xgft4, xp4, xgft5, xgft5, xp5
@@ -231,7 +240,9 @@ func(gf_5vect_dot_prod_avx512_gfni)
 
 	xor	pos, pos
 	mov	vskip3, vec
-	imul	vskip3, 8*3
+	imul	vskip3, 32*3
+	mov	vskip4, vec
+	imul	vskip4, 32*4
 	shl	vec, 3		;vec *= 8. Make vec_i count by 8
 	mov	dest2, [dest1 + 8]
 	mov	dest3, [dest1 + 2*8]

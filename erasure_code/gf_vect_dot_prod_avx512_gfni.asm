@@ -133,8 +133,8 @@ section .text
 %endif
 	add	vec_i, 8
 
-        vbroadcastf32x2 xgft1, [tmp]
-	add	tmp, 8
+        vpbroadcastq xgft1, [tmp]
+	add	tmp, 32
 
         GF_MUL_XOR EVEX, x0, xgft1, xgft1, xp1
 

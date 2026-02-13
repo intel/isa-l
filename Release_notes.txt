@@ -15,6 +15,8 @@ v2.32
 
 * Fixed RAID performance application for MacOS.
 * Fixed DEFLATE header construction for constant 0x00 and 0xFF blocks in Big-Endian systems.
+* ec_init_tables now always return a `32-byte * k * rows` array, regardless the underlying implementation used
+  (in Release v2.31, it could return a `8-byte * k * rows` array if GFNI ISA was available in the system).
 
 v2.31.1
 

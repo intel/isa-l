@@ -148,11 +148,11 @@ func(gf_2vect_mad_avx512_gfni)
 	FUNC_SAVE
 
 	xor	pos, pos
-	shl	vec_i, 3		;Multiply by 8
-	shl	vec, 3
+	shl	vec_i, 5		;Multiply by 32
+	shl	vec, 5
 	lea	tmp, [mul_array + vec_i]
-        vbroadcastf32x2 xgft1, [tmp]
-        vbroadcastf32x2 xgft2, [tmp + vec]
+        vpbroadcastq xgft1, [tmp]
+        vpbroadcastq xgft2, [tmp + vec]
 	mov	dest2, [dest1 + 8]	; reuse mul_array
 	mov	dest1, [dest1]
 

@@ -138,9 +138,9 @@ mk_global gf_vect_mad_avx512_gfni, function
 func(gf_vect_mad_avx512_gfni)
 	FUNC_SAVE
 	xor	pos, pos
-	shl	vec_i, 3		;Multiply by 8
+	shl	vec_i, 5		;Multiply by 32
 
-        vbroadcastf32x2 xgft1, [vec_i + mul_array]
+        vpbroadcastq xgft1, [vec_i + mul_array]
 
         cmp     len, 64
         jl      .len_lt_64

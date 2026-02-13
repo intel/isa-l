@@ -441,9 +441,16 @@ ec_init_tables_gfni(int k, int rows, unsigned char *a, unsigned char *g_tbls)
 
         uint64_t *g64 = (uint64_t *) g_tbls;
 
-        for (i = 0; i < rows; i++)
-                for (j = 0; j < k; j++)
-                        *(g64++) = gf_table_gfni[*a++];
+        for (i = 0; i < rows; i++) {
+                for (j = 0; j < k; j++) {
+                        const uint64_t val = gf_table_gfni[*a++];
+
+                        *(g64++) = val;
+                        *(g64++) = val;
+                        *(g64++) = val;
+                        *(g64++) = val;
+                }
+        }
 }
 
 void
@@ -453,7 +460,7 @@ ec_encode_data_avx512_gfni(int len, int k, int rows, unsigned char *g_tbls, unsi
 
         while (rows >= 6) {
                 gf_6vect_dot_prod_avx512_gfni(len, k, g_tbls, data, coding);
-                g_tbls += 6 * k * 8;
+                g_tbls += 6 * k * 32;
                 coding += 6;
                 rows -= 6;
         }
@@ -485,7 +492,7 @@ ec_encode_data_avx2_gfni(int len, int k, int rows, unsigned char *g_tbls, unsign
 {
         while (rows >= 3) {
                 gf_3vect_dot_prod_avx2_gfni(len, k, g_tbls, data, coding);
-                g_tbls += 3 * k * 8;
+                g_tbls += 3 * k * 32;
                 coding += 3;
                 rows -= 3;
         }
@@ -508,7 +515,7 @@ ec_encode_data_update_avx512_gfni(int len, int k, int rows, int vec_i, unsigned 
 {
         while (rows >= 6) {
                 gf_6vect_mad_avx512_gfni(len, k, vec_i, g_tbls, data, coding);
-                g_tbls += 6 * k * 8;
+                g_tbls += 6 * k * 32;
                 coding += 6;
                 rows -= 6;
         }
@@ -540,7 +547,7 @@ ec_encode_data_update_avx2_gfni(int len, int k, int rows, int vec_i, unsigned ch
 {
         while (rows >= 5) {
                 gf_5vect_mad_avx2_gfni(len, k, vec_i, g_tbls, data, coding);
-                g_tbls += 5 * k * 8;
+                g_tbls += 5 * k * 32;
                 coding += 5;
                 rows -= 5;
         }
