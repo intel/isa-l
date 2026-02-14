@@ -26,7 +26,13 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
+#ifdef __APPLE__
+#include <arm_sme.h>
+#define ARM_STREAMING __arm_streaming
+#else
 #include <arm_sve.h>
+#define ARM_STREAMING
+#endif
 #include <stdint.h>
 
 // This implementation of the nvect_dot_prod uses several techniques for optimization:
@@ -51,9 +57,14 @@
 //     can do this automatically in optimization so a separate implementation isn't required.
 //     We simply allow the compiler to generate SVE2 versions as well.
 
-__attribute__((target("+sve"), always_inline)) static inline void
+#ifdef __APPLE__
+__attribute__((target("+sme"), always_inline))
+#else
+__attribute__((target("+sve"), always_inline))
+#endif
+static inline void
 gf_nvect_dot_prod_sve_unrolled(int len, int vlen, unsigned char *gftbls, unsigned char **src,
-                               unsigned char **dest, int nvect)
+                               unsigned char **dest, int nvect) ARM_STREAMING
 {
         if (len < 16)
                 return;
@@ -254,103 +265,173 @@ gf_nvect_dot_prod_sve_unrolled(int len, int vlen, unsigned char *gftbls, unsigne
 }
 
 // Optimized wrapper functions
-__attribute__((target("+sve"))) void
+#ifdef __APPLE__
+__attribute__((target("+sme")))
+#else
+__attribute__((target("+sve")))
+#endif
+void
 gf_vect_dot_prod_sve(int len, int vlen, unsigned char *gftbls, unsigned char **src,
-                     unsigned char *dest)
+                     unsigned char *dest) ARM_STREAMING
 {
         unsigned char *dest_array[1] = { dest };
         gf_nvect_dot_prod_sve_unrolled(len, vlen, gftbls, src, dest_array, 1);
 }
 
-__attribute__((target("+sve"))) void
+#ifdef __APPLE__
+__attribute__((target("+sme")))
+#else
+__attribute__((target("+sve")))
+#endif
+void
 gf_2vect_dot_prod_sve(int len, int vlen, unsigned char *gftbls, unsigned char **src,
-                      unsigned char **dest)
+                      unsigned char **dest) ARM_STREAMING
 {
         gf_nvect_dot_prod_sve_unrolled(len, vlen, gftbls, src, dest, 2);
 }
 
-__attribute__((target("+sve"))) void
+#ifdef __APPLE__
+__attribute__((target("+sme")))
+#else
+__attribute__((target("+sve")))
+#endif
+void
 gf_3vect_dot_prod_sve(int len, int vlen, unsigned char *gftbls, unsigned char **src,
-                      unsigned char **dest)
+                      unsigned char **dest) ARM_STREAMING
 {
         gf_nvect_dot_prod_sve_unrolled(len, vlen, gftbls, src, dest, 3);
 }
 
-__attribute__((target("+sve"))) void
+#ifdef __APPLE__
+__attribute__((target("+sme")))
+#else
+__attribute__((target("+sve")))
+#endif
+void
 gf_4vect_dot_prod_sve(int len, int vlen, unsigned char *gftbls, unsigned char **src,
-                      unsigned char **dest)
+                      unsigned char **dest) ARM_STREAMING
 {
         gf_nvect_dot_prod_sve_unrolled(len, vlen, gftbls, src, dest, 4);
 }
 
-__attribute__((target("+sve"))) void
+#ifdef __APPLE__
+__attribute__((target("+sme")))
+#else
+__attribute__((target("+sve")))
+#endif
+void
 gf_5vect_dot_prod_sve(int len, int vlen, unsigned char *gftbls, unsigned char **src,
-                      unsigned char **dest)
+                      unsigned char **dest) ARM_STREAMING
 {
         gf_nvect_dot_prod_sve_unrolled(len, vlen, gftbls, src, dest, 5);
 }
 
-__attribute__((target("+sve"))) void
+#ifdef __APPLE__
+__attribute__((target("+sme")))
+#else
+__attribute__((target("+sve")))
+#endif
+void
 gf_6vect_dot_prod_sve(int len, int vlen, unsigned char *gftbls, unsigned char **src,
-                      unsigned char **dest)
+                      unsigned char **dest) ARM_STREAMING
 {
         gf_nvect_dot_prod_sve_unrolled(len, vlen, gftbls, src, dest, 6);
 }
 
-__attribute__((target("+sve"))) void
+#ifdef __APPLE__
+__attribute__((target("+sme")))
+#else
+__attribute__((target("+sve")))
+#endif
+void
 gf_7vect_dot_prod_sve(int len, int vlen, unsigned char *gftbls, unsigned char **src,
-                      unsigned char **dest)
+                      unsigned char **dest) ARM_STREAMING
 {
         gf_nvect_dot_prod_sve_unrolled(len, vlen, gftbls, src, dest, 7);
 }
 
 // SVE2 wrapper functions - compiler will optimize eor to eor3 automatically
-__attribute__((target("+sve+sve2"))) void
+#ifdef __APPLE__
+__attribute__((target("+sme+sme2")))
+#else
+__attribute__((target("+sve+sve2")))
+#endif
+void
 gf_vect_dot_prod_sve2(int len, int vlen, unsigned char *gftbls, unsigned char **src,
-                      unsigned char *dest)
+                      unsigned char *dest) ARM_STREAMING
 {
         unsigned char *dest_array[1] = { dest };
         gf_nvect_dot_prod_sve_unrolled(len, vlen, gftbls, src, dest_array, 1);
 }
 
-__attribute__((target("+sve+sve2"))) void
+#ifdef __APPLE__
+__attribute__((target("+sme+sme2")))
+#else
+__attribute__((target("+sve+sve2")))
+#endif
+void
 gf_2vect_dot_prod_sve2(int len, int vlen, unsigned char *gftbls, unsigned char **src,
-                       unsigned char **dest)
+                       unsigned char **dest) ARM_STREAMING
 {
         gf_nvect_dot_prod_sve_unrolled(len, vlen, gftbls, src, dest, 2);
 }
 
-__attribute__((target("+sve+sve2"))) void
+#ifdef __APPLE__
+__attribute__((target("+sme+sme2")))
+#else
+__attribute__((target("+sve+sve2")))
+#endif
+void
 gf_3vect_dot_prod_sve2(int len, int vlen, unsigned char *gftbls, unsigned char **src,
-                       unsigned char **dest)
+                       unsigned char **dest) ARM_STREAMING
 {
         gf_nvect_dot_prod_sve_unrolled(len, vlen, gftbls, src, dest, 3);
 }
 
-__attribute__((target("+sve+sve2"))) void
+#ifdef __APPLE__
+__attribute__((target("+sme+sme2")))
+#else
+__attribute__((target("+sve+sve2")))
+#endif
+void
 gf_4vect_dot_prod_sve2(int len, int vlen, unsigned char *gftbls, unsigned char **src,
-                       unsigned char **dest)
+                       unsigned char **dest) ARM_STREAMING
 {
         gf_nvect_dot_prod_sve_unrolled(len, vlen, gftbls, src, dest, 4);
 }
 
-__attribute__((target("+sve+sve2"))) void
+#ifdef __APPLE__
+__attribute__((target("+sme+sme2")))
+#else
+__attribute__((target("+sve+sve2")))
+#endif
+void
 gf_5vect_dot_prod_sve2(int len, int vlen, unsigned char *gftbls, unsigned char **src,
-                       unsigned char **dest)
+                       unsigned char **dest) ARM_STREAMING
 {
         gf_nvect_dot_prod_sve_unrolled(len, vlen, gftbls, src, dest, 5);
 }
 
-__attribute__((target("+sve+sve2"))) void
+#ifdef __APPLE__
+__attribute__((target("+sme+sme2")))
+#else
+__attribute__((target("+sve+sve2")))
+#endif
+void
 gf_6vect_dot_prod_sve2(int len, int vlen, unsigned char *gftbls, unsigned char **src,
-                       unsigned char **dest)
+                       unsigned char **dest) ARM_STREAMING
 {
         gf_nvect_dot_prod_sve_unrolled(len, vlen, gftbls, src, dest, 6);
 }
 
-__attribute__((target("+sve+sve2"))) void
+#ifdef __APPLE__
+__attribute__((target("+sme+sme2")))
+#else
+__attribute__((target("+sve+sve2")))
+#endif
+void
 gf_7vect_dot_prod_sve2(int len, int vlen, unsigned char *gftbls, unsigned char **src,
-                       unsigned char **dest)
+                       unsigned char **dest) ARM_STREAMING
 {
         gf_nvect_dot_prod_sve_unrolled(len, vlen, gftbls, src, dest, 7);
 }
