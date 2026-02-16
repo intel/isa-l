@@ -73,12 +73,26 @@ inflateInit2_(z_streamp strm, int windowBits)
         s->w_bits = windowBits;
         s->trailer_overconsumption_fixed = 0; // Initialize the workaround flag
 
+        // Sanity checks on windowBits
+        // Valid ranges: 0 (default), 8-15 (standard), -8 to -15 (raw), 16-31 (gzip)
+        if (windowBits != 0 &&
+            (windowBits < -15 || (windowBits > -8 && windowBits < 8) || windowBits > 31)) {
+                fprintf(stderr, "Error: Invalid windowBits value: %d\n", windowBits);
+                free(s);
+                free(isal_strm_inflate);
+                return Z_STREAM_ERROR;
+        }
+
         if (windowBits < 0) {
                 // Raw deflate mode - no headers/trailers
                 isal_strm_inflate->crc_flag = IGZIP_DEFLATE;
                 isal_strm_inflate->hist_bits = -windowBits;
+        } else if (windowBits > 15) {
+                // Gzip format (windowBits > 15 means gzip header)
+                isal_strm_inflate->crc_flag = IGZIP_GZIP;
+                isal_strm_inflate->hist_bits = windowBits - 16;
         } else {
-                // Standard zlib format
+                // Standard zlib format (8..15)
                 isal_strm_inflate->crc_flag = IGZIP_ZLIB;
                 isal_strm_inflate->hist_bits = windowBits;
         }

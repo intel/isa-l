@@ -52,11 +52,30 @@ typedef z_stream *z_streamp;
 
 #include "igzip_lib.h"
 
+/* gz_header structure for custom gzip headers */
+typedef struct gz_header_s {
+        int text;               /* true if compressed data believed to be text */
+        unsigned long time;     /* modification time */
+        int xflags;             /* extra flags */
+        int os;                 /* operating system */
+        unsigned char *extra;   /* pointer to extra field or NULL if none */
+        unsigned int extra_len; /* extra field length (valid if extra != NULL) */
+        unsigned char *name;    /* pointer to zero-terminated file name or NULL */
+        unsigned char *comment; /* pointer to zero-terminated comment or NULL */
+        int hcrc;               /* true if there was or will be a header crc */
+} gz_header;
+
+typedef gz_header *gz_headerp;
+
 typedef struct internal_state {
         z_streamp strm;
         int level;
         int w_bits;
         struct isal_zstream *isal_strm;
+        gz_headerp gz_header;      /* Pointer to gz_header for custom gzip headers */
+        int header_written;        /* Flag: custom header written? */
+        unsigned long crc32_value; /* Running CRC32 for gzip trailer */
+        unsigned long input_size;  /* Total input size for gzip trailer */
 } deflate_state;
 
 #define Z_NO_FLUSH      0

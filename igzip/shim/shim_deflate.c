@@ -33,6 +33,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int
 deflateInit2_(z_streamp strm, int level, int method, int windowBits, int memLevel, int strategy)
@@ -99,15 +100,32 @@ deflateInit2_(z_streamp strm, int level, int method, int windowBits, int memLeve
         s->level = level;
         s->w_bits = windowBits;
         s->strm = strm;
+        s->gz_header = NULL;   /* Initialize to NULL */
+        s->header_written = 0; /* Header not yet written */
+        s->crc32_value = 0;    /* Initialize CRC32 */
+        s->input_size = 0;     /* Initialize input size */
 
-        // Set stream->gzip_flag and hist_bits
-        // Ensure hist_bits are non-negative
+        // Sanity checks on windowBits
+        // Valid ranges: 0 (default), 8-15 (standard), -8 to -15 (raw), 16+ (gzip)
+        if (windowBits != 0 &&
+            (windowBits < -15 || (windowBits > -8 && windowBits < 8) || windowBits > 31)) {
+                fprintf(stderr, "Error: Invalid windowBits value: %d\n", windowBits);
+                free(s);
+                free(isal_strm->level_buf);
+                free(isal_strm);
+                return Z_STREAM_ERROR;
+        }
+
         if (windowBits < 0) {
                 // Raw deflate mode - no headers/trailers
                 isal_strm->gzip_flag = IGZIP_DEFLATE;
                 isal_strm->hist_bits = -windowBits;
+        } else if (windowBits > 15) {
+                // Gzip format (windowBits > 15 means add gzip header)
+                isal_strm->gzip_flag = IGZIP_GZIP;
+                isal_strm->hist_bits = windowBits - 16;
         } else {
-                // Standard zlib format
+                // Standard zlib format (8..15)
                 isal_strm->gzip_flag = IGZIP_ZLIB;
                 isal_strm->hist_bits = windowBits;
         }
@@ -151,6 +169,89 @@ deflate(z_streamp strm, int flush)
                 return -1;
         }
 
+        // Write custom gzip header if set and not yet written
+        if (s->gz_header && !s->header_written && s->w_bits > 15) {
+                // Switch to raw deflate mode for manual header/trailer
+                isal_strm->gzip_flag = IGZIP_DEFLATE;
+
+                gz_headerp gzh = s->gz_header;
+                unsigned char *out = strm->next_out;
+                int header_len = 10; // Base gzip header size
+
+                // Calculate total header size needed
+                int total_header_size = header_len;
+                if (gzh->extra)
+                        total_header_size += 2 + gzh->extra_len;
+                if (gzh->name)
+                        total_header_size += strlen((char *) gzh->name) + 1;
+                if (gzh->comment)
+                        total_header_size += strlen((char *) gzh->comment) + 1;
+                if (gzh->hcrc)
+                        total_header_size += 2;
+
+                // Check if we have enough space
+                if (strm->avail_out < (unsigned int) total_header_size) {
+                        return Z_BUF_ERROR;
+                }
+
+                // Write standard gzip header (10 bytes)
+                out[0] = 0x1f; // ID1
+                out[1] = 0x8b; // ID2
+                out[2] = 0x08; // CM (deflate)
+
+                // Flags byte
+                unsigned char flags = (gzh->text ? 0x01 : 0) | (gzh->hcrc ? 0x02 : 0) |
+                                      (gzh->extra ? 0x04 : 0) | (gzh->name ? 0x08 : 0) |
+                                      (gzh->comment ? 0x10 : 0);
+                out[3] = flags;
+
+                // MTIME (4 bytes, little-endian)
+                for (int i = 0; i < 4; i++) {
+                        out[4 + i] = (gzh->time >> (8 * i)) & 0xff;
+                }
+
+                out[8] = gzh->xflags; // XFL
+                out[9] = gzh->os;     // OS
+
+                // FEXTRA field
+                if (gzh->extra) {
+                        out[header_len++] = gzh->extra_len & 0xff;
+                        out[header_len++] = (gzh->extra_len >> 8) & 0xff;
+                        memcpy(&out[header_len], gzh->extra, gzh->extra_len);
+                        header_len += gzh->extra_len;
+                }
+
+                // FNAME field
+                if (gzh->name) {
+                        const int name_len = strlen((char *) gzh->name) + 1;
+                        memcpy(&out[header_len], gzh->name, name_len);
+                        header_len += name_len;
+                }
+
+                // FCOMMENT field
+                if (gzh->comment) {
+                        const int comm_len = strlen((char *) gzh->comment) + 1;
+                        memcpy(&out[header_len], gzh->comment, comm_len);
+                        header_len += comm_len;
+                }
+
+                // FHCRC
+                if (gzh->hcrc) {
+                        unsigned long hcrc = crc32_gzip_refl(0, out, header_len);
+                        out[header_len++] = hcrc & 0xff;
+                        out[header_len++] = (hcrc >> 8) & 0xff;
+                }
+
+                // Update output pointers
+                strm->next_out += header_len;
+                strm->avail_out -= header_len;
+                strm->total_out += header_len;
+
+                s->header_written = 1;
+                s->crc32_value = 0; // Initialize CRC for data
+                s->input_size = 0;
+        }
+
         // set stream->avail_in, next_in, avail_out, next_out (from zstream)​
         isal_strm->next_out = strm->next_out;
         isal_strm->avail_out = strm->avail_out;
@@ -158,6 +259,10 @@ deflate(z_streamp strm, int flush)
         isal_strm->avail_in = strm->avail_in;
         isal_strm->total_out = strm->total_out;
         isal_strm->total_in = strm->total_in;
+
+        // Track input for CRC calculation when using custom headers
+        const unsigned char *input_start = isal_strm->next_in;
+        unsigned int input_len = isal_strm->avail_in;
 
         // stream->flush mapping
         switch (flush) {
@@ -191,6 +296,15 @@ deflate(z_streamp strm, int flush)
 
         int comp = isal_deflate(isal_strm);
 
+        // Update CRC and input size for custom gzip trailer
+        if (s->gz_header && input_len > 0) {
+                unsigned int consumed = input_len - isal_strm->avail_in;
+                if (consumed > 0) {
+                        s->crc32_value = crc32_gzip_refl(s->crc32_value, input_start, consumed);
+                        s->input_size += consumed;
+                }
+        }
+
         strm->avail_out = isal_strm->avail_out;
         strm->avail_in = isal_strm->avail_in;
         strm->next_in = isal_strm->next_in;
@@ -206,7 +320,31 @@ deflate(z_streamp strm, int flush)
 
         if (comp == COMP_OK) {
                 if (isal_strm->end_of_stream && isal_strm->avail_out > 0) {
-                        ret = Z_STREAM_END; // Compression is done
+                        // Write gzip trailer if using custom header
+                        if (s->gz_header) {
+                                if (strm->avail_out < 8) {
+                                        // Not enough space for trailer
+                                        ret = Z_BUF_ERROR;
+                                } else {
+                                        unsigned char *out = strm->next_out;
+
+                                        // Write CRC32 and ISIZE (8 bytes total)
+                                        for (int i = 0; i < 4; i++) {
+                                                out[i] =
+                                                        (s->crc32_value >> (8 * i)) & 0xff; // CRC32
+                                                out[i + 4] =
+                                                        (s->input_size >> (8 * i)) & 0xff; // ISIZE
+                                        }
+
+                                        strm->next_out += 8;
+                                        strm->avail_out -= 8;
+                                        strm->total_out += 8;
+
+                                        ret = Z_STREAM_END;
+                                }
+                        } else {
+                                ret = Z_STREAM_END; // Compression is done
+                        }
                 } else {
                         ret = Z_OK;
                 }
@@ -261,11 +399,24 @@ deflateEnd(z_streamp strm)
         // Free allocated memory for level_buf and isal_strm
         if (strm->state) {
                 const deflate_state *s = (deflate_state *) strm->state;
-                if (s && s->isal_strm) {
-                        if (s->isal_strm->level_buf) {
-                                free(s->isal_strm->level_buf);
+                if (s) {
+                        // Free gz_header if allocated
+                        if (s->gz_header) {
+                                if (s->gz_header->extra)
+                                        free(s->gz_header->extra);
+                                if (s->gz_header->name)
+                                        free(s->gz_header->name);
+                                if (s->gz_header->comment)
+                                        free(s->gz_header->comment);
+                                free(s->gz_header);
                         }
-                        free(s->isal_strm);
+
+                        if (s->isal_strm) {
+                                if (s->isal_strm->level_buf) {
+                                        free(s->isal_strm->level_buf);
+                                }
+                                free(s->isal_strm);
+                        }
                 }
                 free(strm->state);
                 strm->state = NULL;
@@ -280,8 +431,88 @@ deflateEnd(z_streamp strm)
 int
 deflateSetHeader(z_streamp strm, void *head)
 {
-        (void) head; // Suppress unused parameter warning
+        if (!strm) {
+                fprintf(stderr, "Error: z_streamp is NULL\n");
+                return Z_STREAM_ERROR;
+        }
+
+        deflate_state *s = (deflate_state *) strm->state;
+        if (!s) {
+                fprintf(stderr, "Error: deflate_state is NULL\n");
+                return Z_STREAM_ERROR;
+        }
+
+        // Check mode (windowBits > 15)
+        if (s->w_bits <= 15) {
+                fprintf(stderr, "Error: deflateSetHeader requires gzip format (windowBits > 15)\n");
+                return Z_STREAM_ERROR;
+        }
+
+        if (!head) {
+                return Z_STREAM_ERROR;
+        }
+
+        // Free any existing gz_header
+        if (s->gz_header) {
+                if (s->gz_header->extra)
+                        free(s->gz_header->extra);
+                if (s->gz_header->name)
+                        free(s->gz_header->name);
+                if (s->gz_header->comment)
+                        free(s->gz_header->comment);
+                free(s->gz_header);
+        }
+
+        // Allocate and copy gz_header structure
+        s->gz_header = (gz_headerp) malloc(sizeof(gz_header));
+        if (!s->gz_header) {
+                fprintf(stderr, "Error: Memory allocation for gz_header failed\n");
+                return Z_MEM_ERROR;
+        }
+
+        gz_headerp src = (gz_headerp) head;
+        memcpy(s->gz_header, src, sizeof(gz_header));
+
+        // Copy the fields if they exist
+        if (src->extra && src->extra_len > 0) {
+                s->gz_header->extra = (unsigned char *) malloc(src->extra_len);
+                if (!s->gz_header->extra)
+                        goto cleanup;
+                memcpy(s->gz_header->extra, src->extra, src->extra_len);
+        } else {
+                s->gz_header->extra = NULL;
+        }
+
+        if (src->name) {
+                int name_len = strlen((char *) src->name) + 1;
+                s->gz_header->name = (unsigned char *) malloc(name_len);
+                if (!s->gz_header->name)
+                        goto cleanup;
+                memcpy(s->gz_header->name, src->name, name_len);
+        } else {
+                s->gz_header->name = NULL;
+        }
+
+        if (src->comment) {
+                int comm_len = strlen((char *) src->comment) + 1;
+                s->gz_header->comment = (unsigned char *) malloc(comm_len);
+                if (!s->gz_header->comment)
+                        goto cleanup;
+                memcpy(s->gz_header->comment, src->comment, comm_len);
+        } else {
+                s->gz_header->comment = NULL;
+        }
+
         return Z_OK;
+
+cleanup:
+        if (s->gz_header->extra)
+                free(s->gz_header->extra);
+        if (s->gz_header->name)
+                free(s->gz_header->name);
+        free(s->gz_header);
+        s->gz_header = NULL;
+        return Z_MEM_ERROR;
 }
 
 int

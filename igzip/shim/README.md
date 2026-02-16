@@ -65,6 +65,9 @@ This library is a drop-in replacement for zlib that utilizes Intel's Storage Acc
 - **Function Interception**: Only intercepts specific zlib functions (see Intercepted Zlib Functions section below)
 - **API Compatibility**: While designed as a drop-in replacement, some zlib functions are not supported yet
 
+**Note:** Automatic gzip header detection is out of scope for this implementation.
+**Note:** Custom zlib header support is out of scope for this implementation.
+
 For production use, thorough testing in your specific environment is recommended before deployment.
 
 ## Intercepted Zlib Functions
