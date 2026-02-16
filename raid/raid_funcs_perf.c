@@ -78,6 +78,7 @@ typedef void *(*thread_func_t)(void *);
 #define DEFAULT_TEST_LEN 8 * 1024
 
 #define COLD_CACHE_TEST_MEM (1024 * 1024 * 1024)
+#define ALIGNMENT           64
 
 // Global variables:
 //   g_thread_bufs: Pointer to per-thread buffer arrays for single memory space allocation.
@@ -844,7 +845,8 @@ main(int argc, char *argv[])
                 test_len = COLD_CACHE_TEST_MEM / max_needed_buffs;
 
         // Single memory space allocation for all buffers across all threads
-        const size_t allocated_size_per_buf = test_len;
+        // Align each buffer to 64 bytes to ensure all thread buffers are properly aligned
+        const size_t allocated_size_per_buf = (test_len + (ALIGNMENT - 1)) & ~(ALIGNMENT - 1);
         const size_t total_memory_size =
                 (size_t) max_needed_buffs * num_threads * allocated_size_per_buf;
 
