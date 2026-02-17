@@ -30,8 +30,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> // for memset, memcmp
+#include <ctype.h>
 #include "erasure_code.h"
 #include "test.h"
+
+#ifdef _MSC_VER
+#define strdup _strdup
+#endif
 
 #ifndef GT_L3_CACHE
 #define GT_L3_CACHE 32 * 1024 * 1024 /* some number > last level cache */
@@ -61,6 +66,48 @@
 
 typedef unsigned char u8;
 
+// Helper function to parse size values with optional K (KB), M (MB) or G (GB) suffix
+size_t
+parse_size_value(const char *size_str)
+{
+        size_t size_val;
+        char *endptr;
+        size_t multiplier = 1;
+        char *str_copy = strdup(size_str);
+        if (!str_copy)
+                return 0;
+
+        const size_t len = strlen(str_copy);
+        if (len > 0) {
+                // Convert to uppercase for case-insensitive comparison
+                const char last_char = toupper(str_copy[len - 1]);
+
+                if (last_char == 'K') {
+                        multiplier = 1024;
+                        str_copy[len - 1] = '\0'; // Remove the suffix
+                } else if (last_char == 'M') {
+                        multiplier = 1024 * 1024;
+                        str_copy[len - 1] = '\0'; // Remove the suffix
+                } else if (last_char == 'G') {
+                        multiplier = 1024 * 1024 * 1024;
+                        str_copy[len - 1] = '\0'; // Remove the suffix
+                }
+        }
+
+        // Convert the numeric part
+        size_val = strtoul(str_copy, &endptr, 10);
+
+        // Check if the conversion was successful or if the remaining part is just whitespace
+        if (*endptr != '\0') {
+                // Invalid characters in the string
+                free(str_copy);
+                return 0;
+        }
+
+        free(str_copy);
+        return size_val * multiplier;
+}
+
 void
 usage(const char *app_name)
 {
@@ -70,21 +117,23 @@ usage(const char *app_name)
                 "  -k <val>  Number of source buffers\n"
                 "  -p <val>  Number of parity buffers\n"
                 "  -e <val>  Number of simulated buffers with errors (cannot be higher than p or "
-                "k)\n",
+                "k)\n"
+                "  -s <val>  Size of each buffer in bytes. Can use K (1024 bytes), M (1024 KB), G "
+                "(1024 MB) suffixes)\n",
                 app_name);
 }
 
 void
-ec_encode_perf(int m, int k, u8 *a, u8 *g_tbls, u8 **buffs, struct perf *start)
+ec_encode_perf(int m, int k, u8 *a, u8 *g_tbls, u8 **buffs, struct perf *start, int test_len)
 {
         ec_init_tables(k, m - k, &a[k * k], g_tbls);
         BENCHMARK(start, BENCHMARK_TIME,
-                  ec_encode_data(TEST_LEN(m), k, m - k, g_tbls, buffs, &buffs[k]));
+                  ec_encode_data(test_len, k, m - k, g_tbls, buffs, &buffs[k]));
 }
 
 int
 ec_decode_perf(int m, int k, u8 *a, u8 *g_tbls, u8 **buffs, u8 *src_in_err, u8 *src_err_list,
-               int nerrs, u8 **temp_buffs, struct perf *start)
+               int nerrs, u8 **temp_buffs, struct perf *start, int test_len)
 {
         int i, j, r;
         u8 b[MMAX * KMAX], c[MMAX * KMAX], d[MMAX * KMAX];
@@ -113,7 +162,7 @@ ec_decode_perf(int m, int k, u8 *a, u8 *g_tbls, u8 **buffs, u8 *src_in_err, u8 *
         // Recover data
         ec_init_tables(k, nerrs, c, g_tbls);
         BENCHMARK(start, BENCHMARK_TIME,
-                  ec_encode_data(TEST_LEN(m), k, nerrs, g_tbls, recov, temp_buffs));
+                  ec_encode_data(test_len, k, nerrs, g_tbls, recov, temp_buffs));
 
         return 0;
 }
@@ -129,6 +178,7 @@ main(int argc, char *argv[])
         u8 g_tbls[KMAX * TEST_SOURCES * 32], src_in_err[TEST_SOURCES];
         u8 src_err_list[TEST_SOURCES];
         struct perf start;
+        int test_len = 0;
 
         /* Set default parameters */
         k = 8;
@@ -143,6 +193,8 @@ main(int argc, char *argv[])
                         p = atoi(argv[++i]);
                 } else if (strcmp(argv[i], "-e") == 0) {
                         nerrs = atoi(argv[++i]);
+                } else if (strcmp(argv[i], "-s") == 0) {
+                        test_len = (int) parse_size_value(argv[++i]);
                 } else if (strcmp(argv[i], "-h") == 0) {
                         usage(argv[0]);
                         return 0;
@@ -182,6 +234,14 @@ main(int argc, char *argv[])
                 return -1;
         }
 
+        if (test_len == 0)
+                test_len = TEST_LEN(m);
+
+        if (test_len % 64 != 0) {
+                printf("Buffer size must be a multiple of 64\n");
+                return -1;
+        }
+
         u8 *err_list = malloc((size_t) nerrs);
         if (err_list == NULL) {
                 printf("Error allocating list of array of error indices\n");
@@ -207,7 +267,7 @@ main(int argc, char *argv[])
 
         printf("])\n");
 
-        printf("erasure_code_perf: %dx%d %d\n", m, TEST_LEN(m), nerrs);
+        printf("erasure_code_perf: %dx%d %d\n", m, test_len, nerrs);
 
         memcpy(src_err_list, err_list, nerrs);
         memset(src_in_err, 0, TEST_SOURCES);
@@ -216,7 +276,7 @@ main(int argc, char *argv[])
 
         // Allocate the arrays
         for (i = 0; i < m; i++) {
-                if (posix_memalign(&buf, 64, TEST_LEN(m))) {
+                if (posix_memalign(&buf, 64, test_len)) {
                         printf("Error allocating buffers\n");
                         goto exit;
                 }
@@ -224,7 +284,7 @@ main(int argc, char *argv[])
         }
 
         for (i = 0; i < p; i++) {
-                if (posix_memalign(&buf, 64, TEST_LEN(m))) {
+                if (posix_memalign(&buf, 64, test_len)) {
                         printf("Error allocating buffers\n");
                         goto exit;
                 }
@@ -233,19 +293,19 @@ main(int argc, char *argv[])
 
         // Make random data
         for (i = 0; i < k; i++)
-                for (j = 0; j < TEST_LEN(m); j++)
+                for (j = 0; j < test_len; j++)
                         buffs[i][j] = rand();
 
         gf_gen_rs_matrix(a, m, k);
 
         // Start encode test
-        ec_encode_perf(m, k, a, g_tbls, buffs, &start);
+        ec_encode_perf(m, k, a, g_tbls, buffs, &start, test_len);
         printf("erasure_code_encode" TEST_TYPE_STR ": ");
-        perf_print(start, (double) ((TEST_LEN(m)) * (m)));
+        perf_print(start, (double) (test_len) * (m));
 
         // Start decode test
         check = ec_decode_perf(m, k, a, g_tbls, buffs, src_in_err, src_err_list, nerrs, temp_buffs,
-                               &start);
+                               &start, test_len);
 
         if (check == BAD_MATRIX) {
                 printf("BAD MATRIX\n");
@@ -254,14 +314,14 @@ main(int argc, char *argv[])
         }
 
         for (i = 0; i < nerrs; i++) {
-                if (0 != memcmp(temp_buffs[i], buffs[src_err_list[i]], TEST_LEN(m))) {
+                if (0 != memcmp(temp_buffs[i], buffs[src_err_list[i]], test_len)) {
                         printf("Fail error recovery (%d, %d, %d) - ", m, k, nerrs);
                         goto exit;
                 }
         }
 
         printf("erasure_code_decode" TEST_TYPE_STR ": ");
-        perf_print(start, (double) ((TEST_LEN(m)) * (k + nerrs)));
+        perf_print(start, (double) (test_len) * (k + nerrs));
 
         printf("done all: Pass\n");
 
