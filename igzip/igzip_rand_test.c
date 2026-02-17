@@ -2740,10 +2740,29 @@ create_custom_hufftables(struct isal_hufftables *hufftables_custom, size_t file_
                         printf("Error opening file\n");
                         return 1;
                 }
-                fseek(file, 0, SEEK_END);
+                if (fseek(file, 0, SEEK_END) != 0) {
+                        printf("Error seeking to end of file\n");
+                        fclose(file);
+                        return 1;
+                }
                 file_length = ftell(file);
-                fseek(file, 0, SEEK_SET);
-                file_length -= ftell(file);
+                if (file_length < 0) {
+                        printf("Error getting file position\n");
+                        fclose(file);
+                        return 1;
+                }
+                if (fseek(file, 0, SEEK_SET) != 0) {
+                        printf("Error seeking to start of file\n");
+                        fclose(file);
+                        return 1;
+                }
+                long int start_pos = ftell(file);
+                if (start_pos < 0) {
+                        printf("Error getting file position\n");
+                        fclose(file);
+                        return 1;
+                }
+                file_length -= start_pos;
 
                 if (file_length > 0) {
                         stream = malloc(file_length);
