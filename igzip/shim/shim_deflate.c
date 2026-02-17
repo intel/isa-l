@@ -79,6 +79,7 @@ deflateInit2_(z_streamp strm, int level, int method, int windowBits, int memLeve
                 isal_strm->level_buf_size = ISAL_DEF_LVL3_DEFAULT;
         } else {
                 fprintf(stderr, "Error: Invalid compression level\n");
+                free(isal_strm);
                 return -1;
         }
 
