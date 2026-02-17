@@ -317,6 +317,10 @@ uncompress2(uint8_t *dest, unsigned long *dest_len, const uint8_t *source,
         unsigned long len, left;
         uint8_t buf[1] = { 0 }; /* for detection of incomplete strm when *dest_len == 0 */
 
+        if (dest == NULL || dest_len == NULL || source == NULL || source_len == NULL) {
+                return Z_STREAM_ERROR;
+        }
+
         len = *source_len;
         if (*dest_len) {
                 left = *dest_len;

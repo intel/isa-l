@@ -305,10 +305,13 @@ compress2(uint8_t *dest, unsigned long *dest_len, const uint8_t *source, unsigne
         z_stream strm;
         int err;
         const unsigned int max = (unsigned int) -1;
-        unsigned long left = *dest_len;
+        unsigned long left;
+
         if (dest == NULL || dest_len == NULL || source == NULL) {
                 return Z_STREAM_ERROR;
         }
+
+        left = *dest_len;
         *dest_len = 0;
 
         strm.zalloc = NULL;
