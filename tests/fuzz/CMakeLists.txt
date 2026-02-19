@@ -94,6 +94,14 @@ target_link_libraries(${IGZIP_FUZZ_APP} PRIVATE isal)
 target_compile_options(${IGZIP_FUZZ_APP} PRIVATE ${FUZZ_FLAGS})
 target_link_options(${IGZIP_FUZZ_APP} PRIVATE ${FUZZ_FLAGS})
 
-message(STATUS "Fuzz Test Applications: ${CRC_FUZZ_APP}, ${EC_FUZZ_APP}, ${RAID_FUZZ_APP}, ${IGZIP_ROUND_TRIP_FUZZ_APP}, ${IGZIP_SIMPLE_INFLATE_FUZZ_APP}, ${IGZIP_CHECKED_INFLATE_FUZZ_APP}, ${IGZIP_FUZZ_APP}")
+set(SHIM_FUZZ_APP isal_fuzz_shim)
+add_executable(${SHIM_FUZZ_APP} shim_fuzz_test.c)
+
+target_include_directories(${SHIM_FUZZ_APP} PRIVATE ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(${SHIM_FUZZ_APP} PRIVATE isal z)
+target_compile_options(${SHIM_FUZZ_APP} PRIVATE ${FUZZ_FLAGS})
+target_link_options(${SHIM_FUZZ_APP} PRIVATE ${FUZZ_FLAGS})
+
+message(STATUS "Fuzz Test Applications: ${CRC_FUZZ_APP}, ${EC_FUZZ_APP}, ${RAID_FUZZ_APP}, ${IGZIP_ROUND_TRIP_FUZZ_APP}, ${IGZIP_SIMPLE_INFLATE_FUZZ_APP}, ${IGZIP_CHECKED_INFLATE_FUZZ_APP}, ${IGZIP_FUZZ_APP}, ${SHIM_FUZZ_APP}")
 message(STATUS "  Compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "  Sanitizers: fuzzer, address, undefined")
