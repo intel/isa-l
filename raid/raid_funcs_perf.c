@@ -61,6 +61,18 @@
 #include "raid.h"
 #include "test.h"
 
+// Portable thread-safe xorshift32 PRNG (works on Linux, Windows, FreeBSD).
+// Returns a pseudo-random value and updates *state in place.
+static unsigned int
+xorshift32(unsigned int *state)
+{
+        unsigned int x = *state;
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        return *state = x;
+}
+
 // Cross-platform threading definitions
 #ifdef _WIN32
 typedef HANDLE perf_thread_t;
@@ -77,14 +89,16 @@ typedef void *(*thread_func_t)(void *);
 #define DEFAULT_SOURCES  10
 #define DEFAULT_TEST_LEN 8 * 1024
 
-#define COLD_CACHE_TEST_MEM (1024 * 1024 * 1024)
+#define COLD_CACHE_TEST_MEM (1024ULL * 1024 * 1024 * 10)
 #define ALIGNMENT           64
-
+#define RAND_SEED           20250707
 // Global variables:
 //   g_thread_bufs: Pointer to per-thread buffer arrays for single memory space allocation.
 //   g_coremask: Stores the CPU affinity mask for thread pinning.
+//   g_buf_size: Actual allocated size per buffer (used by run_benchmark for cold cache offsets).
 static void ***g_thread_bufs = NULL;
 static unsigned long g_coremask = 0;
+static size_t g_buf_size = 0;
 
 // Define RAID function types
 typedef enum {
@@ -109,6 +123,7 @@ typedef struct {
         raid_type_t raid_type;
         int csv_output;
         int use_cold_cache;
+        unsigned int rand_seed; // Per-thread seed for xorshift32()
 } thread_data_t;
 
 // Helper function to get buffer count for a specific RAID type
@@ -126,7 +141,7 @@ get_buffer_count(const raid_type_t type, const int sources)
 
 void
 run_benchmark(void *buffs[], const size_t len, const int sources, const raid_type_t type,
-              const int csv_output, const int use_cold_cache);
+              const int csv_output, const int use_cold_cache, unsigned int *rand_seed);
 void
 print_help(void);
 void
@@ -159,7 +174,7 @@ benchmark_raid_type_size_list(const raid_type_t raid_type, void *buffs[], const 
 // len is the block size for each source and destination buffer, in bytes
 void
 run_benchmark(void *buffs[], const size_t len, const int num_sources_dest, const raid_type_t type,
-              const int csv_output, const int use_cold_cache)
+              const int csv_output, const int use_cold_cache, unsigned int *rand_seed)
 {
         struct perf start;
         const char *raid_type_str = "";
@@ -182,7 +197,7 @@ run_benchmark(void *buffs[], const size_t len, const int num_sources_dest, const
 
         // Create list of random buffer addresses within the large memory space for cold cache tests
         if (use_cold_cache) {
-                const size_t buffer_size_each = COLD_CACHE_TEST_MEM / num_sources_dest;
+                const size_t buffer_size_each = g_buf_size;
                 const size_t num_buffer_sets = buffer_size_each / len;
 
                 if (num_buffer_sets == 0) {
@@ -196,7 +211,25 @@ run_benchmark(void *buffs[], const size_t len, const int num_sources_dest, const
                         exit(1);
                 }
 
-                // For each buffer set, create pointers to random offsets within the allocated
+                // Build a shuffled permutation of [0, num_buffer_sets) offsets so every
+                // region is visited exactly once, guaranteeing no repeated cache lines.
+                size_t *offset_perm = (size_t *) malloc(num_buffer_sets * sizeof(size_t));
+                if (!offset_perm) {
+                        fprintf(stderr, "Failed to allocate memory for offset permutation\n");
+                        free(buffer_set_list);
+                        exit(1);
+                }
+                for (size_t i = 0; i < num_buffer_sets; i++)
+                        offset_perm[i] = i;
+                // Fisher-Yates shuffle using per-thread xorshift32 seed
+                for (size_t i = num_buffer_sets - 1; i > 0; i--) {
+                        size_t j = (size_t) xorshift32(rand_seed) % (i + 1);
+                        size_t tmp = offset_perm[i];
+                        offset_perm[i] = offset_perm[j];
+                        offset_perm[j] = tmp;
+                }
+
+                // For each buffer set, create pointers to distinct offsets within the allocated
                 // memory
                 for (size_t i = 0; i < num_buffer_sets; i++) {
                         buffer_set_list[i] = (void **) malloc(num_sources_dest * sizeof(void *));
@@ -208,16 +241,16 @@ run_benchmark(void *buffs[], const size_t len, const int num_sources_dest, const
                                 for (size_t j = 0; j < i; j++)
                                         free(buffer_set_list[j]);
                                 free(buffer_set_list);
+                                free(offset_perm);
                                 exit(1);
                         }
 
-                        // Calculate random offset for this buffer set, ensuring we don't exceed
-                        // buffer bounds
-                        const size_t offset = len * (rand() % num_buffer_sets);
+                        const size_t offset = len * offset_perm[i];
 
                         for (int j = 0; j < num_sources_dest; j++)
                                 buffer_set_list[i][j] = (uint8_t *) buffs[j] + offset;
                 }
+                free(offset_perm);
 
                 size_t current_buffer_idx = 0;
                 BENCHMARK_COLD(&start, BENCHMARK_TIME,
@@ -469,7 +502,7 @@ thread_worker(void *arg)
 
         // Run the benchmark with this thread's buffers
         run_benchmark(data->buffs, data->test_len, buffer_count, data->raid_type, data->csv_output,
-                      data->use_cold_cache);
+                      data->use_cold_cache, &data->rand_seed);
 
         return THREAD_RETURN_VAL;
 }
@@ -479,11 +512,12 @@ static void
 run_benchmark_multithreaded(const size_t len, const int sources, const raid_type_t type,
                             const int csv_output, const int use_cold_cache, const int num_threads)
 {
-        if (num_threads == 1 || !g_thread_bufs) {
+        if (num_threads == 1) {
                 // Single-threaded fallback
                 const int buffer_count = get_buffer_count(type, sources);
-                run_benchmark(g_thread_bufs[0], len, buffer_count, type, csv_output,
-                              use_cold_cache);
+                unsigned int seed = RAND_SEED;
+                run_benchmark(g_thread_bufs[0], len, buffer_count, type, csv_output, use_cold_cache,
+                              &seed);
                 return;
         }
 
@@ -508,6 +542,7 @@ run_benchmark_multithreaded(const size_t len, const int sources, const raid_type
                 thread_data[i].raid_type = type;
                 thread_data[i].csv_output = csv_output;
                 thread_data[i].use_cold_cache = use_cold_cache;
+                thread_data[i].rand_seed = RAND_SEED + (unsigned int) i;
 
 #ifdef _WIN32
                 threads[i] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) thread_worker,
@@ -840,15 +875,16 @@ main(int argc, char *argv[])
                 return 1;
         }
 
-        // For cold cache, we need larger buffers to accommodate the full memory space
+        // For cold cache, divide COLD_CACHE_TEST_MEM evenly across all buffers and threads so
+        // that total shared memory stays at COLD_CACHE_TEST_MEM regardless of thread count.
         if (use_cold_cache)
-                test_len = COLD_CACHE_TEST_MEM / max_needed_buffs;
+                test_len = COLD_CACHE_TEST_MEM / ((size_t) max_needed_buffs * num_threads);
 
         // Single memory space allocation for all buffers across all threads
         // Align each buffer to 64 bytes to ensure all thread buffers are properly aligned
         const size_t allocated_size_per_buf = (test_len + (ALIGNMENT - 1)) & ~(ALIGNMENT - 1);
-        const size_t total_memory_size =
-                (size_t) max_needed_buffs * num_threads * allocated_size_per_buf;
+        const uint64_t total_memory_size =
+                (uint64_t) max_needed_buffs * num_threads * allocated_size_per_buf;
 
         void *shared_memory;
         int ret = posix_memalign(&shared_memory, 64, total_memory_size);
@@ -857,7 +893,7 @@ main(int argc, char *argv[])
                 return 1;
         }
 
-        srand(20250707);
+        srand(RAND_SEED);
         // Initialize all memory with incremental data
         for (size_t j = 0; j < total_memory_size; j++)
                 ((uint8_t *) shared_memory)[j] = j & 0xFF;
@@ -898,6 +934,7 @@ main(int argc, char *argv[])
         // Store globally for potential future use by helper functions
         g_thread_bufs = bufs;
         g_coremask = coremask;
+        g_buf_size = allocated_size_per_buf;
 
         // Process according to chosen RAID type and size options
         if (use_range) {
