@@ -322,24 +322,24 @@ struct {
 int
 LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
 {
-        /* Require at least 4 bytes for all tests */
-        if (dataSize < 4)
+        /* Require at least 5 bytes for all tests */
+        if (dataSize < 5)
                 return 0;
 
         /* Use first byte to select which EC function to test */
         const uint8_t test_selector = data[0];
         const size_t test_index = test_selector % NUM_EC_TESTS;
 
-        /* Allocate a working buffer for the test */
-        uint8_t *buff = malloc(dataSize);
+        /* Allocate a working buffer for the test, excluding the selector byte */
+        uint8_t *buff = malloc(dataSize - 1);
         if (buff == NULL)
                 return 0;
 
-        /* Copy input data to working buffer */
-        memcpy(buff, data, dataSize);
+        /* Copy input data to working buffer, skipping the selector byte */
+        memcpy(buff, data + 1, dataSize - 1);
 
         /* Run the selected test */
-        ec_test_funcs[test_index].func(buff, dataSize);
+        ec_test_funcs[test_index].func(buff, dataSize - 1);
 
         /* Clean up */
         free(buff);

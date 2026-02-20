@@ -659,16 +659,16 @@ test_write_zlib_header(uint8_t *buff, size_t dataSize)
 int
 LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
 {
-        /* Require at least 2 bytes */
-        if (dataSize < 2)
+        /* Require at least 3 bytes */
+        if (dataSize < 3)
                 return 0;
 
         /* Use first byte to select which test to run */
         const uint8_t test_selector = data[0];
         const size_t test_index = test_selector % NUM_IGZIP_TESTS;
 
-        /* Run the selected test */
-        igzip_test_funcs[test_index]((uint8_t *) data, dataSize);
+        /* Run the selected test, skipping the selector byte */
+        igzip_test_funcs[test_index]((uint8_t *) data + 1, dataSize - 1);
 
         return 0;
 }
