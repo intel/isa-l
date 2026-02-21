@@ -272,3 +272,17 @@ configure_file(
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libisal.pc"
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
 )
+
+# Print configuration summary
+message(STATUS "")
+message(STATUS "ISA-L ${PROJECT_VERSION} configuration summary:")
+message(STATUS "  Build type         : ${CMAKE_BUILD_TYPE}")
+message(STATUS "  Architecture       : ${CMAKE_SYSTEM_PROCESSOR}")
+message(STATUS "  Shared libs        : ${BUILD_SHARED_LIBS}")
+message(STATUS "  Install prefix     : ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "  Build tests        : ${ISAL_BUILD_TESTS}")
+message(STATUS "  Build perf tests   : ${ISAL_BUILD_PERF_TESTS}")
+message(STATUS "  Build fuzz tests   : ${ISAL_BUILD_FUZZ_TESTS}")
+message(STATUS "  Build ISAL shim    : ${ISAL_BUILD_ISAL_SHIM}")
+message(STATUS "  No NT load/store   : ${NO_NT_LDST}")
+message(STATUS "")
