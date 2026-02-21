@@ -316,6 +316,7 @@ print_help(void)
         printf("                       Size values can include K (KB) or M (MB) suffix\n");
         printf("  -c, --csv           Output results in CSV format\n");
         printf("      --cold          Use cold cache for benchmarks (buffer not in cache)\n");
+        printf("      --unalign       Force buffer unalignment by 8 bytes\n");
 }
 
 void
@@ -594,6 +595,7 @@ main(int argc, char *argv[])
         raid_type_t raid_type = RAID_ALL;
         int csv_output = 0;         // Flag for CSV output mode
         int use_cold_cache = 0;     // Flag for cold cache mode
+        int unalign_offset = 0;     // Byte offset to force buffer unalignment (0 = aligned)
         int num_threads = 1;        // Number of threads for benchmarking (default: single-threaded)
         unsigned long coremask = 0; // CPU core mask for thread affinity (0 = no pinning)
         size_t test_len = DEFAULT_TEST_LEN;
@@ -846,6 +848,12 @@ main(int argc, char *argv[])
                         printf("Cold cache option enabled\n");
                 }
 
+                // Unalign option
+                else if (strcmp(argv[i], "--unalign") == 0) {
+                        unalign_offset = 8;
+                        printf("Unaligned buffers: offset = %d bytes\n", unalign_offset);
+                }
+
                 // Unknown option
                 else if (argv[i][0] == '-') {
                         fprintf(stderr, "Unknown option: %s\n", argv[i]);
@@ -881,8 +889,11 @@ main(int argc, char *argv[])
                 test_len = COLD_CACHE_TEST_MEM / ((size_t) max_needed_buffs * num_threads);
 
         // Single memory space allocation for all buffers across all threads
-        // Align each buffer to 64 bytes to ensure all thread buffers are properly aligned
-        const size_t allocated_size_per_buf = (test_len + (ALIGNMENT - 1)) & ~(ALIGNMENT - 1);
+        // Align each buffer to 64 bytes to ensure all thread buffers are properly aligned.
+        // Add unalign_offset extra bytes per buffer so that the pointer can be shifted
+        // without overrunning the allocation.
+        const size_t allocated_size_per_buf =
+                (test_len + (size_t) unalign_offset + (ALIGNMENT - 1)) & ~(ALIGNMENT - 1);
         const uint64_t total_memory_size =
                 (uint64_t) max_needed_buffs * num_threads * allocated_size_per_buf;
 
@@ -920,11 +931,14 @@ main(int argc, char *argv[])
                         return 1;
                 }
 
-                // Assign memory slices to each thread's buffers
+                // Assign memory slices to each thread's buffers.
+                // When unalign_offset > 0, shift each pointer by that many bytes so
+                // the benchmark exercises unaligned memory access paths.
                 for (int buffer = 0; buffer < max_needed_buffs; buffer++) {
                         size_t offset =
                                 (thread * max_needed_buffs + buffer) * allocated_size_per_buf;
-                        bufs[thread][buffer] = (void *) ((uint8_t *) shared_memory + offset);
+                        bufs[thread][buffer] =
+                                (void *) ((uint8_t *) shared_memory + offset + unalign_offset);
                 }
         }
 
