@@ -89,6 +89,14 @@ Other targets include:
 * `make other` : build other utilities such as compression file tests
 * `make doc`   : build API manual
 
+API Usage Notes
+---------------
+
+Parameters passed to ISA-L functions are not fully validated. In particular,
+NULL pointers and other invalid inputs are not checked and may result in
+undefined behavior. Callers are responsible for ensuring all arguments are
+valid before invoking library functions.
+
 DLL Injection Attack
 --------------------
 
