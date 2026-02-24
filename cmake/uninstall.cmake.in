@@ -1,0 +1,48 @@
+# cmake-format: off
+# Copyright (c) 2026, Intel Corporation
+# Copyright 2000-2023 Kitware, Inc. and Contributors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#     * Redistributions of source code must retain the above copyright notice,
+#       this list of conditions and the following disclaimer.
+#     * Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
+#       documentation and/or other materials provided with the distribution.
+#     * Neither the name of Intel Corporation nor the names of its contributors
+#       may be used to endorse or promote products derived from this software
+#       without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# cmake-format: on
+
+if(NOT EXISTS "@CMAKE_BINARY_DIR@/install_manifest.txt")
+    message(FATAL_ERROR "No install manifest found!")
+endif()
+
+file(READ "@CMAKE_BINARY_DIR@/install_manifest.txt" installed_files)
+string(REPLACE "\n" ";" installed_files "${installed_files}")
+foreach(install_file ${installed_files})
+    message(STATUS "Removing ${install_file}")
+    if(IS_SYMLINK "${install_file}" OR EXISTS "${install_file}")
+        execute_process(
+            COMMAND "@CMAKE_COMMAND@" -E remove "${install_file}"
+            RESULT_VARIABLE retval
+            OUTPUT_VARIABLE out)
+        if(NOT "${retval}" STREQUAL 0)
+            message(FATAL_ERROR "Error removing ${install_file}")
+        endif()
+    else()
+        message(STATUS "${install_file} does not exist.")
+    endif()
+endforeach()
