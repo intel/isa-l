@@ -240,7 +240,7 @@ test_stateful_inflate(uint8_t *buff, size_t dataSize)
 
         size_t total_decompressed = 0;
 
-        while (istate.avail_in > 0 || istate.block_state != ISAL_BLOCK_FINISH) {
+        while (istate.block_state != ISAL_BLOCK_FINISH) {
                 size_t out_size = MIN(output_chunk_size, size * 2 - total_decompressed);
 
                 if (out_size == 0)
@@ -251,7 +251,7 @@ test_stateful_inflate(uint8_t *buff, size_t dataSize)
 
                 ret = isal_inflate(&istate);
 
-                if (ret != ISAL_DECOMP_OK && ret != ISAL_END_INPUT)
+                if (ret != ISAL_DECOMP_OK)
                         goto cleanup;
 
                 total_decompressed = istate.total_out;
