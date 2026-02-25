@@ -71,9 +71,8 @@ main(int argc, char *argv[])
         printf("gf_vect_mul_perf:\n");
 
         // Allocate large mem region
-        buff1 = (u8 *) malloc(TEST_LEN);
-        buff2 = (u8 *) malloc(TEST_LEN);
-        if (NULL == buff1 || NULL == buff2) {
+        if (posix_memalign((void **) &buff1, 32, TEST_LEN) ||
+            posix_memalign((void **) &buff2, 32, TEST_LEN)) {
                 printf("Failed to allocate %dB\n", TEST_LEN);
                 return 1;
         }
@@ -90,8 +89,8 @@ main(int argc, char *argv[])
         perf_print(start, (long long) TEST_LEN);
 
         // Free allocated memory
-        free(buff1);
-        free(buff2);
+        aligned_free(buff1);
+        aligned_free(buff2);
 
         return 0;
 }

@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "erasure_code.h"
+#include "test.h"
 
 #define TEST_SIZE (128 * 1024)
 
@@ -50,11 +51,9 @@ main(int argc, char *argv[])
 
         gf_vect_mul_init(a, gf_const_tbl);
 
-        buff1 = (u8 *) malloc(TEST_SIZE);
-        buff2 = (u8 *) malloc(TEST_SIZE);
-        buff3 = (u8 *) malloc(TEST_SIZE);
-
-        if (NULL == buff1 || NULL == buff2 || NULL == buff3) {
+        if (posix_memalign((void **) &buff1, 32, TEST_SIZE) ||
+            posix_memalign((void **) &buff2, 32, TEST_SIZE) ||
+            posix_memalign((void **) &buff3, 32, TEST_SIZE)) {
                 printf("buffer alloc error\n");
                 goto exit;
         }
@@ -189,9 +188,9 @@ main(int argc, char *argv[])
         ret = 0;
 exit:
 
-        free(buff1);
-        free(buff2);
-        free(buff3);
+        aligned_free(buff1);
+        aligned_free(buff2);
+        aligned_free(buff3);
 
         return ret;
 }
