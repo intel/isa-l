@@ -151,7 +151,7 @@ main(int argc, char *argv[])
         // Make parity vects
         for (i = k; i < m; i++) {
                 for (j = 0; j < k; j++)
-                        gf_vect_mul_init(a[k * i + j], &g_tbls[j * 32]);
+                        gf_vect_mul_init_base(a[k * i + j], &g_tbls[j * 32]);
 
                 gf_vect_dot_prod_base(TEST_LEN, k, g_tbls, buffs, buffs[i]);
         }
@@ -189,7 +189,7 @@ main(int argc, char *argv[])
         // Recover data
         for (i = 0; i < nerrs; i++) {
                 for (j = 0; j < k; j++)
-                        gf_vect_mul_init(d[k * src_err_list[i] + j], &g_tbls[j * 32]);
+                        gf_vect_mul_init_base(d[k * src_err_list[i] + j], &g_tbls[j * 32]);
 
                 gf_vect_dot_prod_base(TEST_LEN, k, g_tbls, recov, temp_buff);
 
@@ -224,7 +224,7 @@ main(int argc, char *argv[])
                 // Make parity vects
                 for (i = k; i < m; i++) {
                         for (j = 0; j < k; j++)
-                                gf_vect_mul_init(a[k * i + j], &g_tbls[j * 32]);
+                                gf_vect_mul_init_base(a[k * i + j], &g_tbls[j * 32]);
 
                         gf_vect_dot_prod_base(TEST_LEN, k, g_tbls, buffs, buffs[i]);
                 }
@@ -267,7 +267,7 @@ main(int argc, char *argv[])
                 // Recover data
                 for (i = 0; i < nerrs; i++) {
                         for (j = 0; j < k; j++)
-                                gf_vect_mul_init(d[k * src_err_list[i] + j], &g_tbls[j * 32]);
+                                gf_vect_mul_init_base(d[k * src_err_list[i] + j], &g_tbls[j * 32]);
 
                         gf_vect_dot_prod_base(TEST_LEN, k, g_tbls, recov, temp_buff);
 

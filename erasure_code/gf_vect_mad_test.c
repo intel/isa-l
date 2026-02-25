@@ -135,7 +135,7 @@ main(int argc, char *argv[])
         int i, j, rtest, srcs;
         void *buf;
         u8 gf[6][TEST_SOURCES];
-        u8 *g_tbls;
+        u8 *g_tbls, *g_tbls_base;
         u8 *dest_ref[VECT];
         u8 *dest_ptrs[VECT], *buffs[TEST_SOURCES];
         int vector = VECT;
@@ -161,6 +161,12 @@ main(int argc, char *argv[])
                 return -1;
         }
         g_tbls = buf;
+
+        if (posix_memalign(&buf, 16, 2 * (vector * TEST_SOURCES * 32))) {
+                printf("alloc error: Fail");
+                return -1;
+        }
+        g_tbls_base = buf;
 
         for (i = 0; i < vector; i++) {
                 if (posix_memalign(&buf, 64, TEST_LEN)) {
@@ -209,12 +215,14 @@ main(int argc, char *argv[])
         for (i = 0; i < vector; i++)
                 for (j = 0; j < TEST_SOURCES; j++) {
                         gf[i][j] = rand();
+                        gf_vect_mul_init_base(gf[i][j],
+                                              &g_tbls_base[i * (32 * TEST_SOURCES) + j * 32]);
                         gf_vect_mul_init(gf[i][j], &g_tbls[i * (32 * TEST_SOURCES) + j * 32]);
                 }
 
         for (i = 0; i < vector; i++)
-                gf_vect_dot_prod_base(TEST_LEN, TEST_SOURCES, &g_tbls[i * 32 * TEST_SOURCES], buffs,
-                                      dest_ref[i]);
+                gf_vect_dot_prod_base(TEST_LEN, TEST_SOURCES, &g_tbls_base[i * 32 * TEST_SOURCES],
+                                      buffs, dest_ref[i]);
 
         for (i = 0; i < vector; i++)
                 memset(dest_ptrs[i], 0, TEST_LEN);
@@ -268,13 +276,16 @@ main(int argc, char *argv[])
                 for (i = 0; i < vector; i++)
                         for (j = 0; j < TEST_SOURCES; j++) {
                                 gf[i][j] = rand();
+                                gf_vect_mul_init_base(
+                                        gf[i][j], &g_tbls_base[i * (32 * TEST_SOURCES) + j * 32]);
                                 gf_vect_mul_init(gf[i][j],
                                                  &g_tbls[i * (32 * TEST_SOURCES) + j * 32]);
                         }
 
                 for (i = 0; i < vector; i++)
                         gf_vect_dot_prod_base(TEST_LEN, TEST_SOURCES,
-                                              &g_tbls[i * 32 * TEST_SOURCES], buffs, dest_ref[i]);
+                                              &g_tbls_base[i * 32 * TEST_SOURCES], buffs,
+                                              dest_ref[i]);
 
                 for (i = 0; i < vector; i++)
                         memset(dest_ptrs[i], 0, TEST_LEN);
@@ -314,13 +325,15 @@ main(int argc, char *argv[])
                         for (i = 0; i < vector; i++)
                                 for (j = 0; j < srcs; j++) {
                                         gf[i][j] = rand();
+                                        gf_vect_mul_init_base(
+                                                gf[i][j], &g_tbls_base[i * (32 * srcs) + j * 32]);
                                         gf_vect_mul_init(gf[i][j],
                                                          &g_tbls[i * (32 * srcs) + j * 32]);
                                 }
 
                         for (i = 0; i < vector; i++)
-                                gf_vect_dot_prod_base(TEST_LEN, srcs, &g_tbls[i * 32 * srcs], buffs,
-                                                      dest_ref[i]);
+                                gf_vect_dot_prod_base(TEST_LEN, srcs, &g_tbls_base[i * 32 * srcs],
+                                                      buffs, dest_ref[i]);
 
                         for (i = 0; i < vector; i++)
                                 memset(dest_ptrs[i], 0, TEST_LEN);
@@ -365,13 +378,16 @@ main(int argc, char *argv[])
                 for (i = 0; i < vector; i++)
                         for (j = 0; j < TEST_SOURCES; j++) {
                                 gf[i][j] = rand();
+                                gf_vect_mul_init_base(
+                                        gf[i][j], &g_tbls_base[i * (32 * TEST_SOURCES) + j * 32]);
                                 gf_vect_mul_init(gf[i][j],
                                                  &g_tbls[i * (32 * TEST_SOURCES) + j * 32]);
                         }
 
                 for (i = 0; i < vector; i++)
-                        gf_vect_dot_prod_base(size, TEST_SOURCES, &g_tbls[i * 32 * TEST_SOURCES],
-                                              efence_buffs, dest_ref[i]);
+                        gf_vect_dot_prod_base(size, TEST_SOURCES,
+                                              &g_tbls_base[i * 32 * TEST_SOURCES], efence_buffs,
+                                              dest_ref[i]);
 
                 for (i = 0; i < vector; i++)
                         memset(dest_ptrs[i], 0, size);
@@ -427,11 +443,13 @@ main(int argc, char *argv[])
                 for (i = 0; i < vector; i++)
                         for (j = 0; j < srcs; j++) {
                                 gf[i][j] = rand();
+                                gf_vect_mul_init_base(gf[i][j],
+                                                      &g_tbls_base[i * (32 * srcs) + j * 32]);
                                 gf_vect_mul_init(gf[i][j], &g_tbls[i * (32 * srcs) + j * 32]);
                         }
 
                 for (i = 0; i < vector; i++)
-                        gf_vect_dot_prod_base(size, srcs, &g_tbls[i * 32 * srcs], ubuffs,
+                        gf_vect_dot_prod_base(size, srcs, &g_tbls_base[i * 32 * srcs], ubuffs,
                                               dest_ref[i]);
 
                 for (i = 0; i < srcs; i++) {
@@ -487,6 +505,8 @@ main(int argc, char *argv[])
                 for (i = 0; i < vector; i++) {
                         for (j = 0; j < TEST_SOURCES; j++) {
                                 gf[i][j] = rand();
+                                gf_vect_mul_init_base(
+                                        gf[i][j], &g_tbls_base[i * (32 * TEST_SOURCES) + j * 32]);
                                 gf_vect_mul_init(gf[i][j],
                                                  &g_tbls[i * (32 * TEST_SOURCES) + j * 32]);
                         }
@@ -494,8 +514,9 @@ main(int argc, char *argv[])
                 }
 
                 for (i = 0; i < vector; i++)
-                        gf_vect_dot_prod_base(size, TEST_SOURCES, &g_tbls[i * 32 * TEST_SOURCES],
-                                              buffs, dest_ref[i]);
+                        gf_vect_dot_prod_base(size, TEST_SOURCES,
+                                              &g_tbls_base[i * 32 * TEST_SOURCES], buffs,
+                                              dest_ref[i]);
 
                 for (i = 0; i < TEST_SOURCES; i++) {
 #if (VECT == 1)
@@ -530,6 +551,7 @@ main(int argc, char *argv[])
                 aligned_free(buffs[i]);
         }
         aligned_free(g_tbls);
+        aligned_free(g_tbls_base);
         for (i = 0; i < vector; i++) {
                 aligned_free(dest_ptrs[i]);
                 aligned_free(dest_ref[i]);

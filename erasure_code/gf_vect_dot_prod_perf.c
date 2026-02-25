@@ -87,11 +87,12 @@ dump_matrix(unsigned char **s, int k, int m)
 
 void
 vect_dot_prod_perf(void (*fun_ptr)(int, int, unsigned char *, unsigned char **, unsigned char *),
-                   u8 *g, u8 *g_tbls, u8 **buffs, u8 *dest_ref)
+                   void (*init_ptr)(unsigned char, unsigned char *), u8 *g, u8 *g_tbls, u8 **buffs,
+                   u8 *dest_ref)
 {
         int j;
         for (j = 0; j < TEST_SOURCES; j++)
-                gf_vect_mul_init(g[j], &g_tbls[j * 32]);
+                init_ptr(g[j], &g_tbls[j * 32]);
 
         (*fun_ptr)(TEST_LEN, TEST_SOURCES, &g_tbls[0], buffs, dest_ref);
 }
@@ -101,7 +102,8 @@ main(int argc, char *argv[])
 {
         int i, j;
         void *buf;
-        u8 g[TEST_SOURCES], g_tbls[TEST_SOURCES * 32], *dest, *dest_ref;
+        u8 g[TEST_SOURCES], g_tbls[TEST_SOURCES * 32], g_tbls_base[TEST_SOURCES * 32], *dest,
+                *dest_ref;
         u8 *temp_buff, *buffs[TEST_SOURCES];
         struct perf start;
 
@@ -149,15 +151,18 @@ main(int argc, char *argv[])
 
 #ifdef DO_REF_PERF
         BENCHMARK(&start, BENCHMARK_TIME,
-                  vect_dot_prod_perf(&gf_vect_dot_prod_base, g, g_tbls, buffs, dest_ref));
+                  vect_dot_prod_perf(&gf_vect_dot_prod_base, &gf_vect_mul_init_base, g, g_tbls_base,
+                                     buffs, dest_ref));
         printf("gf_vect_dot_prod_base" TEST_TYPE_STR ": ");
         perf_print(start, (long long) TEST_LEN * (TEST_SOURCES + 1));
 #else
-        vect_dot_prod_perf(&gf_vect_dot_prod_base, g, g_tbls, buffs, dest_ref);
+        vect_dot_prod_perf(&gf_vect_dot_prod_base, &gf_vect_mul_init_base, g, g_tbls_base, buffs,
+                           dest_ref);
 #endif
 
         BENCHMARK(&start, BENCHMARK_TIME,
-                  vect_dot_prod_perf(&FUNCTION_UNDER_TEST, g, g_tbls, buffs, dest));
+                  vect_dot_prod_perf(&FUNCTION_UNDER_TEST, &gf_vect_mul_init, g, g_tbls, buffs,
+                                     dest));
         printf(xstr(FUNCTION_UNDER_TEST) TEST_TYPE_STR ": ");
         perf_print(start, (long long) TEST_LEN * (TEST_SOURCES + 1));
 

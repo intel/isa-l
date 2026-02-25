@@ -50,7 +50,7 @@ main(int argc, char *argv[])
 
         printf("gf_vect_mul_base_test:\n");
 
-        gf_vect_mul_init(a, gf_const_tbl);
+        gf_vect_mul_init_base(a, gf_const_tbl);
 
         buff1 = (u8 *) malloc(TEST_SIZE);
         buff2 = (u8 *) malloc(TEST_SIZE);
@@ -94,7 +94,7 @@ main(int argc, char *argv[])
         // Check each possible constant
         printf("Random tests ");
         for (a = 0; a != 255; a++) {
-                gf_vect_mul_init(a, gf_const_tbl);
+                gf_vect_mul_init_base(a, gf_const_tbl);
                 if (gf_vect_mul_base(TEST_SIZE, gf_const_tbl, buff1, buff2) != 0) {
                         printf("fail random tests\n");
                         return 1;
@@ -115,7 +115,7 @@ main(int argc, char *argv[])
         align = 32;
         a = 2;
 
-        gf_vect_mul_init(a, gf_const_tbl);
+        gf_vect_mul_init_base(a, gf_const_tbl);
         for (size = 0; size < TEST_SIZE; size += align) {
                 // Line up TEST_SIZE from end
                 efence_buff1 = buff1 + size;

@@ -40,7 +40,8 @@ int
 main(int argc, char *argv[])
 {
         int i, ret = -1;
-        u8 *buff1 = NULL, *buff2 = NULL, *buff3 = NULL, gf_const_tbl[64], a = 2;
+        u8 *buff1 = NULL, *buff2 = NULL, *buff3 = NULL, gf_const_tbl[64], gf_const_tbl_base[64],
+           a = 2;
         int tsize;
         int align, size;
         unsigned char *efence_buff1;
@@ -74,7 +75,9 @@ main(int argc, char *argv[])
                 }
         }
 
-        if (gf_vect_mul_base(TEST_SIZE, gf_const_tbl, buff1, buff3) != 0) {
+        gf_vect_mul_init_base(a, gf_const_tbl_base);
+
+        if (gf_vect_mul_base(TEST_SIZE, gf_const_tbl_base, buff1, buff3) != 0) {
                 printf("fail fill with rand data\n");
                 goto exit;
         }
@@ -137,6 +140,7 @@ main(int argc, char *argv[])
         a = 2;
 
         gf_vect_mul_init(a, gf_const_tbl);
+        gf_vect_mul_init_base(a, gf_const_tbl_base);
         for (size = 0; size < TEST_SIZE; size += align) {
                 // Line up TEST_SIZE from end
                 efence_buff1 = buff1 + size;
@@ -155,8 +159,8 @@ main(int argc, char *argv[])
                                 goto exit;
                         }
 
-                if (gf_vect_mul_base(TEST_SIZE - size, gf_const_tbl, efence_buff1, efence_buff3) !=
-                    0) {
+                if (gf_vect_mul_base(TEST_SIZE - size, gf_const_tbl_base, efence_buff1,
+                                     efence_buff3) != 0) {
                         printf("fail line up TEST_SIZE from end\n");
                         goto exit;
                 }
