@@ -42,6 +42,7 @@ extern ec_encode_data_update_avx512
 extern gf_vect_mad_avx512
 extern gf_vect_mul_sse
 extern gf_vect_mul_avx
+extern gf_vect_mul_avx2_gfni
 
 extern gf_vect_mul_init_base
 extern gf_vect_mul_init_gfni
@@ -81,7 +82,7 @@ mbin_interface gf_vect_mad
 mbin_interface ec_init_tables
 mbin_interface gf_vect_mul_init
 
-mbin_dispatch_init5 gf_vect_mul, gf_vect_mul_base, gf_vect_mul_sse, gf_vect_mul_avx, gf_vect_mul_avx
+mbin_dispatch_init8 gf_vect_mul, gf_vect_mul_base, gf_vect_mul_sse, gf_vect_mul_avx, gf_vect_mul_avx, gf_vect_mul_avx, gf_vect_mul_avx2_gfni, gf_vect_mul_avx2_gfni
 mbin_dispatch_init8 ec_encode_data, ec_encode_data_base, ec_encode_data_sse, ec_encode_data_avx, ec_encode_data_avx2, ec_encode_data_avx512, ec_encode_data_avx2_gfni, ec_encode_data_avx512_gfni
 mbin_dispatch_init8_hygon ec_encode_data_update, ec_encode_data_update_base, ec_encode_data_update_sse, ec_encode_data_update_avx, ec_encode_data_update_avx2, ec_encode_data_update_avx512, ec_encode_data_update_avx2_gfni, ec_encode_data_update_avx512_gfni
 mbin_dispatch_init6 gf_vect_mad, gf_vect_mad_base, gf_vect_mad_sse, gf_vect_mad_avx, gf_vect_mad_avx2, gf_vect_mad_avx512

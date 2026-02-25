@@ -51,6 +51,7 @@ objs = \
 	bin\ec_highlevel_func.obj \
 	bin\gf_vect_mul_sse.obj \
 	bin\gf_vect_mul_avx.obj \
+	bin\gf_vect_mul_avx2_gfni.obj \
 	bin\gf_vect_dot_prod_sse.obj \
 	bin\gf_vect_dot_prod_avx.obj \
 	bin\gf_vect_dot_prod_avx2.obj \

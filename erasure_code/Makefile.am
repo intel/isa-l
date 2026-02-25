@@ -40,6 +40,7 @@ lsrc_x86_64  += \
 		erasure_code/ec_highlevel_func.c \
 		erasure_code/gf_vect_mul_sse.asm \
 		erasure_code/gf_vect_mul_avx.asm \
+		erasure_code/gf_vect_mul_avx2_gfni.asm \
 		erasure_code/gf_vect_dot_prod_sse.asm  \
 		erasure_code/gf_vect_dot_prod_avx.asm \
 		erasure_code/gf_vect_dot_prod_avx2.asm \
