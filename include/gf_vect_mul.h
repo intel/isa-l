@@ -29,6 +29,7 @@
 
 #ifndef _GF_VECT_MUL_H
 #define _GF_VECT_MUL_H
+#include "isal_api.h"
 
 /**
  *  @file gf_vect_mul.h
@@ -61,8 +62,11 @@ extern "C" {
  * @param src   Pointer to src data array. Must be aligned to 32B.
  * @param dest  Pointer to destination data array. Must be aligned to 32B.
  * @returns 0 pass, other fail
+
+ * @deprecated Please use gf_vect_mul() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use gf_vect_mul() instead.")
 int
 gf_vect_mul_sse(int len, unsigned char *gftbl, void *src, void *dest);
 
@@ -82,8 +86,11 @@ gf_vect_mul_sse(int len, unsigned char *gftbl, void *src, void *dest);
  * @param src   Pointer to src data array. Must be aligned to 32B.
  * @param dest  Pointer to destination data array. Must be aligned to 32B.
  * @returns 0 pass, other fail
+
+ * @deprecated Please use gf_vect_mul() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use gf_vect_mul() instead.")
 int
 gf_vect_mul_avx(int len, unsigned char *gftbl, void *src, void *dest);
 

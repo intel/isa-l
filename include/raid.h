@@ -29,6 +29,7 @@
 
 #ifndef _RAID_H_
 #define _RAID_H_
+#include "isal_api.h"
 
 /**
  *  @file  raid.h
@@ -134,8 +135,11 @@ pq_check(int vects, int len, void **array);
  *                must be aligned to 16B.
  *
  * @returns 0 pass, other fail
+
+ * @deprecated Please use xor_gen() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use xor_gen() instead.")
 int
 xor_gen_sse(int vects, int len, void **array);
 
@@ -150,8 +154,11 @@ xor_gen_sse(int vects, int len, void **array);
  *                must be aligned to 32B.
  *
  * @returns 0 pass, other fail
+
+ * @deprecated Please use xor_gen() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use xor_gen() instead.")
 int
 xor_gen_avx(int vects, int len, void **array);
 
@@ -165,8 +172,11 @@ xor_gen_avx(int vects, int len, void **array);
  *                must be aligned to 16B.
  *
  * @returns 0 pass, other fail
+
+ * @deprecated Please use xor_check() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use xor_check() instead.")
 int
 xor_check_sse(int vects, int len, void **array);
 
@@ -183,8 +193,11 @@ xor_check_sse(int vects, int len, void **array);
  *                pointers must be aligned to 16B.
  *
  * @returns 0 pass, other fail
+
+ * @deprecated Please use pq_gen() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use pq_gen() instead.")
 int
 pq_gen_sse(int vects, int len, void **array);
 
@@ -201,8 +214,11 @@ pq_gen_sse(int vects, int len, void **array);
  *                pointers must be aligned to 16B.
  *
  * @returns 0 pass, other fail
+
+ * @deprecated Please use pq_gen() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use pq_gen() instead.")
 int
 pq_gen_avx(int vects, int len, void **array);
 
@@ -219,8 +235,11 @@ pq_gen_avx(int vects, int len, void **array);
  *                pointers must be aligned to 32B.
  *
  * @returns 0 pass, other fail
+
+ * @deprecated Please use pq_gen() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use pq_gen() instead.")
 int
 pq_gen_avx2(int vects, int len, void **array);
 
@@ -234,8 +253,11 @@ pq_gen_avx2(int vects, int len, void **array);
                  are assumed to be the last two pointers in the array.
                  All pointers must be aligned to 16B.
  * @returns 0 pass, other fail
+
+ * @deprecated Please use pq_check() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use pq_check() instead.")
 int
 pq_check_sse(int vects, int len, void **array);
 

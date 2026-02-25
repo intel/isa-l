@@ -87,6 +87,7 @@ endif
 nobase_include_HEADERS = isa-l.h
 libisal_la_LDFLAGS = $(AM_LDFLAGS) \
 	-version-info $(LIBISAL_CURRENT):$(LIBISAL_REVISION):$(LIBISAL_AGE)
+libisal_la_CFLAGS = $(AM_CFLAGS) -DISAL_DEPRECATED_INTERNAL
 libisal_la_LIBADD = ${noinst_LTLIBRARIES}
 
 EXTRA_DIST += ${other_src}

@@ -30,6 +30,30 @@
 #ifndef _ISAL_API_H
 #define _ISAL_API_H
 
+#define ISAL_LIB_GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+
+#ifndef __has_extension
+#define __has_extension(x) 0
+#endif
+
+#if (defined(__ICC) || defined(__GNUC__) || defined(__clang__)) && !defined(ISAL_UNIT_TEST) &&     \
+        !defined(ISAL_DEPRECATED_INTERNAL)
+#if __has_extension(attribute_deprecated_with_message) || (ISAL_LIB_GCC_VERSION >= 40500) ||       \
+        (__INTEL_COMPILER >= 1100)
+#define ISAL_LIB_DEPRECATED(message) __attribute__((deprecated(message)))
+#else
+#define ISAL_LIB_DEPRECATED(message) __attribute__((deprecated))
+#endif
+#elif (defined(__ICL) || defined(_MSC_VER))
+#if (__INTEL_COMPILER >= 1100) || (_MSC_FULL_VER >= 140050727)
+#define ISAL_LIB_DEPRECATED(message) __declspec(deprecated(message))
+#else
+#define ISAL_LIB_DEPRECATED(message) __declspec(deprecated)
+#endif
+#else
+#define ISAL_LIB_DEPRECATED(message)
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -41,12 +65,22 @@ extern "C" {
 #define TO_STRING(a)             TO_STRING_(a)
 
 /* Library version numbers */
+#ifndef ISAL_MAJOR_VERSION
 #define ISAL_MAJOR_VERSION 2
+#endif
+#ifndef ISAL_MINOR_VERSION
 #define ISAL_MINOR_VERSION 31
+#endif
+#ifndef ISAL_PATCH_VERSION
 #define ISAL_PATCH_VERSION 1
+#endif
 
+#ifndef ISAL_MAKE_VERSION
 #define ISAL_MAKE_VERSION(maj, min, patch) ((maj) * 0x10000 + (min) * 0x100 + (patch))
-#define ISAL_VERSION                       ISAL_MAKE_VERSION(ISAL_MAJOR_VERSION, ISAL_MINOR_VERSION, ISAL_PATCH_VERSION)
+#endif
+#ifndef ISAL_VERSION
+#define ISAL_VERSION ISAL_MAKE_VERSION(ISAL_MAJOR_VERSION, ISAL_MINOR_VERSION, ISAL_PATCH_VERSION)
+#endif
 #define ISAL_VERSION_STR                                                                           \
         TO_STRING(CONCAT_VERSION(ISAL_MAJOR_VERSION, ISAL_MINOR_VERSION, ISAL_PATCH_VERSION))
 

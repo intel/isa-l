@@ -247,6 +247,7 @@ $(bin_PROGRAMS): % : %_cli.c $(lib_name)
 
 # Target to build lib files
 lib: $(lib_name)
+$(lib_name): DEFINES+=-DISAL_DEPRECATED_INTERNAL
 ifneq ($(lib_debug),1)
  $(lib_name): DEBUG_$(AS)=	# Don't put debug symbols in the lib
  $(lib_name): DEBUG=
@@ -282,6 +283,7 @@ $(O)/shared_ver_%.o: %.c
 $(O)/shared_ver_%.o: $(host_cpu)/%.c
 	@echo "  ---> Building shared $< $(msg)"
 	@$(COMPILE.c) $(OUTPUT_OPTION) $<
+$(so_lib_name): DEFINES+=-DISAL_DEPRECATED_INTERNAL
 ifneq ($(lib_debug),1)
  $(so_lib_name): DEBUG_$(AS)=
  $(so_lib_name): DEBUG=

@@ -163,7 +163,6 @@ add_library(isal
 set_target_properties(isal PROPERTIES
     VERSION ${LIBISAL_VERSION_MAJOR}.${LIBISAL_VERSION_MINOR}.${LIBISAL_VERSION_PATCH}
     SOVERSION ${LIBISAL_VERSION_MAJOR}
-    PUBLIC_HEADER "${EXTERN_HEADERS}"
 )
 
 # Match Makefile.nmake naming convention
@@ -182,6 +181,9 @@ if(CPU_X86_64 AND USE_NASM)
         endif()
     endforeach()
 endif()
+
+# Suppress deprecation warnings when building the library internally
+target_compile_definitions(isal PRIVATE ISAL_DEPRECATED_INTERNAL)
 
 # Include directories
 target_include_directories(isal
@@ -293,5 +295,4 @@ message(STATUS "  Build tests        : ${ISAL_BUILD_TESTS}")
 message(STATUS "  Build perf tests   : ${ISAL_BUILD_PERF_TESTS}")
 message(STATUS "  Build fuzz tests   : ${ISAL_BUILD_FUZZ_TESTS}")
 message(STATUS "  Build ISAL shim    : ${ISAL_BUILD_ISAL_SHIM}")
-message(STATUS "  No NT load/store   : ${NO_NT_LDST}")
 message(STATUS "")

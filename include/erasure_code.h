@@ -29,6 +29,7 @@
 
 #ifndef _ERASURE_CODE_H_
 #define _ERASURE_CODE_H_
+#include "isal_api.h"
 
 /**
  *  @file erasure_code.h
@@ -247,7 +248,10 @@ gf_vect_mad_base(int len, int vec, int vec_i, unsigned char *v, unsigned char *s
  *
  * Arch specific version of ec_encode_data() with same parameters.
  * @requires SSE4.1
+
+ * @deprecated Please use ec_encode_data() instead.
  */
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 ec_encode_data_sse(int len, int k, int rows, unsigned char *gftbls, unsigned char **data,
                    unsigned char **coding);
@@ -257,7 +261,10 @@ ec_encode_data_sse(int len, int k, int rows, unsigned char *gftbls, unsigned cha
  *
  * Arch specific version of ec_encode_data() with same parameters.
  * @requires AVX
+
+ * @deprecated Please use ec_encode_data() instead.
  */
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 ec_encode_data_avx(int len, int k, int rows, unsigned char *gftbls, unsigned char **data,
                    unsigned char **coding);
@@ -267,7 +274,10 @@ ec_encode_data_avx(int len, int k, int rows, unsigned char *gftbls, unsigned cha
  *
  * Arch specific version of ec_encode_data() with same parameters.
  * @requires AVX2
+
+ * @deprecated Please use ec_encode_data() instead.
  */
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 ec_encode_data_avx2(int len, int k, int rows, unsigned char *gftbls, unsigned char **data,
                     unsigned char **coding);
@@ -277,8 +287,11 @@ ec_encode_data_avx2(int len, int k, int rows, unsigned char *gftbls, unsigned ch
  *
  * Arch specific version of ec_encode_data_update() with same parameters.
  * @requires SSE4.1
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 ec_encode_data_update_sse(int len, int k, int rows, int vec_i, unsigned char *g_tbls,
                           unsigned char *data, unsigned char **coding);
@@ -288,8 +301,11 @@ ec_encode_data_update_sse(int len, int k, int rows, int vec_i, unsigned char *g_
  *
  * Arch specific version of ec_encode_data_update() with same parameters.
  * @requires AVX
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 ec_encode_data_update_avx(int len, int k, int rows, int vec_i, unsigned char *g_tbls,
                           unsigned char *data, unsigned char **coding);
@@ -299,8 +315,11 @@ ec_encode_data_update_avx(int len, int k, int rows, int vec_i, unsigned char *g_
  *
  * Arch specific version of ec_encode_data_update() with same parameters.
  * @requires AVX2
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 ec_encode_data_update_avx2(int len, int k, int rows, int vec_i, unsigned char *g_tbls,
                            unsigned char *data, unsigned char **coding);
@@ -321,8 +340,11 @@ ec_encode_data_update_avx2(int len, int k, int rows, int vec_i, unsigned char *g
  * @param src    Array of pointers to source inputs.
  * @param dest   Pointer to destination data array.
  * @returns none
+
+ * @deprecated Please use gf_vect_dot_prod() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use gf_vect_dot_prod() instead.")
 void
 gf_vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                      unsigned char *dest);
@@ -343,8 +365,11 @@ gf_vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls, unsigned char **s
  * @param src    Array of pointers to source inputs.
  * @param dest   Pointer to destination data array.
  * @returns none
+
+ * @deprecated Please use gf_vect_dot_prod() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use gf_vect_dot_prod() instead.")
 void
 gf_vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                      unsigned char *dest);
@@ -365,8 +390,11 @@ gf_vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls, unsigned char **s
  * @param src    Array of pointers to source inputs.
  * @param dest   Pointer to destination data array.
  * @returns none
+
+ * @deprecated Please use gf_vect_dot_prod() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use gf_vect_dot_prod() instead.")
 void
 gf_vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                       unsigned char *dest);
@@ -388,8 +416,11 @@ gf_vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls, unsigned char **
  * @param src    Array of pointers to source inputs.
  * @param dest   Array of pointers to destination data buffers.
  * @returns none
+
+ * @deprecated Please use ec_encode_data() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 gf_2vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                       unsigned char **dest);
@@ -411,8 +442,11 @@ gf_2vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls, unsigned char **
  * @param src    Array of pointers to source inputs.
  * @param dest   Array of pointers to destination data buffers.
  * @returns none
+
+ * @deprecated Please use ec_encode_data() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 gf_2vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                       unsigned char **dest);
@@ -434,8 +468,11 @@ gf_2vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls, unsigned char **
  * @param src    Array of pointers to source inputs.
  * @param dest   Array of pointers to destination data buffers.
  * @returns none
+
+ * @deprecated Please use ec_encode_data() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 gf_2vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                        unsigned char **dest);
@@ -457,8 +494,11 @@ gf_2vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls, unsigned char *
  * @param src    Array of pointers to source inputs.
  * @param dest   Array of pointers to destination data buffers.
  * @returns none
+
+ * @deprecated Please use ec_encode_data() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 gf_3vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                       unsigned char **dest);
@@ -480,8 +520,11 @@ gf_3vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls, unsigned char **
  * @param src    Array of pointers to source inputs.
  * @param dest   Array of pointers to destination data buffers.
  * @returns none
+
+ * @deprecated Please use ec_encode_data() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 gf_3vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                       unsigned char **dest);
@@ -503,8 +546,11 @@ gf_3vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls, unsigned char **
  * @param src    Array of pointers to source inputs.
  * @param dest   Array of pointers to destination data buffers.
  * @returns none
+
+ * @deprecated Please use ec_encode_data() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 gf_3vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                        unsigned char **dest);
@@ -526,8 +572,11 @@ gf_3vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls, unsigned char *
  * @param src    Array of pointers to source inputs.
  * @param dest   Array of pointers to destination data buffers.
  * @returns none
+
+ * @deprecated Please use ec_encode_data() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 gf_4vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                       unsigned char **dest);
@@ -549,8 +598,11 @@ gf_4vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls, unsigned char **
  * @param src    Array of pointers to source inputs.
  * @param dest   Array of pointers to destination data buffers.
  * @returns none
+
+ * @deprecated Please use ec_encode_data() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 gf_4vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                       unsigned char **dest);
@@ -572,8 +624,11 @@ gf_4vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls, unsigned char **
  * @param src    Array of pointers to source inputs.
  * @param dest   Array of pointers to destination data buffers.
  * @returns none
+
+ * @deprecated Please use ec_encode_data() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 gf_4vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                        unsigned char **dest);
@@ -595,8 +650,11 @@ gf_4vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls, unsigned char *
  * @param src    Array of pointers to source inputs.
  * @param dest   Array of pointers to destination data buffers.
  * @returns none
+
+ * @deprecated Please use ec_encode_data() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 gf_5vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                       unsigned char **dest);
@@ -618,8 +676,11 @@ gf_5vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls, unsigned char **
  * @param src    Array of pointers to source inputs.
  * @param dest   Array of pointers to destination data buffers.
  * @returns none
+
+ * @deprecated Please use ec_encode_data() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 gf_5vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                       unsigned char **dest);
@@ -641,8 +702,11 @@ gf_5vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls, unsigned char **
  * @param src    Array of pointers to source inputs.
  * @param dest   Array of pointers to destination data buffers.
  * @returns none
+
+ * @deprecated Please use ec_encode_data() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 gf_5vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                        unsigned char **dest);
@@ -664,8 +728,11 @@ gf_5vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls, unsigned char *
  * @param src    Array of pointers to source inputs.
  * @param dest   Array of pointers to destination data buffers.
  * @returns none
+
+ * @deprecated Please use ec_encode_data() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 gf_6vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                       unsigned char **dest);
@@ -687,8 +754,11 @@ gf_6vect_dot_prod_sse(int len, int vlen, unsigned char *gftbls, unsigned char **
  * @param src    Array of pointers to source inputs.
  * @param dest   Array of pointers to destination data buffers.
  * @returns none
+
+ * @deprecated Please use ec_encode_data() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 gf_6vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                       unsigned char **dest);
@@ -710,8 +780,11 @@ gf_6vect_dot_prod_avx(int len, int vlen, unsigned char *gftbls, unsigned char **
  * @param src    Array of pointers to source inputs.
  * @param dest   Array of pointers to destination data buffers.
  * @returns none
+
+ * @deprecated Please use ec_encode_data() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data() instead.")
 void
 gf_6vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls, unsigned char **src,
                        unsigned char **dest);
@@ -721,8 +794,11 @@ gf_6vect_dot_prod_avx2(int len, int vlen, unsigned char *gftbls, unsigned char *
  *
  * Arch specific version of gf_vect_mad() with same parameters.
  * @requires SSE4.1
+
+ * @deprecated Please use gf_vect_mad() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use gf_vect_mad() instead.")
 void
 gf_vect_mad_sse(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                 unsigned char *dest);
@@ -731,8 +807,11 @@ gf_vect_mad_sse(int len, int vec, int vec_i, unsigned char *gftbls, unsigned cha
  *
  * Arch specific version of gf_vect_mad() with same parameters.
  * @requires AVX
+
+ * @deprecated Please use gf_vect_mad() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use gf_vect_mad() instead.")
 void
 gf_vect_mad_avx(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                 unsigned char *dest);
@@ -742,8 +821,11 @@ gf_vect_mad_avx(int len, int vec, int vec_i, unsigned char *gftbls, unsigned cha
  *
  * Arch specific version of gf_vect_mad() with same parameters.
  * @requires AVX2
+
+ * @deprecated Please use gf_vect_mad() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use gf_vect_mad() instead.")
 void
 gf_vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                  unsigned char *dest);
@@ -767,8 +849,11 @@ gf_vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned ch
  * @param src    Pointer to source input array.
  * @param dest   Array of pointers to destination input/outputs.
  * @returns none
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 gf_2vect_mad_sse(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                  unsigned char **dest);
@@ -776,14 +861,20 @@ gf_2vect_mad_sse(int len, int vec, int vec_i, unsigned char *gftbls, unsigned ch
 /**
  * @brief GF(2^8) vector multiply with 2 accumulate. AVX version of gf_2vect_mad_sse().
  * @requires AVX
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 gf_2vect_mad_avx(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                  unsigned char **dest);
 /**
  * @brief GF(2^8) vector multiply with 2 accumulate. AVX2 version of gf_2vect_mad_sse().
  * @requires AVX2
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 gf_2vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                   unsigned char **dest);
@@ -807,8 +898,11 @@ gf_2vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned c
  * @param src    Pointer to source input array.
  * @param dest   Array of pointers to destination input/outputs.
  * @returns none
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 gf_3vect_mad_sse(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                  unsigned char **dest);
@@ -816,7 +910,10 @@ gf_3vect_mad_sse(int len, int vec, int vec_i, unsigned char *gftbls, unsigned ch
 /**
  * @brief GF(2^8) vector multiply with 3 accumulate. AVX version of gf_3vect_mad_sse().
  * @requires AVX
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 gf_3vect_mad_avx(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                  unsigned char **dest);
@@ -824,7 +921,10 @@ gf_3vect_mad_avx(int len, int vec, int vec_i, unsigned char *gftbls, unsigned ch
 /**
  * @brief GF(2^8) vector multiply with 3 accumulate. AVX2 version of gf_3vect_mad_sse().
  * @requires AVX2
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 gf_3vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                   unsigned char **dest);
@@ -848,8 +948,11 @@ gf_3vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned c
  * @param src    Pointer to source input array.
  * @param dest   Array of pointers to destination input/outputs.
  * @returns none
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
 
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 gf_4vect_mad_sse(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                  unsigned char **dest);
@@ -857,14 +960,20 @@ gf_4vect_mad_sse(int len, int vec, int vec_i, unsigned char *gftbls, unsigned ch
 /**
  * @brief GF(2^8) vector multiply with 4 accumulate. AVX version of gf_4vect_mad_sse().
  * @requires AVX
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 gf_4vect_mad_avx(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                  unsigned char **dest);
 /**
  * @brief GF(2^8) vector multiply with 4 accumulate. AVX2 version of gf_4vect_mad_sse().
  * @requires AVX2
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 gf_4vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                   unsigned char **dest);
@@ -872,7 +981,10 @@ gf_4vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned c
 /**
  * @brief GF(2^8) vector multiply with 5 accumulate. SSE version.
  * @requires SSE4.1
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 gf_5vect_mad_sse(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                  unsigned char **dest);
@@ -880,14 +992,20 @@ gf_5vect_mad_sse(int len, int vec, int vec_i, unsigned char *gftbls, unsigned ch
 /**
  * @brief GF(2^8) vector multiply with 5 accumulate. AVX version.
  * @requires AVX
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 gf_5vect_mad_avx(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                  unsigned char **dest);
 /**
  * @brief GF(2^8) vector multiply with 5 accumulate. AVX2 version.
  * @requires AVX2
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 gf_5vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                   unsigned char **dest);
@@ -895,14 +1013,20 @@ gf_5vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned c
 /**
  * @brief GF(2^8) vector multiply with 6 accumulate. SSE version.
  * @requires SSE4.1
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 gf_6vect_mad_sse(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                  unsigned char **dest);
 /**
  * @brief GF(2^8) vector multiply with 6 accumulate. AVX version.
  * @requires AVX
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 gf_6vect_mad_avx(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                  unsigned char **dest);
@@ -910,7 +1034,10 @@ gf_6vect_mad_avx(int len, int vec, int vec_i, unsigned char *gftbls, unsigned ch
 /**
  * @brief GF(2^8) vector multiply with 6 accumulate. AVX2 version.
  * @requires AVX2
+
+ * @deprecated Please use ec_encode_data_update() instead.
  */
+ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
 gf_6vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                   unsigned char **dest);
