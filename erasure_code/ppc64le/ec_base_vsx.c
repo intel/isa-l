@@ -105,5 +105,11 @@ gf_vect_mul(int len, unsigned char *a, void *src, void *dest)
 void
 ec_init_tables(int k, int rows, unsigned char *a, unsigned char *g_tbls)
 {
-        return ec_init_tables_base(k, rows, a, g_tbls);
+        ec_init_tables_base(k, rows, a, g_tbls);
+}
+
+void
+gf_vect_mul_init(unsigned char c, unsigned char *tbl)
+{
+        gf_vect_mul_init_base(c, tbl);
 }

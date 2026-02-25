@@ -155,3 +155,4 @@ DEFINE_INTERFACE_DISPATCHER(gf_vect_mul)
 }
 
 DEFINE_INTERFACE_DISPATCHER(ec_init_tables) { return ec_init_tables_base; }
+DEFINE_INTERFACE_DISPATCHER(gf_vect_mul_init) { return gf_vect_mul_init_base; }

@@ -434,21 +434,26 @@ extern void
 gf_5vect_mad_avx2_gfni(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                        unsigned char **dest);
 
+// Calculates 32-byte const table gftbl in GF(2^8) from single input A,
+// to be used with GFNI-based internal implementations, such as gf_vect_mul_avx2_gfni
+void
+gf_vect_mul_init_gfni(unsigned char c, unsigned char *tbl)
+{
+        const uint64_t val = gf_table_gfni[c];
+        const uint64_t tmp[4] = { val, val, val, val };
+
+        memcpy(tbl, tmp, 32);
+}
+
 void
 ec_init_tables_gfni(int k, int rows, unsigned char *a, unsigned char *g_tbls)
 {
         int i, j;
 
-        uint64_t *g64 = (uint64_t *) g_tbls;
-
         for (i = 0; i < rows; i++) {
                 for (j = 0; j < k; j++) {
-                        const uint64_t val = gf_table_gfni[*a++];
-
-                        *(g64++) = val;
-                        *(g64++) = val;
-                        *(g64++) = val;
-                        *(g64++) = val;
+                        gf_vect_mul_init_gfni(*a++, g_tbls);
+                        g_tbls += 32;
                 }
         }
 }

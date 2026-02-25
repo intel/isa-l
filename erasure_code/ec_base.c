@@ -41,7 +41,7 @@ ec_init_tables_base(int k, int rows, unsigned char *a, unsigned char *g_tbls)
 
         for (i = 0; i < rows; i++) {
                 for (j = 0; j < k; j++) {
-                        gf_vect_mul_init(*a++, g_tbls);
+                        gf_vect_mul_init_base(*a++, g_tbls);
                         g_tbls += 32;
                 }
         }
@@ -173,7 +173,7 @@ gf_invert_matrix(unsigned char *in_mat, unsigned char *out_mat, const int n)
 // gftbl(A) = {A{00}, A{01}, A{02}, ... , A{0f} }, {A{00}, A{10}, A{20}, ... , A{f0} }
 
 void
-gf_vect_mul_init(unsigned char c, unsigned char *tbl)
+gf_vect_mul_init_base(unsigned char c, unsigned char *tbl)
 {
         unsigned char c2 = (c << 1) ^ ((c & 0x80) ? 0x1d : 0);   // Mult by GF{2}
         unsigned char c4 = (c2 << 1) ^ ((c2 & 0x80) ? 0x1d : 0); // Mult by GF{2}

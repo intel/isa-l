@@ -126,6 +126,19 @@ void
 gf_vect_mul_init(unsigned char c, unsigned char *gftbl);
 
 /**
+ * @brief Initialize 32-byte constant array for GF(2^8) vector multiply
+ *
+ * Calculates array {C{00}, C{01}, C{02}, ... , C{0f} }, {C{00}, C{10},
+ * C{20}, ... , C{f0} } as required by other fast vector multiply
+ * functions.
+ * @param c     Constant input.
+ * @param gftbl Table output.
+ */
+
+void
+gf_vect_mul_init_base(unsigned char c, unsigned char *gftbl);
+
+/**
  * @brief GF(2^8) vector multiply by constant, runs baseline version.
  *
  * Does a GF(2^8) vector multiply b = Ca where a and b are arrays and C
