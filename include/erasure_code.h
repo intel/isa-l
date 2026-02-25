@@ -92,7 +92,7 @@ ec_init_tables_base(int k, int rows, unsigned char *a, unsigned char *gftbls);
  * or decoding of Reed-Solomon type erasure codes.
  *
  * This function determines what instruction sets are enabled and
- * selects the appropriate version at runtime.
+ * selects the appropriate (most optimized) version at runtime.
  *
  * @param len    Length of each block of data (vector) of source or dest data.
  * @param k      The number of vector sources or rows in the generator matrix
@@ -113,10 +113,11 @@ ec_encode_data(int len, int k, int rows, unsigned char *gftbls, unsigned char **
  * @brief Generate or decode erasure codes on blocks of data, runs baseline version.
  *
  * Baseline version of ec_encode_data() with same parameters.
+ * Param 'gftbls' must come from the output from ec_init_tables_base().
  */
 void
-ec_encode_data_base(int len, int srcs, int dests, unsigned char *v, unsigned char **src,
-                    unsigned char **dest);
+ec_encode_data_base(int len, int k, int rows, unsigned char *gftbls, unsigned char **data,
+                    unsigned char **coding);
 
 /**
  * @brief Generate update for encode or decode of erasure codes from single source, runs appropriate
@@ -127,33 +128,34 @@ ec_encode_data_base(int len, int srcs, int dests, unsigned char *v, unsigned cha
  * coefficients, this function will perform the fast generation or decoding of
  * Reed-Solomon type erasure codes from one input source at a time.
  *
- * This function determines what instruction sets are enabled and selects the
- * appropriate version at runtime.
+ * This function determines what instruction sets are enabled and
+ * selects the appropriate (most optimized) version at runtime.
  *
  * @param len    Length of each block of data (vector) of source or dest data.
  * @param k      The number of vector sources or rows in the generator matrix
  * 		 for coding.
  * @param rows   The number of output vectors to concurrently encode/decode.
  * @param vec_i  The vector index corresponding to the single input source.
- * @param g_tbls Pointer to array of input tables generated from coding
+ * @param gftbls Pointer to array of input tables generated from coding
  * 		 coefficients in ec_init_tables(). Must be of size 32*k*rows
  * @param data   Pointer to single input source used to update output parity.
  * @param coding Array of pointers to coded output buffers.
  * @returns none
  */
 void
-ec_encode_data_update(int len, int k, int rows, int vec_i, unsigned char *g_tbls,
+ec_encode_data_update(int len, int k, int rows, int vec_i, unsigned char *gftbls,
                       unsigned char *data, unsigned char **coding);
 
 /**
  * @brief Generate update for encode or decode of erasure codes from single source.
  *
  * Baseline version of ec_encode_data_update().
+ * Param 'gftbls' must come from the output from ec_init_tables_base().
  */
 
 void
-ec_encode_data_update_base(int len, int k, int rows, int vec_i, unsigned char *v,
-                           unsigned char *data, unsigned char **dest);
+ec_encode_data_update_base(int len, int k, int rows, int vec_i, unsigned char *gftbls,
+                           unsigned char *data, unsigned char **coding);
 
 /**
  * @brief GF(2^8) vector dot product, runs baseline version.
@@ -170,6 +172,7 @@ ec_encode_data_update_base(int len, int k, int rows, int vec_i, unsigned char *v
  *               of this array are used, where j = (0, 1, 2...) and CONST is the
  *               number of elements in the array of input coefficients. The
  *               elements used correspond to the original input coefficients.
+ *               This array must come from the output from ec_init_tables_base().
  * @param src    Array of pointers to source inputs.
  * @param dest   Pointer to destination data array.
  * @returns none
@@ -188,12 +191,13 @@ gf_vect_dot_prod_base(int len, int vlen, unsigned char *gftbls, unsigned char **
  * 32*vlen byte constant array based on the input coefficients.
  *
  * This function determines what instruction sets are enabled and
- * selects the appropriate version at runtime.
+ * selects the appropriate (most optimized) version at runtime.
  *
  * @param len    Length of each vector in bytes. Must be >= 32.
  * @param vlen   Number of vector sources.
  * @param gftbls Pointer to 32*vlen byte array of pre-calculated constants based
- *               on the array of input coefficients.
+ *               on the array of input coefficients. This array should come from
+ *               the output from ec_init_tables().
  * @param src    Array of pointers to source inputs.
  * @param dest   Pointer to destination data array.
  * @returns none
@@ -212,8 +216,8 @@ gf_vect_dot_prod(int len, int vlen, unsigned char *gftbls, unsigned char **src,
  * requires pre-calculation of a 32*vec byte constant array based on the input
  * coefficients.
  *
- * This function determines what instruction sets are enabled and selects the
- * appropriate version at runtime.
+ * This function determines what instruction sets are enabled and
+ * selects the appropriate (most optimized) version at runtime.
  *
  * @param len    Length of each vector in bytes. Must be >= 64.
  * @param vec    The number of vector sources or rows in the generator matrix
@@ -234,10 +238,11 @@ gf_vect_mad(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *s
  * @brief GF(2^8) vector multiply accumulate, baseline version.
  *
  * Baseline version of gf_vect_mad() with same parameters.
+ * Param 'gftbls' must come from the output from ec_init_tables_base().
  */
 
 void
-gf_vect_mad_base(int len, int vec, int vec_i, unsigned char *v, unsigned char *src,
+gf_vect_mad_base(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                  unsigned char *dest);
 
 // x86 only
@@ -293,7 +298,7 @@ ec_encode_data_avx2(int len, int k, int rows, unsigned char *gftbls, unsigned ch
 
 ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
-ec_encode_data_update_sse(int len, int k, int rows, int vec_i, unsigned char *g_tbls,
+ec_encode_data_update_sse(int len, int k, int rows, int vec_i, unsigned char *gftbls,
                           unsigned char *data, unsigned char **coding);
 
 /**
@@ -307,7 +312,7 @@ ec_encode_data_update_sse(int len, int k, int rows, int vec_i, unsigned char *g_
 
 ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
-ec_encode_data_update_avx(int len, int k, int rows, int vec_i, unsigned char *g_tbls,
+ec_encode_data_update_avx(int len, int k, int rows, int vec_i, unsigned char *gftbls,
                           unsigned char *data, unsigned char **coding);
 
 /**
@@ -321,7 +326,7 @@ ec_encode_data_update_avx(int len, int k, int rows, int vec_i, unsigned char *g_
 
 ISAL_LIB_DEPRECATED("Please use ec_encode_data_update() instead.")
 void
-ec_encode_data_update_avx2(int len, int k, int rows, int vec_i, unsigned char *g_tbls,
+ec_encode_data_update_avx2(int len, int k, int rows, int vec_i, unsigned char *gftbls,
                            unsigned char *data, unsigned char **coding);
 
 /**

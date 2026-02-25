@@ -165,6 +165,10 @@ v2.32
 
 * Erasure coding improvements:
   - Added new RVV ec_encode_data,ec_encode_data_update,gf_vect_mad, gf_vect_dot_prod, gf_vect_mul implementations.
+  - Added new AVX2+GFNI implementation for gf_vect_mul.
+  - Added new gf_vect_mul_init_base, to be used with any erasure coding base functions, such as gf_vect_mul_base.
+  - Enabled GFNI implementations for gf_vect_mad.
+  - gf_vect_mul_init is now a multi-binary function, backed by different implementations depending on the ISA available.
 
 * Zero-memory detection improvements:
   - Added new RVV implementations.
