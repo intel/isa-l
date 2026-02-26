@@ -34,22 +34,18 @@ default rel
 %include "multibinary.asm"
 
 extern crc32_iscsi_01
-extern crc32_iscsi_by8_02
 extern crc32_iscsi_avx2
 extern crc32_iscsi_base
 
 extern crc32_ieee_01
-extern crc32_ieee_02
 extern crc32_ieee_base
 extern crc32_ieee_avx2
 
 extern crc16_t10dif_01
-extern crc16_t10dif_02
 extern crc16_t10dif_avx2
 extern crc16_t10dif_base
 
 extern crc32_gzip_refl_by8
-extern crc32_gzip_refl_by8_02
 extern crc32_gzip_refl_base
 extern crc32_gzip_refl_avx2
 
@@ -105,19 +101,19 @@ extern crc64_rocksoft_norm_by16_10
 
 
 mbin_interface			crc32_iscsi
-mbin_dispatch_init_clmul	crc32_iscsi, crc32_iscsi_base, crc32_iscsi_01, crc32_iscsi_by8_02, crc32_iscsi_avx2, crc32_iscsi_by16_10
+mbin_dispatch_init_clmul	crc32_iscsi, crc32_iscsi_base, crc32_iscsi_01, crc32_iscsi_01, crc32_iscsi_avx2, crc32_iscsi_by16_10
 
 mbin_interface			crc32_gzip_refl
-mbin_dispatch_init_clmul	crc32_gzip_refl, crc32_gzip_refl_base, crc32_gzip_refl_by8, crc32_gzip_refl_by8_02, crc32_gzip_refl_avx2, crc32_gzip_refl_by16_10
+mbin_dispatch_init_clmul	crc32_gzip_refl, crc32_gzip_refl_base, crc32_gzip_refl_by8, crc32_gzip_refl_by8, crc32_gzip_refl_avx2, crc32_gzip_refl_by16_10
 
 mbin_interface			crc16_t10dif_copy
 mbin_dispatch_init_clmul	crc16_t10dif_copy, crc16_t10dif_copy_base, crc16_t10dif_copy_by4, crc16_t10dif_copy_by4_02, crc16_t10dif_copy_by4_02, crc16_t10dif_copy_by4_02
 
 mbin_interface			crc32_ieee
-mbin_dispatch_init_clmul	crc32_ieee, crc32_ieee_base, crc32_ieee_01, crc32_ieee_02, crc32_ieee_avx2, crc32_ieee_by16_10
+mbin_dispatch_init_clmul	crc32_ieee, crc32_ieee_base, crc32_ieee_01, crc32_ieee_01, crc32_ieee_avx2, crc32_ieee_by16_10
 
 mbin_interface			crc16_t10dif
-mbin_dispatch_init_clmul	crc16_t10dif, crc16_t10dif_base, crc16_t10dif_01, crc16_t10dif_02, crc16_t10dif_avx2, crc16_t10dif_by16_10
+mbin_dispatch_init_clmul	crc16_t10dif, crc16_t10dif_base, crc16_t10dif_01, crc16_t10dif_01, crc16_t10dif_avx2, crc16_t10dif_by16_10
 
 mbin_interface		        crc64_ecma_refl
 mbin_dispatch_init_clmul    crc64_ecma_refl, crc64_ecma_refl_base, crc64_ecma_refl_by8, crc64_ecma_refl_by8, crc64_ecma_refl_avx2, crc64_ecma_refl_by16_10
