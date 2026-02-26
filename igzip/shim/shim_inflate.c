@@ -142,6 +142,7 @@ inflate(z_streamp strm, int flush)
 
         const unsigned int total_in = strm->total_in;
         const unsigned int original_avail_in = strm->avail_in;
+        const unsigned int original_avail_out = strm->avail_out;
         const unsigned int bytes_consumed = original_avail_in - isal_strm_inflate->avail_in;
 
 #ifdef DEBUG
@@ -233,6 +234,14 @@ inflate(z_streamp strm, int flush)
                 ret = Z_OK;
         } else {
                 ret = Z_DATA_ERROR;
+        }
+
+        // Detect no-progress condition and return Z_BUF_ERROR if true.
+        if (ret == Z_OK) {
+                const unsigned int bytes_produced =
+                        original_avail_out - isal_strm_inflate->avail_out;
+                if (bytes_consumed_by_isal == 0 && bytes_produced == 0)
+                        ret = Z_BUF_ERROR;
         }
 
 #ifdef DEBUG
