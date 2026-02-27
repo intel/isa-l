@@ -144,7 +144,10 @@ main(int argc, char *argv[])
                 efence_buff2 = buff2 + size;
                 efence_buff3 = buff3 + size;
 
-                gf_vect_mul(TEST_SIZE - size, gf_const_tbl, efence_buff1, efence_buff2);
+                if (gf_vect_mul(TEST_SIZE - size, gf_const_tbl, efence_buff1, efence_buff2) != 0) {
+                        printf("fail creating efence_buff2 (len %d)\n", tsize);
+                        goto exit;
+                }
 
                 for (i = 0; i < TEST_SIZE - size; i++)
                         if (gf_mul(a, efence_buff1[i]) != efence_buff2[i]) {
