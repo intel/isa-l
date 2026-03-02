@@ -69,10 +69,10 @@ extern "C" {
 #define ISAL_MAJOR_VERSION 2
 #endif
 #ifndef ISAL_MINOR_VERSION
-#define ISAL_MINOR_VERSION 31
+#define ISAL_MINOR_VERSION 32
 #endif
 #ifndef ISAL_PATCH_VERSION
-#define ISAL_PATCH_VERSION 1
+#define ISAL_PATCH_VERSION 0
 #endif
 
 #ifndef ISAL_MAKE_VERSION

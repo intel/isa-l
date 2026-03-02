@@ -28,7 +28,7 @@ cmake_minimum_required(VERSION 3.12)
 cmake_policy(VERSION 3.12)
 
 project(ISA-L
-    VERSION 2.31.0
+    VERSION 2.32.0
     DESCRIPTION "Intel's ISA-L (Intelligent Storage Acceleration Library)"
     LANGUAGES C
 )
@@ -118,7 +118,7 @@ endif()
 
 # Library version (semantic versioning)
 set(LIBISAL_VERSION_MAJOR 2)
-set(LIBISAL_VERSION_MINOR 31)
+set(LIBISAL_VERSION_MINOR 32)
 set(LIBISAL_VERSION_PATCH 0)
 
 # Include CMake modules for each library component
