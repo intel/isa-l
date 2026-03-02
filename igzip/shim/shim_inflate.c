@@ -38,14 +38,18 @@ int
 inflateInit2_(z_streamp strm, int windowBits)
 {
         if (!strm) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: z_streamp is NULL\n");
+#endif
                 return Z_STREAM_ERROR;
         }
 
         struct inflate_state *isal_strm_inflate =
                 (struct inflate_state *) malloc(sizeof(struct inflate_state));
         if (!isal_strm_inflate) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: Memory allocation for inflate_state failed\n");
+#endif
                 return -1;
         }
 
@@ -64,7 +68,9 @@ inflateInit2_(z_streamp strm, int windowBits)
         inflate_state2 *s = (inflate_state2 *) malloc(sizeof(inflate_state2));
         if (!s) {
                 free(isal_strm_inflate);
+#ifdef DEBUG
                 fprintf(stderr, "Error: Memory allocation for inflate_state2 failed\n");
+#endif
                 return -1;
         }
 
@@ -77,7 +83,9 @@ inflateInit2_(z_streamp strm, int windowBits)
         // Valid ranges: 0 (default), 8-15 (standard), -8 to -15 (raw), 16-31 (gzip)
         if (windowBits != 0 &&
             (windowBits < -15 || (windowBits > -8 && windowBits < 8) || windowBits > 31)) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: Invalid windowBits value: %d\n", windowBits);
+#endif
                 free(s);
                 free(isal_strm_inflate);
                 return Z_STREAM_ERROR;
@@ -107,7 +115,9 @@ int
 inflateInit_(z_streamp strm)
 {
         if (!strm) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: z_streamp is NULL\n");
+#endif
                 return Z_STREAM_ERROR;
         }
 
@@ -118,19 +128,25 @@ int
 inflate(z_streamp strm, int flush)
 {
         if (!strm) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: z_streamp is NULL\n");
+#endif
                 return Z_STREAM_ERROR;
         }
 
         inflate_state2 *s = (inflate_state2 *) strm->state;
         if (!s) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: inflate_state2 is NULL\n");
+#endif
                 return Z_STREAM_ERROR;
         }
 
         struct inflate_state *isal_strm_inflate = s->isal_strm_inflate;
         if (!isal_strm_inflate) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: isal_strm_inflate is NULL\n");
+#endif
                 return Z_STREAM_ERROR;
         }
 
@@ -298,7 +314,9 @@ int
 inflateEnd(z_streamp strm)
 {
         if (!strm) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: z_streamp is NULL\n");
+#endif
                 return Z_STREAM_ERROR;
         }
 
@@ -401,19 +419,25 @@ int
 inflateReset(z_streamp strm)
 {
         if (!strm) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: z_streamp is NULL\n");
+#endif
                 return Z_STREAM_ERROR;
         }
 
         inflate_state2 *s = (inflate_state2 *) strm->state;
         if (!s) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: inflate_state2 is NULL\n");
+#endif
                 return Z_STREAM_ERROR;
         }
 
         struct inflate_state *isal_strm_inflate = s->isal_strm_inflate;
         if (!isal_strm_inflate) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: isal_strm_inflate is NULL\n");
+#endif
                 return Z_STREAM_ERROR;
         }
 

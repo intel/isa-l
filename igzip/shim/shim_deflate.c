@@ -39,7 +39,9 @@ int
 deflateInit2_(z_streamp strm, int level, int method, int windowBits, int memLevel, int strategy)
 {
         if (!strm) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: z_streamp is NULL\n");
+#endif
                 return -1;
         }
 
@@ -53,7 +55,9 @@ deflateInit2_(z_streamp strm, int level, int method, int windowBits, int memLeve
         struct isal_zstream *isal_strm =
                 (struct isal_zstream *) malloc(sizeof(struct isal_zstream));
         if (!isal_strm) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: Memory allocation for isal_zstream failed\n");
+#endif
                 return -1;
         }
 
@@ -79,21 +83,27 @@ deflateInit2_(z_streamp strm, int level, int method, int windowBits, int memLeve
                 isal_strm->level_buf = malloc(ISAL_DEF_LVL3_DEFAULT);
                 isal_strm->level_buf_size = ISAL_DEF_LVL3_DEFAULT;
         } else {
+#ifdef DEBUG
                 fprintf(stderr, "Error: Invalid compression level\n");
+#endif
                 free(isal_strm);
                 return -1;
         }
 
         if (!isal_strm->level_buf) {
                 free(isal_strm);
+#ifdef DEBUG
                 fprintf(stderr, "Error: Memory allocation for level_buf failed\n");
+#endif
                 return -1;
         }
         deflate_state *s = (deflate_state *) malloc(sizeof(deflate_state));
         if (!s) {
                 free(isal_strm->level_buf);
                 free(isal_strm);
+#ifdef DEBUG
                 fprintf(stderr, "Error: Memory allocation for deflate_state failed\n");
+#endif
                 return -1;
         }
 
@@ -106,10 +116,12 @@ deflateInit2_(z_streamp strm, int level, int method, int windowBits, int memLeve
         s->input_size = 0;     /* Initialize input size */
 
         // Sanity checks on windowBits
-        // Valid ranges: 0 (default), 8-15 (standard), -8 to -15 (raw), 16+ (gzip)
+        // Valid ranges: 0 (default), 8-15 (standard), -8 to -15 (raw), 16-31 (gzip)
         if (windowBits != 0 &&
             (windowBits < -15 || (windowBits > -8 && windowBits < 8) || windowBits > 31)) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: Invalid windowBits value: %d\n", windowBits);
+#endif
                 free(s);
                 free(isal_strm->level_buf);
                 free(isal_strm);
@@ -140,7 +152,9 @@ int
 deflateInit_(z_streamp strm, int level)
 {
         if (!strm) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: z_streamp is NULL\n");
+#endif
                 return -1;
         }
 
@@ -153,19 +167,25 @@ deflate(z_streamp strm, int flush)
         int ret;
 
         if (!strm) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: z_streamp is NULL\n");
+#endif
                 return -1;
         }
 
         deflate_state *s = (deflate_state *) strm->state;
         if (!s) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: deflate_state is NULL\n");
+#endif
                 return -1;
         }
 
         struct isal_zstream *isal_strm = s->isal_strm;
         if (!isal_strm) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: deflate isal_strm is NULL\n");
+#endif
                 return -1;
         }
 
@@ -282,7 +302,9 @@ deflate(z_streamp strm, int flush)
                 isal_strm->end_of_stream = 1;
                 break;
         default:
+#ifdef DEBUG
                 fprintf(stderr, "Error: Invalid flush value\n");
+#endif
                 return -1;
         }
 
@@ -392,7 +414,9 @@ int
 deflateEnd(z_streamp strm)
 {
         if (!strm) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: z_streamp is NULL\n");
+#endif
                 return -1;
         }
 
@@ -432,19 +456,25 @@ int
 deflateSetHeader(z_streamp strm, void *head)
 {
         if (!strm) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: z_streamp is NULL\n");
+#endif
                 return Z_STREAM_ERROR;
         }
 
         deflate_state *s = (deflate_state *) strm->state;
         if (!s) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: deflate_state is NULL\n");
+#endif
                 return Z_STREAM_ERROR;
         }
 
         // Check mode (windowBits > 15)
         if (s->w_bits <= 15) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: deflateSetHeader requires gzip format (windowBits > 15)\n");
+#endif
                 return Z_STREAM_ERROR;
         }
 
@@ -466,7 +496,9 @@ deflateSetHeader(z_streamp strm, void *head)
         // Allocate and copy gz_header structure
         s->gz_header = (gz_headerp) malloc(sizeof(gz_header));
         if (!s->gz_header) {
+#ifdef DEBUG
                 fprintf(stderr, "Error: Memory allocation for gz_header failed\n");
+#endif
                 return Z_MEM_ERROR;
         }
 
