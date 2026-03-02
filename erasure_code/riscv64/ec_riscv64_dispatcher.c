@@ -57,6 +57,7 @@
 **********************************************************************/
 
 #include "riscv64_multibinary.h"
+#include "gf_vect_mul.h"
 
 extern void
 gf_vect_dot_prod_rvv(int len, int vlen, unsigned char *gftbls, unsigned char **src,
