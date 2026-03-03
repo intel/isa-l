@@ -215,9 +215,6 @@ section .text
 	cmp	vec_i, vec
 	jl	%%next_vect
 
-        mov     ptr, [dest1]			;reuse ptr
-        mov     tmp, [dest1 + 5*8]		;reuse tmp
-
 %if %0 == 1
 	vmovdqu8 [dest1 + pos]{%%KMASK}, xp1
 	vmovdqu8 [dest2 + pos]{%%KMASK}, xp2
