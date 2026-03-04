@@ -52,7 +52,7 @@ x86_64:
 
 aarch64:
 * Assembler: gas v2.24 or later.
-* Compiler: gcc v4.7 or later.
+* Compiler: gcc v10.1 or later.
 
 RISC-V 64:
 * Portable base functions:
