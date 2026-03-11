@@ -43,6 +43,7 @@
 ;       URL: http://www.intel.com/content/dam/www/public/us/en/documents/white-papers/fast-crc-computation-generic-polynomials-pclmulqdq-paper.pdf
 
 %include "reg_sizes.asm"
+%include "crc.inc"
 
 %ifndef fetch_dist
 %define	fetch_dist	4096
@@ -82,6 +83,7 @@ align 16
 mk_global 	crc16_t10dif_01, function
 crc16_t10dif_01:
 	endbranch
+	lea	r10, [rel crc16_t10dif_const]
 
 	; adjust the 16-bit initial_crc value, scale it to 32 bits
 	shl	arg1_low32, 16
@@ -116,7 +118,7 @@ crc16_t10dif_01:
 	; because data will be byte-reflected and will align with initial crc at correct place.
 	pslldq	xmm10, 12
 
-	movdqa xmm11, [SHUF_MASK]
+	movdqa xmm11, [bswap_shuf_mask]
 	; receive the initial 128B data, xor the initial crc value
 	movdqu	xmm0, [arg2+16*0]
 	movdqu	xmm1, [arg2+16*1]
@@ -138,7 +140,7 @@ crc16_t10dif_01:
 	pshufb	xmm6, xmm11
 	pshufb	xmm7, xmm11
 
-	movdqa	xmm10, [rk3]	;xmm10 has rk3 and rk4
+	movdqa	xmm10, [r10 + crc_fold_const_fold_8x128b]	;xmm10 has rk3 and rk4
 					;imm value of pclmulqdq instruction will determine which constant to use
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	; we subtract 256 instead of 128 to save one instruction from the loop
@@ -304,49 +306,49 @@ _fold_128_B_loop:
 	; at this point, the buffer pointer is pointing at the last y Bytes of the buffer
 	; fold the 8 xmm registers to 1 xmm register with different constants
 
-	movdqa	xmm10, [rk9]
+	movdqa	xmm10, [r10 + crc_fold_const_fold_7x128b]
 	movdqa	xmm8, xmm0
 	pclmulqdq	xmm0, xmm10, 0x11
 	pclmulqdq	xmm8, xmm10, 0x0
 	pxor	xmm7, xmm8
 	xorps	xmm7, xmm0
 
-	movdqa	xmm10, [rk11]
+	movdqa	xmm10, [r10 + crc_fold_const_fold_6x128b]
 	movdqa	xmm8, xmm1
 	pclmulqdq	xmm1, xmm10, 0x11
 	pclmulqdq	xmm8, xmm10, 0x0
 	pxor	xmm7, xmm8
 	xorps	xmm7, xmm1
 
-	movdqa	xmm10, [rk13]
+	movdqa	xmm10, [r10 + crc_fold_const_fold_5x128b]
 	movdqa	xmm8, xmm2
 	pclmulqdq	xmm2, xmm10, 0x11
 	pclmulqdq	xmm8, xmm10, 0x0
 	pxor	xmm7, xmm8
 	pxor	xmm7, xmm2
 
-	movdqa	xmm10, [rk15]
+	movdqa	xmm10, [r10 + crc_fold_const_fold_4x128b]
 	movdqa	xmm8, xmm3
 	pclmulqdq	xmm3, xmm10, 0x11
 	pclmulqdq	xmm8, xmm10, 0x0
 	pxor	xmm7, xmm8
 	xorps	xmm7, xmm3
 
-	movdqa	xmm10, [rk17]
+	movdqa	xmm10, [r10 + crc_fold_const_fold_3x128b]
 	movdqa	xmm8, xmm4
 	pclmulqdq	xmm4, xmm10, 0x11
 	pclmulqdq	xmm8, xmm10, 0x0
 	pxor	xmm7, xmm8
 	pxor	xmm7, xmm4
 
-	movdqa	xmm10, [rk19]
+	movdqa	xmm10, [r10 + crc_fold_const_fold_2x128b]
 	movdqa	xmm8, xmm5
 	pclmulqdq	xmm5, xmm10, 0x11
 	pclmulqdq	xmm8, xmm10, 0x0
 	pxor	xmm7, xmm8
 	xorps	xmm7, xmm5
 
-	movdqa	xmm10, [rk1]	;xmm10 has rk1 and rk2
+	movdqa	xmm10, [r10 + crc_fold_const_fold_1x128b]	;xmm10 has rk1 and rk2
 				;imm value of pclmulqdq instruction will determine which constant to use
 	movdqa	xmm8, xmm6
 	pclmulqdq	xmm6, xmm10, 0x11
@@ -399,7 +401,7 @@ _get_last_two_xmms:
 
 	; get rid of the extra data that was loaded before
 	; load the shift constant
-	lea	rax, [pshufb_shf_table + 16]
+	lea	rax, [rel shf_table_refl + 16]
 	sub	rax, arg3
 	movdqu	xmm0, [rax]
 
@@ -407,7 +409,7 @@ _get_last_two_xmms:
 	pshufb	xmm2, xmm0
 
 	; shift xmm7 to the right by 16-arg3 bytes
-	pxor	xmm0, [mask1]
+	pxor	xmm0, [rel shf_xor_mask]
 	pshufb	xmm7, xmm0
 	pblendvb	xmm1, xmm2	;xmm0 is implicit
 
@@ -421,7 +423,7 @@ _get_last_two_xmms:
 
 _128_done:
 	; compute crc of a 128-bit value
-	movdqa	xmm10, [rk5]	; rk5 and rk6 in xmm10
+	movdqa	xmm10, [r10 + crc_fold_const_fold_128b_to_64b]	; rk5 and rk6 in xmm10
 	movdqa	xmm0, xmm7
 
 	;64b fold
@@ -432,7 +434,7 @@ _128_done:
 	;32b fold
 	movdqa	xmm0, xmm7
 
-	pand	xmm0, [mask2]
+	pand	xmm0, [hi32_clr_mask]
 
 	psrldq	xmm7, 12
 	pclmulqdq	xmm7, xmm10, 0x10
@@ -440,7 +442,7 @@ _128_done:
 
 	;barrett reduction
 _barrett:
-	movdqa	xmm10, [rk7]	; rk7 and rk8 in xmm10
+	movdqa	xmm10, [r10 + crc_fold_const_barrett]	; rk7 and rk8 in xmm10
 	movdqa	xmm0, xmm7
 	pclmulqdq	xmm7, xmm10, 0x01
 	pslldq	xmm7, 4
@@ -478,10 +480,10 @@ _less_than_256:
 	; check if there is enough buffer to be able to fold 16B at a time
 	cmp	arg3, 32
 	jl	_less_than_32
-	movdqa xmm11, [SHUF_MASK]
+	movdqa xmm11, [bswap_shuf_mask]
 
 	; if there is, load the constants
-	movdqa	xmm10, [rk1]	; rk1 and rk2 in xmm10
+	movdqa	xmm10, [r10 + crc_fold_const_fold_1x128b]	; rk1 and rk2 in xmm10
 
 	movd	xmm0, arg1_low32	; get the initial crc value
 	pslldq	xmm0, 12	; align it to its correct place
@@ -506,7 +508,7 @@ _less_than_32:
 	test	arg3, arg3
 	je	_cleanup
 
-	movdqa xmm11, [SHUF_MASK]
+	movdqa xmm11, [bswap_shuf_mask]
 
 	movd	xmm0, arg1_low32	; get the initial crc value
 	pslldq	xmm0, 12	; align it to its correct place
@@ -520,7 +522,7 @@ _less_than_32:
 	pxor	xmm7, xmm0	; xor the initial crc value
 	add	arg2, 16
 	sub	arg3, 16
-	movdqa	xmm10, [rk1]	; rk1 and rk2 in xmm10
+	movdqa	xmm10, [r10 + crc_fold_const_fold_1x128b]	; rk1 and rk2 in xmm10
 	jmp	_get_last_two_xmms
 
 
@@ -580,10 +582,10 @@ _zero_left:
 	pshufb	xmm7, xmm11
 	pxor	xmm7, xmm0	; xor the initial crc value
 
-	lea	rax, [pshufb_shf_table + 16]
+	lea	rax, [rel shf_table_refl + 16]
 	sub	rax, r9
 	movdqu	xmm0, [rax]
-	pxor	xmm0, [mask1]
+	pxor	xmm0, [rel shf_xor_mask]
 
 	pshufb	xmm7, xmm0
 	jmp	_128_done
@@ -649,95 +651,4 @@ _only_less_than_2:
 
 	jmp	_barrett
 
-section .data
-
-; precomputed constants
-; these constants are precomputed from the poly: 0x8bb70000 (0x8bb7 scaled to 32 bits)
-align 16
-; Q = 0x18BB70000
-; rk1 = 2^(32*3) mod Q << 32
-; rk2 = 2^(32*5) mod Q << 32
-; rk3 = 2^(32*15) mod Q << 32
-; rk4 = 2^(32*17) mod Q << 32
-; rk5 = 2^(32*3) mod Q << 32
-; rk6 = 2^(32*2) mod Q << 32
-; rk7 = floor(2^64/Q)
-; rk8 = Q
-rk1:
-DQ 0x2d56000000000000
-rk2:
-DQ 0x06df000000000000
-rk3:
-DQ 0x9d9d000000000000
-rk4:
-DQ 0x7cf5000000000000
-rk5:
-DQ 0x2d56000000000000
-rk6:
-DQ 0x1368000000000000
-rk7:
-DQ 0x00000001f65a57f8
-rk8:
-DQ 0x000000018bb70000
-
-rk9:
-DQ 0xceae000000000000
-rk10:
-DQ 0xbfd6000000000000
-rk11:
-DQ 0x1e16000000000000
-rk12:
-DQ 0x713c000000000000
-rk13:
-DQ 0xf7f9000000000000
-rk14:
-DQ 0x80a6000000000000
-rk15:
-DQ 0x044c000000000000
-rk16:
-DQ 0xe658000000000000
-rk17:
-DQ 0xad18000000000000
-rk18:
-DQ 0xa497000000000000
-rk19:
-DQ 0x6ee3000000000000
-rk20:
-DQ 0xe7b5000000000000
-
-
-
-
-
-
-
-
-
-mask1:
-dq 0x8080808080808080, 0x8080808080808080
-mask2:
-dq 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF
-
-SHUF_MASK:
-dq 0x08090A0B0C0D0E0F, 0x0001020304050607
-
-pshufb_shf_table:
-; use these values for shift constants for the pshufb instruction
-; different alignments result in values as shown:
-;	dq 0x8887868584838281, 0x008f8e8d8c8b8a89 ; shl 15 (16-1) / shr1
-;	dq 0x8988878685848382, 0x01008f8e8d8c8b8a ; shl 14 (16-3) / shr2
-;	dq 0x8a89888786858483, 0x0201008f8e8d8c8b ; shl 13 (16-4) / shr3
-;	dq 0x8b8a898887868584, 0x030201008f8e8d8c ; shl 12 (16-4) / shr4
-;	dq 0x8c8b8a8988878685, 0x04030201008f8e8d ; shl 11 (16-5) / shr5
-;	dq 0x8d8c8b8a89888786, 0x0504030201008f8e ; shl 10 (16-6) / shr6
-;	dq 0x8e8d8c8b8a898887, 0x060504030201008f ; shl 9  (16-7) / shr7
-;	dq 0x8f8e8d8c8b8a8988, 0x0706050403020100 ; shl 8  (16-8) / shr8
-;	dq 0x008f8e8d8c8b8a89, 0x0807060504030201 ; shl 7  (16-9) / shr9
-;	dq 0x01008f8e8d8c8b8a, 0x0908070605040302 ; shl 6  (16-10) / shr10
-;	dq 0x0201008f8e8d8c8b, 0x0a09080706050403 ; shl 5  (16-11) / shr11
-;	dq 0x030201008f8e8d8c, 0x0b0a090807060504 ; shl 4  (16-12) / shr12
-;	dq 0x04030201008f8e8d, 0x0c0b0a0908070605 ; shl 3  (16-13) / shr13
-;	dq 0x0504030201008f8e, 0x0d0c0b0a09080706 ; shl 2  (16-14) / shr14
-;	dq 0x060504030201008f, 0x0e0d0c0b0a090807 ; shl 1  (16-15) / shr15
-dq 0x8786858483828100, 0x8f8e8d8c8b8a8988
-dq 0x0706050403020100, 0x000e0d0c0b0a0908
+%include "crc_const_extern.asm"
