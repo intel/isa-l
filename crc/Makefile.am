@@ -38,6 +38,7 @@ lsrc_base_aliases += crc/crc_base_aliases.c
 lsrc_ppc64le      += crc/crc_base_aliases.c
 
 lsrc_x86_64 += \
+	crc/crc_const.asm \
 	crc/crc16_t10dif_01.asm \
 	crc/crc16_t10dif_avx2.asm \
 	crc/crc16_t10dif_by16_10.asm \
@@ -82,7 +83,8 @@ src_include += -I $(srcdir)/crc
 extern_hdrs +=  include/crc.h include/crc64.h
 
 other_src   +=  include/reg_sizes.asm include/test.h \
-		crc/crc_ref.h crc/crc64_ref.h
+		crc/crc_ref.h crc/crc64_ref.h \
+	crc/crc_const_extern.asm
 
 check_tests +=  crc/crc16_t10dif_test \
 		crc/crc16_t10dif_copy_test \

@@ -50,6 +50,7 @@
 ;       http://www.ietf.org/rfc/rfc1952.txt
 
 %include "reg_sizes.asm"
+%include "include/crc.inc"
 
 %ifndef FUNCTION_NAME
 %define FUNCTION_NAME crc32_gzip_refl_by16_10
@@ -89,6 +90,7 @@ FUNCTION_NAME:
 	endbranch
 
 	not		arg1_low32
+	lea		r10, [rel crc32_gzip_refl_const]
 
 %ifidn __OUTPUT_FORMAT__, win64
 	sub		rsp, (16*10 + 8)
@@ -117,7 +119,7 @@ FUNCTION_NAME:
 	vmovdqu8	zmm0, [arg2+16*0]
 	vmovdqu8	zmm4, [arg2+16*4]
 	vpxorq		zmm0, zmm10
-	vbroadcasti32x4	zmm10, [rk3]	;xmm10 has rk3 and rk4
+	vbroadcasti32x4	zmm10, [r10 + crc_fold_const_fold_8x128b]	;xmm10 has rk3 and rk4
 					;imm value of pclmulqdq instruction will determine which constant to use
 
 	sub		arg3, 256
@@ -126,7 +128,7 @@ FUNCTION_NAME:
 
 	vmovdqu8	zmm7, [arg2+16*8]
 	vmovdqu8	zmm8, [arg2+16*12]
-	vbroadcasti32x4 zmm16, [rk_1]	;zmm16 has rk-1 and rk-2
+	vbroadcasti32x4 zmm16, [r10 + crc_fold_const_fold_16x128b]	;zmm16 has rk-1 and rk-2
 	sub		arg3, 256
 
 %if fetch_dist != 0
@@ -232,7 +234,7 @@ align 16
         cmp             arg3, -64
         jl              .fold_128_B_register
 
-        vbroadcasti32x4 zmm10, [rk15]
+        vbroadcasti32x4 zmm10, [r10 + crc_fold_const_fold_4x128b]
         ;; If there are still 64 bytes left, folds from 128 bytes to 64 bytes
         ;; and handles the next 64 bytes
         vpclmulqdq      zmm2, zmm0, zmm10, 0x10
@@ -245,15 +247,15 @@ align 16
 align 16
 .fold_128_B_register:
 	; fold the 8 128b parts into 1 xmm register with different constants
-	vmovdqu8	zmm16, [rk9]		; multiply by rk9-rk16
-	vmovdqu8	zmm11, [rk17]		; multiply by rk17-rk20, rk1,rk2, 0,0
+	vmovdqu8	zmm16, [r10 + crc_fold_const_fold_7x128b]		; multiply by rk9-rk16
+	vmovdqu8	zmm11, [r10 + crc_fold_const_fold_3x128b]		; multiply by rk17-rk20, rk1,rk2, 0,0
 	vpclmulqdq	zmm1, zmm0, zmm16, 0x01
 	vpclmulqdq	zmm2, zmm0, zmm16, 0x10
 	vextracti64x2	xmm7, zmm4, 3		; save last that has no multiplicand
 
 	vpclmulqdq	zmm5, zmm4, zmm11, 0x01
 	vpclmulqdq	zmm6, zmm4, zmm11, 0x10
-	vmovdqa		xmm10, [rk1]		; Needed later in reduction loop
+	vmovdqa		xmm10, [r10 + crc_fold_const_fold_1x128b]		; Needed later in reduction loop
 	vpternlogq	zmm1, zmm2, zmm5, 0x96	; xor ABC
 	vpternlogq	zmm1, zmm6, zmm7, 0x96	; xor ABC
 
@@ -304,12 +306,12 @@ align 16
 
 	; get rid of the extra data that was loaded before
 	; load the shift constant
-	lea		rax, [rel pshufb_shf_table]
+	lea		rax, [rel shf_table_refl]
 	add		rax, arg3
 	vmovdqu		xmm0, [rax]
 
 	vpshufb		xmm7, xmm0
-	vpxor		xmm0, [mask3]
+	vpxor		xmm0, [rel shf_xor_mask]
 	vpshufb		xmm2, xmm0
 
 	vpblendvb	xmm2, xmm2, xmm1, xmm0
@@ -321,7 +323,7 @@ align 16
 align 16
 .128_done:
 	; compute crc of a 128-bit value
-	vmovdqa		xmm10, [rk5]
+	vmovdqa		xmm10, [r10 + crc_fold_const_fold_128b_to_64b]
 	vmovdqa		xmm0, xmm7
 
 	;64b fold
@@ -339,13 +341,13 @@ align 16
 	;barrett reduction
 align 16
 .barrett:
-	vpand		xmm7, [mask2]
+	vpand		xmm7, [lo32_clr_mask]
 	vmovdqa		xmm1, xmm7
 	vmovdqa		xmm2, xmm7
-	vmovdqa		xmm10, [rk7]
+	vmovdqa		xmm10, [r10 + crc_fold_const_barrett]
 
 	vpclmulqdq	xmm7, xmm10, 0
-        vpternlogq      xmm7, xmm2, [mask], 0x28
+        vpternlogq      xmm7, xmm2, [hi64_mask], 0x28
 	vmovdqa		xmm2, xmm7
 	vpclmulqdq	xmm7, xmm10, 0x10
         vpternlogq      xmm7, xmm2, xmm1, 0x96
@@ -399,7 +401,7 @@ align 16
         cmp             arg3, 64
         jb              .reduce_64B
 
-        vbroadcasti32x4 zmm10, [rk15]
+        vbroadcasti32x4 zmm10, [r10 + crc_fold_const_fold_4x128b]
 
 align 16
 .fold_64B_loop:
@@ -417,13 +419,13 @@ align 16
 align 16
 .reduce_64B:
         ; Reduce from 64 bytes to 16 bytes
-	vmovdqu8	zmm11, [rk17]
+	vmovdqu8	zmm11, [r10 + crc_fold_const_fold_3x128b]
 	vpclmulqdq	zmm1, zmm0, zmm11, 0x01
 	vpclmulqdq	zmm2, zmm0, zmm11, 0x10
 	vextracti64x2	xmm7, zmm0, 3		; save last that has no multiplicand
         vpternlogq      zmm1, zmm2, zmm7, 0x96
 
-	vmovdqa		xmm10, [rk_1b] ; Needed later in reduction loop
+	vmovdqa		xmm10, [r10 + crc_fold_const_fold_1x128b_b] ; Needed later in reduction loop
 
 	vshufi64x2      zmm8, zmm1, zmm1, 0x4e ; Swap 1,0,3,2 - 01 00 11 10
 	vpxorq          ymm8, ymm8, ymm1
@@ -437,7 +439,7 @@ align 16
 align 16
 .less_than_64:
 	;; if there is, load the constants
-	vmovdqa	xmm10, [rk_1b]
+	vmovdqa	xmm10, [r10 + crc_fold_const_fold_1x128b_b]
 
 	vmovdqu	xmm7, [arg2]		; load the plaintext
 	vpxor	xmm7, xmm1              ; xmm1 already has initial crc value
@@ -468,15 +470,15 @@ align 16
 	vpxor	xmm7, xmm0		; xor the initial crc value
 	add	arg2, 16
 	sub	arg3, 16
-	vmovdqa	xmm10, [rk1]		; rk1 and rk2 in xmm10
+	vmovdqa	xmm10, [r10 + crc_fold_const_fold_1x128b]		; rk1 and rk2 in xmm10
 	jmp	.get_last_two_xmms
 
 align 16
 .less_than_16_left:
-        xor     r10, r10
-        bts     r10, arg3
-        dec     r10
-        kmovw   k2, r10d
+        xor     rax, rax
+        bts     rax, arg3
+        dec     rax
+        kmovw   k2, eax
         vmovdqu8 xmm7{k2}{z}, [arg2]
 
 	vpxor	xmm7, xmm0	; xor the initial crc value
@@ -484,7 +486,7 @@ align 16
 	cmp	arg3, 4
 	jb	.only_less_than_4
 
-	lea	rax, [rel pshufb_shf_table]
+	lea	rax, [rel shf_table_refl]
 	vmovdqu	xmm0, [rax + arg3]
 	vpshufb	xmm7,xmm0
 	jmp	.128_done
@@ -497,75 +499,9 @@ align 16
 
 align 16
 .only_less_than_4:
-        lea     r11, [rel pshufb_shift_table]
+        lea     r11, [rel tail_shuf_refl]
         vmovdqu	xmm0, [r11 + arg3]
         vpshufb	xmm7, xmm0
         jmp	.barrett
 
-section .data
-align 32
-
-%ifndef USE_CONSTS
-; precomputed constants
-rk_1: dq 0x00000000e95c1271
-rk_2: dq 0x00000000ce3371cb
-rk1:  dq 0x00000000ccaa009e
-rk2:  dq 0x00000001751997d0
-rk3:  dq 0x000000014a7fe880
-rk4:  dq 0x00000001e88ef372
-rk5:  dq 0x00000000ccaa009e
-rk6:  dq 0x0000000163cd6124
-rk7:  dq 0x00000001f7011640
-rk8:  dq 0x00000001db710640
-rk9:  dq 0x00000001d7cfc6ac
-rk10: dq 0x00000001ea89367e
-rk11: dq 0x000000018cb44e58
-rk12: dq 0x00000000df068dc2
-rk13: dq 0x00000000ae0b5394
-rk14: dq 0x00000001c7569e54
-rk15: dq 0x00000001c6e41596
-rk16: dq 0x0000000154442bd4
-rk17: dq 0x0000000174359406
-rk18: dq 0x000000003db1ecdc
-rk19: dq 0x000000015a546366
-rk20: dq 0x00000000f1da05aa
-
-rk_1b: dq 0x00000000ccaa009e
-rk_2b: dq 0x00000001751997d0
-	dq 0x0000000000000000
-	dq 0x0000000000000000
-%else
-INCLUDE_CONSTS
-%endif
-
-pshufb_shf_table:
-; use these values for shift constants for the pshufb instruction
-; different alignments result in values as shown:
-;       dq 0x8887868584838281, 0x008f8e8d8c8b8a89 ; shl 15 (16-1) / shr1
-;       dq 0x8988878685848382, 0x01008f8e8d8c8b8a ; shl 14 (16-3) / shr2
-;       dq 0x8a89888786858483, 0x0201008f8e8d8c8b ; shl 13 (16-4) / shr3
-;       dq 0x8b8a898887868584, 0x030201008f8e8d8c ; shl 12 (16-4) / shr4
-;       dq 0x8c8b8a8988878685, 0x04030201008f8e8d ; shl 11 (16-5) / shr5
-;       dq 0x8d8c8b8a89888786, 0x0504030201008f8e ; shl 10 (16-6) / shr6
-;       dq 0x8e8d8c8b8a898887, 0x060504030201008f ; shl 9  (16-7) / shr7
-;       dq 0x8f8e8d8c8b8a8988, 0x0706050403020100 ; shl 8  (16-8) / shr8
-;       dq 0x008f8e8d8c8b8a89, 0x0807060504030201 ; shl 7  (16-9) / shr9
-;       dq 0x01008f8e8d8c8b8a, 0x0908070605040302 ; shl 6  (16-10) / shr10
-;       dq 0x0201008f8e8d8c8b, 0x0a09080706050403 ; shl 5  (16-11) / shr11
-;       dq 0x030201008f8e8d8c, 0x0b0a090807060504 ; shl 4  (16-12) / shr12
-;       dq 0x04030201008f8e8d, 0x0c0b0a0908070605 ; shl 3  (16-13) / shr13
-;       dq 0x0504030201008f8e, 0x0d0c0b0a09080706 ; shl 2  (16-14) / shr14
-;       dq 0x060504030201008f, 0x0e0d0c0b0a090807 ; shl 1  (16-15) / shr15
-dq 0x8786858483828100, 0x8f8e8d8c8b8a8988
-dq 0x0706050403020100, 0x000e0d0c0b0a0908
-
-align 16
-pshufb_shift_table:
-        ;; use these values to shift data for the pshufb instruction
-        db 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-        db 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
-        db 0x08, 0x09, 0x0A
-
-mask:  dq     0xFFFFFFFFFFFFFFFF, 0x0000000000000000
-mask2: dq     0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF
-mask3: dq     0x8080808080808080, 0x8080808080808080
+%include "crc_const_extern.asm"

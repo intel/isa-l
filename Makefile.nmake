@@ -133,6 +133,7 @@ objs = \
 	bin\pq_gen_avx512.obj \
 	bin\pq_gen_avx512_gfni.obj \
 	bin\raid_multibinary.obj \
+	bin\crc_const.obj \
 	bin\crc16_t10dif_01.obj \
 	bin\crc16_t10dif_avx2.obj \
 	bin\crc16_t10dif_by16_10.obj \
