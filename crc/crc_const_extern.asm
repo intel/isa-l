@@ -49,6 +49,9 @@ extern crc32_iscsi_const
 ; CRC-16 T10 DIF
 extern crc16_t10dif_const
 
+; CRC-16 T10 DIF copy variant
+extern crc16_t10dif_copy_const
+
 ; Utility masks and shuffle tables
 extern hi64_mask
 extern shf_xor_mask
