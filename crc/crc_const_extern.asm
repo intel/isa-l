@@ -43,6 +43,9 @@ extern crc32_gzip_refl_const
 ; CRC-32 IEEE 802.3
 extern crc32_ieee_const
 
+; CRC-32C iSCSI
+extern crc32_iscsi_const
+
 ; Utility masks and shuffle tables
 extern hi64_mask
 extern shf_xor_mask
