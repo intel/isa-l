@@ -27,49 +27,7 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%define FUNCTION_NAME crc64_ecma_refl_by8
-%define USE_CONSTS
-%macro INCLUDE_CONSTS 0
-rk1 :
-DQ 0xdabe95afc7875f40
-rk2 :
-DQ 0xe05dd497ca393ae4
-rk3 :
-DQ 0xd7d86b2af73de740
-rk4 :
-DQ 0x8757d71d4fcc1000
-rk5 :
-DQ 0xdabe95afc7875f40
-rk6 :
-DQ 0x0000000000000000
-rk7 :
-DQ 0x9c3e466c172963d5
-rk8 :
-DQ 0x92d8af2baf0e1e84
-rk9 :
-DQ 0x947874de595052cb
-rk10 :
-DQ 0x9e735cb59b4724da
-rk11 :
-DQ 0xe4ce2cd55fea0037
-rk12 :
-DQ 0x2fe3fd2920ce82ec
-rk13 :
-DQ 0x0e31d519421a63a5
-rk14 :
-DQ 0x2e30203212cac325
-rk15 :
-DQ 0x081f6054a7842df4
-rk16 :
-DQ 0x6ae3efbb9dd441f3
-rk17 :
-DQ 0x69a35d91c3730254
-rk18 :
-DQ 0xb5ea1af9c013aca4
-rk19 :
-DQ 0x3be653a30fe1af51
-rk20 :
-DQ 0x60095b008a9efa44
-%endm
 
+%define FUNCTION_NAME crc64_ecma_refl_by8
+%define CONST_LABEL crc64_ecma_refl_const
 %include "crc64_iso_refl_by8.asm"

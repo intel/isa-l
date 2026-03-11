@@ -28,48 +28,5 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %define FUNCTION_NAME crc64_jones_norm_by8
-%define USE_CONSTS
-%macro INCLUDE_CONSTS 0
-rk1:
-DQ 0x4445ed2750017038
-rk2:
-DQ 0x698b74157cfbd736
-rk3:
-DQ 0x0cfcfb5101c4b775
-rk4:
-DQ 0x65403fd47cbec866
-rk5:
-DQ 0x4445ed2750017038
-rk6:
-DQ 0x0000000000000000
-rk7:
-DQ 0xddf3eeb298be6cf8
-rk8:
-DQ 0xad93d23594c935a9
-rk9:
-DQ 0xd8dc208e2ba527b4
-rk10:
-DQ 0xf032cfec76bb2bc5
-rk11:
-DQ 0xb536044f357f4238
-rk12:
-DQ 0xfdbf104d938ba67a
-rk13:
-DQ 0xeeddad9297a843e7
-rk14:
-DQ 0x3550bce629466473
-rk15:
-DQ 0x4e501e58ca43d25e
-rk16:
-DQ 0x13c961588f27f643
-rk17:
-DQ 0x3b60d00dcb1099bc
-rk18:
-DQ 0x44bf1f468c53b9a3
-rk19:
-DQ 0x96f2236e317179ee
-rk20:
-DQ 0xf00839aa0dd64bac
-%endm
-
+%define CONST_LABEL crc64_jones_norm_const
 %include "crc64_iso_norm_by8.asm"

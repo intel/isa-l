@@ -35,8 +35,12 @@
 ;       );
 ;
 %include "reg_sizes.asm"
+%include "crc.inc"
 %include "memcpy.asm"
 
+%ifndef CONST_LABEL
+%define CONST_LABEL crc64_iso_norm_const
+%endif
 %ifndef FUNCTION_NAME
 %define FUNCTION_NAME crc64_iso_norm_avx2
 %endif
@@ -72,6 +76,7 @@ align 16
 mk_global 	FUNCTION_NAME, function
 FUNCTION_NAME:
 	endbranch
+        lea     r10, [rel CONST_LABEL]
 	not	init_crc
 
 %ifidn __OUTPUT_FORMAT__, win64
@@ -88,7 +93,7 @@ FUNCTION_NAME:
 		vmovdqa  [rsp + 16*8], xmm14
 		vmovdqa  [rsp + 16*9], xmm15
 %endif
-	vbroadcasti128 ymm11, [SHUF_MASK]
+	vbroadcasti128 ymm11, [bswap_shuf_mask]
 	; check if smaller than 256
 	cmp	buf_len, 256
 	; for sizes less than 256, we can't fold 128B at a time...
@@ -113,7 +118,7 @@ FUNCTION_NAME:
     vpshufb ymm2, ymm11
     vpshufb ymm3, ymm11
 
-	vbroadcasti128	ymm10, [rk3]	; ymm10 has rk3 and rk4
+	vbroadcasti128	ymm10, [r10 + crc_fold_const_fold_8x128b]	; ymm10 has rk3 and rk4
 
 	sub	buf_len, 256
 	cmp	buf_len, 256
@@ -129,7 +134,7 @@ FUNCTION_NAME:
     vpshufb ymm12, ymm11
     vpshufb ymm13, ymm11
 
-	vbroadcasti128	ymm15, [rk_1]	; ymm15 has rk_1 and rk_2
+	vbroadcasti128	ymm15, [r10 + crc_fold_const_fold_16x128b]	; ymm15 has rk_1 and rk_2
 	sub	buf_len, 256
 
 %if fetch_dist != 0
@@ -344,24 +349,24 @@ _fold_less_than_128_B:
 	vextracti128	xmm7, ymm3, 1
 
 	; fold the rest of the data in the ymm registers into xmm7
-	vmovdqu	ymm10, [rk9]
+	vmovdqu	ymm10, [r10 + crc_fold_const_fold_7x128b]
 	vpclmulqdq	ymm4, ymm0, ymm10, 0x0
 	vpclmulqdq	ymm12, ymm0, ymm10, 0x11
 	vpxor	ymm12, ymm4 ; use ymm12 to accumulate all products
 
-	vmovdqu	ymm10, [rk13]
+	vmovdqu	ymm10, [r10 + crc_fold_const_fold_5x128b]
 	vpclmulqdq	ymm4, ymm1, ymm10, 0x0
 	vpclmulqdq	ymm5, ymm1, ymm10, 0x11
 	vpxor	ymm12, ymm4
 	vpxor	ymm12, ymm5
 
-	vmovdqu	ymm10, [rk17]
+	vmovdqu	ymm10, [r10 + crc_fold_const_fold_3x128b]
 	vpclmulqdq	ymm4, ymm2, ymm10, 0x0
 	vpclmulqdq	ymm5, ymm2, ymm10, 0x11
 	vpxor	ymm12, ymm4
 	vpxor	ymm12, ymm5
 
-	vmovdqa	xmm10, [rk1]
+	vmovdqa	xmm10, [r10 + crc_fold_const_fold_1x128b]
 	vpclmulqdq	xmm4, xmm3, xmm10, 0x0
 	vpclmulqdq	xmm5, xmm3, xmm10, 0x11
 	vpxor	ymm12, ymm4
@@ -414,7 +419,7 @@ _get_last_two_xmms:
 
 	; get rid of the extra data that was loaded before
 	; load the shift constant
-	lea	rax, [pshufb_shf_table + 16]
+	lea	rax, [rel shf_table_norm + 16]
 	sub	rax, buf_len
 	vmovdqu	xmm0, [rax]
 
@@ -422,7 +427,7 @@ _get_last_two_xmms:
 	vpshufb	xmm2, xmm0
 
 	; shift xmm7 to the right by 16-buf_len bytes
-	vpxor	xmm0, [mask1]
+	vpxor	xmm0, [rel shf_xor_mask]
 	vpshufb	xmm7, xmm0
 	vpblendvb	xmm1, xmm1, xmm2, xmm0
 
@@ -436,7 +441,7 @@ _get_last_two_xmms:
 align 16
 _128_done:
 	; compute crc of a 128-bit value
-	vmovdqa	xmm10, [rk5]	; rk5 and rk6 in xmm10
+	vmovdqa	xmm10, [r10 + crc_fold_const_fold_128b_to_64b]	; rk5 and rk6 in xmm10
 	vmovdqa	xmm0, xmm7
 
 	;64b fold
@@ -446,11 +451,11 @@ _128_done:
 
 align 16
 _barrett:
-	vmovdqa	xmm10, [rk7]	; rk7 and rk8 in xmm10
+	vmovdqa	xmm10, [r10 + crc_fold_const_barrett]	; rk7 and rk8 in xmm10
 	vmovdqa	xmm0, xmm7
 
 	vmovdqa	xmm1, xmm7
-    vpand    xmm1, [mask3]
+    vpand    xmm1, [lo64_mask]
 	vpclmulqdq	xmm7, xmm10, 0x01
 	vpxor	xmm7, xmm1
 
@@ -487,7 +492,7 @@ _less_than_256:
 	jb	_less_than_32
 
 	; if there is, load the constants
-	vmovdqa	xmm10, [rk1]	; rk1 and rk2 in xmm10
+	vmovdqa	xmm10, [r10 + crc_fold_const_fold_1x128b]	; rk1 and rk2 in xmm10
 
 	movq	xmm0, init_crc	; get the initial crc value
 	vpslldq	xmm0, 8	; align it to its correct place
@@ -509,7 +514,7 @@ _less_than_32:
 	test	buf_len, buf_len
 	je	_cleanup
 
-	vmovdqa xmm11, [SHUF_MASK]
+	vmovdqa xmm11, [bswap_shuf_mask]
 
 	movq	xmm0, init_crc	; get the initial crc value
 	vpslldq	xmm0, 8	; align it to its correct place
@@ -523,7 +528,7 @@ _less_than_32:
 	vpxor	xmm7, xmm0	; xor the initial crc value
 	add	in_buf, 16
 	sub	buf_len, 16
-	vmovdqa	xmm10, [rk1]	; rk1 and rk2 in xmm10
+	vmovdqa	xmm10, [r10 + crc_fold_const_fold_1x128b]	; rk1 and rk2 in xmm10
 	jmp	_get_last_two_xmms
 
 align 16
@@ -541,20 +546,20 @@ _less_than_16_left:
 	vpshufb	xmm7, xmm11
 	vpxor	xmm7, xmm0	; xor the initial crc value
 
-	lea	r11, [pshufb_shf_table + 16]
-	lea	rax, [pshufb_shf_table + 24]
+	lea	r11, [rel shf_table_norm + 16]
+	lea	rax, [rel shf_table_norm + 24]
 	sub	r11, buf_len
 	sub	rax, buf_len
 
-	lea	r10, [mask1]
-	lea	r9, [zero_mask]
-
 	cmp	buf_len, 8
+	lea	r8, [rel shf_xor_mask]
+	lea	r9, [rel zero128]
+
 	cmovae	rax, r11	; if >= 8, use r11 address; else use rax address
-	cmovb	r10, r9		; if < 8, use zero_mask instead of mask1
+	cmovb	r8, r9		; if < 8, use zero128 instead of shf_xor_mask
 
 	vmovdqu	xmm0, [rax]
-	vpxor	xmm0, [r10]	; XOR with either mask1 or zeros
+	vpxor	xmm0, [r8]	; XOR with either shf_xor_mask or zeros
 	vpshufb	xmm7, xmm0
 
 	jb	_barrett
@@ -562,49 +567,4 @@ _less_than_16_left:
 
 section .data
 
-; precomputed constants
-align 16
-%ifndef USE_CONSTS
-; precomputed constants
-rk_1: dq 0x0000001a00000144
-rk_2: dq 0x0000015e00001dac
-rk1:  dq 0x0000000000000145
-rk2:  dq 0x0000000000001db7
-rk3:  dq 0x000100000001001a
-rk4:  dq 0x001b0000001b015e
-rk5:  dq 0x0000000000000145
-rk6:  dq 0x0000000000000000
-rk7:  dq 0x000000000000001b
-rk8:  dq 0x000000000000001b
-rk9:  dq 0x0150145145145015
-rk10: dq 0x1c71db6db6db71c7
-rk11: dq 0x0001110110110111
-rk12: dq 0x001aab1ab1ab1aab
-rk13: dq 0x0000014445014445
-rk14: dq 0x00001daab71daab7
-rk15: dq 0x0000000101000101
-rk16: dq 0x0000001b1b001b1b
-rk17: dq 0x0000000001514515
-rk18: dq 0x000000001c6db6c7
-rk19: dq 0x0000000000011011
-rk20: dq 0x00000000001ab1ab
-%else
-INCLUDE_CONSTS
-%endif
-
-mask1:
-dq 0x8080808080808080, 0x8080808080808080
-zero_mask:
-dq 0x0000000000000000, 0x0000000000000000
-mask3:
-dq 0x0000000000000000, 0xFFFFFFFFFFFFFFFF
-
-SHUF_MASK:
-dq 0x08090A0B0C0D0E0F, 0x0001020304050607
-
-pshufb_shf_table:
-; use these values for shift constants for the pshufb instruction
-dq 0x8786858483828100, 0x8f8e8d8c8b8a8988
-dq 0x0706050403020100, 0x0f0e0d0c0b0a0908
-dq 0x8080808080808080, 0x0f0e0d0c0b0a0908
-dq 0x8080808080808080, 0x8080808080808080
+%include "crc_const_extern.asm"

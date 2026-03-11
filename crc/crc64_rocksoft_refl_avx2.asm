@@ -27,31 +27,7 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%define FUNCTION_NAME crc64_rocksoft_refl_avx2
-%define USE_CONSTS
-%macro INCLUDE_CONSTS 0
-rk_1: dq 0xa043808c0f782663
-rk_2: dq 0x37ccd3e14069cabc
-rk1: dq 0x21e9761e252621ac
-rk2: dq 0xeadc41fd2ba3d420
-rk3: dq 0x5f852fb61e8d92dc
-rk4: dq 0xa1ca681e733f9c40
-rk5: dq 0x21e9761e252621ac
-rk6: dq 0x0000000000000000
-rk7: dq 0x27ecfa329aef9f77
-rk8: dq 0x34d926535897936a
-rk9: dq 0x946588403d4adcbc
-rk10: dq 0xd083dd594d96319d
-rk11: dq 0x34f5a24e22d66e90
-rk12: dq 0x3c255f5ebc414423
-rk13: dq 0x03363823e6e791e5
-rk14: dq 0x7b0ab10dd0f809fe
-rk15: dq 0x62242240ace5045a
-rk16: dq 0x0c32cdb31e18a84a
-rk17: dq 0xa3ffdc1fe8e82a8b
-rk18: dq 0xbdd7ac0ee1a4a0f0
-rk19: dq 0xe1e0bb9d45d7a44c
-rk20: dq 0xb0bc2e589204f500
-%endm
 
+%define FUNCTION_NAME crc64_rocksoft_refl_avx2
+%define CONST_LABEL crc64_rocksoft_refl_const
 %include "crc64_iso_refl_avx2.asm"

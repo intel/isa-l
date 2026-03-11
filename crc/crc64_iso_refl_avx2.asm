@@ -36,8 +36,12 @@
 ;       );
 ;
 %include "reg_sizes.asm"
+%include "crc.inc"
 %include "memcpy.asm"
 
+%ifndef CONST_LABEL
+%define CONST_LABEL crc64_iso_refl_const
+%endif
 %ifndef FUNCTION_NAME
 %define FUNCTION_NAME crc64_iso_refl_avx2
 %endif
@@ -73,6 +77,7 @@ align 16
 mk_global 	FUNCTION_NAME, function
 FUNCTION_NAME:
 	endbranch
+        lea     r10, [rel CONST_LABEL]
     not init_crc
 
 %ifidn __OUTPUT_FORMAT__, win64
@@ -103,7 +108,7 @@ FUNCTION_NAME:
 	; XOR the initial_crc value
 	vpxor	ymm0, ymm10
 
-    vbroadcasti128	ymm10, [rk3]	; ymm10 has rk3 and rk4
+    vbroadcasti128	ymm10, [r10 + crc_fold_const_fold_8x128b]	; ymm10 has rk3 and rk4
 
 	sub	buf_len, 256
 	cmp	buf_len, 256
@@ -114,7 +119,7 @@ FUNCTION_NAME:
 	vmovdqu	ymm11, [in_buf+16*12]
 	vmovdqu	ymm12, [in_buf+16*14]
 
-	vbroadcasti128	ymm15, [rk_1]	; ymm15 has rk_1 and rk_2
+	vbroadcasti128	ymm15, [r10 + crc_fold_const_fold_16x128b]	; ymm15 has rk_1 and rk_2
 	sub	buf_len, 256
 
 %if fetch_dist != 0
@@ -286,24 +291,24 @@ _fold_less_than_128_B:
 
 	vextracti128	xmm7, ymm3, 1
 	; fold the rest of the data in the ymm registers into xmm7
-	vmovdqu	ymm10, [rk9]
+	vmovdqu	ymm10, [r10 + crc_fold_const_fold_7x128b]
 	vpclmulqdq	ymm4, ymm0, ymm10, 0x01
 	vpclmulqdq	ymm11, ymm0, ymm10, 0x10
 	vpxor	ymm11, ymm4 ; use ymm11 to accumulate all products
 
-	vmovdqu	ymm10, [rk13]
+	vmovdqu	ymm10, [r10 + crc_fold_const_fold_5x128b]
 	vpclmulqdq	ymm4, ymm1, ymm10, 0x01
 	vpclmulqdq	ymm5, ymm1, ymm10, 0x10
 	vpxor	ymm11, ymm4
 	vpxor	ymm11, ymm5
 
-	vmovdqu	ymm10, [rk17]
+	vmovdqu	ymm10, [r10 + crc_fold_const_fold_3x128b]
 	vpclmulqdq	ymm4, ymm2, ymm10, 0x01
 	vpclmulqdq	ymm5, ymm2, ymm10, 0x10
 	vpxor	ymm11, ymm4
 	vpxor	ymm11, ymm5
 
-	vmovdqa	xmm10, [rk1]
+	vmovdqa	xmm10, [r10 + crc_fold_const_fold_1x128b]
 	vpclmulqdq	xmm4, xmm3, xmm10, 0x01
 	vpclmulqdq	xmm5, xmm3, xmm10, 0x10
 	vpxor	ymm11, ymm4
@@ -349,12 +354,12 @@ _get_last_two_xmms:
 
         ; get rid of the extra data that was loaded before
         ; load the shift constant
-        lea     rax, [pshufb_shf_table]
+        lea     rax, [rel shf_table_refl]
         add     rax, buf_len
         vmovdqu  xmm0, [rax]
 
         vpshufb  xmm7, xmm0
-        vpxor    xmm0, [mask3]
+        vpxor    xmm0, [rel shf_xor_mask]
         vpshufb  xmm2, xmm0
 
         vpblendvb xmm2, xmm2, xmm1, xmm0
@@ -368,7 +373,7 @@ _get_last_two_xmms:
 align 16
 _128_done:
         ; compute crc of a 128-bit value
-        vmovdqa  xmm10, [rk5]
+        vmovdqa  xmm10, [r10 + crc_fold_const_fold_128b_to_64b]
         vmovdqa  xmm0, xmm7
 
         ;64b fold
@@ -379,7 +384,7 @@ _128_done:
 align 16
 _barrett:
         vmovdqa  xmm1, xmm7
-        vmovdqa  xmm10, [rk7]
+        vmovdqa  xmm10, [r10 + crc_fold_const_barrett]
 
         vpclmulqdq       xmm7, xmm10, 0
         vmovdqa  xmm2, xmm7
@@ -419,7 +424,7 @@ _less_than_256:
 	jb	_less_than_32
 
 	; if there is, load the constants
-	vmovdqa	xmm10, [rk1]	; rk1 and rk2 in xmm10
+	vmovdqa	xmm10, [r10 + crc_fold_const_fold_1x128b]	; rk1 and rk2 in xmm10
 
 	vmovq	xmm0, init_crc	; get the initial crc value
 	vmovdqu	xmm7, [in_buf]	; load the plaintext
@@ -448,7 +453,7 @@ _less_than_32:
 	vpxor	xmm7, xmm0	; xor the initial crc value
 	add	in_buf, 16
 	sub	buf_len, 16
-	vmovdqa	xmm10, [rk1]	; rk1 and rk2 in xmm10
+	vmovdqa	xmm10, [r10 + crc_fold_const_fold_1x128b]	; rk1 and rk2 in xmm10
 	jmp	_get_last_two_xmms
 
 align 16
@@ -463,7 +468,7 @@ _less_than_16_left:
 	simd_load_avx_15_1 xmm7, in_buf, buf_len
 	vpxor	xmm7, xmm0	; xor the initial crc value
 
-	lea     rax, [pshufb_shf_table]
+	lea     rax, [rel shf_table_refl]
     lea     r11, [buf_len + 8]
 
     cmp     buf_len, 8
@@ -479,41 +484,5 @@ _less_than_16_left:
 section .data
 
 ; precomputed constants
-align 16
-%ifndef USE_CONSTS
-rk_1: dq 0x45000000b0000000
-rk_2: dq 0x6b700000f5000000
-rk1:  dq 0xf500000000000001
-rk2:  dq 0x6b70000000000001
-rk3:  dq 0xb001000000010000
-rk4:  dq 0xf501b0000001b000
-rk5:  dq 0xf500000000000001
-rk6:  dq 0x0000000000000000
-rk7:  dq 0xb000000000000001
-rk8:  dq 0xb000000000000000
-rk9:  dq 0xe014514514501501
-rk10: dq 0x771db6db6db71c71
-rk11: dq 0xa101101101110001
-rk12: dq 0x1ab1ab1ab1aab001
-rk13: dq 0xf445014445000001
-rk14: dq 0x6aab71daab700001
-rk15: dq 0xb100010100000001
-rk16: dq 0x01b001b1b0000001
-rk17: dq 0xe145150000000001
-rk18: dq 0x76db6c7000000001
-rk19: dq 0xa011000000000001
-rk20: dq 0x1b1ab00000000001
-%else
-INCLUDE_CONSTS
-%endif
 
-pshufb_shf_table:
-dq 0x8786858483828100, 0x8f8e8d8c8b8a8988
-dq 0x0706050403020100, 0x000e0d0c0b0a0908
-
-mask:
-dq     0xFFFFFFFFFFFFFFFF, 0x0000000000000000
-mask2:
-dq     0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF
-mask3:
-dq     0x8080808080808080, 0x8080808080808080
+%include "crc_const_extern.asm"

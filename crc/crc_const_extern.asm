@@ -37,20 +37,20 @@
 
 default rel
 
-; CRC-32 gzip (polynomial 0x04C11DB7, reflected)
+; CRC polynomial constant tables
 extern crc32_gzip_refl_const
-
-; CRC-32 IEEE 802.3
 extern crc32_ieee_const
-
-; CRC-32C iSCSI
 extern crc32_iscsi_const
-
-; CRC-16 T10 DIF
 extern crc16_t10dif_const
-
-; CRC-16 T10 DIF copy variant
 extern crc16_t10dif_copy_const
+extern crc64_iso_norm_const
+extern crc64_iso_refl_const
+extern crc64_ecma_norm_const
+extern crc64_ecma_refl_const
+extern crc64_jones_norm_const
+extern crc64_jones_refl_const
+extern crc64_rocksoft_norm_const
+extern crc64_rocksoft_refl_const
 
 ; Utility masks and shuffle tables
 extern hi64_mask
@@ -58,6 +58,10 @@ extern shf_xor_mask
 extern lo32_clr_mask
 extern hi32_clr_mask
 extern bswap_shuf_mask
+extern lo64_mask
+extern zero128
 extern shf_table_refl
-extern shift_table
-extern shift_table_ieee
+extern tail_shuf_refl
+extern tail_shuf_norm
+extern shf_table_norm
+extern byte_len_mask_table

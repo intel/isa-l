@@ -27,35 +27,7 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%define FUNCTION_NAME crc64_ecma_refl_by16_10
-%define USE_CONSTS
-%macro INCLUDE_CONSTS 0
-rk_1: dq 0xf31fd9271e228b79
-rk_2: dq 0x8260adf2381ad81c
-rk1: dq 0xdabe95afc7875f40
-rk2: dq 0xe05dd497ca393ae4
-rk3: dq 0xd7d86b2af73de740
-rk4: dq 0x8757d71d4fcc1000
-rk5: dq 0xdabe95afc7875f40
-rk6: dq 0x0000000000000000
-rk7: dq 0x9c3e466c172963d5
-rk8: dq 0x92d8af2baf0e1e84
-rk9: dq 0x947874de595052cb
-rk10: dq 0x9e735cb59b4724da
-rk11: dq 0xe4ce2cd55fea0037
-rk12: dq 0x2fe3fd2920ce82ec
-rk13: dq 0x0e31d519421a63a5
-rk14: dq 0x2e30203212cac325
-rk15: dq 0x081f6054a7842df4
-rk16: dq 0x6ae3efbb9dd441f3
-rk17: dq 0x69a35d91c3730254
-rk18: dq 0xb5ea1af9c013aca4
-rk19: dq 0x3be653a30fe1af51
-rk20: dq 0x60095b008a9efa44
-rk_1b: dq 0xdabe95afc7875f40
-rk_2b: dq 0xe05dd497ca393ae4
-	dq 0x0000000000000000
-	dq 0x0000000000000000
-%endm
 
+%define FUNCTION_NAME crc64_ecma_refl_by16_10
+%define CONST_LABEL crc64_ecma_refl_const
 %include "crc64_iso_refl_by16_10.asm"
