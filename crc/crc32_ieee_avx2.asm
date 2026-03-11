@@ -43,6 +43,7 @@
 ;       URL: http://www.intel.com/content/dam/www/public/us/en/documents/white-papers/fast-crc-computation-generic-polynomials-pclmulqdq-paper.pdf
 
 %include "reg_sizes.asm"
+%include "crc.inc"
 %include "memcpy.asm"
 
 %ifndef fetch_dist
@@ -80,6 +81,7 @@ align 16
 mk_global 	crc32_ieee_avx2, function
 crc32_ieee_avx2:
 	endbranch
+	lea	r10, [rel crc32_ieee_const]
 	not	init_crc
 
 %ifidn __OUTPUT_FORMAT__, win64
@@ -107,7 +109,7 @@ crc32_ieee_avx2:
     ; crc value does not need to be byte-reflected, but it needs to be moved to the high part of the register.
 	; because data will be byte-reflected and will align with initial crc at correct place.
 	vpslldq	xmm10, 12
-    vbroadcasti128 ymm11, [SHUF_MASK]
+    vbroadcasti128 ymm11, [bswap_shuf_mask]
 
     vmovdqu	ymm0, [in_buf+16*0]
 	vmovdqu	ymm1, [in_buf+16*2]
@@ -121,7 +123,7 @@ crc32_ieee_avx2:
     vpshufb ymm2, ymm11
     vpshufb ymm3, ymm11
 
-	vbroadcasti128	ymm10, [rk3]	; ymm10 has rk3 and rk4
+	vbroadcasti128	ymm10, [r10 + crc_fold_const_fold_8x128b]	; ymm10 has rk3 and rk4
 
 	sub	buf_len, 256
 	cmp	buf_len, 256
@@ -137,7 +139,7 @@ crc32_ieee_avx2:
     vpshufb ymm12, ymm11
     vpshufb ymm13, ymm11
 
-	vbroadcasti128	ymm15, [rk_1]	; ymm15 has rk_1 and rk_2
+	vbroadcasti128	ymm15, [r10 + crc_fold_const_fold_16x128b]	; ymm15 has rk_1 and rk_2
 	sub	buf_len, 256
 
 %if fetch_dist != 0
@@ -352,24 +354,24 @@ _fold_less_than_128_B:
 	vextracti128	xmm7, ymm3, 1
 
 	; fold the rest of the data in the ymm registers into xmm7
-    vmovdqu	ymm10, [rk9]
+    vmovdqu	ymm10, [r10 + crc_fold_const_fold_7x128b]
 	vpclmulqdq	ymm4, ymm0, ymm10, 0x0
 	vpclmulqdq	ymm12, ymm0, ymm10, 0x11
 	vpxor	ymm12, ymm4 ; use ymm12 to accumulate all products
 
-	vmovdqu	ymm10, [rk13]
+	vmovdqu	ymm10, [r10 + crc_fold_const_fold_5x128b]
 	vpclmulqdq	ymm4, ymm1, ymm10, 0x0
 	vpclmulqdq	ymm5, ymm1, ymm10, 0x11
 	vpxor	ymm12, ymm4
 	vpxor	ymm12, ymm5
 
-	vmovdqu	ymm10, [rk17]
+	vmovdqu	ymm10, [r10 + crc_fold_const_fold_3x128b]
 	vpclmulqdq	ymm4, ymm2, ymm10, 0x0
 	vpclmulqdq	ymm5, ymm2, ymm10, 0x11
 	vpxor	ymm12, ymm4
 	vpxor	ymm12, ymm5
 
-	vmovdqa	xmm10, [rk1]
+	vmovdqa	xmm10, [r10 + crc_fold_const_fold_1x128b]
 	vpclmulqdq	xmm4, xmm3, xmm10, 0x0
 	vpclmulqdq	xmm5, xmm3, xmm10, 0x11
 	vpxor	ymm12, ymm4
@@ -422,7 +424,7 @@ _get_last_two_xmms:
 
 	; get rid of the extra data that was loaded before
 	; load the shift constant
-	lea	rax, [pshufb_shf_table + 16]
+	lea	rax, [rel shf_table_refl + 16]
 	sub	rax, buf_len
 	vmovdqu	xmm0, [rax]
 
@@ -430,7 +432,7 @@ _get_last_two_xmms:
 	vpshufb	xmm2, xmm0
 
 	; shift xmm7 to the right by 16-buf_len bytes
-	vpxor	xmm0, [mask1]
+	vpxor	xmm0, [rel shf_xor_mask]
 	vpshufb	xmm7, xmm0
 	vpblendvb	xmm1, xmm1, xmm2, xmm0
 
@@ -445,7 +447,7 @@ _get_last_two_xmms:
 align 16
 _128_done:
 	; compute crc of a 128-bit value
-	vmovdqa	xmm10, [rk5]	; rk5 and rk6 in xmm10
+	vmovdqa	xmm10, [r10 + crc_fold_const_fold_128b_to_64b]	; rk5 and rk6 in xmm10
 	vmovdqa	xmm0, xmm7
 
 	;64b fold
@@ -456,7 +458,7 @@ _128_done:
 	;32b fold
 	vmovdqa	xmm0, xmm7
 
-	vpand	xmm0, [mask2]
+	vpand	xmm0, [hi32_clr_mask]
 
 	vpsrldq	xmm7, 12
 	vpclmulqdq	xmm7, xmm10, 0x10
@@ -465,7 +467,7 @@ _128_done:
 	;barrett reduction
 align 16
 _barrett:
-	vmovdqa	xmm10, [rk7]	; rk7 and rk8 in xmm10
+	vmovdqa	xmm10, [r10 + crc_fold_const_barrett]	; rk7 and rk8 in xmm10
 	vmovdqa	xmm0, xmm7
 	vpclmulqdq	xmm7, xmm10, 0x01
 	vpslldq	xmm7, 4
@@ -503,10 +505,10 @@ _less_than_256:
 	; check if there is enough buffer to be able to fold 16B at a time
 	cmp	buf_len, 32
 	jb	_less_than_32
-	vmovdqa xmm11, [SHUF_MASK]
+	vmovdqa xmm11, [bswap_shuf_mask]
 
 	; if there is, load the constants
-	vmovdqa	xmm10, [rk1]	; rk1 and rk2 in xmm10
+	vmovdqa	xmm10, [r10 + crc_fold_const_fold_1x128b]	; rk1 and rk2 in xmm10
 
 	vmovd	xmm0, init_crc	; get the initial crc value
 	vpslldq	xmm0, 12	; align it to its correct place
@@ -529,7 +531,7 @@ _less_than_32:
 	test	buf_len, buf_len
 	je	_cleanup
 
-	vmovdqa xmm11, [SHUF_MASK]
+	vmovdqa xmm11, [bswap_shuf_mask]
 
 	vmovd	xmm0, init_crc	; get the initial crc value
 	vpslldq	xmm0, 12	; align it to its correct place
@@ -543,7 +545,7 @@ _less_than_32:
 	vpxor	xmm7, xmm0	; xor the initial crc value
 	add	in_buf, 16
 	sub	buf_len, 16
-	vmovdqa	xmm10, [rk1]	; rk1 and rk2 in xmm10
+	vmovdqa	xmm10, [r10 + crc_fold_const_fold_1x128b]	; rk1 and rk2 in xmm10
 	jmp	_get_last_two_xmms
 
 align 16
@@ -565,10 +567,10 @@ _less_than_16_left:
 	jb	_only_less_than_4
 
 	; use shuffle to align data
-	lea	rax, [pshufb_shf_table + 16]
+	lea	rax, [rel shf_table_refl + 16]
 	sub	rax, buf_len
 	vmovdqu	xmm0, [rax]
-	vpxor	xmm0, [mask1]
+	vpxor	xmm0, [rel shf_xor_mask]
 
 	vpshufb	xmm7, xmm0
 	jmp	_128_done
@@ -578,49 +580,10 @@ _only_less_than_4:
 	; offset = (8 - buf_len) - 5 = 3 - buf_len
 	mov	rax, 3
 	sub	rax, buf_len
-	lea	r11, [pshufb_shift_table]
+	lea	r11, [rel tail_shuf_norm]
 	add	r11, rax
 	vmovdqu	xmm0, [r11]
 	vpshufb	xmm7, xmm0
 	jmp	_barrett
 
-section .data
-
-; precomputed constants
-align 16
-rk_1: dq 0x1851689900000000
-rk_2: dq 0xa3dc855100000000
-rk1 : dq 0xf200aa6600000000
-rk2 : dq 0x17d3315d00000000
-rk3 : dq 0x022ffca500000000
-rk4 : dq 0x9d9ee22f00000000
-rk5 : dq 0xf200aa6600000000
-rk6 : dq 0x490d678d00000000
-rk7 : dq 0x0000000104d101df
-rk8 : dq 0x0000000104c11db7
-rk9 : dq 0x6ac7e7d700000000
-rk10 : dq 0xfcd922af00000000
-rk11 : dq 0x34e45a6300000000
-rk12 : dq 0x8762c1f600000000
-rk13 : dq 0x5395a0ea00000000
-rk14 : dq 0x54f2d5c700000000
-rk15 : dq 0xd3504ec700000000
-rk16 : dq 0x57a8445500000000
-rk17 : dq 0xc053585d00000000
-rk18 : dq 0x766f1b7800000000
-rk19 : dq 0xcd8c54b500000000
-rk20 : dq 0xab40b71e00000000
-
-mask1: dq 0x8080808080808080, 0x8080808080808080
-mask2: dq 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF
-
-SHUF_MASK: dq 0x08090A0B0C0D0E0F, 0x0001020304050607
-
-pshufb_shf_table:
-dq 0x8786858483828100, 0x8f8e8d8c8b8a8988
-dq 0x0706050403020100, 0x000e0d0c0b0a0908
-
-pshufb_shift_table:
-	;; use these values for variable right shift (5, 6, 7 bytes)
-	db 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B
-	db 0x0C, 0x0D, 0x0E, 0x0F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+%include "crc_const_extern.asm"

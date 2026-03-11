@@ -40,9 +40,15 @@ default rel
 ; CRC-32 gzip (polynomial 0x04C11DB7, reflected)
 extern crc32_gzip_refl_const
 
+; CRC-32 IEEE 802.3
+extern crc32_ieee_const
+
 ; Utility masks and shuffle tables
 extern hi64_mask
 extern shf_xor_mask
 extern lo32_clr_mask
+extern hi32_clr_mask
+extern bswap_shuf_mask
 extern shf_table_refl
 extern shift_table
+extern shift_table_ieee

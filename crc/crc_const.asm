@@ -54,6 +54,26 @@ crc32_gzip_refl_const:
         dq 0x0000000000000000, 0x0000000000000000   ; padding
 
 ; ---------------------------------------------------------------------------
+; CRC-32 IEEE 802.3  (polynomial 0x04C11DB7, non-reflected / bit-reversed)
+; ---------------------------------------------------------------------------
+align 16
+mk_global crc32_ieee_const, data, hidden
+crc32_ieee_const:
+        dq 0x1851689900000000, 0xa3dc855100000000   ; fold_16x128b
+        dq 0xf200aa6600000000, 0x17d3315d00000000   ; fold_1x128b
+        dq 0x022ffca500000000, 0x9d9ee22f00000000   ; fold_8x128b
+        dq 0xf200aa6600000000, 0x490d678d00000000   ; fold_128b_to_64b
+        dq 0x0000000104d101df, 0x0000000104c11db7   ; reduce_64b_to_32b
+        dq 0x6ac7e7d700000000, 0xfcd922af00000000   ; rk9/rk10
+        dq 0x34e45a6300000000, 0x8762c1f600000000   ; rk11/rk12
+        dq 0x5395a0ea00000000, 0x54f2d5c700000000   ; rk13/rk14
+        dq 0xd3504ec700000000, 0x57a8445500000000   ; rk15/rk16
+        dq 0xc053585d00000000, 0x766f1b7800000000   ; rk17/rk18
+        dq 0xcd8c54b500000000, 0xab40b71e00000000   ; rk19/rk20
+        dq 0xf200aa6600000000, 0x17d3315d00000000   ; fold_1x128b_b (= fold_1x128b)
+        dq 0x0000000000000000, 0x0000000000000000   ; padding
+
+; ---------------------------------------------------------------------------
 ; CRC Masks and Shuffles
 ; ---------------------------------------------------------------------------
 align 16
@@ -63,6 +83,11 @@ mk_global shf_xor_mask, data, hidden
 shf_xor_mask: dq 0x8080808080808080, 0x8080808080808080
 mk_global lo32_clr_mask, data, hidden
 lo32_clr_mask: dq 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF
+
+mk_global hi32_clr_mask, data, hidden
+hi32_clr_mask: dq 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF
+mk_global bswap_shuf_mask, data, hidden
+bswap_shuf_mask: dq 0x08090A0B0C0D0E0F, 0x0001020304050607
 
 align 16
 mk_global shf_table_refl, data, hidden
@@ -75,3 +100,8 @@ shift_table:
 db 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 db 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
 db 0x08, 0x09, 0x0A
+
+mk_global shift_table_ieee, data, hidden
+shift_table_ieee:
+db 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B
+db 0x0C, 0x0D, 0x0E, 0x0F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
