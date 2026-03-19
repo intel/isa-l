@@ -86,7 +86,7 @@ main(int argc, char *argv[])
         BENCHMARK(&start, BENCHMARK_TIME, gf_vect_mul_perf(a, gf_const_tbl, buff1, buff2));
 
         printf("gf_vect_mul" TEST_TYPE_STR ": ");
-        perf_print(start, (long long) TEST_LEN);
+        perf_print(start, (long long) TEST_LEN * 2);
 
         // Free allocated memory
         aligned_free(buff1);
