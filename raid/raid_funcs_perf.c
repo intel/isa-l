@@ -642,7 +642,7 @@ main(int argc, char *argv[])
                 else if (strcmp(argv[i], "--sources") == 0) {
                         if (i + 1 < argc && argv[i + 1][0] != '-') {
                                 sources = atoi(argv[i + 1]);
-                                if (sources <= 0) {
+                                if (sources <= 1) {
                                         fprintf(stderr,
                                                 "Invalid number of sources: %s. Using default "
                                                 "(%d).\n",
