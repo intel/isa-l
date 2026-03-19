@@ -138,9 +138,13 @@ decode_test(int m, int k, u8 **update_buffs, u8 **recov, u8 *a, u8 *src_in_err, 
                 return -1;
         }
 
-        for (i = 0; i < nerrs; i++)
+        memset(c, 0, sizeof(c));
+        for (i = 0; i < nerrs; i++) {
+                int s = src_err_list[i];
                 for (j = 0; j < k; j++)
-                        c[k * i + j] = d[k * src_err_list[i] + j];
+                        for (r = 0; r < k; r++)
+                                c[k * i + j] ^= gf_mul(d[k * r + j], a[k * s + r]);
+        }
 
         // Recover data
         ec_init_tables(k, nerrs, c, g_tbls);
@@ -204,12 +208,6 @@ main(int argc, char *argv[])
                 }
         }
 
-        if (nerrs > k) {
-                printf("Number of errors (%d) cannot be higher than number of data buffers (%d)\n",
-                       nerrs, k);
-                return -1;
-        }
-
         if (k <= 0) {
                 printf("Number of source buffers (%d) must be > 0\n", k);
                 return -1;
@@ -249,7 +247,7 @@ main(int argc, char *argv[])
         srand(TEST_SEED);
 
         for (i = 0; i < nerrs;) {
-                u8 next_err = rand() % k;
+                u8 next_err = rand() % m;
                 for (j = 0; j < i; j++)
                         if (next_err == err_list[j])
                                 break;
