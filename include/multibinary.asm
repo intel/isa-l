@@ -163,11 +163,12 @@
 		;; Test for AVX2
 		xor	ecx, ecx
 		mov	eax, 7
-		cpuid
+		cpuid ; ebx, ecx returned to be checked
 		test	ebx, FLAG_CPUID7_EBX_AVX2
 		je	_%1_init_done		; No AVX2 possible
-		and	ecx, FLAGS_CPUID7_ECX_AVX2_G2
-		cmp	ecx, FLAGS_CPUID7_ECX_AVX2_G2
+		mov     eax, ecx
+		and	eax, FLAGS_CPUID7_ECX_AVX2_G2
+		cmp	eax, FLAGS_CPUID7_ECX_AVX2_G2
 		lea	rax, [%5 WRT_OPT]
 		cmove	rsi, rax
 
@@ -175,14 +176,16 @@
 		and	edi, FLAG_XGETBV_EAX_ZMM_OPM
 		cmp	edi, FLAG_XGETBV_EAX_ZMM_OPM
 		jne	_%1_init_done	  ; No AVX512 possible
-		and	ebx, FLAGS_CPUID7_EBX_AVX512_G1
-		cmp	ebx, FLAGS_CPUID7_EBX_AVX512_G1
+		mov     eax, ebx
+		and	eax, FLAGS_CPUID7_EBX_AVX512_G1
+		cmp	eax, FLAGS_CPUID7_EBX_AVX512_G1
 		jne	_%1_init_done
 
-		and	ecx, FLAGS_CPUID7_ECX_AVX512_G2
-		cmp	ecx, FLAGS_CPUID7_ECX_AVX512_G2
-		lea	rbx, [%6 WRT_OPT] ; AVX512/10 opt
-		cmove	rsi, rbx
+		mov     eax, ecx
+		and	eax, FLAGS_CPUID7_ECX_AVX512_G2
+		cmp	eax, FLAGS_CPUID7_ECX_AVX512_G2
+		lea	rax, [%6 WRT_OPT] ; AVX512/10 opt
+		cmove	rsi, rax
 
 	_%1_init_done:
 		pop	rdi
