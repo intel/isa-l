@@ -11,6 +11,11 @@ RELEASE NOTE CONTENTS
 
 2. FIXED ISSUES
 ---------------
+Unreleased
+
+* Fixed x86 CRC dispatcher (AVX512+VPLCMUL implementation could not be always reached
+  when the ISA was available).
+
 v2.32
 
 * Fixed RAID performance application for MacOS.

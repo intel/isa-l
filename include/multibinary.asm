@@ -131,7 +131,6 @@
 	section .text
 	%1_dispatch_init:
 		push	rsi
-		push	rax
 		push	rbx
 		push	rcx
 		push	rdx
@@ -169,8 +168,8 @@
 		je	_%1_init_done		; No AVX2 possible
 		and	ecx, FLAGS_CPUID7_ECX_AVX2_G2
 		cmp	ecx, FLAGS_CPUID7_ECX_AVX2_G2
-		lea	rbx, [%5 WRT_OPT]
-		cmove	rsi, rbx
+		lea	rax, [%5 WRT_OPT]
+		cmove	rsi, rax
 
 		;; Test for AVX512
 		and	edi, FLAG_XGETBV_EAX_ZMM_OPM
@@ -190,7 +189,6 @@
 		pop	rdx
 		pop	rcx
 		pop	rbx
-		pop	rax
 		mov	[%1_dispatched], rsi
 		pop	rsi
 		ret
