@@ -132,6 +132,18 @@ case "${CPU}" in
 
 esac
 
+# Special configuration for Hygon
+AC_MSG_CHECKING([if Hygon CPU])
+if grep -q "HygonGenuine" /proc/cpuinfo 2>/dev/null ; then
+  is_hygon=yes
+else
+  is_hygon=no
+fi
+AC_MSG_RESULT([$is_hygon])
+AS_IF([test "x$is_hygon" = "xyes"], [
+  AC_DEFINE_UNQUOTED([NO_VPTERNLOGQ], [1], [Disable VPTERNLOGQ instruction.])
+])
+
 # Options
 AC_ARG_ENABLE([debug],
         AS_HELP_STRING([--enable-debug], [enable debug messages @<:@default=disabled@:>@]),
