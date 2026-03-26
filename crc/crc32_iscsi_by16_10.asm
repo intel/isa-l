@@ -80,6 +80,15 @@ section .text
 	%xdefine	arg1_low32 edx
 %endif
 
+%macro TERNARY_XOR 3
+%ifdef NO_VPTERNLOGQ
+	vpxorq		%1, %1, %2
+	vpxorq		%1, %1, %3
+%else
+	vpternlogq	%1, %2, %3, 0x96
+%endif
+%endmacro
+
 align 64
 mk_global FUNCTION_NAME, function
 FUNCTION_NAME:
@@ -142,22 +151,22 @@ align 16
 	PREFETCH	[arg2+fetch_dist+0]
 	vpclmulqdq	zmm1, zmm0, zmm16, 0x10
 	vpclmulqdq	zmm0, zmm0, zmm16, 0x01
-	vpternlogq	zmm0, zmm1, [arg2+16*0], 0x96
+	TERNARY_XOR	zmm0, zmm1, [arg2+16*0]
 
 	PREFETCH	[arg2+fetch_dist+64]
 	vpclmulqdq	zmm2, zmm4, zmm16, 0x10
 	vpclmulqdq	zmm4, zmm4, zmm16, 0x01
-	vpternlogq	zmm4, zmm2, [arg2+16*4], 0x96
+	TERNARY_XOR	zmm4, zmm2, [arg2+16*4]
 
 	PREFETCH	[arg2+fetch_dist+64*2]
 	vpclmulqdq	zmm3, zmm7, zmm16, 0x10
 	vpclmulqdq	zmm7, zmm7, zmm16, 0x01
-	vpternlogq	zmm7, zmm3, [arg2+16*8], 0x96
+	TERNARY_XOR	zmm7, zmm3, [arg2+16*8]
 
 	PREFETCH	[arg2+fetch_dist+64*3]
 	vpclmulqdq	zmm5, zmm8, zmm16, 0x10
 	vpclmulqdq	zmm8, zmm8, zmm16, 0x01
-	vpternlogq	zmm8, zmm5, [arg2+16*12], 0x96
+	TERNARY_XOR	zmm8, zmm5, [arg2+16*12]
 
 	sub		arg3, 256
 
@@ -171,19 +180,19 @@ align 16
 	add		arg2, 256
 	vpclmulqdq	zmm1, zmm0, zmm16, 0x10
 	vpclmulqdq	zmm0, zmm0, zmm16, 0x01
-	vpternlogq	zmm0, zmm1, [arg2+16*0], 0x96
+	TERNARY_XOR	zmm0, zmm1, [arg2+16*0]
 
 	vpclmulqdq	zmm2, zmm4, zmm16, 0x10
 	vpclmulqdq	zmm4, zmm4, zmm16, 0x01
-	vpternlogq	zmm4, zmm2, [arg2+16*4], 0x96
+	TERNARY_XOR	zmm4, zmm2, [arg2+16*4]
 
 	vpclmulqdq	zmm3, zmm7, zmm16, 0x10
 	vpclmulqdq	zmm7, zmm7, zmm16, 0x01
-	vpternlogq	zmm7, zmm3, [arg2+16*8], 0x96
+	TERNARY_XOR	zmm7, zmm3, [arg2+16*8]
 
 	vpclmulqdq	zmm5, zmm8, zmm16, 0x10
 	vpclmulqdq	zmm8, zmm8, zmm16, 0x01
-	vpternlogq	zmm8, zmm5, [arg2+16*12], 0x96
+	TERNARY_XOR	zmm8, zmm5, [arg2+16*12]
 
 	sub		arg3, 256
 	jge     	.fold_256_B_loop
@@ -192,11 +201,11 @@ align 16
 	add		arg2, 256
 	vpclmulqdq	zmm1, zmm0, zmm10, 0x01
 	vpclmulqdq	zmm2, zmm0, zmm10, 0x10
-	vpternlogq	zmm7, zmm1, zmm2, 0x96	; xor ABC
+	TERNARY_XOR	zmm7, zmm1, zmm2
 
 	vpclmulqdq	zmm5, zmm4, zmm10, 0x01
 	vpclmulqdq	zmm6, zmm4, zmm10, 0x10
-	vpternlogq	zmm8, zmm5, zmm6, 0x96	; xor ABC
+	TERNARY_XOR	zmm8, zmm5, zmm6
 
 	vmovdqa32	zmm0, zmm7
 	vmovdqa32	zmm4, zmm8
@@ -213,11 +222,11 @@ align 16
 	add		arg2, 128
 	vpclmulqdq	zmm2, zmm0, zmm10, 0x10
 	vpclmulqdq	zmm0, zmm0, zmm10, 0x01
-	vpternlogq	zmm0, zmm2, [arg2+16*0], 0x96
+	TERNARY_XOR	zmm0, zmm2, [arg2+16*0]
 
 	vpclmulqdq	zmm5, zmm4, zmm10, 0x10
 	vpclmulqdq	zmm4, zmm4, zmm10, 0x01
-	vpternlogq	zmm4, zmm5, [arg2+16*4], 0x96
+	TERNARY_XOR	zmm4, zmm5, [arg2+16*4]
 
         sub		arg3, 128
 	jge		.fold_128_B_loop
@@ -239,7 +248,7 @@ align 16
         ;; and handles the next 64 bytes
         vpclmulqdq      zmm2, zmm0, zmm10, 0x10
         vpclmulqdq      zmm0, zmm0, zmm10, 0x01
-        vpternlogq      zmm0, zmm2, zmm4, 0x96
+        TERNARY_XOR     zmm0, zmm2, zmm4
         add             arg3, 128
 
         jmp             .fold_64B_loop
@@ -256,8 +265,8 @@ align 16
 	vpclmulqdq	zmm5, zmm4, zmm11, 0x01
 	vpclmulqdq	zmm6, zmm4, zmm11, 0x10
 	vmovdqa		xmm10, [r10 + crc_fold_const_fold_1x128b]		; Needed later in reduction loop
-	vpternlogq	zmm1, zmm2, zmm5, 0x96	; xor ABC
-	vpternlogq	zmm1, zmm6, zmm7, 0x96	; xor ABC
+	TERNARY_XOR	zmm1, zmm2, zmm5
+	TERNARY_XOR	zmm1, zmm6, zmm7
 
 	vshufi64x2      zmm8, zmm1, zmm1, 0x4e ; Swap 1,0,3,2 - 01 00 11 10
 	vpxorq          ymm8, ymm8, ymm1
@@ -277,7 +286,7 @@ align 16
 .16B_reduction_loop:
 	vpclmulqdq	xmm8, xmm7, xmm10, 0x1
 	vpclmulqdq	xmm7, xmm7, xmm10, 0x10
-        vpternlogq      xmm7, xmm8, [arg2], 0x96
+        TERNARY_XOR     xmm7, xmm8, [arg2]
 	add		arg2, 16
 	sub		arg3, 16
 	; instead of a cmp instruction, we utilize the flags with the jge instruction
@@ -318,7 +327,7 @@ align 16
 	;;;;;;;;;;
 	vpclmulqdq	xmm8, xmm7, xmm10, 0x1
 	vpclmulqdq	xmm7, xmm7, xmm10, 0x10
-        vpternlogq      xmm7, xmm8, xmm2, 0x96
+        TERNARY_XOR     xmm7, xmm8, xmm2
 
 align 16
 .128_done:
@@ -382,7 +391,7 @@ align 16
         vmovdqu8        zmm4, [arg2]
         vpclmulqdq      zmm2, zmm0, zmm10, 0x10
         vpclmulqdq      zmm0, zmm0, zmm10, 0x01
-        vpternlogq      zmm0, zmm2, zmm4, 0x96
+        TERNARY_XOR     zmm0, zmm2, zmm4
 
         add             arg2, 64
         sub             arg3, 64
@@ -397,7 +406,7 @@ align 16
 	vpclmulqdq	zmm1, zmm0, zmm11, 0x01
 	vpclmulqdq	zmm2, zmm0, zmm11, 0x10
 	vextracti64x2	xmm7, zmm0, 3		; save last that has no multiplicand
-        vpternlogq      zmm1, zmm2, zmm7, 0x96
+        TERNARY_XOR     zmm1, zmm2, zmm7
 
 	vmovdqa		xmm10, [r10 + crc_fold_const_fold_1x128b_b] ; Needed later in reduction loop
 
