@@ -80,6 +80,17 @@ section .text
 	%xdefine	arg1_low32 edx
 %endif
 
+%ifdef NO_VPTERNLOGQ
+%macro vpternlogq 4
+%if %4 == 0x96
+	vpxorq		%1, %1, %2
+	vpxorq		%1, %1, %3
+%else
+	vpternlogq	%1, %2, %3, %4	; fallback
+%endif
+%endmacro
+%endif
+
 align 64
 mk_global FUNCTION_NAME, function
 FUNCTION_NAME:
