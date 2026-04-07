@@ -153,3 +153,5 @@ endif
 		-e 's/-lz/zlib.lib/' \
 		-e 's/ $$//' \
 			>> $@
+	$(if $(findstring igzip,$(units)), \
+		@awk '/^igzip_perf\.exe:  zlib\.lib$$/{printf "igzip_perf.exe: igzip_perf.obj igzip_perf_misc.obj isa-l.lib zlib.lib\n\tlink /out:$$@ $$(LINKFLAGS) igzip_perf.obj igzip_perf_misc.obj isa-l.lib zlib.lib\n"; next} {print}' $@ > $@.tmp && mv $@.tmp $@ )
