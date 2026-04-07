@@ -30,6 +30,8 @@
 #define _FILE_OFFSET_BITS 64
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
 #include <assert.h>
 #include <getopt.h>
 #include "huff_codes.h"
@@ -41,6 +43,46 @@
 #define BUF_SIZE 1024
 
 #define OPTARGS "hl:f:z:i:d:stub:y:w:o:D:"
+
+#if defined(__x86_64__) || defined(_M_X64)
+
+#ifdef _MSC_VER
+#include <intrin.h>
+#define run_cpuid(leaf, subleaf, regs) __cpuidex((int *) (regs), (int) (leaf), (int) (subleaf))
+#else
+#include <cpuid.h>
+static inline void
+run_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t *regs)
+{
+        __cpuid_count(leaf, subleaf, regs[0], regs[1], regs[2], regs[3]);
+}
+#endif
+
+#define CPUID_LEAF_BRAND_START 0x80000002U
+#define CPUID_LEAF_BRAND_END   0x80000004U
+#define CPUID_LEAF_BRAND_NUM   (CPUID_LEAF_BRAND_END - CPUID_LEAF_BRAND_START + 1)
+#define MAX_BRAND_STRING_LEN   (CPUID_LEAF_BRAND_NUM * 4 * sizeof(uint32_t))
+
+static void
+get_cpu_brand(char *brand_str, size_t size)
+{
+        uint32_t regs[4];
+        uint32_t *p = (uint32_t *) brand_str;
+        unsigned i;
+
+        memset(brand_str, 0, size);
+        run_cpuid(0x80000000U, 0, regs);
+        if (regs[0] < CPUID_LEAF_BRAND_END)
+                return;
+        for (i = 0; i < CPUID_LEAF_BRAND_NUM; i++) {
+                run_cpuid(CPUID_LEAF_BRAND_START + i, 0, regs);
+                *p++ = regs[0];
+                *p++ = regs[1];
+                *p++ = regs[2];
+                *p++ = regs[3];
+        }
+}
+#endif /* __x86_64__ || _M_X64 */
 
 #define COMPRESSION_QUEUE_LIMIT 32
 #define UNSET                   -1
@@ -213,6 +255,52 @@ print_inflate_perf_line(struct perf_info *info)
                 printf("    zlib_inflate->           ");
 
         perf_print(info->start, info->file_size);
+}
+
+#if defined(__x86_64__) || defined(_M_X64)
+/* Declared in igzip_perf_misc.asm */
+uint64_t
+measure_tsc(const uint64_t cycles);
+
+/* Return TSC-to-core-cycle scale factor. Wraps measure_tsc() with
+ * clock_gettime to derive TSC frequency from the same run, then computes
+ * core frequency as tsc_freq / ratio. */
+static double
+get_tsc_to_core_scale(double *tsc_freq_mhz_out)
+{
+        const uint64_t expected_cycles = 1000000000ULL;
+        struct timespec t0, t1;
+        uint64_t tsc_ticks;
+        double elapsed_s, ratio;
+
+        clock_gettime(CLOCK_MONOTONIC, &t0);
+        tsc_ticks = measure_tsc(expected_cycles);
+        clock_gettime(CLOCK_MONOTONIC, &t1);
+
+        elapsed_s = (t1.tv_sec - t0.tv_sec) + (t1.tv_nsec - t0.tv_nsec) * 1e-9;
+        *tsc_freq_mhz_out = (double) tsc_ticks / elapsed_s / 1e6;
+
+        ratio = (double) tsc_ticks / (double) expected_cycles;
+        return ratio;
+}
+#endif /* __x86_64__ || _M_X64 */
+
+static void
+print_cpu_freq(void)
+{
+#if defined(__x86_64__) || defined(_M_X64)
+        double tsc_scale, tsc_freq_mhz, core_freq_mhz;
+        char brand_str[MAX_BRAND_STRING_LEN + 1];
+
+        tsc_scale = get_tsc_to_core_scale(&tsc_freq_mhz);
+        core_freq_mhz = tsc_freq_mhz / tsc_scale;
+        printf("cpu info-> TSC to core cycle ratio: %.3f\n", tsc_scale);
+        printf("cpu info-> freq:  %.0f MHz (%.2f GHz)\n", core_freq_mhz, core_freq_mhz / 1000.0);
+
+        get_cpu_brand(brand_str, sizeof(brand_str));
+        if (brand_str[0] != '\0')
+                printf("cpu info-> model: %s\n", brand_str);
+#endif /* __x86_64__ || _M_X64 */
 }
 
 int
@@ -855,6 +943,8 @@ main(int argc, char *argv[])
                 exit(1);
         }
         fclose(in);
+
+        print_cpu_freq();
 
         for (i = 0; i < compression_queue_size; i++) {
                 if (i > 0)

@@ -60,6 +60,7 @@ if CPU_X86_64
 ARCH=-Dx86_64
 libisal_la_SOURCES += ${lsrc_x86_64}
 other_tests += ${other_tests_x86_64}
+igzip_igzip_perf_SOURCES = igzip/igzip_perf.c igzip/igzip_perf_misc.asm
 endif
 
 if CPU_AARCH64

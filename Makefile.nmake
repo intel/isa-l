@@ -402,5 +402,6 @@ clean:
 	-if exist isa-l.res del isa-l.res
 
 zlib.lib:
-igzip_perf.exe:  zlib.lib
+igzip_perf.exe: igzip_perf.obj igzip_perf_misc.obj isa-l.lib zlib.lib
+	link /out:$@ $(LINKFLAGS) igzip_perf.obj igzip_perf_misc.obj isa-l.lib zlib.lib
 igzip_inflate_test.exe:  zlib.lib
