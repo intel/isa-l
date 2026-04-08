@@ -148,7 +148,6 @@
 	section .text
 	%1_dispatch_init:
 		push	rsi
-		push	rax
 		push	rbx
 		push	rcx
 		push	rdx
@@ -187,7 +186,6 @@
 		pop	rdx
 		pop	rcx
 		pop	rbx
-		pop	rax
 		mov	[%1_dispatched], rsi
 		pop	rsi
 		ret
@@ -206,7 +204,6 @@
 	section .text
 	%1_dispatch_init:
 		push	rsi
-		push	rax
 		push	rbx
 		push	rcx
 		push	rdx
@@ -256,7 +253,6 @@
 		pop	rdx
 		pop	rcx
 		pop	rbx
-		pop	rax
 		mov	[%1_dispatched], rsi
 		pop	rsi
 		ret
@@ -277,7 +273,6 @@
 	section .text
 	%1_dispatch_init:
 		push	rsi
-		push	rax
 		push	rbx
 		push	rcx
 		push	rdx
@@ -340,7 +335,6 @@
 		pop	rdx
 		pop	rcx
 		pop	rbx
-		pop	rax
 		mov	[%1_dispatched], rsi
 		pop	rsi
 		ret
@@ -364,7 +358,6 @@
 	section .text
 	%1_dispatch_init:
 		push	rsi
-		push	rax
 		push	rbx
 		push	rcx
 		push	rdx
@@ -464,7 +457,6 @@
 		pop	rdx
 		pop	rcx
 		pop	rbx
-		pop	rax
 		mov	[%1_dispatched], rsi
 		pop	rsi
 		ret
