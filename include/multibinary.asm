@@ -462,4 +462,79 @@
 		ret
 %endmacro
 
+;;;;;
+; mbin_dispatch_init6_apx parameters
+; Extends mbin_dispatch_init5 with APX support.
+; 1-> function name
+; 2-> base function
+; 3-> SSE4_2 or 00/01 optimized function
+; 4-> AVX/02 opt func
+; 5-> AVX2/04 opt func
+; 6-> APX opt func
+;;;;;
+%macro mbin_dispatch_init6_apx 6
+	section .text
+	%1_dispatch_init:
+		push	rsi
+		push	rbx
+		push	rcx
+		push	rdx
+		push	rdi
+		lea	rsi, [%2 WRT_OPT] ; Default - use base function
+
+		mov	eax, 1
+		cpuid
+		test	ecx, FLAG_CPUID1_ECX_SSE4_2
+		lea	rbx, [%3 WRT_OPT] ; SSE opt func
+		cmovne	rsi, rbx
+
+		;; Check AVX and OS XSAVE support before probing extended features
+		and	ecx, (FLAG_CPUID1_ECX_AVX | FLAG_CPUID1_ECX_OSXSAVE)
+		cmp	ecx, (FLAG_CPUID1_ECX_AVX | FLAG_CPUID1_ECX_OSXSAVE)
+		jne	_%1_init_done ; AVX is not available so end
+
+		;; Confirm OS has enabled XMM/YMM state in XCR0 before using AVX or higher
+		xor	ecx, ecx
+		xgetbv
+		mov	edi, eax ; Save XCR0 before masking and CPUID
+		and	eax, FLAG_XGETBV_EAX_XMM_YMM
+		cmp	eax, FLAG_XGETBV_EAX_XMM_YMM
+		jne	_%1_init_done ; OS has not enabled YMM state; stay with SSE func
+
+		lea	rsi, [%4 WRT_OPT] ; AVX (gen2) opt func
+
+		;; Try for AVX2
+		xor	ecx, ecx
+		mov	eax, 7
+		cpuid
+		test	ebx, FLAG_CPUID7_EBX_AVX2
+		jz	_%1_init_done
+		lea	rsi, [%5 WRT_OPT] ; AVX2 (gen4) opt func
+
+		;; Require AVX-512 and BMI2 for the APX slot, not the AVX2 fallback.
+		and	ebx, (FLAGS_CPUID7_EBX_AVX512_G1 | FLAG_CPUID7_EBX_BMI2)
+		cmp	ebx, (FLAGS_CPUID7_EBX_AVX512_G1 | FLAG_CPUID7_EBX_BMI2)
+		jne	_%1_init_done
+		and	edi, (FLAG_XGETBV_EAX_ZMM_OPM | FLAG_XGETBV_EAX_APX)
+		cmp	edi, (FLAG_XGETBV_EAX_ZMM_OPM | FLAG_XGETBV_EAX_APX)
+		jne	_%1_init_done
+
+		;; Try for APX (CPUID leaf 7, subleaf 1, EDX[21])
+		mov	eax, 7
+		mov	ecx, 1
+		cpuid
+		test	edx, FLAG_CPUID7_1_EDX_APX_F
+		lea	rbx, [%6 WRT_OPT] ; APX opt func
+		cmovne	rsi, rbx
+
+	_%1_init_done:
+		pop	rdi
+		pop	rdx
+		pop	rcx
+		pop	rbx
+		mov	[%1_dispatched], rsi
+		pop	rsi
+		ret
+%endmacro
+
 %endif ; ifndef _MULTIBINARY_ASM_
