@@ -424,13 +424,13 @@ main(int argc, char *argv[])
 
                 printf("Read %ld bytes of dictionary file %s\n", dict_file_length, dict_path);
                 fclose(dict_file);
-                free(dict_stream);
         }
 
         if (hist_path) {
                 hist_file = fopen(hist_path, "r+");
                 if (hist_file == NULL) {
                         printf("File \"%s\" open error!\n", hist_path);
+                        free(dict_stream);
                         return 1;
                 }
                 fseek(hist_file, 0, SEEK_END);
@@ -440,11 +440,13 @@ main(int argc, char *argv[])
                 if (hist_file_length > (long int) sizeof(histogram)) {
                         printf("Histogram file too long\n");
                         fclose(hist_file);
+                        free(dict_stream);
                         return 1;
                 }
                 if (fread(&histogram, 1, hist_file_length, hist_file) != hist_file_length) {
-                        printf("Error occurred when reading history file");
+                        printf("Error occurred when reading history file\n");
                         fclose(hist_file);
+                        free(dict_stream);
                         return 1;
                 }
                 fseek(hist_file, 0, SEEK_SET);
@@ -459,6 +461,9 @@ main(int argc, char *argv[])
                 file = fopen(argv[optind], "r");
                 if (file == NULL) {
                         printf("Error opening file\n");
+                        if (hist_file)
+                                fclose(hist_file);
+                        free(dict_stream);
                         return 1;
                 }
                 fseek(file, 0, SEEK_END);
@@ -469,6 +474,9 @@ main(int argc, char *argv[])
                 if (stream == NULL) {
                         printf("Failed to allocate memory to read in file\n");
                         fclose(file);
+                        if (hist_file)
+                                fclose(hist_file);
+                        free(dict_stream);
                         return 1;
                 }
                 if (dict_file_length > 0)
@@ -478,6 +486,9 @@ main(int argc, char *argv[])
                         printf("Error occurred when reading file");
                         fclose(file);
                         free(stream);
+                        if (hist_file)
+                                fclose(hist_file);
+                        free(dict_stream);
                         return 1;
                 }
 
@@ -499,6 +510,9 @@ main(int argc, char *argv[])
         file = fopen("hufftables_c.c", "w");
         if (file == NULL) {
                 printf("Error creating file hufftables_c.c\n");
+                if (hist_file)
+                        fclose(hist_file);
+                free(dict_stream);
                 return 1;
         }
 
@@ -521,5 +535,6 @@ main(int argc, char *argv[])
                 printf("wrote %d bytes of histogram file\n", len);
                 fclose(hist_file);
         }
+        free(dict_stream);
         return 0;
 }
