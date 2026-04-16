@@ -1073,20 +1073,26 @@ isal_write_gzip_header(struct isal_zstream *stream, struct isal_gzip_header *gz_
                 flags |= TEXT_FLAG;
         if (gz_hdr->extra) {
                 flags |= EXTRA_FLAG;
+                if (gz_hdr->extra_len > UINT16_MAX)
+                        return UINT32_MAX;
                 hdr_size += GZIP_EXTRA_LEN + gz_hdr->extra_len;
         }
         if (gz_hdr->name) {
                 flags |= NAME_FLAG;
                 name_len = (uint32_t) strnlen(gz_hdr->name, gz_hdr->name_buf_len);
                 if (name_len < gz_hdr->name_buf_len)
-                        name_len++;
+                        name_len++; /* Account for null terminator */
+                if (name_len > UINT32_MAX - hdr_size)
+                        return UINT32_MAX;
                 hdr_size += name_len;
         }
         if (gz_hdr->comment) {
                 flags |= COMMENT_FLAG;
                 comment_len = (uint32_t) strnlen(gz_hdr->comment, gz_hdr->comment_buf_len);
                 if (comment_len < gz_hdr->comment_buf_len)
-                        comment_len++;
+                        comment_len++; /* Account for null terminator */
+                if (comment_len > UINT32_MAX - hdr_size)
+                        return UINT32_MAX;
                 hdr_size += comment_len;
         }
         if (gz_hdr->hcrc) {
