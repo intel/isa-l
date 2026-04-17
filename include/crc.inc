@@ -109,5 +109,78 @@ endstruc
 	vextracti64x2	xmm5, ymm8, 1
 	vpxorq		xmm7, xmm5, xmm8
 %endmacro
+;; CRC_FOLD_YMM_XMM acc, tmp, fold_const, src, imm_tmp, imm_acc
+;;   Generic YMM/XMM fold step (VEX vpclmulqdq×2 + vpxor×2). Works for any
+;;   register source or memory operand; no byte-swap performed.
+;;   For reflected CRC:            imm_tmp=0x10, imm_acc=0x01
+;;   For normal CRC register fold: imm_tmp=0x0,  imm_acc=0x11
+%macro CRC_FOLD_YMM_XMM 6
+%define %%ACC       %1  ; [in/out] YMM/XMM accumulator
+%define %%TMP       %2  ; [clobbered] YMM/XMM for first product
+%define %%FOLD_CST  %3  ; [in] YMM/XMM holding fold polynomial constants
+%define %%SRC       %4  ; [in] YMM/XMM source data
+%define %%IMM_TMP   %5  ; [in] vpclmulqdq immediate for first (TMP) multiply
+%define %%IMM_ACC   %6  ; [in] vpclmulqdq immediate for second (ACC) multiply
+	vpclmulqdq	%%TMP, %%ACC, %%FOLD_CST, %%IMM_TMP
+	vpclmulqdq	%%ACC, %%ACC, %%FOLD_CST, %%IMM_ACC
+	vpxor		%%ACC, %%SRC
+	vpxor		%%ACC, %%TMP
+%endmacro
+
+;; CRC_FOLD_YMM_SHUF acc, tmp, fold_const, mem
+;;   One YMM fold step for normal (byte-swapping) CRC (VEX vpclmulqdq 0x00/0x11 + vpxor×2).
+;;   Uses ymm14 as the data scratch register and ymm11 as the byte-swap shuffle
+;;   mask (both must be set up by the caller before entering the fold loop).
+%macro CRC_FOLD_YMM_SHUF 4
+%define %%ACC       %1  ; [in/out] YMM accumulator
+%define %%TMP       %2  ; [clobbered] YMM for low-half product
+%define %%FOLD_CST  %3  ; [in] YMM holding fold polynomial constants
+%define %%MEM       %4  ; [in] memory operand [address + offset]
+	vmovdqu		ymm14, %%MEM
+	vpshufb		ymm14, ymm11
+	vpclmulqdq	%%TMP, %%ACC, %%FOLD_CST, 0x0
+	vpclmulqdq	%%ACC, %%ACC, %%FOLD_CST, 0x11
+	vpxor		%%ACC, ymm14
+	vpxor		%%ACC, %%TMP
+%endmacro
+
+
+;; CRC_FOLD_YMM_TO_XMM7 accum, imm1, imm2
+;;   Folds ymm0..ymm3 (4x128B accumulated CRC) down into xmm7 for the 16B
+;;   reduction loop.  Works for both reflected and normal CRC by parameterising
+;;   the accumulator register and the vpclmulqdq immediate bytes:
+;;     REFL: CRC_FOLD_YMM_TO_XMM7 ymm11, 0x01, 0x10
+;;     NORM: CRC_FOLD_YMM_TO_XMM7 ymm12, 0x0,  0x11
+;;   Clobbers: ymm4, ymm5, ymm10, xmm4, xmm5, xmm7, xmm10.
+%macro CRC_FOLD_YMM_TO_XMM7 3
+%define %%ACCUM     %1  ; [in/out] YMM accumulator
+%define %%IMM1      %2  ; [in] vpclmulqdq first immediate
+%define %%IMM2      %3  ; [in] vpclmulqdq second immediate
+	vextracti128	xmm7, ymm3, 1
+	vmovdqu		ymm10, [r10 + crc_fold_const_fold_7x128b]
+	vpclmulqdq	ymm4, ymm0, ymm10, %%IMM1
+	vpclmulqdq	%%ACCUM, ymm0, ymm10, %%IMM2
+	vpxor		%%ACCUM, ymm4
+	vmovdqu		ymm10, [r10 + crc_fold_const_fold_5x128b]
+	vpclmulqdq	ymm4, ymm1, ymm10, %%IMM1
+	vpclmulqdq	ymm5, ymm1, ymm10, %%IMM2
+	vpxor		%%ACCUM, ymm4
+	vpxor		%%ACCUM, ymm5
+	vmovdqu		ymm10, [r10 + crc_fold_const_fold_3x128b]
+	vpclmulqdq	ymm4, ymm2, ymm10, %%IMM1
+	vpclmulqdq	ymm5, ymm2, ymm10, %%IMM2
+	vpxor		%%ACCUM, ymm4
+	vpxor		%%ACCUM, ymm5
+	vmovdqa		xmm10, [r10 + crc_fold_const_fold_1x128b]
+	vpclmulqdq	xmm4, xmm3, xmm10, %%IMM1
+	vpclmulqdq	xmm5, xmm3, xmm10, %%IMM2
+	vpxor		%%ACCUM, ymm4
+	vpxor		%%ACCUM, ymm5
+	vextracti128	xmm4, %%ACCUM, 1
+	vpxor		xmm7, xmm4
+	vextracti128	xmm4, %%ACCUM, 0
+	vpxor		xmm7, xmm4
+%endmacro
+
 
 %endif ;; CRC_INC

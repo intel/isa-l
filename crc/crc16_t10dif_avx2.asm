@@ -161,65 +161,18 @@ align 16
 _fold_and_prefetch_256_B_loop:
 	add	in_buf, 256
 
-    PREFETCH [in_buf+fetch_dist+0]
-	vmovdqu ymm14, [in_buf+16*0]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm4, ymm0, ymm15, 0x0
-	vpclmulqdq	ymm0, ymm0, ymm15, 0x11
-	vpxor	ymm0, ymm14
-	vpxor 	ymm0, ymm4
-
-    vmovdqu ymm14, [in_buf+16*2]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm5, ymm1, ymm15, 0x0
-	vpclmulqdq	ymm1, ymm1, ymm15, 0x11
-	vpxor	ymm1, ymm14
-	vpxor 	ymm1, ymm5
-
+	PREFETCH [in_buf+fetch_dist+0]
+	CRC_FOLD_YMM_SHUF ymm0, ymm4, ymm15, [in_buf+16*0]
+	CRC_FOLD_YMM_SHUF ymm1, ymm5, ymm15, [in_buf+16*2]
 	PREFETCH [in_buf+fetch_dist+64]
-    vmovdqu ymm14, [in_buf+16*4]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm4, ymm2, ymm15, 0x0
-	vpclmulqdq	ymm2, ymm2, ymm15, 0x11
-	vpxor	ymm2, ymm14
-	vpxor 	ymm2, ymm4
-
-    vmovdqu ymm14, [in_buf+16*6]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm5, ymm3, ymm15, 0x0
-	vpclmulqdq	ymm3, ymm3, ymm15, 0x11
-	vpxor	ymm3, ymm14
-	vpxor 	ymm3, ymm5
-
+	CRC_FOLD_YMM_SHUF ymm2, ymm4, ymm15, [in_buf+16*4]
+	CRC_FOLD_YMM_SHUF ymm3, ymm5, ymm15, [in_buf+16*6]
 	PREFETCH [in_buf+fetch_dist+64*2]
-    vmovdqu ymm14, [in_buf+16*8]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm6, ymm8, ymm15, 0x0
-	vpclmulqdq	ymm8, ymm8, ymm15, 0x11
-	vpxor	ymm8, ymm14
-	vpxor 	ymm8, ymm6
-
-    vmovdqu ymm14, [in_buf+16*10]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm7, ymm9, ymm15, 0x0
-	vpclmulqdq	ymm9, ymm9, ymm15, 0x11
-	vpxor	ymm9, ymm14
-	vpxor 	ymm9, ymm7
-
-    PREFETCH [in_buf+fetch_dist+64*3]
-    vmovdqu ymm14, [in_buf+16*12]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm6, ymm12, ymm15, 0x0
-	vpclmulqdq	ymm12, ymm12, ymm15, 0x11
-	vpxor	ymm12, ymm14
-	vpxor 	ymm12, ymm6
-
-    vmovdqu ymm14, [in_buf+16*14]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm7, ymm13, ymm15, 0x0
-	vpclmulqdq	ymm13, ymm13, ymm15, 0x11
-	vpxor	ymm13, ymm14
-	vpxor 	ymm13, ymm7
+	CRC_FOLD_YMM_SHUF ymm8, ymm6, ymm15, [in_buf+16*8]
+	CRC_FOLD_YMM_SHUF ymm9, ymm7, ymm15, [in_buf+16*10]
+	PREFETCH [in_buf+fetch_dist+64*3]
+	CRC_FOLD_YMM_SHUF ymm12, ymm6, ymm15, [in_buf+16*12]
+	CRC_FOLD_YMM_SHUF ymm13, ymm7, ymm15, [in_buf+16*14]
 
 	sub	buf_len, 256
 	; check if there is another 256B in the buffer to be able to fold
@@ -231,61 +184,14 @@ align 16
 _fold_256_B_loop:
 	add	in_buf, 256
 
-    vmovdqu ymm14, [in_buf+16*0]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm4, ymm0, ymm15, 0x0
-	vpclmulqdq	ymm0, ymm0, ymm15, 0x11
-	vpxor	ymm0, ymm14
-	vpxor 	ymm0, ymm4
-
-    vmovdqu ymm14, [in_buf+16*2]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm5, ymm1, ymm15, 0x0
-	vpclmulqdq	ymm1, ymm1, ymm15, 0x11
-	vpxor	ymm1, ymm14
-	vpxor 	ymm1, ymm5
-
-    vmovdqu ymm14, [in_buf+16*4]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm4, ymm2, ymm15, 0x0
-	vpclmulqdq	ymm2, ymm2, ymm15, 0x11
-	vpxor	ymm2, ymm14
-	vpxor 	ymm2, ymm4
-
-    vmovdqu ymm14, [in_buf+16*6]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm5, ymm3, ymm15, 0x0
-	vpclmulqdq	ymm3, ymm3, ymm15, 0x11
-	vpxor	ymm3, ymm14
-	vpxor 	ymm3, ymm5
-
-    vmovdqu ymm14, [in_buf+16*8]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm6, ymm8, ymm15, 0x0
-	vpclmulqdq	ymm8, ymm8, ymm15, 0x11
-	vpxor	ymm8, ymm14
-	vpxor 	ymm8, ymm6
-
-    vmovdqu ymm14, [in_buf+16*10]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm7, ymm9, ymm15, 0x0
-	vpclmulqdq	ymm9, ymm9, ymm15, 0x11
-	vpxor	ymm9, ymm14
-	vpxor 	ymm9, ymm7
-
-    vmovdqu ymm14, [in_buf+16*12]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm6, ymm12, ymm15, 0x0
-	vpclmulqdq	ymm12, ymm12, ymm15, 0x11
-	vpxor	ymm12, ymm14
-	vpxor 	ymm12, ymm6
-
-    vmovdqu ymm14, [in_buf+16*14]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm7, ymm13, ymm15, 0x0
-	vpclmulqdq	ymm13, ymm13, ymm15, 0x11
-	vpxor	ymm13, ymm14
-	vpxor 	ymm13, ymm7
+	CRC_FOLD_YMM_SHUF ymm0, ymm4, ymm15, [in_buf+16*0]
+	CRC_FOLD_YMM_SHUF ymm1, ymm5, ymm15, [in_buf+16*2]
+	CRC_FOLD_YMM_SHUF ymm2, ymm4, ymm15, [in_buf+16*4]
+	CRC_FOLD_YMM_SHUF ymm3, ymm5, ymm15, [in_buf+16*6]
+	CRC_FOLD_YMM_SHUF ymm8, ymm6, ymm15, [in_buf+16*8]
+	CRC_FOLD_YMM_SHUF ymm9, ymm7, ymm15, [in_buf+16*10]
+	CRC_FOLD_YMM_SHUF ymm12, ymm6, ymm15, [in_buf+16*12]
+	CRC_FOLD_YMM_SHUF ymm13, ymm7, ymm15, [in_buf+16*14]
 
 	sub	buf_len, 256
 	; check if there is another 256B in the buffer to be able to fold
@@ -293,25 +199,10 @@ _fold_256_B_loop:
 
 	; Fold 256B into 128B using rk3/rk4
 	add in_buf, 128
-	vpclmulqdq	ymm4, ymm0, ymm10, 0x0
-	vpclmulqdq	ymm0, ymm0, ymm10, 0x11
-	vpxor	ymm0, ymm4
-	vpxor	ymm0, ymm8
-
-	vpclmulqdq	ymm5, ymm1, ymm10, 0x0
-	vpclmulqdq	ymm1, ymm1, ymm10, 0x11
-	vpxor	ymm1, ymm5
-	vpxor	ymm1, ymm9
-
-	vpclmulqdq	ymm4, ymm2, ymm10, 0x0
-	vpclmulqdq	ymm2, ymm2, ymm10, 0x11
-	vpxor	ymm2, ymm4
-	vpxor	ymm2, ymm12
-
-	vpclmulqdq	ymm5, ymm3, ymm10, 0x0
-	vpclmulqdq	ymm3, ymm3, ymm10, 0x11
-	vpxor	ymm3, ymm5
-	vpxor	ymm3, ymm13
+	CRC_FOLD_YMM_XMM ymm0, ymm4, ymm10, ymm8, 0x0, 0x11
+	CRC_FOLD_YMM_XMM ymm1, ymm5, ymm10, ymm9, 0x0, 0x11
+	CRC_FOLD_YMM_XMM ymm2, ymm4, ymm10, ymm12, 0x0, 0x11
+	CRC_FOLD_YMM_XMM ymm3, ymm5, ymm10, ymm13, 0x0, 0x11
 
 	add	buf_len, 128
     cmp buf_len, 128
@@ -322,33 +213,10 @@ _fold_128_B_loop:
 	; update the buffer pointer
 	add	in_buf, 128		;    buf += 128;
 
-    vmovdqu ymm14, [in_buf+16*0]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm4, ymm0, ymm10, 0x0
-	vpclmulqdq	ymm0, ymm0, ymm10, 0x11
-	vpxor	ymm0, ymm14
-	vpxor 	ymm0, ymm4
-
-    vmovdqu ymm14, [in_buf+16*2]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm5, ymm1, ymm10, 0x0
-	vpclmulqdq	ymm1, ymm1, ymm10, 0x11
-	vpxor	ymm1, ymm14
-	vpxor 	ymm1, ymm5
-
-    vmovdqu ymm14, [in_buf+16*4]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm4, ymm2, ymm10, 0x0
-	vpclmulqdq	ymm2, ymm2, ymm10, 0x11
-	vpxor	ymm2, ymm14
-	vpxor 	ymm2, ymm4
-
-    vmovdqu ymm14, [in_buf+16*6]
-    vpshufb ymm14, ymm11
-	vpclmulqdq	ymm5, ymm3, ymm10, 0x0
-	vpclmulqdq	ymm3, ymm3, ymm10, 0x11
-	vpxor	ymm3, ymm14
-	vpxor 	ymm3, ymm5
+	CRC_FOLD_YMM_SHUF ymm0, ymm4, ymm10, [in_buf+16*0]
+	CRC_FOLD_YMM_SHUF ymm1, ymm5, ymm10, [in_buf+16*2]
+	CRC_FOLD_YMM_SHUF ymm2, ymm4, ymm10, [in_buf+16*4]
+	CRC_FOLD_YMM_SHUF ymm3, ymm5, ymm10, [in_buf+16*6]
 	sub	buf_len, 128
 
 	; check if there is another 128B in the buffer to be able to fold
@@ -359,53 +227,18 @@ _fold_less_than_128_B:
 	; at this point, the buffer pointer is pointing at the last y Bytes of the buffer
 	; the 128 of folded data is in 4 of the ymm registers: ymm0, ymm1, ymm2, ymm3
 	add	in_buf, 128
+	CRC_FOLD_YMM_TO_XMM7 ymm12, 0x0, 0x11
 
-	;Extract the final 16B into xmm7 - this is the accumulator
-	vextracti128	xmm7, ymm3, 1
-
-	; fold the rest of the data in the ymm registers into xmm7
-    vmovdqu	ymm10, [r10 + crc_fold_const_fold_7x128b]
-	vpclmulqdq	ymm4, ymm0, ymm10, 0x0
-	vpclmulqdq	ymm12, ymm0, ymm10, 0x11
-	vpxor	ymm12, ymm4 ; use ymm12 to accumulate all products
-
-	vmovdqu	ymm10, [r10 + crc_fold_const_fold_5x128b]
-	vpclmulqdq	ymm4, ymm1, ymm10, 0x0
-	vpclmulqdq	ymm5, ymm1, ymm10, 0x11
-	vpxor	ymm12, ymm4
-	vpxor	ymm12, ymm5
-
-	vmovdqu	ymm10, [r10 + crc_fold_const_fold_3x128b]
-	vpclmulqdq	ymm4, ymm2, ymm10, 0x0
-	vpclmulqdq	ymm5, ymm2, ymm10, 0x11
-	vpxor	ymm12, ymm4
-	vpxor	ymm12, ymm5
-
-	vmovdqa	xmm10, [r10 + crc_fold_const_fold_1x128b]
-	vpclmulqdq	xmm4, xmm3, xmm10, 0x0
-	vpclmulqdq	xmm5, xmm3, xmm10, 0x11
-	vpxor	ymm12, ymm4
-	vpxor	ymm12, ymm5
-
-	; horizontal xor of ymm7
-	vextracti128	xmm4, ymm12, 1
-	vpxor	xmm7, xmm4
-	vpxor	xmm7, xmm12
-
-	; instead of 128, we add 112 to the loop counter to save 1 instruction from the loop
+	; instead of 128, we add 128-16 to the loop counter to save 1 instruction from the loop
 	; instead of a cmp instruction, we use the negative flag with the jl instruction
 	add	buf_len, 128-16
 	jl	_final_reduction_for_128
 
 align 16
 _16B_reduction_loop:
-	vmovdqa	xmm8, xmm7
-	vpclmulqdq	xmm7, xmm10, 0x11
-	vpclmulqdq	xmm8, xmm10, 0x0
-	vpxor	xmm7, xmm8
 	vmovdqu	xmm0, [in_buf]
 	vpshufb	xmm0, xmm11
-	vpxor	xmm7, xmm0
+	CRC_FOLD_YMM_XMM xmm7, xmm8, xmm10, xmm0, 0x0, 0x11
 	add	in_buf, 16
 	sub	buf_len, 16
 	; instead of a cmp instruction, we utilize the flags with the jge instruction
@@ -448,11 +281,7 @@ _get_last_two_xmms:
 
 	; fold 16 Bytes
 	vmovdqa	xmm2, xmm1
-	vmovdqa	xmm8, xmm7
-	vpclmulqdq	xmm7, xmm10, 0x11
-	vpclmulqdq	xmm8, xmm10, 0x0
-	vpxor	xmm7, xmm8
-	vpxor	xmm7, xmm2
+	CRC_FOLD_YMM_XMM xmm7, xmm8, xmm10, xmm2, 0x0, 0x11
 
 align 16
 _128_done:
