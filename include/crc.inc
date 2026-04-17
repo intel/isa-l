@@ -51,4 +51,63 @@ crc_fold_const_fold_2x128b:     resq 2  ;; offset 160 -- fold 2x128b
 crc_fold_const_fold_1x128b_b:   resq 4  ;; offset 176 -- fold_1x128b copy + 2x zero (zmm tail)
 endstruc
 
+;; CRC_FOLD_ZMM acc, tmp, fold_const, src, imm_tmp, imm_acc
+;;   Folds a 512-bit ZMM accumulator using two EVEX vpclmulqdq steps and vpternlogq.
+%macro CRC_FOLD_ZMM 6
+%define %%ACC       %1  ; [in/out] ZMM accumulator
+%define %%TMP       %2  ; [clobbered] ZMM for first product
+%define %%FOLD_CST  %3  ; [in] ZMM holding fold polynomial constants
+%define %%SRC       %4  ; [in] ZMM source data
+%define %%IMM_TMP   %5  ; [in] vpclmulqdq immediate for first (TMP) multiply
+%define %%IMM_ACC   %6  ; [in] vpclmulqdq immediate for second (ACC) multiply
+	vpclmulqdq	%%TMP, %%ACC, %%FOLD_CST, %%IMM_TMP
+	vpclmulqdq	%%ACC, %%ACC, %%FOLD_CST, %%IMM_ACC
+	vpternlogq	%%ACC, %%TMP, %%SRC, 0x96
+%endmacro
+
+;; CRC_FOLD_ZMM_SHUF acc, tmp, data_tmp, fold_const, mem
+;;   One fold step for normal (byte-swapping) CRC (imm8 0x00 / 0x11).
+;;   Loads MEM into DATA_TMP, byte-swaps it using zmm18 (must be loaded
+;;   by the caller), then folds into ACC via vpternlogq.
+%macro CRC_FOLD_ZMM_SHUF 5
+%define %%ACC       %1  ; [in/out] ZMM accumulator
+%define %%TMP       %2  ; [clobbered] ZMM for high-half product
+%define %%DATA_TMP  %3  ; [clobbered] ZMM for loaded + byte-swapped data
+%define %%FOLD_CST  %4  ; [in] ZMM holding fold polynomial constants
+%define %%MEM       %5  ; [in] memory operand [address + offset]
+	vmovdqu8	%%DATA_TMP, %%MEM
+	vpshufb		%%DATA_TMP, %%DATA_TMP, zmm18
+	vpclmulqdq	%%TMP, %%ACC, %%FOLD_CST, 0x00
+	vpclmulqdq	%%ACC, %%ACC, %%FOLD_CST, 0x11
+	vpternlogq	%%ACC, %%TMP, %%DATA_TMP, 0x96
+%endmacro
+
+;; CRC_FOLD_8_TO_1_ZMM fold_7x128, fold_3x128, imm1, imm2, ztmp1, ztmp2
+;;   Folds 8 128b chunks (zmm0, zmm4) down to a single 128b value in xmm7
+;;   using packed ZMM carry-less multiplies.
+;;   Also pre-loads xmm10 with fold_1x128b ready for the 16-byte loop.
+;;   Clobbers: zmm1, zmm2, zmm5, zmm6, zmm7, zmm8, xmm5, xmm7, xmm10.
+%macro CRC_FOLD_8_TO_1_ZMM 6
+%define %%FOLD_CONST_7x128  %1  ; [in] address of fold_7x128b constants
+%define %%FOLD_CONST_3x128  %2  ; [in] address of fold_3x128b constants
+%define %%IMM1              %3  ; [in] vpclmulqdq first immediate  (e.g., 0x01 REFL, 0x00 NORM)
+%define %%IMM2              %4  ; [in] vpclmulqdq second immediate (e.g., 0x10 REFL, 0x11 NORM)
+%define %%ZTMP1             %5  ; [clobbered] ZMM register for fold_7x128b constants
+%define %%ZTMP2             %6  ; [clobbered] ZMM register for fold_3x128b constants
+	vmovdqu8	%%ZTMP1, %%FOLD_CONST_7x128
+	vmovdqu8	%%ZTMP2, %%FOLD_CONST_3x128
+	vpclmulqdq	zmm1, zmm0, %%ZTMP1, %%IMM1
+	vpclmulqdq	zmm2, zmm0, %%ZTMP1, %%IMM2
+	vextracti64x2	xmm7, zmm4, 3
+	vpclmulqdq	zmm5, zmm4, %%ZTMP2, %%IMM1
+	vpclmulqdq	zmm6, zmm4, %%ZTMP2, %%IMM2
+	vmovdqa		xmm10, [r10 + crc_fold_const_fold_1x128b]
+	vpternlogq	zmm1, zmm2, zmm5, 0x96
+	vpternlogq	zmm1, zmm6, zmm7, 0x96
+	vshufi64x2	zmm8, zmm1, zmm1, 0x4e
+	vpxorq		ymm8, ymm8, ymm1
+	vextracti64x2	xmm5, ymm8, 1
+	vpxorq		xmm7, xmm5, xmm8
+%endmacro
+
 %endif ;; CRC_INC

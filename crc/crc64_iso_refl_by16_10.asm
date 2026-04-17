@@ -129,24 +129,13 @@ align 16
 _fold_and_prefetch_256_B_loop:
 	add		arg2, 256
 	PREFETCH        [arg2+fetch_dist+0]
-	vpclmulqdq	zmm1, zmm0, zmm16, 0x10
-	vpclmulqdq	zmm0, zmm0, zmm16, 0x01
-	vpternlogq	zmm0, zmm1, [arg2+16*0], 0x96
-
+	CRC_FOLD_ZMM zmm0, zmm1, zmm16, [arg2+16*0], 0x10, 0x01
 	PREFETCH        [arg2+fetch_dist+64]
-	vpclmulqdq	zmm2, zmm4, zmm16, 0x10
-	vpclmulqdq	zmm4, zmm4, zmm16, 0x01
-	vpternlogq	zmm4, zmm2, [arg2+16*4], 0x96
-
+	CRC_FOLD_ZMM zmm4, zmm2, zmm16, [arg2+16*4], 0x10, 0x01
 	PREFETCH        [arg2+fetch_dist+64*2]
-	vpclmulqdq	zmm3, zmm7, zmm16, 0x10
-	vpclmulqdq	zmm7, zmm7, zmm16, 0x01
-	vpternlogq	zmm7, zmm3, [arg2+16*8], 0x96
-
+	CRC_FOLD_ZMM zmm7, zmm3, zmm16, [arg2+16*8], 0x10, 0x01
 	PREFETCH        [arg2+fetch_dist+64*3]
-	vpclmulqdq	zmm5, zmm8, zmm16, 0x10
-	vpclmulqdq	zmm8, zmm8, zmm16, 0x01
-	vpternlogq	zmm8, zmm5, [arg2+16*12], 0x96
+	CRC_FOLD_ZMM zmm8, zmm5, zmm16, [arg2+16*12], 0x10, 0x01
 
 	sub		arg3, 256
 
@@ -158,37 +147,18 @@ _fold_and_prefetch_256_B_loop:
 align 16
 _fold_256_B_loop:
 	add		arg2, 256
-	vpclmulqdq	zmm1, zmm0, zmm16, 0x10
-	vpclmulqdq	zmm0, zmm0, zmm16, 0x01
-	vpternlogq	zmm0, zmm1, [arg2+16*0], 0x96
-
-	vpclmulqdq	zmm2, zmm4, zmm16, 0x10
-	vpclmulqdq	zmm4, zmm4, zmm16, 0x01
-	vpternlogq	zmm4, zmm2, [arg2+16*4], 0x96
-
-	vpclmulqdq	zmm3, zmm7, zmm16, 0x10
-	vpclmulqdq	zmm7, zmm7, zmm16, 0x01
-	vpternlogq	zmm7, zmm3, [arg2+16*8], 0x96
-
-	vpclmulqdq	zmm5, zmm8, zmm16, 0x10
-	vpclmulqdq	zmm8, zmm8, zmm16, 0x01
-	vpternlogq	zmm8, zmm5, [arg2+16*12], 0x96
+	CRC_FOLD_ZMM zmm0, zmm1, zmm16, [arg2+16*0], 0x10, 0x01
+	CRC_FOLD_ZMM zmm4, zmm2, zmm16, [arg2+16*4], 0x10, 0x01
+	CRC_FOLD_ZMM zmm7, zmm3, zmm16, [arg2+16*8], 0x10, 0x01
+	CRC_FOLD_ZMM zmm8, zmm5, zmm16, [arg2+16*12], 0x10, 0x01
 
 	sub		arg3, 256
 	jge     	_fold_256_B_loop
 
 	;; Fold 256 into 128
 	add		arg2, 256
-	vpclmulqdq	zmm1, zmm0, zmm10, 0x01
-	vpclmulqdq	zmm2, zmm0, zmm10, 0x10
-	vpternlogq	zmm7, zmm1, zmm2, 0x96	; xor ABC
-
-	vpclmulqdq	zmm5, zmm4, zmm10, 0x01
-	vpclmulqdq	zmm6, zmm4, zmm10, 0x10
-	vpternlogq	zmm8, zmm5, zmm6, 0x96	; xor ABC
-
-	vmovdqa32	zmm0, zmm7
-	vmovdqa32	zmm4, zmm8
+	CRC_FOLD_ZMM zmm0, zmm1, zmm10, zmm7, 0x10, 0x01
+	CRC_FOLD_ZMM zmm4, zmm5, zmm10, zmm8, 0x10, 0x01
 
 	add		arg3, 128
 	jmp		_fold_128_B_register
@@ -196,13 +166,8 @@ _fold_256_B_loop:
 	; fold 128B at a time. This section of the code folds 2 zmm registers in parallel
 _fold_128_B_loop:
 	add		arg2, 128	; update the buffer pointer
-	vpclmulqdq	zmm1, zmm0, zmm10, 0x10
-	vpclmulqdq	zmm0, zmm0, zmm10, 0x01
-	vpternlogq	zmm0, zmm1, [arg2+16*0], 0x96
-
-	vpclmulqdq	zmm5, zmm4, zmm10, 0x10
-	vpclmulqdq	zmm4, zmm4, zmm10, 0x01
-	vpternlogq	zmm4, zmm5, [arg2+16*4], 0x96
+	CRC_FOLD_ZMM zmm0, zmm1, zmm10, [arg2+16*0], 0x10, 0x01
+	CRC_FOLD_ZMM zmm4, zmm5, zmm10, [arg2+16*4], 0x10, 0x01
 
 	sub		arg3, 128
 	jge		_fold_128_B_loop
@@ -214,23 +179,7 @@ _fold_128_B_loop:
 
 _fold_128_B_register:
 	; fold the 8 128b parts into 1 xmm register with different constants
-	vmovdqu8	zmm16, [r10 + crc_fold_const_fold_7x128b]		; multiply by rk9-rk16
-	vmovdqu8	zmm11, [r10 + crc_fold_const_fold_3x128b]		; multiply by rk17-rk20, rk1,rk2, 0,0
-	vpclmulqdq	zmm1, zmm0, zmm16, 0x01
-	vpclmulqdq	zmm2, zmm0, zmm16, 0x10
-	vextracti64x2	xmm7, zmm4, 3		; save last that has no multiplicand
-
-	vpclmulqdq	zmm5, zmm4, zmm11, 0x01
-	vpclmulqdq	zmm6, zmm4, zmm11, 0x10
-	vmovdqa		xmm10, [r10 + crc_fold_const_fold_1x128b]		; Needed later in reduction loop
-	vpternlogq	zmm1, zmm2, zmm5, 0x96	; xor ABC
-	vpternlogq	zmm1, zmm6, zmm7, 0x96	; xor ABC
-
-	vshufi64x2      zmm8, zmm1, zmm1, 0x4e ; Swap 1,0,3,2 - 01 00 11 10
-	vpxorq          ymm8, ymm8, ymm1
-	vextracti64x2   xmm5, ymm8, 1
-	vpxorq          xmm7, xmm5, xmm8
-
+        CRC_FOLD_8_TO_1_ZMM [r10 + crc_fold_const_fold_7x128b], [r10 + crc_fold_const_fold_3x128b], 0x01, 0x10, zmm16, zmm11
 	; instead of 128, we add 128-16 to the loop counter to save 1 instruction from the loop
 	; instead of a cmp instruction, we use the negative flag with the jl instruction
 	add		arg3, 128-16
@@ -241,12 +190,7 @@ _fold_128_B_register:
 	; continue folding 16B at a time
 
 _16B_reduction_loop:
-	vmovdqa		xmm8, xmm7
-	vpclmulqdq	xmm7, xmm10, 0x1
-	vpclmulqdq	xmm8, xmm10, 0x10
-	vpxor		xmm7, xmm8
-	vmovdqu		xmm0, [arg2]
-	vpxor		xmm7, xmm0
+	CRC_FOLD_ZMM xmm7, xmm8, xmm10, [arg2], 0x10, 0x01
 	add		arg2, 16
 	sub		arg3, 16
 	; instead of a cmp instruction, we utilize the flags with the jge instruction
@@ -284,12 +228,7 @@ _get_last_two_xmms:
 
 	vpblendvb	xmm2, xmm2, xmm1, xmm0
 	;;;;;;;;;;
-	vmovdqa		xmm8, xmm7
-	vpclmulqdq	xmm7, xmm10, 0x1
-
-	vpclmulqdq	xmm8, xmm10, 0x10
-	vpxor		xmm7, xmm8
-	vpxor		xmm7, xmm2
+	CRC_FOLD_ZMM xmm7, xmm8, xmm10, xmm2, 0x10, 0x01
 
 _128_done:
 	; compute crc of a 128-bit value
