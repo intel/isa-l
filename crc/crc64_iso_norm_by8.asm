@@ -155,66 +155,11 @@ _fold_and_prefetch_128_B_loop:
 	add	arg2, 128		;    buf += 128;
 
 	PREFETCH [arg2+fetch_dist+0]
-	movdqu	xmm9, [arg2+16*0]
-	movdqu	xmm12, [arg2+16*1]
-	pshufb	xmm9, xmm11
-	pshufb	xmm12, xmm11
-	movdqa	xmm8, xmm0
-	movdqa	xmm13, xmm1
-	pclmulqdq	xmm0, xmm10, 0x0
-	pclmulqdq	xmm8, xmm10 , 0x11
-	pclmulqdq	xmm1, xmm10, 0x0
-	pclmulqdq	xmm13, xmm10 , 0x11
-	pxor	xmm0, xmm9
-	xorps	xmm0, xmm8
-	pxor	xmm1, xmm12
-	xorps	xmm1, xmm13
-
-	movdqu	xmm9, [arg2+16*2]
-	movdqu	xmm12, [arg2+16*3]
-	pshufb	xmm9, xmm11
-	pshufb	xmm12, xmm11
-	movdqa	xmm8, xmm2
-	movdqa	xmm13, xmm3
-	pclmulqdq	xmm2, xmm10, 0x0
-	pclmulqdq	xmm8, xmm10 , 0x11
-	pclmulqdq	xmm3, xmm10, 0x0
-	pclmulqdq	xmm13, xmm10 , 0x11
-	pxor	xmm2, xmm9
-	xorps	xmm2, xmm8
-	pxor	xmm3, xmm12
-	xorps	xmm3, xmm13
-
+	CRC_FOLD_PAIR_STEP_XMM_NORM xmm0, xmm1, xmm10, [arg2+16*0], [arg2+16*1]
+	CRC_FOLD_PAIR_STEP_XMM_NORM xmm2, xmm3, xmm10, [arg2+16*2], [arg2+16*3]
 	PREFETCH [arg2+fetch_dist+64]
-	movdqu	xmm9, [arg2+16*4]
-	movdqu	xmm12, [arg2+16*5]
-	pshufb	xmm9, xmm11
-	pshufb	xmm12, xmm11
-	movdqa	xmm8, xmm4
-	movdqa	xmm13, xmm5
-	pclmulqdq	xmm4, xmm10, 0x0
-	pclmulqdq	xmm8, xmm10 , 0x11
-	pclmulqdq	xmm5, xmm10, 0x0
-	pclmulqdq	xmm13, xmm10 , 0x11
-	pxor	xmm4, xmm9
-	xorps	xmm4, xmm8
-	pxor	xmm5, xmm12
-	xorps	xmm5, xmm13
-
-	movdqu	xmm9, [arg2+16*6]
-	movdqu	xmm12, [arg2+16*7]
-	pshufb	xmm9, xmm11
-	pshufb	xmm12, xmm11
-	movdqa	xmm8, xmm6
-	movdqa	xmm13, xmm7
-	pclmulqdq	xmm6, xmm10, 0x0
-	pclmulqdq	xmm8, xmm10 , 0x11
-	pclmulqdq	xmm7, xmm10, 0x0
-	pclmulqdq	xmm13, xmm10 , 0x11
-	pxor	xmm6, xmm9
-	xorps	xmm6, xmm8
-	pxor	xmm7, xmm12
-	xorps	xmm7, xmm13
+	CRC_FOLD_PAIR_STEP_XMM_NORM xmm4, xmm5, xmm10, [arg2+16*4], [arg2+16*5]
+	CRC_FOLD_PAIR_STEP_XMM_NORM xmm6, xmm7, xmm10, [arg2+16*6], [arg2+16*7]
 
 	sub	arg3, 128
 
@@ -232,65 +177,10 @@ _fold_128_B_loop:
 	; update the buffer pointer
 	add	arg2, 128		;    buf += 128;
 
-	movdqu	xmm9, [arg2+16*0]
-	movdqu	xmm12, [arg2+16*1]
-	pshufb	xmm9, xmm11
-	pshufb	xmm12, xmm11
-	movdqa	xmm8, xmm0
-	movdqa	xmm13, xmm1
-	pclmulqdq	xmm0, xmm10, 0x0
-	pclmulqdq	xmm8, xmm10 , 0x11
-	pclmulqdq	xmm1, xmm10, 0x0
-	pclmulqdq	xmm13, xmm10 , 0x11
-	pxor	xmm0, xmm9
-	xorps	xmm0, xmm8
-	pxor	xmm1, xmm12
-	xorps	xmm1, xmm13
-
-	movdqu	xmm9, [arg2+16*2]
-	movdqu	xmm12, [arg2+16*3]
-	pshufb	xmm9, xmm11
-	pshufb	xmm12, xmm11
-	movdqa	xmm8, xmm2
-	movdqa	xmm13, xmm3
-	pclmulqdq	xmm2, xmm10, 0x0
-	pclmulqdq	xmm8, xmm10 , 0x11
-	pclmulqdq	xmm3, xmm10, 0x0
-	pclmulqdq	xmm13, xmm10 , 0x11
-	pxor	xmm2, xmm9
-	xorps	xmm2, xmm8
-	pxor	xmm3, xmm12
-	xorps	xmm3, xmm13
-
-	movdqu	xmm9, [arg2+16*4]
-	movdqu	xmm12, [arg2+16*5]
-	pshufb	xmm9, xmm11
-	pshufb	xmm12, xmm11
-	movdqa	xmm8, xmm4
-	movdqa	xmm13, xmm5
-	pclmulqdq	xmm4, xmm10, 0x0
-	pclmulqdq	xmm8, xmm10 , 0x11
-	pclmulqdq	xmm5, xmm10, 0x0
-	pclmulqdq	xmm13, xmm10 , 0x11
-	pxor	xmm4, xmm9
-	xorps	xmm4, xmm8
-	pxor	xmm5, xmm12
-	xorps	xmm5, xmm13
-
-	movdqu	xmm9, [arg2+16*6]
-	movdqu	xmm12, [arg2+16*7]
-	pshufb	xmm9, xmm11
-	pshufb	xmm12, xmm11
-	movdqa	xmm8, xmm6
-	movdqa	xmm13, xmm7
-	pclmulqdq	xmm6, xmm10, 0x0
-	pclmulqdq	xmm8, xmm10 , 0x11
-	pclmulqdq	xmm7, xmm10, 0x0
-	pclmulqdq	xmm13, xmm10 , 0x11
-	pxor	xmm6, xmm9
-	xorps	xmm6, xmm8
-	pxor	xmm7, xmm12
-	xorps	xmm7, xmm13
+	CRC_FOLD_PAIR_STEP_XMM_NORM xmm0, xmm1, xmm10, [arg2+16*0], [arg2+16*1]
+	CRC_FOLD_PAIR_STEP_XMM_NORM xmm2, xmm3, xmm10, [arg2+16*2], [arg2+16*3]
+	CRC_FOLD_PAIR_STEP_XMM_NORM xmm4, xmm5, xmm10, [arg2+16*4], [arg2+16*5]
+	CRC_FOLD_PAIR_STEP_XMM_NORM xmm6, xmm7, xmm10, [arg2+16*6], [arg2+16*7]
 
 	sub	arg3, 128
 
@@ -304,57 +194,7 @@ _fold_128_B_loop:
 
 
 	; fold the 8 xmm registers to 1 xmm register with different constants
-
-	movdqa	xmm10, [r10 + crc_fold_const_fold_7x128b]
-	movdqa	xmm8, xmm0
-	pclmulqdq	xmm0, xmm10, 0x11
-	pclmulqdq	xmm8, xmm10, 0x0
-	pxor	xmm7, xmm8
-	xorps	xmm7, xmm0
-
-	movdqa	xmm10, [r10 + crc_fold_const_fold_6x128b]
-	movdqa	xmm8, xmm1
-	pclmulqdq	xmm1, xmm10, 0x11
-	pclmulqdq	xmm8, xmm10, 0x0
-	pxor	xmm7, xmm8
-	xorps	xmm7, xmm1
-
-	movdqa	xmm10, [r10 + crc_fold_const_fold_5x128b]
-	movdqa	xmm8, xmm2
-	pclmulqdq	xmm2, xmm10, 0x11
-	pclmulqdq	xmm8, xmm10, 0x0
-	pxor	xmm7, xmm8
-	pxor	xmm7, xmm2
-
-	movdqa	xmm10, [r10 + crc_fold_const_fold_4x128b]
-	movdqa	xmm8, xmm3
-	pclmulqdq	xmm3, xmm10, 0x11
-	pclmulqdq	xmm8, xmm10, 0x0
-	pxor	xmm7, xmm8
-	xorps	xmm7, xmm3
-
-	movdqa	xmm10, [r10 + crc_fold_const_fold_3x128b]
-	movdqa	xmm8, xmm4
-	pclmulqdq	xmm4, xmm10, 0x11
-	pclmulqdq	xmm8, xmm10, 0x0
-	pxor	xmm7, xmm8
-	pxor	xmm7, xmm4
-
-	movdqa	xmm10, [r10 + crc_fold_const_fold_2x128b]
-	movdqa	xmm8, xmm5
-	pclmulqdq	xmm5, xmm10, 0x11
-	pclmulqdq	xmm8, xmm10, 0x0
-	pxor	xmm7, xmm8
-	xorps	xmm7, xmm5
-
-	movdqa	xmm10, [r10 + crc_fold_const_fold_1x128b]	;xmm10 has rk1 and rk2
-
-	movdqa	xmm8, xmm6
-	pclmulqdq	xmm6, xmm10, 0x11
-	pclmulqdq	xmm8, xmm10, 0x0
-	pxor	xmm7, xmm8
-	pxor	xmm7, xmm6
-
+        CRC_FOLD_8_TO_1_XMM 0x11, 0x00, xmm8, xmm10
 
 	; instead of 128, we add 112 to the loop counter to save 1 instruction from the loop
 	; instead of a cmp instruction, we use the negative flag with the jl instruction

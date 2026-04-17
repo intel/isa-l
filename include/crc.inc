@@ -182,5 +182,108 @@ endstruc
 	vpxor		xmm7, xmm4
 %endmacro
 
+;; CRC_FOLD_PAIR_STEP_XMM_REFL acc1, acc2, fold_const, mem1, mem2
+;;   Two-accumulator XMM fold step for reflected-input CRC (SSE pclmulqdq 0x10/0x01).
+;;   Clobbers xmm8, xmm9, xmm12, xmm13 (used as scratch for copies and loads).
+%macro CRC_FOLD_PAIR_STEP_XMM_REFL 5
+%define %%ACC1      %1  ; [in/out] XMM first accumulator
+%define %%ACC2      %2  ; [in/out] XMM second accumulator
+%define %%FOLD_CST  %3  ; [in] XMM holding fold polynomial constants
+%define %%MEM1      %4  ; [in] first memory operand
+%define %%MEM2      %5  ; [in] second memory operand
+	movdqu		xmm9, %%MEM1
+	movdqu		xmm12, %%MEM2
+	movdqa		xmm8, %%ACC1
+	movdqa		xmm13, %%ACC2
+	pclmulqdq	%%ACC1, %%FOLD_CST, 0x10
+	pclmulqdq	xmm8, %%FOLD_CST, 0x01
+	pclmulqdq	%%ACC2, %%FOLD_CST, 0x10
+	pclmulqdq	xmm13, %%FOLD_CST, 0x01
+	pxor		%%ACC1, xmm9
+	xorps		%%ACC1, xmm8
+	pxor		%%ACC2, xmm12
+	xorps		%%ACC2, xmm13
+%endmacro
+
+;; CRC_FOLD_PAIR_STEP_XMM_NORM acc1, acc2, fold_const, mem1, mem2
+;;   Two-accumulator XMM fold step for normal (byte-swapping) CRC (SSE pclmulqdq 0x00/0x11).
+;;   Clobbers xmm8, xmm9, xmm12, xmm13. Uses xmm11 as the byte-swap mask
+;;   (must be loaded by the caller before entering the fold loop).
+%macro CRC_FOLD_PAIR_STEP_XMM_NORM 5
+%define %%ACC1      %1  ; [in/out] XMM first accumulator
+%define %%ACC2      %2  ; [in/out] XMM second accumulator
+%define %%FOLD_CST  %3  ; [in] XMM holding fold polynomial constants
+%define %%MEM1      %4  ; [in] first memory operand
+%define %%MEM2      %5  ; [in] second memory operand
+	movdqu		xmm9, %%MEM1
+	movdqu		xmm12, %%MEM2
+	pshufb		xmm9, xmm11
+	pshufb		xmm12, xmm11
+	movdqa		xmm8, %%ACC1
+	movdqa		xmm13, %%ACC2
+	pclmulqdq	%%ACC1, %%FOLD_CST, 0x0
+	pclmulqdq	xmm8, %%FOLD_CST, 0x11
+	pclmulqdq	%%ACC2, %%FOLD_CST, 0x0
+	pclmulqdq	xmm13, %%FOLD_CST, 0x11
+	pxor		%%ACC1, xmm9
+	xorps		%%ACC1, xmm8
+	pxor		%%ACC2, xmm12
+	xorps		%%ACC2, xmm13
+%endmacro
+
+;; CRC_FOLD_8_TO_1_XMM imm_acc, imm_hi, xtmp1, xtmp2
+;;   Folds xmm0..xmm6 into xmm7 using the fold_7x..fold_1x 128b constants.
+;;   After the macro, XTMP2 holds fold_1x128b, ready for the 16B reduction loop.
+;;   imm_acc: pclmulqdq immediate for the accumulator register (e.g., 0x01 REFL, 0x11 NORM)
+;;   imm_tmp: pclmulqdq immediate for XTMP1                   (e.g., 0x10 REFL, 0x00 NORM)
+%macro CRC_FOLD_8_TO_1_XMM 4
+%define %%IMM_ACC   %1  ; [in] pclmulqdq immediate for accumulator (e.g., 0x01 REFL, 0x11 NORM)
+%define %%IMM_TMP   %2  ; [in] pclmulqdq immediate for XTMP1       (e.g., 0x10 REFL, 0x00 NORM)
+%define %%XTMP1     %3  ; [clobbered] XMM scratch register
+%define %%XTMP2     %4  ; [clobbered] XMM register for fold constants
+	movdqa		%%XTMP2, [r10 + crc_fold_const_fold_7x128b]
+	movdqa		%%XTMP1, xmm0
+	pclmulqdq	xmm0, %%XTMP2, %%IMM_ACC
+	pclmulqdq	%%XTMP1, %%XTMP2, %%IMM_TMP
+	pxor		xmm7, %%XTMP1
+	pxor		xmm7, xmm0
+	movdqa		%%XTMP2, [r10 + crc_fold_const_fold_6x128b]
+	movdqa		%%XTMP1, xmm1
+	pclmulqdq	xmm1, %%XTMP2, %%IMM_ACC
+	pclmulqdq	%%XTMP1, %%XTMP2, %%IMM_TMP
+	pxor		xmm7, %%XTMP1
+	pxor		xmm7, xmm1
+	movdqa		%%XTMP2, [r10 + crc_fold_const_fold_5x128b]
+	movdqa		%%XTMP1, xmm2
+	pclmulqdq	xmm2, %%XTMP2, %%IMM_ACC
+	pclmulqdq	%%XTMP1, %%XTMP2, %%IMM_TMP
+	pxor		xmm7, %%XTMP1
+	pxor		xmm7, xmm2
+	movdqa		%%XTMP2, [r10 + crc_fold_const_fold_4x128b]
+	movdqa		%%XTMP1, xmm3
+	pclmulqdq	xmm3, %%XTMP2, %%IMM_ACC
+	pclmulqdq	%%XTMP1, %%XTMP2, %%IMM_TMP
+	pxor		xmm7, %%XTMP1
+	pxor		xmm7, xmm3
+	movdqa		%%XTMP2, [r10 + crc_fold_const_fold_3x128b]
+	movdqa		%%XTMP1, xmm4
+	pclmulqdq	xmm4, %%XTMP2, %%IMM_ACC
+	pclmulqdq	%%XTMP1, %%XTMP2, %%IMM_TMP
+	pxor		xmm7, %%XTMP1
+	pxor		xmm7, xmm4
+	movdqa		%%XTMP2, [r10 + crc_fold_const_fold_2x128b]
+	movdqa		%%XTMP1, xmm5
+	pclmulqdq	xmm5, %%XTMP2, %%IMM_ACC
+	pclmulqdq	%%XTMP1, %%XTMP2, %%IMM_TMP
+	pxor		xmm7, %%XTMP1
+	pxor		xmm7, xmm5
+	movdqa		%%XTMP2, [r10 + crc_fold_const_fold_1x128b]
+	movdqa		%%XTMP1, xmm6
+	pclmulqdq	xmm6, %%XTMP2, %%IMM_ACC
+	pclmulqdq	%%XTMP1, %%XTMP2, %%IMM_TMP
+	pxor		xmm7, %%XTMP1
+	pxor		xmm7, xmm6
+%endmacro
 
 %endif ;; CRC_INC
+
