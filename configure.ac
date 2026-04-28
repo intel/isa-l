@@ -152,6 +152,11 @@ AS_IF([test "x$enable_debug" = "xyes"], [
         AC_DEFINE(ENABLE_DEBUG, [1], [Debug messages.])
 ])
 
+AC_ARG_ENABLE([programs],
+	AS_HELP_STRING([--enable-programs], [build test programs @<:@default=disabled@:>@]),
+	[], [enable_programs=no])
+AM_CONDITIONAL([HAVE_PROGRAMS], [test "x$enable_programs" != "xno"])
+
 # If this build is for x86, look for nasm
 if test x"$is_x86" = x"yes"; then
   AC_MSG_CHECKING([whether Intel CET is enabled])
