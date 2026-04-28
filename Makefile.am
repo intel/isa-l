@@ -43,7 +43,9 @@ include crc/Makefile.am
 include igzip/Makefile.am
 include tests/fuzz/Makefile.am
 include examples/ec/Makefile.am
+if HAVE_PROGRAMS
 include programs/Makefile.am
+endif
 include mem/Makefile.am
 include misc/Makefile.am
 
