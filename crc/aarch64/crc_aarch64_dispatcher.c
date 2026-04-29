@@ -46,6 +46,11 @@ crc32_iscsi_3crc_fold(unsigned char *, int, unsigned int);
 extern unsigned int
 crc32_iscsi_refl_pmull(unsigned char *, int, unsigned int);
 
+extern unsigned int
+crc32_iscsi_x6(unsigned char *, int, unsigned int);
+extern unsigned int
+crc32_iscsi_fusion_p8_c10_asm(unsigned char *, int, unsigned int);
+
 extern uint32_t
 crc32_gzip_refl_crc_ext(uint32_t, uint8_t *, uint64_t);
 extern uint32_t
@@ -121,6 +126,7 @@ DEFINE_INTERFACE_DISPATCHER(crc32_iscsi)
 {
 #if defined(__linux__)
         unsigned long auxval = getauxval(AT_HWCAP);
+        unsigned long auxval2 = getauxval(AT_HWCAP2);
         if (auxval & HWCAP_CRC32) {
                 switch (get_micro_arch_id()) {
                 case MICRO_ARCH_ID(ARM, NEOVERSE_N1):
@@ -129,8 +135,13 @@ DEFINE_INTERFACE_DISPATCHER(crc32_iscsi)
                         return crc32_iscsi_crc_ext;
                 }
         }
+
+        if ((HWCAP_CRC32) == (auxval & HWCAP_CRC32) &&
+            (HWCAP2_SVE2) == (auxval2 & HWCAP2_SVE2)) {
+                return crc32_iscsi_fusion_p8_c10_asm;
+        }
         if ((HWCAP_CRC32 | HWCAP_PMULL) == (auxval & (HWCAP_CRC32 | HWCAP_PMULL))) {
-                return crc32_iscsi_3crc_fold;
+                return crc32_iscsi_x6;
         }
 
         if (auxval & HWCAP_PMULL) {

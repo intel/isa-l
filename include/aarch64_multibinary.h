@@ -254,6 +254,10 @@ static inline int sysctlEnabled(const char* name){
 #define HWCAP_CPUID (1<<11)
 #endif
 
+#ifndef HWCAP2_SVE2
+#define HWCAP2_SVE2 (1<<1)
+#endif
+
 /**
  * @brief  get_micro_arch_id
  *
