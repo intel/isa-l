@@ -128,7 +128,14 @@ case "${CPU}" in
 		;;
 
 	*)
+
 		is_x86=no
+		case $host_os in
+			*linux*)  arch=linux;;
+			*darwin*) arch=darwin;;
+			*)        arch=unknown;;
+		esac
+		AM_CONDITIONAL(DARWIN, test x"$arch" = x"darwin")
 
 esac
 
