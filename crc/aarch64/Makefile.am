@@ -58,3 +58,11 @@ lsrc_aarch64 += \
 	crc/aarch64/crc32_mix_neoverse_n1.S \
 	crc/aarch64/crc32c_mix_neoverse_n1.S
 
+# SVE2 optimized files - not supported on macOS
+if !DARWIN
+lsrc_aarch64 += \
+	crc/aarch64/crc32_iscsi_p8c10.S \
+	crc/aarch64/crc32_iscsi_p8c10_clmul_const.S \
+	crc/aarch64/crc32_iscsi_x6.S
+endif
+
