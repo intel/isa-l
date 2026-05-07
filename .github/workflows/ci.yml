@@ -17,7 +17,7 @@ jobs:
       CLANGFORMAT: clang-format-18
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 2
       - name: Install clang-format-18
@@ -41,7 +41,7 @@ jobs:
           - nasm
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install build dependencies (Linux)
         run: sudo apt install ${{ matrix.assembler }}
         if: runner.os == 'Linux'
@@ -62,7 +62,7 @@ jobs:
     needs: check_format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install build dependencies (Linux)
         run: sudo apt install nasm mingw-w64
       - name: Build
@@ -75,7 +75,7 @@ jobs:
     needs: check_format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install build dependencies (Linux)
         run: sudo apt install nasm mingw-w64
       - name: Build
@@ -87,9 +87,9 @@ jobs:
     needs: check_format
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install nasm
-        uses: ilammy/setup-nasm@v1.5.2
+        uses: ilammy/setup-nasm@72793074d3c8cdda771dba85f6deafe00623038b # v1.5.2
       - name: Build
         shell: bash
         run: |
@@ -112,11 +112,11 @@ jobs:
     needs: check_format
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Set MSVC developer prompt
-        uses: ilammy/msvc-dev-cmd@v1.13.0
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       - name: Install nasm
-        uses: ilammy/setup-nasm@v1.5.2
+        uses: ilammy/setup-nasm@72793074d3c8cdda771dba85f6deafe00623038b # v1.5.2
       - name: Build
         run: |
           nmake -f Makefile.nmake || exit /b 1
@@ -131,7 +131,7 @@ jobs:
     needs: check_format
     runs-on: run_tests_linux-riscv64-v
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Build
         run: |
           ./autogen.sh
