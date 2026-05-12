@@ -68,7 +68,7 @@ dump(unsigned char *buf, int len)
 int
 main(int argc, char *argv[])
 {
-        int i, j, k, ret = 0, fail = 0;
+        int i, j, k, alias_idx, which_dest, ret = 0, fail = 0;
         void *buffs[TEST_SOURCES + 2] = { NULL }; // Pointers to src and dest
         char *tmp_buf[TEST_SOURCES + 2] = { NULL };
 
@@ -176,6 +176,38 @@ main(int argc, char *argv[])
                 putchar('.');
 #endif
                 k += 32;
+        }
+
+        // Test in-place aliasing
+        for (j = 4; j <= TEST_SOURCES + 2; j++) {
+                for (alias_idx = 0; alias_idx < j - 2; alias_idx++) {
+                        for (which_dest = 0; which_dest < 2; which_dest++) {
+                                int dest_slot = (which_dest == 0) ? j - 2 : j - 1;
+
+                                for (i = 0; i < j; i++)
+                                        rand_buffer(buffs[i], TEST_LEN);
+
+                                memcpy(buffs[dest_slot], buffs[alias_idx], TEST_LEN);
+                                for (i = 0; i < j; i++)
+                                        tmp_buf[i] = (char *) buffs[i];
+                                tmp_buf[alias_idx] = (char *) buffs[dest_slot];
+
+                                ret = pq_gen(j, TEST_LEN, (void *) tmp_buf);
+
+                                tmp_buf[alias_idx] = (char *) buffs[alias_idx];
+                                fail |= pq_check_base(j, TEST_LEN, (void *) tmp_buf);
+
+                                if (fail > 0) {
+                                        printf("fail aliasing test - vects: %d, alias_idx: %d, "
+                                               "dest: %s, ret: %d\n",
+                                               j, alias_idx, which_dest == 0 ? "P" : "Q", ret);
+                                        goto exit;
+                                }
+#ifdef TEST_VERBOSE
+                                putchar('.');
+#endif
+                        }
+                }
         }
 
         // Test at the end of buffer
