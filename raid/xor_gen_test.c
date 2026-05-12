@@ -54,7 +54,7 @@ rand_buffer(unsigned char *buf, long buffer_size)
 int
 main(int argc, char *argv[])
 {
-        int i, j, k, ret, fail = 0;
+        int i, j, k, alias_idx, ret, fail = 0;
         void *buffs[TEST_SOURCES + 1] = { NULL };
         char *tmp_buf[TEST_SOURCES + 1] = { NULL };
 
@@ -147,6 +147,33 @@ main(int argc, char *argv[])
                 putchar('.');
 #endif
                 k += 1;
+        }
+
+        // Test in-place aliasing
+        for (j = 3; j <= TEST_SOURCES + 1; j++) {
+                for (alias_idx = 0; alias_idx < j - 1; alias_idx++) {
+                        for (i = 0; i < j; i++)
+                                rand_buffer(buffs[i], TEST_LEN);
+
+                        memcpy(buffs[j - 1], buffs[alias_idx], TEST_LEN);
+                        for (i = 0; i < j; i++)
+                                tmp_buf[i] = (char *) buffs[i];
+                        tmp_buf[alias_idx] = (char *) buffs[j - 1];
+
+                        xor_gen(j, TEST_LEN, (void *) tmp_buf);
+
+                        tmp_buf[alias_idx] = (char *) buffs[alias_idx];
+                        fail |= xor_check_base(j, TEST_LEN, (void *) tmp_buf);
+
+                        if (fail > 0) {
+                                printf("fail aliasing test - vects: %d, alias_idx: %d\n", j,
+                                       alias_idx);
+                                goto exit;
+                        }
+#ifdef TEST_VERBOSE
+                        putchar('.');
+#endif
+                }
         }
 
         // Test at the end of buffer
