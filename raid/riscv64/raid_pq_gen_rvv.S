@@ -33,7 +33,7 @@
 pq_gen_rvv:
     srli        a1, a1, 3                  // blocks = len / 8
     beqz        a1, ret0                   // blocks <= 0
-    addi        a6, a0, -3                 // j = vects - 4
+    addi        a6, a0, -3                 // vects - 3
     blez        a6, ret1                   // vects < 4
 
     slli        t0, a0, 3                  // t0 = vects * 8
@@ -41,36 +41,24 @@ pq_gen_rvv:
     li          t1, 0x8080808080808080     // bit7
     li          t2, 0xfefefefefefefefe     // notbit0
     li          t3, 0x1d1d1d1d1d1d1d1d     // gf8poly
+    li          a7, 0                      // byte offset
+
+outer_strip:
+    vsetvli     t4, a1, e64, m4, ta, ma
+
     ld          a3, -24(t0)                // src[vects-3]
-    ld          a4, -16(t0)                // p
-    ld          a5, -8(t0)                 // q
-    mv          t6, a1                     // save blocks
-    mv          t5, a4                     // save p
-    mv          a7, a5                     // save q
+    add         a3, a3, a7
+    vle64.v     v0, (a3)                   // p
+    vmv.v.v     v4, v0                     // q
 
-init_pq:
-    vsetvli     t4, t6, e64, m4, ta, ma
-    vle64.v     v0, (a3)
-    vse64.v     v0, (a4)                   // init p
-    vse64.v     v0, (a5)                   // init q
-    sub         t6, t6, t4
-    slli        t4, t4, 3
-    add         a3, a3, t4
-    add         a4, a4, t4
-    add         a5, a5, t4
-    bnez        t6, init_pq
+    addi        a4, t0, -32                // &array[vects-4]
+    mv          a5, a6                     // inner source count
 
-outer_j:
-    mv          a4, t5                     // restore p
-    mv          a5, a7                     // restore q
-    mv          t6, a1                     // restore blocks
-    ld          a0, -32(t0)                // src[j]
+inner_src:
+    ld          a3, 0(a4)                  // src[j]
+    add         a3, a3, a7
+    vle64.v     v8, (a3)                   // s
 
-inner_block:
-    vsetvli     t4, t6, e64, m4, ta, ma
-    vle64.v     v8, (a0)                   // s
-    vle64.v     v0, (a4)                   // p
-    vle64.v     v4, (a5)                   // q
     vxor.vv     v0, v0, v8                 // p ^= s
     vand.vx     v20, v4, t1                // q & bit7
     vsll.vi     v24, v4, 1                 // (q << 1)
@@ -81,18 +69,23 @@ inner_block:
     vand.vx     v20, v20, t3               // ((q & bit7)<<1 - (q & bit7)>>7) & gf8poly
     vxor.vv     v4, v24, v20               // ((q << 1) & notbit0) ^
     vxor.vv     v4, v4, v8                 // s^
-    vse64.v     v0, (a4)                   // p
-    vse64.v     v4, (a5)                   // q
-    sub         t6, t6, t4                 // blocks
-    slli        t4, t4, 3
-    add         a4, a4, t4                 // p+=
-    add         a5, a5, t4                 // q+=
-    add         a0, a0, t4                 // s+=
-    bnez        t6, inner_block
 
-    addi        a6, a6, -1
-    addi        t0, t0, -8
-    bnez        a6, outer_j
+    addi        a4, a4, -8
+    addi        a5, a5, -1
+    bnez        a5, inner_src
+
+    ld          a3, -16(t0)                // p
+    add         a3, a3, a7
+    vse64.v     v0, (a3)
+
+    ld          a3, -8(t0)                 // q
+    add         a3, a3, a7
+    vse64.v     v4, (a3)
+
+    sub         a1, a1, t4
+    slli        t5, t4, 3
+    add         a7, a7, t5
+    bnez        a1, outer_strip
 
 ret0:
     li a0, 0
