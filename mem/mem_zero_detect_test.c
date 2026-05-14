@@ -31,6 +31,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <stdint.h>
+#ifndef _WIN32
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
 #include "mem_routines.h"
 #include "test.h"
 
@@ -45,6 +50,74 @@
 #ifndef TEST_SEED
 #define TEST_SEED 0x1234
 #endif
+
+/* Regression test for out-of-bounds reads due to loop-counter
+ * integer overflow. Two consecutive pages are mapped and the second one is
+ * write-protected as a guard page. A 192-byte buffer is placed at the very
+ * end of the first page with the last 64 bytes set to 0x01.
+ * Any out-of-bounds read will fault on the guard page immediately.
+ */
+static int
+test_overflow_bounds(void)
+{
+#ifdef _WIN32
+        SYSTEM_INFO si;
+
+        GetSystemInfo(&si);
+        const size_t page_size = (size_t) si.dwPageSize;
+#else
+        const long ps = sysconf(_SC_PAGESIZE);
+
+        if (ps < 0)
+                return -1;
+        const size_t page_size = (size_t) ps;
+#endif
+        const int len = 192;
+
+        if (page_size < (size_t) len || page_size > SIZE_MAX / 2)
+                return -1;
+
+        const size_t map_size = 2 * page_size;
+        uint8_t *region;
+
+#ifdef _WIN32
+        region = VirtualAlloc(NULL, map_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        if (region == NULL)
+                return -1;
+        DWORD old_protect;
+        if (!VirtualProtect(region + page_size, page_size, PAGE_NOACCESS, &old_protect)) {
+                VirtualFree(region, 0, MEM_RELEASE);
+                return -1;
+        }
+#else
+        region = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (region == MAP_FAILED)
+                return -1;
+        if (mprotect(region + page_size, page_size, PROT_NONE) != 0) {
+                munmap(region, map_size);
+                return -1;
+        }
+#endif
+
+        uint8_t *buf = region + page_size - len;
+
+        memset(buf, 0x00, len);
+        memset(buf + len - 64, 0x01, 64); /* last 64 bytes: non-zero */
+
+        const int ret = isal_zero_detect(buf, len);
+
+#ifdef _WIN32
+        VirtualFree(region, 0, MEM_RELEASE);
+#else
+        munmap(region, map_size);
+#endif
+
+        if (ret == 0) {
+                printf("Fail bounds check (len=%d)\n", len);
+                return -1;
+        }
+        return 0;
+}
 
 int
 main(int argc, char *argv[])
@@ -63,6 +136,15 @@ main(int argc, char *argv[])
         }
 
         srand(TEST_SEED);
+
+        failures = test_overflow_bounds();
+        if (failures) {
+                printf("Fail bounds check\n");
+                goto exit;
+        }
+#ifdef TEST_VERBOSE
+        putchar('.');
+#endif
 
         // Test full zero buffer
         memset(buf, 0, TEST_MEM);
