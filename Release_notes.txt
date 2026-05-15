@@ -15,6 +15,7 @@ Unreleased
 
 * Fixed x86 CRC dispatcher (AVX512+VPLCMUL implementation could not be always reached
   when the ISA was available).
+* Fixed potential out-of-bounds read in isal_mem_zero_detect when the last block is all 1's.
 
 v2.32
 

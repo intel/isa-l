@@ -110,13 +110,13 @@ align 16
 	add	src, 128
 	xor	DWORD(tmp1), DWORD(tmp1)
 	sub	len, 1
-	setz	BYTE(tmp1)
+	setnz	BYTE(tmp1)		; tmp1=1 if not last block
 	vpor	ymm0, ymm0, ymm1
 	vpcmpeqb ymm0, ymm2, ymm0
 	vpmovmskb DWORD(tmp0), ymm0
-	not	DWORD(tmp0)
-	add	DWORD(tmp1), DWORD(tmp0)
-	jz	.mem_z_loop
+	not	DWORD(tmp0)		; tmp0=0 if all zeros
+	cmp	DWORD(tmp0), DWORD(tmp1); loop if zero (tmp0=0) and not last (tmp1=1): 0-1 => CF=1
+	jb	.mem_z_loop
 
 .return:
 	xor	eax, eax
@@ -141,10 +141,10 @@ align 16
 	mov	tmp0, [src]
 	or	tmp0, [src+8]
 	sub	DWORD(len), 1
-	setz	al
+	setnz	al			; al=1 if not last block
 	add	src, 16
-	add	rax, tmp0
-	jz	.mem_z_small_block_loop
+	cmp	tmp0, rax		; loop if zero (tmp0=0) and not last (rax=1): 0-1 => CF=1
+	jb	.mem_z_small_block_loop
 
 	test	tmp0, tmp0
 	jnz	.return_small

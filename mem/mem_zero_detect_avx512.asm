@@ -107,12 +107,12 @@ align 16
 	vporq	zmm0, zmm0,[src+64]
 	xor	tmp1,tmp1
 	sub	len, 1
-	setz	BYTE(tmp1)
+	setnz	BYTE(tmp1)		; tmp1=1 if not last block
 	add	src, 128
 	vptestmb k1, zmm0, zmm0
-	kmovq	tmp0, k1
-	add	tmp1, tmp0 ; for macrofusion.
-	jz	.mem_z_loop
+	kmovq	tmp0, k1		; tmp0=0 if all zeros
+	cmp	tmp0, tmp1		; loop if zero (tmp0=0) and not last (tmp1=1): 0-1 => CF=1
+	jb	.mem_z_loop
 
 align 16
 .mem_z_small_block:
