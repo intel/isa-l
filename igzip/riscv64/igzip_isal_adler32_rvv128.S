@@ -50,7 +50,7 @@ adler32_rvv128:
 
 outer_loop:
     beqz    t1, tail_bytes
-    vmv.v.i v24, 0
+    vmv.v.i v26, 0
     li      t2, 173
     bgeu    t1, t2, 1f
     mv      t2, t1
@@ -68,18 +68,18 @@ inner_loop:
     addi    a1, a1, 16
     vwredsumu.vs v12, v2, v4
     vwredsumu.vs v12, v3, v12
-    vwmulu.vv v16, v2, v0
-    vwmulu.vv v18, v3, v1
+    vwmulu.vv v24, v2, v0
+    vwmaccu.vv v24, v3, v1
 
-    vsetvli zero, t0, e16, m2, ta, ma
-    vwaddu.wv v24, v24, v16
-    vwaddu.wv v24, v24, v18
+    vsetivli zero, 8, e16, m1, ta, ma
+    vadd.vv v24, v24, v25
+    vwaddu.wv v26, v26, v24
     vmv.x.s a6, v12
     add     t5, t5, a6
     bne     a1, a7, inner_loop
 
-    vsetvli zero, t0, e32, m4, ta, ma
-    vredsum.vs v16, v24, v4
+    vsetvli zero, t0, e32, m2, ta, ma
+    vredsum.vs v16, v26, v4
     vmv.x.s a6, v16
     add     t6, t6, a6
     mul     a3, t5, t3
