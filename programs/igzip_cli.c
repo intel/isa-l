@@ -894,6 +894,15 @@ decompress_file(void)
         if (outfile_type == implicit)
                 file_time = gz_hdr.time;
 
+        /* RFC 1952 §2.3.1: the NAME field stores a bare filename with any
+         * directory components already removed by the compressor. Strip any
+         * path prefix here to prevent path-traversal. */
+        if (outfile_type == implicit && outfile_name != NULL && outfile_name[0] != 0) {
+                char *base = strrchr(outfile_name, '/');
+                if (base != NULL)
+                        memmove(outfile_name, base + 1, strlen(base + 1) + 1);
+        }
+
         if (outfile_name != NULL && infile_name != NULL &&
             (outfile_type == stripped || (outfile_type == implicit && outfile_name[0] == 0))) {
                 outfile_name_len = infile_name_len - suffix_len;
