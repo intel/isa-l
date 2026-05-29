@@ -31,52 +31,139 @@
 .global         xor_gen_rvv
 .type           xor_gen_rvv, %function
 xor_gen_rvv:
-    beqz        a1, ret0                 # len <= 0, return 0
-    addi        t1, a0, -2               # vects - 3
-    blez        t1, ret1                 # vects < 3, return 1
+    beqz        a1, .Lret0
+    li          t0, 2
+    blt         a0, t0, .Lret1
 
-    slli        t0, a0, 3                # t0 = vects * 8
-    add         t0, a2, t0               # array + vects * 8
-    ld          a4, 0(a2)                # src[0]
-    ld          a3, -8(t0)               # dest = array[vects - 1]
-    mv          t5, a3                   # save dest
-    mv          t6, a1                   # save len
+    addi        t1, a0, -1                 # t1 = vects - 1
+    slli        t1, t1, 3                  # t1 = t1 * 8
+    add         t2, a2, t1
+    ld          a7, 0(t2)                  # a7 = dest
+    ld          a6, 0(a2)                  # a6 = src[0]
+    li          t6, 0                      # t6 = offset
+    mv          t5, a1
+    addi        t0, a0, -2                 # t0 = vects - 2
+    vsetvli     t4, zero, e8, m2, ta, ma
+    slli        t3, t4, 3                  # t3 = 8 * vlmax
 
-init_dest:
-    vsetvli     t4, t6, e8, m8, ta, ma
-    vle8.v      v0, (a4)                 # load src[0]
-    vse8.v      v0, (a3)                 # dest
-    sub         t6, t6, t4
-    add         a4, a4, t4
-    add         a3, a3, t4
-    bnez        t6, init_dest
+.Lunrolled_chunk_loop:
+    blt         t5, t3, .Ltail_loop
 
-outer_j:
-    mv          a3, t5                   # restore dest
-    mv          t6, a1                   # restore length
-    ld          a4, -16(t0)
+    vsetvli     zero, t4, e8, m2, ta, ma 
+    add         t1, a6, t6                 # t1 = src[0] + offset
+    vle8.v      v0,  (t1)
+    add         t1, t1, t4
+    vle8.v      v2,  (t1)
+    add         t1, t1, t4
+    vle8.v      v4,  (t1)
+    add         t1, t1, t4
+    vle8.v      v6,  (t1)
+    add         t1, t1, t4
+    vle8.v      v8,  (t1)
+    add         t1, t1, t4
+    vle8.v      v10, (t1)
+    add         t1, t1, t4
+    vle8.v      v12, (t1)
+    add         t1, t1, t4
+    vle8.v      v14, (t1)
+    beqz        t0, .Lstore_unrolled
 
-inner_len:
-    vsetvli     t4, t6, e8, m8, ta, ma
-    vle8.v      v0, (a4)                 # src[j]
-    vle8.v      v8, (a3)                 # dest
-    vxor.vv     v8, v8, v0               # dest ^= src[j]
-    vse8.v      v8, (a3)
-    sub         t6, t6, t4
-    add         a4, a4, t4
-    add         a3, a3, t4
-    bnez        t6, inner_len
+    mv          a4, t0
+    addi        a5, a2, 8
 
-    addi        t1, t1, -1
-    addi        t0, t0, -8
-    bnez        t1, outer_j
+.Lunrolled_sources_loop:
+    ld          t1, 0(a5)
+    add         t1, t1, t6
 
-ret0:
-    li a0, 0
+    vle8.v      v16, (t1)
+    add         t1, t1, t4
+    vxor.vv     v0, v0, v16
+
+    vle8.v      v18, (t1)
+    add         t1, t1, t4
+    vxor.vv     v2, v2, v18
+
+    vle8.v      v20, (t1)
+    add         t1, t1, t4
+    vxor.vv     v4, v4, v20
+
+    vle8.v      v22, (t1)
+    add         t1, t1, t4
+    vxor.vv     v6, v6, v22
+
+    vle8.v      v24, (t1)
+    add         t1, t1, t4
+    vxor.vv     v8, v8, v24
+
+    vle8.v      v26, (t1)
+    add         t1, t1, t4
+    vxor.vv     v10, v10, v26
+
+    vle8.v      v28, (t1)
+    add         t1, t1, t4
+    vxor.vv     v12, v12, v28
+
+    vle8.v      v30, (t1)
+    vxor.vv     v14, v14, v30
+
+    addi        a5, a5, 8
+    addi        a4, a4, -1
+    bnez        a4, .Lunrolled_sources_loop
+
+.Lstore_unrolled:
+    add         t1, a7, t6
+    vse8.v      v0,  (t1)
+    add         t1, t1, t4
+    vse8.v      v2,  (t1)
+    add         t1, t1, t4
+    vse8.v      v4,  (t1)
+    add         t1, t1, t4
+    vse8.v      v6,  (t1)
+    add         t1, t1, t4
+    vse8.v      v8,  (t1)
+    add         t1, t1, t4
+    vse8.v      v10, (t1)
+    add         t1, t1, t4
+    vse8.v      v12, (t1)
+    add         t1, t1, t4
+    vse8.v      v14, (t1)
+    add         t6, t6, t3
+    sub         t5, t5, t3
+    j           .Lunrolled_chunk_loop
+
+.Ltail_loop:
+    beqz        t5, .Lret0
+
+    vsetvli     t4, t5, e8, m2, ta, ma   
+    add         t1, a6, t6
+    vle8.v      v0, (t1)
+    beqz        t0, .Lstore_tail
+
+    mv          a4, t0
+    addi        a5, a2, 8
+
+.Ltail_sources_loop:
+    ld          t1, 0(a5)
+    add         t1, t1, t6
+    vle8.v      v2, (t1)
+    vxor.vv     v0, v0, v2
+    addi        a5, a5, 8
+    addi        a4, a4, -1
+    bnez        a4, .Ltail_sources_loop
+
+.Lstore_tail:
+    add         t1, a7, t6
+    vse8.v      v0, (t1)
+    add         t6, t6, t4
+    sub         t5, t5, t4
+    j           .Ltail_loop
+
+.Lret0:
+    li          a0, 0
     ret
 
-ret1:
-    li a0, 1
+.Lret1:
+    li          a0, 1
     ret
 
 #endif
