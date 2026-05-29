@@ -57,6 +57,17 @@
 //     can do this automatically in optimization so a separate implementation isn't required.
 //     We simply allow the compiler to generate SVE2 versions as well.
 
+static inline int
+is_dest_coeff_all_one(unsigned char *gftbls, int vlen, int d)
+{
+        for (int v = 0; v < vlen; v++) {
+                if (gftbls[d * vlen * 32 + v * 32 + 1] != 0x1) {
+                        return 0;
+                }
+        }
+        return 1;
+}
+
 #ifdef __APPLE__
 __attribute__((target("+sme"), always_inline))
 #else
@@ -75,6 +86,11 @@ gf_nvect_dot_prod_sve_unrolled(int len, int vlen, unsigned char *gftbls, unsigne
         int pos = 0;
 
         // 4x unrolled main loop - SVE predicates handle ALL remaining data automatically
+        int is_all_one[7] = { 0 };
+        for (int d = 0; d < nvect && d < 7; d++) {
+                is_all_one[d] = is_dest_coeff_all_one(gftbls, vlen, d);
+        }
+
         while (pos < len) {
                 // Create predicates for 4 batches - SVE masks beyond array bounds
                 svbool_t predicate_0 = svwhilelt_b8_s32(pos + sve_len * 0, len);
@@ -129,43 +145,61 @@ gf_nvect_dot_prod_sve_unrolled(int len, int vlen, unsigned char *gftbls, unsigne
                         svuint8_t src_data2 = svld1_u8(predicate_2, &src[v][pos + sve_len * 2]);
                         svuint8_t src_data3 = svld1_u8(predicate_3, &src[v][pos + sve_len * 3]);
 
-                        // Extract nibbles for all batches
-                        svuint8_t src_lo0 = svand_x(predicate_0, src_data0, mask0f);
-                        svuint8_t src_hi0 = svlsr_x(predicate_0, src_data0, 4);
-                        svuint8_t src_lo1 = svand_x(predicate_1, src_data1, mask0f);
-                        svuint8_t src_hi1 = svlsr_x(predicate_1, src_data1, 4);
-                        svuint8_t src_lo2 = svand_x(predicate_2, src_data2, mask0f);
-                        svuint8_t src_hi2 = svlsr_x(predicate_2, src_data2, 4);
-                        svuint8_t src_lo3 = svand_x(predicate_3, src_data3, mask0f);
-                        svuint8_t src_hi3 = svlsr_x(predicate_3, src_data3, 4);
+                        svuint8_t src_lo0, src_hi0, src_lo1, src_hi1, src_lo2, src_hi2, src_lo3,
+                                src_hi3;
+                        int need_nibble = 0;
+                        for (int d = 0; d < nvect; d++) {
+                                if (!is_all_one[d]) {
+                                        need_nibble = 1;
+                                        break;
+                                }
+                        }
+                        if (need_nibble) {
+                                src_lo0 = svand_x(predicate_0, src_data0, mask0f);
+                                src_hi0 = svlsr_x(predicate_0, src_data0, 4);
+                                src_lo1 = svand_x(predicate_1, src_data1, mask0f);
+                                src_hi1 = svlsr_x(predicate_1, src_data1, 4);
+                                src_lo2 = svand_x(predicate_2, src_data2, mask0f);
+                                src_hi2 = svlsr_x(predicate_2, src_data2, 4);
+                                src_lo3 = svand_x(predicate_3, src_data3, mask0f);
+                                src_hi3 = svlsr_x(predicate_3, src_data3, 4);
+                        }
 
                         // Process each destination with unrolled batches
                         for (int d = 0; d < nvect; d++) {
-                                unsigned char *tbl_base = &gftbls[d * vlen * 32 + v * 32];
-                                svuint8_t tbl_lo = svld1_u8(predicate_true, tbl_base);
-                                svuint8_t tbl_hi = svld1_u8(predicate_true, tbl_base + 16);
+                                svuint8_t gf_result0, gf_result1, gf_result2, gf_result3;
 
-                                // Batch 0
-                                svuint8_t gf_lo0 = svtbl_u8(tbl_lo, src_lo0);
-                                svuint8_t gf_hi0 = svtbl_u8(tbl_hi, src_hi0);
+                                if (is_all_one[d]) {
+                                        gf_result0 = src_data0;
+                                        gf_result1 = src_data1;
+                                        gf_result2 = src_data2;
+                                        gf_result3 = src_data3;
+                                } else {
+                                        unsigned char *tbl_base = &gftbls[d * vlen * 32 + v * 32];
+                                        svuint8_t tbl_lo = svld1_u8(predicate_true, tbl_base);
+                                        svuint8_t tbl_hi = svld1_u8(predicate_true, tbl_base + 16);
 
-                                // Batch 1
-                                svuint8_t gf_lo1 = svtbl_u8(tbl_lo, src_lo1);
-                                svuint8_t gf_hi1 = svtbl_u8(tbl_hi, src_hi1);
+                                        // Batch 0
+                                        svuint8_t gf_lo0 = svtbl_u8(tbl_lo, src_lo0);
+                                        svuint8_t gf_hi0 = svtbl_u8(tbl_hi, src_hi0);
 
-                                // Batch 2
-                                svuint8_t gf_lo2 = svtbl_u8(tbl_lo, src_lo2);
-                                svuint8_t gf_hi2 = svtbl_u8(tbl_hi, src_hi2);
+                                        // Batch 1
+                                        svuint8_t gf_lo1 = svtbl_u8(tbl_lo, src_lo1);
+                                        svuint8_t gf_hi1 = svtbl_u8(tbl_hi, src_hi1);
 
-                                // Batch 3
-                                svuint8_t gf_lo3 = svtbl_u8(tbl_lo, src_lo3);
-                                svuint8_t gf_hi3 = svtbl_u8(tbl_hi, src_hi3);
+                                        // Batch 2
+                                        svuint8_t gf_lo2 = svtbl_u8(tbl_lo, src_lo2);
+                                        svuint8_t gf_hi2 = svtbl_u8(tbl_hi, src_hi2);
 
-                                svuint8_t gf_result0 = sveor_x(predicate_0, gf_lo0, gf_hi0);
-                                svuint8_t gf_result1 = sveor_x(predicate_1, gf_lo1, gf_hi1);
-                                svuint8_t gf_result2 = sveor_x(predicate_2, gf_lo2, gf_hi2);
-                                svuint8_t gf_result3 = sveor_x(predicate_3, gf_lo3, gf_hi3);
+                                        // Batch 3
+                                        svuint8_t gf_lo3 = svtbl_u8(tbl_lo, src_lo3);
+                                        svuint8_t gf_hi3 = svtbl_u8(tbl_hi, src_hi3);
 
+                                        gf_result0 = sveor_x(predicate_0, gf_lo0, gf_hi0);
+                                        gf_result1 = sveor_x(predicate_1, gf_lo1, gf_hi1);
+                                        gf_result2 = sveor_x(predicate_2, gf_lo2, gf_hi2);
+                                        gf_result3 = sveor_x(predicate_3, gf_lo3, gf_hi3);
+                                }
                                 // Accumulate results
                                 switch (d) {
                                 case 0:
