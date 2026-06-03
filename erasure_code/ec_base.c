@@ -34,6 +34,31 @@
 #include "erasure_code.h"
 #include "ec_base.h" // for GF tables
 
+/*
+ * Below this region length, the cost of building a 256-entry product
+ * table outweighs the per-byte gf_mul() work it replaces, so the
+ * affected *_base routines fall back to the scalar gf_mul() path. The
+ * crossover is platform-dependent; this is a conservative threshold (a
+ * region must be at least as long as the table that would be built).
+ */
+#define GF_REGION_TBL_MIN_LEN 256
+
+/*
+ * Byte-indexed per-coefficient lookup table (256 bytes).
+ * After build_mul_tbl(c, tbl), tbl[b] = c * b in GF(2^8). The hot-path
+ * region multiply is then GF_REGION_MUL(tbl, b) — see ec_base.h —
+ * expanded inline to a single byte-indexed load.
+ *
+ * Reference implementation: gf-nishida-16's GF8crtRegTbl / GF8LkupRT.
+ */
+static inline void
+build_mul_tbl(unsigned char c, unsigned char *tbl)
+{
+        int b;
+        for (b = 0; b < 256; b++)
+                tbl[b] = gf_mul(c, (unsigned char) b);
+}
+
 void
 ec_init_tables_base(int k, int rows, unsigned char *a, unsigned char *g_tbls)
 {
@@ -283,13 +308,33 @@ void
 gf_vect_dot_prod_base(int len, int vlen, unsigned char *v, unsigned char **src, unsigned char *dest)
 {
         int i, j;
-        unsigned char s;
-        for (i = 0; i < len; i++) {
-                s = 0;
-                for (j = 0; j < vlen; j++)
-                        s ^= gf_mul(src[j][i], v[j * 32 + 1]);
+        unsigned char tbl[256];
 
-                dest[i] = s;
+        /* Short regions: the table build does not pay off (see threshold). */
+        if (len < GF_REGION_TBL_MIN_LEN) {
+                for (i = 0; i < len; i++) {
+                        unsigned char s = 0;
+                        for (j = 0; j < vlen; j++)
+                                s ^= gf_mul(src[j][i], v[j * 32 + 1]);
+                        dest[i] = s;
+                }
+                return;
+        }
+
+        /*
+         * One source at a time, rebuilding a single stack table per source so
+         * the routine stays allocation-free. The first source initializes
+         * dest; the rest XOR-accumulate.
+         */
+        build_mul_tbl(v[1], tbl);
+        for (i = 0; i < len; i++)
+                dest[i] = GF_REGION_MUL(tbl, src[0][i]);
+
+        for (j = 1; j < vlen; j++) {
+                const unsigned char *s = src[j];
+                build_mul_tbl(v[j * 32 + 1], tbl);
+                for (i = 0; i < len; i++)
+                        dest[i] ^= GF_REGION_MUL(tbl, s[i]);
         }
 }
 
@@ -298,12 +343,20 @@ gf_vect_mad_base(int len, int vec, int vec_i, unsigned char *v, unsigned char *s
                  unsigned char *dest)
 {
         int i;
-        unsigned char s;
-        for (i = 0; i < len; i++) {
-                s = dest[i];
-                s ^= gf_mul(src[i], v[vec_i * 32 + 1]);
-                dest[i] = s;
+        unsigned char tbl[256];
+        unsigned char c = v[vec_i * 32 + 1];
+
+        (void) vec; /* unused now */
+
+        if (len < GF_REGION_TBL_MIN_LEN) {
+                for (i = 0; i < len; i++)
+                        dest[i] ^= gf_mul(src[i], c);
+                return;
         }
+
+        build_mul_tbl(c, tbl);
+        for (i = 0; i < len; i++)
+                dest[i] ^= GF_REGION_MUL(tbl, src[i]);
 }
 
 void
@@ -311,15 +364,38 @@ ec_encode_data_base(int len, int srcs, int dests, unsigned char *v, unsigned cha
                     unsigned char **dest)
 {
         int i, j, l;
-        unsigned char s;
+        unsigned char tbl[256];
 
+        /* Short regions: the table build does not pay off (see threshold). */
+        if (len < GF_REGION_TBL_MIN_LEN) {
+                for (l = 0; l < dests; l++) {
+                        for (i = 0; i < len; i++) {
+                                unsigned char s = 0;
+                                for (j = 0; j < srcs; j++)
+                                        s ^= gf_mul(src[j][i], v[j * 32 + l * srcs * 32 + 1]);
+                                dest[l][i] = s;
+                        }
+                }
+                return;
+        }
+
+        /*
+         * Per dest, one source at a time, rebuilding a single stack table per
+         * source so the routine stays allocation-free. The first source
+         * initializes the dest row; the rest XOR-accumulate.
+         */
         for (l = 0; l < dests; l++) {
-                for (i = 0; i < len; i++) {
-                        s = 0;
-                        for (j = 0; j < srcs; j++)
-                                s ^= gf_mul(src[j][i], v[j * 32 + l * srcs * 32 + 1]);
+                unsigned char *d = dest[l];
 
-                        dest[l][i] = s;
+                build_mul_tbl(v[l * srcs * 32 + 1], tbl);
+                for (i = 0; i < len; i++)
+                        d[i] = GF_REGION_MUL(tbl, src[0][i]);
+
+                for (j = 1; j < srcs; j++) {
+                        const unsigned char *s = src[j];
+                        build_mul_tbl(v[j * 32 + l * srcs * 32 + 1], tbl);
+                        for (i = 0; i < len; i++)
+                                d[i] ^= GF_REGION_MUL(tbl, s[i]);
                 }
         }
 }
@@ -329,14 +405,24 @@ ec_encode_data_update_base(int len, int k, int rows, int vec_i, unsigned char *v
                            unsigned char *data, unsigned char **dest)
 {
         int i, l;
-        unsigned char s;
+        unsigned char tbl[256];
+
+        if (len < GF_REGION_TBL_MIN_LEN) {
+                for (l = 0; l < rows; l++) {
+                        unsigned char c = v[vec_i * 32 + l * k * 32 + 1];
+                        unsigned char *d = dest[l];
+                        for (i = 0; i < len; i++)
+                                d[i] ^= gf_mul(data[i], c);
+                }
+                return;
+        }
 
         for (l = 0; l < rows; l++) {
-                for (i = 0; i < len; i++) {
-                        s = dest[l][i];
-                        s ^= gf_mul(data[i], v[vec_i * 32 + l * k * 32 + 1]);
-
-                        dest[l][i] = s;
+                build_mul_tbl(v[vec_i * 32 + l * k * 32 + 1], tbl);
+                {
+                        unsigned char *d = dest[l];
+                        for (i = 0; i < len; i++)
+                                d[i] ^= GF_REGION_MUL(tbl, data[i]);
                 }
         }
 }
@@ -346,13 +432,22 @@ gf_vect_mul_base(int len, unsigned char *a, unsigned char *src, unsigned char *d
 {
         // 2nd element of table array is ref value used to fill it in
         unsigned char c = a[1];
+        unsigned char tbl[256];
+        int i;
 
         // Len must be aligned to 32B
         if ((len % 32) != 0) {
                 return -1;
         }
 
-        while (len-- > 0)
-                *dest++ = gf_mul(c, *src++);
+        if (len < GF_REGION_TBL_MIN_LEN) {
+                for (i = 0; i < len; i++)
+                        dest[i] = gf_mul(c, src[i]);
+                return 0;
+        }
+
+        build_mul_tbl(c, tbl);
+        for (i = 0; i < len; i++)
+                dest[i] = GF_REGION_MUL(tbl, src[i]);
         return 0;
 }
