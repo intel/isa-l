@@ -116,6 +116,27 @@ if(ARCH_DEF)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D${ARCH_DEF}")
 endif()
 
+# On MinGW-w64, two measures are needed to prevent "32 bit pseudo relocation
+# out of range" runtime aborts (STATUS_STACK_BUFFER_OVERRUN / 0xc0000409).
+# ASLR can place system DLLs (e.g. ucrtbase.dll) more than 2 GB from the
+# binary, which overflows 32-bit pseudo-relocation deltas.
+#
+# 1. -fPIC at compile time makes GCC reference external C runtime data via
+#    the IAT (.refptr stubs) instead of 32-bit PC-relative references,
+#    eliminating pseudo-relocations from user-compiled object files.
+#
+# 2. --enable-runtime-pseudo-reloc-v2 at link time upgrades any residual
+#    pseudo-relocations (e.g. those baked into pre-compiled MinGW CRT startup
+#    objects such as libmingw32.a) from the 32-bit v1 format to the 64-bit v2
+#    format, which the MinGW runtime can apply regardless of address gap.
+if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    add_compile_options($<$<COMPILE_LANGUAGE:C>:-fPIC>)
+    set(CMAKE_EXE_LINKER_FLAGS
+        "${CMAKE_EXE_LINKER_FLAGS} -Wl,--enable-runtime-pseudo-reloc-v2")
+    set(CMAKE_SHARED_LINKER_FLAGS
+        "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--enable-runtime-pseudo-reloc-v2")
+endif()
+
 # Library version (semantic versioning)
 set(LIBISAL_VERSION_MAJOR 2)
 set(LIBISAL_VERSION_MINOR 32)
