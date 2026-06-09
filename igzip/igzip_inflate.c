@@ -1766,11 +1766,11 @@ isal_inflate_reset(struct inflate_state *state)
 }
 
 static inline uint32_t
-fixed_size_read(struct inflate_state *state, uint8_t **read_buf, int read_size)
+fixed_size_read(struct inflate_state *state, uint8_t **read_buf, uint32_t read_size)
 {
         uint32_t tmp_in_size = state->tmp_in_size;
 
-        if (state->avail_in + tmp_in_size < (uint32_t) read_size) {
+        if ((uint64_t) state->avail_in + tmp_in_size < read_size) {
                 memcpy(state->tmp_in_buffer + tmp_in_size, state->next_in, state->avail_in);
                 tmp_in_size += state->avail_in;
                 state->tmp_in_size = tmp_in_size;
