@@ -1522,7 +1522,7 @@ isal_deflate(struct isal_zstream *stream)
         struct isal_zstate *state = &stream->internal_state;
         int ret = COMP_OK;
         uint8_t *next_in, *start_in, *buf_start_in, *next_in_pre;
-        uint32_t avail_in, total_start, hist_size, future_size;
+        uint32_t avail_in = 0, total_start, hist_size, future_size;
         uint32_t in_size, in_size_initial, out_size, out_size_initial;
         uint32_t processed, buffered_size = state->b_bytes_valid - state->b_bytes_processed;
         uint32_t flush_type = stream->flush;
