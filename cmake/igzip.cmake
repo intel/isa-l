@@ -147,7 +147,6 @@ if(ISAL_BUILD_PERF_TESTS)
         igzip_hist_perf
         igzip_perf
         igzip_semi_dyn_file_perf
-        igzip_build_hash_table_perf
     )
 
     # Create performance test executables

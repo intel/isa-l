@@ -90,7 +90,6 @@ check_tests +=  igzip/checksum32_funcs_test
 other_tests +=  igzip/igzip_file_perf igzip/igzip_hist_perf
 other_tests +=  igzip/igzip_perf
 other_tests +=  igzip/igzip_semi_dyn_file_perf
-other_tests +=  igzip/igzip_build_hash_table_perf
 
 other_src   += 	igzip/bitbuf2.asm  \
 		igzip/data_struct2.asm \
