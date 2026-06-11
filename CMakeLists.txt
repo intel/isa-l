@@ -158,8 +158,12 @@ list(APPEND EXTERN_HEADERS include/test.h)
 # Build type option
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
-# Use module definition file to explicitly control exported symbols
-if(MSVC AND BUILD_SHARED_LIBS)
+# Use module definition file to explicitly control exported symbols.
+# On Windows the .def file lists every public and arch-specific symbol, so the
+# linker creates proper export-table entries and import-library thunks for all
+# of them (including NASM-assembled functions, which the MinGW linker does not
+# auto-export).
+if(WIN32 AND BUILD_SHARED_LIBS)
     set(ISAL_DEF_FILE "${CMAKE_CURRENT_SOURCE_DIR}/isa-l.def")
 endif()
 
@@ -186,9 +190,17 @@ set_target_properties(isal PROPERTIES
     SOVERSION ${LIBISAL_VERSION_MAJOR}
 )
 
-# Match Makefile.nmake naming convention
-if(MSVC)
-    set_target_properties(isal PROPERTIES OUTPUT_NAME "isa-l")
+# Match Makefile.nmake naming convention. On Windows the import table embeds
+# the DLL name from the .def LIBRARY directive (isa-l), so the produced DLL
+# must be named isa-l.dll for both MSVC and MinGW. Clearing PREFIX/IMPORT_PREFIX
+# stops MinGW from adding the "lib" prefix (libisa-l.dll), which would otherwise
+# not match the name recorded in the consumers' import tables.
+if(WIN32)
+    set_target_properties(isal PROPERTIES
+        OUTPUT_NAME "isa-l"
+        PREFIX ""
+        IMPORT_PREFIX ""
+    )
 endif()
 
 # Configure include directories for NASM assembly files
