@@ -50,7 +50,7 @@
  %define stack_size  1*8
  %define func(x) x: endbranch
  %macro FUNC_SAVE 0
-        sub	    rsp, stack_size
+        sub	rsp, stack_size
         mov     [rsp + 0*8], r12
  %endmacro
  %macro FUNC_RESTORE 0
@@ -133,15 +133,11 @@
 %define xp1x    ymm5
 
 %define xgft1   ymm6
-%define xgft2   ymm7
-%define xgft3   ymm8
 
-%define xtmp1   ymm9
+%define xtmp1   ymm7
 
 %define x0      x0l
 %define xp1     xp1l
-%define xp2     xp2l
-%define xp3     xp3l
 
 default rel
 [bits 64]
@@ -248,10 +244,9 @@ section .text
         ; get next source vector
         mov     ptr, [src + vec_i]
         simd_load_avx2 x0, ptr + pos, %%LEN, tmp, tmp3
-        add     vec_i, 8
 
-        vmovdqu xgft1, [mul_array]
-        add     mul_array, 32
+        vmovdqu xgft1, [mul_array + vec_i*4]
+        add     vec_i, 8
 
         GF_MUL_XOR VEX, x0, xgft1, xgft1, xp1
 
