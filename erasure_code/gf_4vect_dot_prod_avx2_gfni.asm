@@ -1,5 +1,5 @@
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;  Copyright(c) 2023 Intel Corporation All rights reserved.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;  Copyright(c) 2026 Alibaba Group All rights reserved.
 ;
 ;  Redistribution and use in source and binary forms, with or without
 ;  modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
 ;      notice, this list of conditions and the following disclaimer in
 ;      the documentation and/or other materials provided with the
 ;      distribution.
-;    * Neither the name of Intel Corporation nor the names of its
+;    * Neither the name of Alibaba Group nor the names of its
 ;      contributors may be used to endorse or promote products derived
 ;      from this software without specific prior written permission.
 ;
@@ -28,7 +28,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;
-;;; gf_3vect_dot_prod_avx2_gfni(len, vec, *g_tbls, **buffs, **dests);
+;;; gf_4vect_dot_prod_avx2_gfni(len, vec, *g_tbls, **buffs, **dests);
 ;;;
 
 %include "reg_sizes.asm"
@@ -36,11 +36,11 @@
 %include "memcpy.asm"
 
 %ifidn __OUTPUT_FORMAT__, elf64
- %define arg0  rdi
- %define arg1  rsi
- %define arg2  rdx
- %define arg3  rcx
- %define arg4  r8
+ %define arg0  rdi      ; len
+ %define arg1  rsi      ; vec
+ %define arg2  rdx      ; g_tbls
+ %define arg3  rcx      ; buffs
+ %define arg4  r8       ; dests
  %define arg5  r9
 
  %define tmp   r11
@@ -53,7 +53,7 @@
  %define stack_size  4*8
  %define func(x) x: endbranch
  %macro FUNC_SAVE 0
-    sub	    rsp, stack_size
+    sub     rsp, stack_size
     mov     [rsp + 0*8], r12
     mov     [rsp + 1*8], r13
     mov     [rsp + 2*8], r14
@@ -82,7 +82,7 @@
  %define tmp4   r14     ; must be saved and restored
  %define tmp5   rdi     ; must be saved and restored
  %define tmp6   rsi     ; must be saved and restored
- %define stack_size  8*16 + 7*8     ; must be an odd multiple of 8
+ %define stack_size  10*16 + 7*8     ; must be an odd multiple of 8
  %define arg(x)      [rsp + stack_size + 8 + 8*x]
 
  %define func(x) proc_frame x
@@ -96,31 +96,35 @@
     vmovdqa [rsp + 5*16], xmm11
     vmovdqa [rsp + 6*16], xmm12
     vmovdqa [rsp + 7*16], xmm13
-    mov     [rsp + 8*16 + 0*8], r12
-    mov     [rsp + 8*16 + 1*8], r13
-    mov     [rsp + 8*16 + 2*8], r14
-    mov     [rsp + 8*16 + 3*8], r15
-    mov     [rsp + 8*16 + 4*8], rdi
-    mov     [rsp + 8*16 + 5*8], rsi
+    vmovdqa [rsp + 8*16], xmm14
+    vmovdqa [rsp + 9*16], xmm15
+    mov     [rsp + 10*16 + 0*8], r12
+    mov     [rsp + 10*16 + 1*8], r13
+    mov     [rsp + 10*16 + 2*8], r14
+    mov     [rsp + 10*16 + 3*8], r15
+    mov     [rsp + 10*16 + 4*8], rdi
+    mov     [rsp + 10*16 + 5*8], rsi
     end_prolog
     mov     arg4, arg(4)
  %endmacro
 
  %macro FUNC_RESTORE 0
-    vmovdqa xmm6, [rsp + 0*16]
-    vmovdqa xmm7, [rsp + 1*16]
-    vmovdqa xmm8, [rsp + 2*16]
-    vmovdqa xmm9, [rsp + 3*16]
+    vmovdqa xmm6,  [rsp + 0*16]
+    vmovdqa xmm7,  [rsp + 1*16]
+    vmovdqa xmm8,  [rsp + 2*16]
+    vmovdqa xmm9,  [rsp + 3*16]
     vmovdqa xmm10, [rsp + 4*16]
     vmovdqa xmm11, [rsp + 5*16]
     vmovdqa xmm12, [rsp + 6*16]
     vmovdqa xmm13, [rsp + 7*16]
-    mov     r12,  [rsp + 8*16 + 0*8]
-    mov     r13,  [rsp + 8*16 + 1*8]
-    mov     r14,  [rsp + 8*16 + 2*8]
-    mov     r15,  [rsp + 8*16 + 3*8]
-    mov     rdi,  [rsp + 8*16 + 4*8]
-    mov     rsi,  [rsp + 8*16 + 5*8]
+    vmovdqa xmm14, [rsp + 8*16]
+    vmovdqa xmm15, [rsp + 9*16]
+    mov     r12,  [rsp + 10*16 + 0*8]
+    mov     r13,  [rsp + 10*16 + 1*8]
+    mov     r14,  [rsp + 10*16 + 2*8]
+    mov     r15,  [rsp + 10*16 + 3*8]
+    mov     rdi,  [rsp + 10*16 + 4*8]
+    mov     rsi,  [rsp + 10*16 + 5*8]
     add     rsp, stack_size
  %endmacro
 %endif
@@ -130,12 +134,13 @@
 %define vec    arg1
 %define mul_array arg2
 %define src    arg3
-%define dest   arg4
+%define dest1  arg4
 %define ptr    arg5
 %define vec_i  tmp2
 %define dest2  tmp3
 %define dest3  tmp4
-%define dest1  tmp5
+%define dest4  tmp5
+%define vskip3 tmp6
 %define pos    rax
 
 %ifndef EC_ALIGNED_ADDR
@@ -153,28 +158,29 @@
  %endif
 %endif
 
-%define x0l ymm0
-%define x0h ymm1
-
-%define xgft1   ymm8
-%define xgft2   ymm9
-%define xgft3   ymm10
-
-%define xtmp1   ymm11
-%define xtmp2   ymm12
-%define xtmp3   ymm13
+%define x0l     ymm0
+%define x0h     ymm1
 
 %define xp1l    ymm2
 %define xp2l    ymm3
 %define xp3l    ymm4
-%define xp1h    ymm5
-%define xp2h    ymm6
-%define xp3h    ymm7
+%define xp4l    ymm5
+%define xp1h    ymm6
+%define xp2h    ymm7
+%define xp3h    ymm8
+%define xp4h    ymm9
+%define xgft1   ymm10
+%define xgft2   ymm11
+%define xgft3   ymm12
+%define xgft4   ymm13
+%define xtmp1   ymm14
+%define xtmp2   ymm15
 
 %define x0      x0l
 %define xp1     xp1l
 %define xp2     xp2l
 %define xp3     xp3l
+%define xp4     xp4l
 
 default rel
 [bits 64]
@@ -182,15 +188,17 @@ default rel
 section .text
 
 ;;
-;; Encodes 64 bytes of all "k" sources into 3x 64 bytes (parity disks)
+;; Encodes 64 bytes of all "k" sources into 4x 64 bytes (parity disks)
 ;;
-%macro ENCODE_64B_3 0
+%macro ENCODE_64B_4 0
     vpxor   xp1l, xp1l, xp1l
     vpxor   xp1h, xp1h, xp1h
     vpxor   xp2l, xp2l, xp2l
     vpxor   xp2h, xp2h, xp2h
     vpxor   xp3l, xp3l, xp3l
     vpxor   xp3h, xp3h, xp3h
+    vpxor   xp4l, xp4l, xp4l
+    vpxor   xp4h, xp4h, xp4h
     mov     tmp, mul_array
     xor     vec_i, vec_i
 
@@ -203,10 +211,14 @@ section .text
     vmovdqu xgft1, [tmp]
     vmovdqu xgft2, [tmp + vec*4]
     vmovdqu xgft3, [tmp + vec*8]
+    vmovdqu xgft4, [tmp + vskip3]
     add     tmp, 32
 
-    GF_MUL_XOR VEX, x0l, xgft1, xtmp1, xp1l, xgft2, xtmp2, xp2l, xgft3, xtmp3, xp3l
-    GF_MUL_XOR VEX, x0h, xgft1, xgft1, xp1h, xgft2, xgft2, xp2h, xgft3, xgft3, xp3h
+    GF_MUL_XOR VEX, x0l, xgft1, xtmp1, xp1l, xgft2, xtmp2, xp2l
+    GF_MUL_XOR VEX, x0l, xgft3, xtmp1, xp3l, xgft4, xtmp2, xp4l
+
+    GF_MUL_XOR VEX, x0h, xgft1, xgft1, xp1h, xgft2, xgft2, xp2h, \
+                         xgft3, xgft3, xp3h, xgft4, xgft4, xp4h
 
     cmp     vec_i, vec
     jl      %%next_vect
@@ -217,29 +229,34 @@ section .text
     XSTR    [dest2 + pos + 32], xp2h
     XSTR    [dest3 + pos], xp3l
     XSTR    [dest3 + pos + 32], xp3h
+    XSTR    [dest4 + pos], xp4l
+    XSTR    [dest4 + pos + 32], xp4h
 %endmacro
 
 ;;
-;; Encodes 32 bytes of all "k" sources into 3x 32 bytes (parity disks)
+;; Encodes 32 bytes of all "k" sources into 4x 32 bytes (parity disks)
 ;;
-%macro ENCODE_32B_3 0
+%macro ENCODE_32B_4 0
     vpxor   xp1, xp1, xp1
     vpxor   xp2, xp2, xp2
     vpxor   xp3, xp3, xp3
+    vpxor   xp4, xp4, xp4
     mov     tmp, mul_array
     xor     vec_i, vec_i
 
 %%next_vect:
     mov     ptr, [src + vec_i]
     XLDR    x0, [ptr + pos]     ;Get next source vector (32 bytes)
-    add	    vec_i, 8
+    add     vec_i, 8
 
     vmovdqu xgft1, [tmp]
     vmovdqu xgft2, [tmp + vec*4]
     vmovdqu xgft3, [tmp + vec*8]
+    vmovdqu xgft4, [tmp + vskip3]
     add     tmp, 32
 
-    GF_MUL_XOR VEX, x0, xgft1, xgft1, xp1, xgft2, xgft2, xp2, xgft3, xgft3, xp3
+    GF_MUL_XOR VEX, x0, xgft1, xgft1, xp1, xgft2, xgft2, xp2, \
+                       xgft3, xgft3, xp3, xgft4, xgft4, xp4
 
     cmp     vec_i, vec
     jl      %%next_vect
@@ -247,31 +264,36 @@ section .text
     XSTR    [dest1 + pos], xp1
     XSTR    [dest2 + pos], xp2
     XSTR    [dest3 + pos], xp3
+    XSTR    [dest4 + pos], xp4
 %endmacro
 
 ;;
-;; Encodes less than 32 bytes of all "k" sources into 3 parity disks
+;; Encodes less than 32 bytes of all "k" sources into 4 parity disks.
 ;;
-%macro ENCODE_LT_32B_3 1
+%macro ENCODE_LT_32B_4 1
 %define %%LEN   %1
 
     vpxor   xp1, xp1, xp1
     vpxor   xp2, xp2, xp2
     vpxor   xp3, xp3, xp3
+    vpxor   xp4, xp4, xp4
     xor     vec_i, vec_i
 
 %%next_vect:
     mov     ptr, [src + vec_i]
-    simd_load_avx2 x0, ptr + pos, %%LEN, tmp, tmp6 ;Get next source vector
-
+    simd_load_avx2 x0, ptr + pos, %%LEN, tmp, vskip3
+    imul    vskip3, vec, 12             ;; restore vskip3 (clobbered by simd_load);
+                                        ;; vec is pre-shifted by 3, so vec*12 = parity-row-3 stride.
     lea     tmp, [mul_array + vec_i*4]
     add     vec_i, 8
 
     vmovdqu xgft1, [tmp]
     vmovdqu xgft2, [tmp + vec*4]
     vmovdqu xgft3, [tmp + vec*8]
+    vmovdqu xgft4, [tmp + vskip3]
 
-    GF_MUL_XOR VEX, x0, xgft1, xgft1, xp1, xgft2, xgft2, xp2, xgft3, xgft3, xp3
+    GF_MUL_XOR VEX, x0, xgft1, xgft1, xp1, xgft2, xgft2, xp2, \
+                       xgft3, xgft3, xp3, xgft4, xgft4, xp4
 
     cmp     vec_i, vec
     jl      %%next_vect
@@ -285,24 +307,30 @@ section .text
 
     lea     ptr, [dest3 + pos]
     simd_store_avx2 ptr, xp3, %%LEN, tmp, vec_i
+
+    lea     ptr, [dest4 + pos]
+    simd_store_avx2 ptr, xp4, %%LEN, tmp, vec_i
 %endmacro
 
 align 16
-mk_global gf_3vect_dot_prod_avx2_gfni, function
-func(gf_3vect_dot_prod_avx2_gfni)
+mk_global gf_4vect_dot_prod_avx2_gfni, function
+func(gf_4vect_dot_prod_avx2_gfni)
     FUNC_SAVE
 
     xor     pos, pos
-    shl     vec, 3      ;; vec *= 8. Make vec_i count by 8
-    mov     dest1, [dest]
-    mov     dest2, [dest + 8]
-    mov     dest3, [dest + 2*8]
+    mov     vskip3, vec
+    imul    vskip3, 32*3                ;; vskip3 = vec*96 (parity-row-3 stride)
+    shl     vec, 3                      ;; vec *= 8. Make vec_i count by 8
+    mov     dest2, [dest1 + 8]
+    mov     dest3, [dest1 + 2*8]
+    mov     dest4, [dest1 + 3*8]
+    mov     dest1, [dest1]
 
     cmp     len, 64
     jl      .len_lt_64
 
 .loop64:
-    ENCODE_64B_3
+    ENCODE_64B_4
 
     add     pos, 64     ;; Loop on 64 bytes at a time first
     sub     len, 64
@@ -313,7 +341,7 @@ func(gf_3vect_dot_prod_avx2_gfni)
     cmp     len, 32
     jl      .len_lt_32
 
-    ENCODE_32B_3
+    ENCODE_32B_4
 
     add     pos, 32     ;; encode next 32 bytes
     sub     len, 32
@@ -322,7 +350,7 @@ func(gf_3vect_dot_prod_avx2_gfni)
     or     len, len
     jz     .exit
 
-    ENCODE_LT_32B_3 len
+    ENCODE_LT_32B_4 len
 
 .exit:
     vzeroupper
