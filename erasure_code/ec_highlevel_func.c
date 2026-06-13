@@ -424,6 +424,15 @@ extern void
 gf_3vect_dot_prod_avx2_gfni(int len, int k, unsigned char *g_tbls, unsigned char **data,
                             unsigned char **coding);
 extern void
+gf_4vect_dot_prod_avx2_gfni(int len, int k, unsigned char *g_tbls, unsigned char **data,
+                            unsigned char **coding);
+extern void
+gf_5vect_dot_prod_avx2_gfni(int len, int k, unsigned char *g_tbls, unsigned char **data,
+                            unsigned char **coding);
+extern void
+gf_6vect_dot_prod_avx2_gfni(int len, int k, unsigned char *g_tbls, unsigned char **data,
+                            unsigned char **coding);
+extern void
 gf_vect_mad_avx2_gfni(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                       unsigned char *dest);
 extern void
@@ -437,6 +446,9 @@ gf_4vect_mad_avx2_gfni(int len, int vec, int vec_i, unsigned char *gftbls, unsig
                        unsigned char **dest);
 extern void
 gf_5vect_mad_avx2_gfni(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
+                       unsigned char **dest);
+extern void
+gf_6vect_mad_avx2_gfni(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                        unsigned char **dest);
 
 // Calculates 32-byte const table gftbl in GF(2^8) from single input A,
@@ -500,13 +512,22 @@ void
 ec_encode_data_avx2_gfni(int len, int k, int rows, unsigned char *g_tbls, unsigned char **data,
                          unsigned char **coding)
 {
-        while (rows >= 3) {
-                gf_3vect_dot_prod_avx2_gfni(len, k, g_tbls, data, coding);
-                g_tbls += 3 * k * 32;
-                coding += 3;
-                rows -= 3;
+        while (rows >= 6) {
+                gf_6vect_dot_prod_avx2_gfni(len, k, g_tbls, data, coding);
+                g_tbls += 6 * k * 32;
+                coding += 6;
+                rows -= 6;
         }
         switch (rows) {
+        case 5:
+                gf_5vect_dot_prod_avx2_gfni(len, k, g_tbls, data, coding);
+                break;
+        case 4:
+                gf_4vect_dot_prod_avx2_gfni(len, k, g_tbls, data, coding);
+                break;
+        case 3:
+                gf_3vect_dot_prod_avx2_gfni(len, k, g_tbls, data, coding);
+                break;
         case 2:
                 gf_2vect_dot_prod_avx2_gfni(len, k, g_tbls, data, coding);
                 break;
@@ -555,13 +576,16 @@ void
 ec_encode_data_update_avx2_gfni(int len, int k, int rows, int vec_i, unsigned char *g_tbls,
                                 unsigned char *data, unsigned char **coding)
 {
-        while (rows >= 5) {
-                gf_5vect_mad_avx2_gfni(len, k, vec_i, g_tbls, data, coding);
-                g_tbls += 5 * k * 32;
-                coding += 5;
-                rows -= 5;
+        while (rows >= 6) {
+                gf_6vect_mad_avx2_gfni(len, k, vec_i, g_tbls, data, coding);
+                g_tbls += 6 * k * 32;
+                coding += 6;
+                rows -= 6;
         }
         switch (rows) {
+        case 5:
+                gf_5vect_mad_avx2_gfni(len, k, vec_i, g_tbls, data, coding);
+                break;
         case 4:
                 gf_4vect_mad_avx2_gfni(len, k, vec_i, g_tbls, data, coding);
                 break;
