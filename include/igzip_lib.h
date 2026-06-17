@@ -805,6 +805,13 @@ isal_deflate_reset_dict(struct isal_zstream *stream, struct isal_dict *dict_str)
  * not include previous blocks so new blocks are fully independent. Switching
  * between flush types is supported.
  *
+ * A SYNC_FLUSH or FULL_FLUSH always emits the empty stored block (sync marker)
+ * that byte aligns the output, even when avail_in is 0 and the stream is already
+ * byte aligned (internal_state.state == ZSTATE_NEW_HDR). This differs from zlib,
+ * which treats such a redundant flush as a no-op (Z_BUF_ERROR, no output bytes).
+ * Callers that perform precautionary or double flushes should account for these
+ * extra sync bytes, or skip the call when no input is pending.
+ *
  * If a compression dictionary is required, the dictionary can be set calling
  * isal_deflate_set_dictionary before calling isal_deflate.
  *
