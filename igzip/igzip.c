@@ -1749,7 +1749,6 @@ write_stream_header_stateless(struct isal_zstream *stream)
         // Create a 10-byte buffer. Since the gzip header is almost fixed (9 of 10
         // bytes are fixed) use it to initialize the buffer.
         uint8_t buffer[10] = { 0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff };
-        uint32_t next_flag;
 
         if (stream->internal_state.has_wrap_hdr)
                 return COMP_OK;
@@ -1757,12 +1756,10 @@ write_stream_header_stateless(struct isal_zstream *stream)
         if (stream->gzip_flag == IGZIP_ZLIB) {
                 hdr_bytes = zlib_hdr_bytes;
                 _zlib_header_in_buffer(stream, buffer);
-                next_flag = IGZIP_ZLIB_NO_HDR;
         } else {
                 hdr_bytes = gzip_hdr_bytes;
                 if (stream->level == 0)
                         buffer[8] = 0x04; // Fastest algorithm in xfl flag
-                next_flag = IGZIP_GZIP_NO_HDR;
         }
 
         if (hdr_bytes >= stream->avail_out)
@@ -1775,7 +1772,6 @@ write_stream_header_stateless(struct isal_zstream *stream)
 
         stream->next_out += hdr_bytes;
         stream->internal_state.has_wrap_hdr = 1;
-        stream->gzip_flag = next_flag;
 
         return COMP_OK;
 }
