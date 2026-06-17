@@ -44,3 +44,10 @@ fi
 
 # wait for background processes to finish
 wait
+
+echo "Fixing trailing whitespace and dos line endings..."
+for f in $(git ls-files); do
+    [ "$verbose" -gt 0 ] && echo "fixing whitespace on $f"
+    sed -i 's/[[:space:]]*$//' "$f"
+    sed -i 's/\r//' "$f"
+done
