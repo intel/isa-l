@@ -2111,7 +2111,7 @@ isal_read_zlib_header(struct inflate_state *state, struct isal_zlib_header *zlib
                                 break;
                         }
 
-                        zlib_hdr->dict_id = load_le_u32(next_in);
+                        zlib_hdr->dict_id = load_be_u32(next_in);
                 }
 
                 state->wrapper_flag = 1;
