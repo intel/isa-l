@@ -1,4 +1,4 @@
-v2.32 Intel Intelligent Storage Acceleration Library Release Notes
+v2.32.1 Intel Intelligent Storage Acceleration Library Release Notes
 ====================================================================
 
 RELEASE NOTE CONTENTS
@@ -11,7 +11,7 @@ RELEASE NOTE CONTENTS
 
 2. FIXED ISSUES
 ---------------
-Unreleased
+v2.32.1
 
 * Fixed x86 CRC dispatcher (AVX512+VPLCMUL implementation could not be always reached
   when the ISA was available).
