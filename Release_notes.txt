@@ -16,6 +16,19 @@ Unreleased
 * Fixed x86 CRC dispatcher (AVX512+VPLCMUL implementation could not be always reached
   when the ISA was available).
 * Fixed potential out-of-bounds read in isal_mem_zero_detect when the last block is all 1's.
+* Fixed integer-overflow out-of-bounds write in isal_write_gzip_header.
+* Fixed use-after-free bug in generate_custom_hufftables.
+* Fixed internal buffer overrun in igzip.
+* Fixed next_in/avail_in not being reset after block finish in igzip.
+* Fixed zlib DICTID stored and read in wrong byte order (now correctly big-endian).
+* Fixed mutation of user-provided gzip_flag when writing the wrapper header.
+* Fixed gzip NAME field incorrectly including path components on decompress.
+* Fixed MinGW failures on Windows.
+* Fixed in-place aliasing bug in riscv64 xor_gen and pq_gen RAID functions.
+* Fixed memory leak in the zlib shim library.
+* Fixed segmentation fault in erasure_code riscv64 implementation when vlen > 128.
+* Fixed various compilation warnings on Windows for RAID, CRC, erasure code, and igzip.
+* Fixed various errors/warnings in CMake build for non-x86 architectures.
 
 v2.32
 
