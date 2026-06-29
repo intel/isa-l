@@ -263,7 +263,7 @@ deflate(z_streamp strm, int flush)
                 }
 
                 // Update output pointers
-                strm->next_out += header_len;
+                strm->next_out = (uint8_t *) strm->next_out + header_len;
                 strm->avail_out -= header_len;
                 strm->total_out += header_len;
 
@@ -358,7 +358,7 @@ deflate(z_streamp strm, int flush)
                                                         (s->input_size >> (8 * i)) & 0xff; // ISIZE
                                         }
 
-                                        strm->next_out += 8;
+                                        strm->next_out = (uint8_t *) strm->next_out + 8;
                                         strm->avail_out -= 8;
                                         strm->total_out += 8;
 
