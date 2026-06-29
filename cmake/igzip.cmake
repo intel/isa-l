@@ -138,34 +138,32 @@ if(ISAL_BUILD_TESTS)
         add_test(NAME ${test} COMMAND ${test})
     endforeach()
 
-    # Other tests
-    set(IGZIP_OTHER_TESTS
-        generate_custom_hufftables
-        generate_static_inflate
-    )
+    if(NOT MSVC)
+        set(IGZIP_OTHER_TESTS
+            generate_custom_hufftables
+            generate_static_inflate
+        )
 
-    foreach(test ${IGZIP_OTHER_TESTS})
-        add_executable(${test} igzip/${test}.c)
-        target_link_libraries(${test} PRIVATE isal)
-        target_include_directories(${test} PRIVATE include igzip)
-    endforeach()
+        foreach(test ${IGZIP_OTHER_TESTS})
+            add_executable(${test} igzip/${test}.c)
+            target_link_libraries(${test} PRIVATE isal)
+            target_include_directories(${test} PRIVATE include igzip)
+        endforeach()
 
-    # igzip_inflate_test requires zlib
-    find_package(ZLIB REQUIRED)
-    add_executable(igzip_inflate_test igzip/igzip_inflate_test.c)
-    target_link_libraries(igzip_inflate_test PRIVATE isal ZLIB::ZLIB)
-    target_include_directories(igzip_inflate_test PRIVATE include igzip)
+        # igzip_inflate_test requires zlib and is not compatible with MSVC headers
+        find_package(ZLIB REQUIRED)
+        add_executable(igzip_inflate_test igzip/igzip_inflate_test.c)
+        target_link_libraries(igzip_inflate_test PRIVATE isal ZLIB::ZLIB)
+        target_include_directories(igzip_inflate_test PRIVATE include igzip)
+    endif()
 endif()
 
 # Add performance test applications for igzip module
 if(ISAL_BUILD_PERF_TESTS)
-    # Performance tests
+    # Performance tests (cross-platform)
     set(IGZIP_PERF_TESTS
         adler32_perf
-        igzip_file_perf
         igzip_hist_perf
-        igzip_perf
-        igzip_semi_dyn_file_perf
     )
 
     # Create performance test executables
@@ -175,14 +173,29 @@ if(ISAL_BUILD_PERF_TESTS)
         target_include_directories(${test} PRIVATE include igzip)
     endforeach()
 
-    # igzip_perf needs the assembly helper for TSC measurement (x86_64 only)
-    if(CPU_X86_64)
-        target_sources(igzip_perf PRIVATE igzip/igzip_perf_misc.asm)
-        set_source_files_properties(igzip/igzip_perf_misc.asm PROPERTIES
-            INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/include;${CMAKE_SOURCE_DIR}/igzip")
-    endif()
+    if(NOT MSVC)
+        # These perf tests use getopt and are not compatible with MSVC
+        set(IGZIP_PERF_TESTS_UNIX
+            igzip_file_perf
+            igzip_perf
+            igzip_semi_dyn_file_perf
+        )
 
-    # Add zlib dependency for igzip_perf
-    find_package(ZLIB REQUIRED)
-    target_link_libraries(igzip_perf PRIVATE ZLIB::ZLIB)
+        foreach(test ${IGZIP_PERF_TESTS_UNIX})
+            add_executable(${test} igzip/${test}.c)
+            target_link_libraries(${test} PRIVATE isal)
+            target_include_directories(${test} PRIVATE include igzip)
+        endforeach()
+
+        # igzip_perf needs the assembly helper for TSC measurement (x86_64 only)
+        if(CPU_X86_64)
+            target_sources(igzip_perf PRIVATE igzip/igzip_perf_misc.asm)
+            set_source_files_properties(igzip/igzip_perf_misc.asm PROPERTIES
+                INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/include;${CMAKE_SOURCE_DIR}/igzip")
+        endif()
+
+        # Add zlib dependency for igzip_perf
+        find_package(ZLIB REQUIRED)
+        target_link_libraries(igzip_perf PRIVATE ZLIB::ZLIB)
+    endif()
 endif()
