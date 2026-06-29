@@ -90,6 +90,7 @@ set(IGZIP_RISCV64_SOURCES
     igzip/riscv64/igzip_multibinary_riscv64_dispatcher.c
     igzip/riscv64/igzip_multibinary_riscv64.S
     igzip/riscv64/igzip_isal_adler32_rvv.S
+    igzip/riscv64/igzip_isal_adler32_rvv128.S
 )
 
 # Build source list based on architecture
@@ -136,6 +137,24 @@ if(ISAL_BUILD_TESTS)
         target_include_directories(${test} PRIVATE include igzip)
         add_test(NAME ${test} COMMAND ${test})
     endforeach()
+
+    # Other tests
+    set(IGZIP_OTHER_TESTS
+        generate_custom_hufftables
+        generate_static_inflate
+    )
+
+    foreach(test ${IGZIP_OTHER_TESTS})
+        add_executable(${test} igzip/${test}.c)
+        target_link_libraries(${test} PRIVATE isal)
+        target_include_directories(${test} PRIVATE include igzip)
+    endforeach()
+
+    # igzip_inflate_test requires zlib
+    find_package(ZLIB REQUIRED)
+    add_executable(igzip_inflate_test igzip/igzip_inflate_test.c)
+    target_link_libraries(igzip_inflate_test PRIVATE isal ZLIB::ZLIB)
+    target_include_directories(igzip_inflate_test PRIVATE include igzip)
 endif()
 
 # Add performance test applications for igzip module
