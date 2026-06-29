@@ -94,6 +94,8 @@ if(CPU_X86_64)
     # Configure NASM flags
     if(WIN32)
         set(CMAKE_ASM_NASM_FLAGS "-f win64")
+    elseif(APPLE)
+        set(CMAKE_ASM_NASM_FLAGS "-f macho64 --prefix=_")
     else()
         set(CMAKE_ASM_NASM_FLAGS "-f elf64 -D LINUX")
     endif()
