@@ -157,6 +157,12 @@ AC_ARG_ENABLE([programs],
 	[], [enable_programs=no])
 AM_CONDITIONAL([HAVE_PROGRAMS], [test "x$enable_programs" != "xno"])
 
+AC_ARG_ENABLE([gfni-c-kernels],
+	AS_HELP_STRING([--enable-gfni-c-kernels],
+		[build the GFNI erasure-code kernels from C intrinsics instead of assembly @<:@default=disabled@:>@]),
+	[], [enable_gfni_c_kernels=no])
+AM_CONDITIONAL([GFNI_C_KERNELS], [test "x$enable_gfni_c_kernels" = "xyes"])
+
 # If this build is for x86, look for nasm
 if test x"$is_x86" = x"yes"; then
   AC_MSG_CHECKING([whether Intel CET is enabled])

@@ -39,7 +39,6 @@ set(ERASURE_CODE_X86_64_SOURCES
     erasure_code/ec_highlevel_func.c
     erasure_code/gf_vect_mul_sse.asm
     erasure_code/gf_vect_mul_avx.asm
-    erasure_code/gf_vect_mul_avx2_gfni.asm
     erasure_code/gf_vect_dot_prod_sse.asm
     erasure_code/gf_vect_dot_prod_avx.asm
     erasure_code/gf_vect_dot_prod_avx2.asm
@@ -77,39 +76,75 @@ set(ERASURE_CODE_X86_64_SOURCES
     erasure_code/gf_5vect_mad_avx2.asm
     erasure_code/gf_6vect_mad_avx2.asm
     erasure_code/ec_multibinary.asm
-    erasure_code/gf_vect_mad_avx2_gfni.asm
-    erasure_code/gf_2vect_mad_avx2_gfni.asm
-    erasure_code/gf_3vect_mad_avx2_gfni.asm
-    erasure_code/gf_4vect_mad_avx2_gfni.asm
-    erasure_code/gf_5vect_mad_avx2_gfni.asm
     erasure_code/gf_vect_dot_prod_avx512.asm
     erasure_code/gf_2vect_dot_prod_avx512.asm
     erasure_code/gf_3vect_dot_prod_avx512.asm
     erasure_code/gf_4vect_dot_prod_avx512.asm
     erasure_code/gf_5vect_dot_prod_avx512.asm
     erasure_code/gf_6vect_dot_prod_avx512.asm
-    erasure_code/gf_vect_dot_prod_avx512_gfni.asm
-    erasure_code/gf_vect_dot_prod_avx2_gfni.asm
-    erasure_code/gf_2vect_dot_prod_avx2_gfni.asm
-    erasure_code/gf_3vect_dot_prod_avx2_gfni.asm
-    erasure_code/gf_2vect_dot_prod_avx512_gfni.asm
-    erasure_code/gf_3vect_dot_prod_avx512_gfni.asm
-    erasure_code/gf_4vect_dot_prod_avx512_gfni.asm
-    erasure_code/gf_5vect_dot_prod_avx512_gfni.asm
-    erasure_code/gf_6vect_dot_prod_avx512_gfni.asm
     erasure_code/gf_vect_mad_avx512.asm
     erasure_code/gf_2vect_mad_avx512.asm
     erasure_code/gf_3vect_mad_avx512.asm
     erasure_code/gf_4vect_mad_avx512.asm
     erasure_code/gf_5vect_mad_avx512.asm
     erasure_code/gf_6vect_mad_avx512.asm
-    erasure_code/gf_vect_mad_avx512_gfni.asm
-    erasure_code/gf_2vect_mad_avx512_gfni.asm
-    erasure_code/gf_3vect_mad_avx512_gfni.asm
-    erasure_code/gf_4vect_mad_avx512_gfni.asm
-    erasure_code/gf_5vect_mad_avx512_gfni.asm
-    erasure_code/gf_6vect_mad_avx512_gfni.asm
 )
+
+# GFNI erasure-code kernels: assembly by default, or C intrinsics when
+# GFNI_C_KERNELS is enabled. Both export the same symbols and share the
+# ec_multibinary runtime dispatch. The C path needs a compiler that supports
+# function target attributes (GCC/Clang); assembly stays the default and is
+# required for toolchains that do not (e.g. MSVC).
+option(GFNI_C_KERNELS "Build GFNI erasure-code kernels from C intrinsics instead of assembly" OFF)
+if(GFNI_C_KERNELS)
+    list(APPEND ERASURE_CODE_X86_64_SOURCES
+        erasure_code/gf_vect_mul_avx2_gfni.c
+        erasure_code/gf_vect_dot_prod_avx2_gfni.c
+        erasure_code/gf_2vect_dot_prod_avx2_gfni.c
+        erasure_code/gf_3vect_dot_prod_avx2_gfni.c
+        erasure_code/gf_vect_dot_prod_avx512_gfni.c
+        erasure_code/gf_2vect_dot_prod_avx512_gfni.c
+        erasure_code/gf_3vect_dot_prod_avx512_gfni.c
+        erasure_code/gf_4vect_dot_prod_avx512_gfni.c
+        erasure_code/gf_5vect_dot_prod_avx512_gfni.c
+        erasure_code/gf_6vect_dot_prod_avx512_gfni.c
+        erasure_code/gf_vect_mad_avx2_gfni.c
+        erasure_code/gf_2vect_mad_avx2_gfni.c
+        erasure_code/gf_3vect_mad_avx2_gfni.c
+        erasure_code/gf_4vect_mad_avx2_gfni.c
+        erasure_code/gf_5vect_mad_avx2_gfni.c
+        erasure_code/gf_vect_mad_avx512_gfni.c
+        erasure_code/gf_2vect_mad_avx512_gfni.c
+        erasure_code/gf_3vect_mad_avx512_gfni.c
+        erasure_code/gf_4vect_mad_avx512_gfni.c
+        erasure_code/gf_5vect_mad_avx512_gfni.c
+        erasure_code/gf_6vect_mad_avx512_gfni.c
+    )
+else()
+    list(APPEND ERASURE_CODE_X86_64_SOURCES
+        erasure_code/gf_vect_mul_avx2_gfni.asm
+        erasure_code/gf_vect_dot_prod_avx2_gfni.asm
+        erasure_code/gf_2vect_dot_prod_avx2_gfni.asm
+        erasure_code/gf_3vect_dot_prod_avx2_gfni.asm
+        erasure_code/gf_vect_dot_prod_avx512_gfni.asm
+        erasure_code/gf_2vect_dot_prod_avx512_gfni.asm
+        erasure_code/gf_3vect_dot_prod_avx512_gfni.asm
+        erasure_code/gf_4vect_dot_prod_avx512_gfni.asm
+        erasure_code/gf_5vect_dot_prod_avx512_gfni.asm
+        erasure_code/gf_6vect_dot_prod_avx512_gfni.asm
+        erasure_code/gf_vect_mad_avx2_gfni.asm
+        erasure_code/gf_2vect_mad_avx2_gfni.asm
+        erasure_code/gf_3vect_mad_avx2_gfni.asm
+        erasure_code/gf_4vect_mad_avx2_gfni.asm
+        erasure_code/gf_5vect_mad_avx2_gfni.asm
+        erasure_code/gf_vect_mad_avx512_gfni.asm
+        erasure_code/gf_2vect_mad_avx512_gfni.asm
+        erasure_code/gf_3vect_mad_avx512_gfni.asm
+        erasure_code/gf_4vect_mad_avx512_gfni.asm
+        erasure_code/gf_5vect_mad_avx512_gfni.asm
+        erasure_code/gf_6vect_mad_avx512_gfni.asm
+    )
+endif()
 
 set(ERASURE_CODE_AARCH64_SOURCES
     erasure_code/aarch64/ec_aarch64_highlevel_func.c

@@ -40,7 +40,6 @@ lsrc_x86_64  += \
 		erasure_code/ec_highlevel_func.c \
 		erasure_code/gf_vect_mul_sse.asm \
 		erasure_code/gf_vect_mul_avx.asm \
-		erasure_code/gf_vect_mul_avx2_gfni.asm \
 		erasure_code/gf_vect_dot_prod_sse.asm  \
 		erasure_code/gf_vect_dot_prod_avx.asm \
 		erasure_code/gf_vect_dot_prod_avx2.asm \
@@ -80,38 +79,73 @@ lsrc_x86_64  += \
 		erasure_code/ec_multibinary.asm
 
 lsrc_x86_64  += \
-		erasure_code/gf_vect_mad_avx2_gfni.asm \
-		erasure_code/gf_2vect_mad_avx2_gfni.asm \
-		erasure_code/gf_3vect_mad_avx2_gfni.asm \
-		erasure_code/gf_4vect_mad_avx2_gfni.asm \
-		erasure_code/gf_5vect_mad_avx2_gfni.asm \
 		erasure_code/gf_vect_dot_prod_avx512.asm \
 		erasure_code/gf_2vect_dot_prod_avx512.asm \
 		erasure_code/gf_3vect_dot_prod_avx512.asm \
 		erasure_code/gf_4vect_dot_prod_avx512.asm \
 		erasure_code/gf_5vect_dot_prod_avx512.asm \
 		erasure_code/gf_6vect_dot_prod_avx512.asm \
-		erasure_code/gf_vect_dot_prod_avx512_gfni.asm \
-		erasure_code/gf_vect_dot_prod_avx2_gfni.asm \
-		erasure_code/gf_2vect_dot_prod_avx2_gfni.asm \
-		erasure_code/gf_3vect_dot_prod_avx2_gfni.asm \
-		erasure_code/gf_2vect_dot_prod_avx512_gfni.asm \
-		erasure_code/gf_3vect_dot_prod_avx512_gfni.asm \
-		erasure_code/gf_4vect_dot_prod_avx512_gfni.asm \
-		erasure_code/gf_5vect_dot_prod_avx512_gfni.asm \
-		erasure_code/gf_6vect_dot_prod_avx512_gfni.asm \
 		erasure_code/gf_vect_mad_avx512.asm \
 		erasure_code/gf_2vect_mad_avx512.asm \
 		erasure_code/gf_3vect_mad_avx512.asm \
 		erasure_code/gf_4vect_mad_avx512.asm \
 		erasure_code/gf_5vect_mad_avx512.asm \
-		erasure_code/gf_6vect_mad_avx512.asm \
+		erasure_code/gf_6vect_mad_avx512.asm
+
+# GFNI erasure-code kernels. The assembly implementations are built by
+# default. Configuring with --enable-gfni-c-kernels builds the equivalent
+# C intrinsic implementations instead. Both export the same symbols and
+# plug into the same ec_multibinary runtime dispatch, so the choice is
+# transparent to callers. The C path requires a compiler that supports
+# function target attributes (GCC/Clang); assembly remains the default and
+# is required for toolchains that do not (e.g. MSVC).
+if GFNI_C_KERNELS
+lsrc_x86_64  += \
+		erasure_code/gf_vect_mul_avx2_gfni.c \
+		erasure_code/gf_vect_dot_prod_avx2_gfni.c \
+		erasure_code/gf_2vect_dot_prod_avx2_gfni.c \
+		erasure_code/gf_3vect_dot_prod_avx2_gfni.c \
+		erasure_code/gf_vect_dot_prod_avx512_gfni.c \
+		erasure_code/gf_2vect_dot_prod_avx512_gfni.c \
+		erasure_code/gf_3vect_dot_prod_avx512_gfni.c \
+		erasure_code/gf_4vect_dot_prod_avx512_gfni.c \
+		erasure_code/gf_5vect_dot_prod_avx512_gfni.c \
+		erasure_code/gf_6vect_dot_prod_avx512_gfni.c \
+		erasure_code/gf_vect_mad_avx2_gfni.c \
+		erasure_code/gf_2vect_mad_avx2_gfni.c \
+		erasure_code/gf_3vect_mad_avx2_gfni.c \
+		erasure_code/gf_4vect_mad_avx2_gfni.c \
+		erasure_code/gf_5vect_mad_avx2_gfni.c \
+		erasure_code/gf_vect_mad_avx512_gfni.c \
+		erasure_code/gf_2vect_mad_avx512_gfni.c \
+		erasure_code/gf_3vect_mad_avx512_gfni.c \
+		erasure_code/gf_4vect_mad_avx512_gfni.c \
+		erasure_code/gf_5vect_mad_avx512_gfni.c \
+		erasure_code/gf_6vect_mad_avx512_gfni.c
+else
+lsrc_x86_64  += \
+		erasure_code/gf_vect_mul_avx2_gfni.asm \
+		erasure_code/gf_vect_dot_prod_avx2_gfni.asm \
+		erasure_code/gf_2vect_dot_prod_avx2_gfni.asm \
+		erasure_code/gf_3vect_dot_prod_avx2_gfni.asm \
+		erasure_code/gf_vect_dot_prod_avx512_gfni.asm \
+		erasure_code/gf_2vect_dot_prod_avx512_gfni.asm \
+		erasure_code/gf_3vect_dot_prod_avx512_gfni.asm \
+		erasure_code/gf_4vect_dot_prod_avx512_gfni.asm \
+		erasure_code/gf_5vect_dot_prod_avx512_gfni.asm \
+		erasure_code/gf_6vect_dot_prod_avx512_gfni.asm \
+		erasure_code/gf_vect_mad_avx2_gfni.asm \
+		erasure_code/gf_2vect_mad_avx2_gfni.asm \
+		erasure_code/gf_3vect_mad_avx2_gfni.asm \
+		erasure_code/gf_4vect_mad_avx2_gfni.asm \
+		erasure_code/gf_5vect_mad_avx2_gfni.asm \
 		erasure_code/gf_vect_mad_avx512_gfni.asm \
 		erasure_code/gf_2vect_mad_avx512_gfni.asm \
 		erasure_code/gf_3vect_mad_avx512_gfni.asm \
 		erasure_code/gf_4vect_mad_avx512_gfni.asm \
 		erasure_code/gf_5vect_mad_avx512_gfni.asm \
 		erasure_code/gf_6vect_mad_avx512_gfni.asm
+endif
 
 src_include += -I $(srcdir)/erasure_code
 extern_hdrs  += include/erasure_code.h \
