@@ -79,6 +79,24 @@ set(CRC_X86_64_SOURCES
     crc/crc32_gzip_refl_by16_10.asm
 )
 
+set(CRC_RISCV64_SOURCES
+    crc/riscv64/crc_multibinary_riscv.S
+    crc/riscv64/crc_riscv64_dispatcher.c
+    crc/riscv64/crc16_t10dif_vclmul.S
+    crc/riscv64/crc16_t10dif_copy_vclmul.S
+    crc/riscv64/crc32_ieee_norm_vclmul.S
+    crc/riscv64/crc32_iscsi_refl_vclmul.S
+    crc/riscv64/crc32_gzip_refl_vclmul.S
+    crc/riscv64/crc64_ecma_refl_vclmul.S
+    crc/riscv64/crc64_ecma_norm_vclmul.S
+    crc/riscv64/crc64_iso_refl_vclmul.S
+    crc/riscv64/crc64_iso_norm_vclmul.S
+    crc/riscv64/crc64_jones_refl_vclmul.S
+    crc/riscv64/crc64_jones_norm_vclmul.S
+    crc/riscv64/crc64_rocksoft_refl_vclmul.S
+    crc/riscv64/crc64_rocksoft_norm_vclmul.S
+)
+
 set(CRC_AARCH64_SOURCES
     crc/aarch64/crc_multibinary_arm.S
     crc/aarch64/crc_aarch64_dispatcher.c
@@ -112,7 +130,9 @@ if(CPU_X86_64)
     list(APPEND CRC_SOURCES ${CRC_X86_64_SOURCES})
 elseif(CPU_AARCH64)
     list(APPEND CRC_SOURCES ${CRC_AARCH64_SOURCES})
-elseif(CPU_PPC64LE OR CPU_RISCV64 OR CPU_UNDEFINED)
+elseif(CPU_RISCV64)
+    list(APPEND CRC_SOURCES ${CRC_RISCV64_SOURCES})
+elseif(CPU_PPC64LE OR CPU_UNDEFINED)
     # These architectures use base aliases
     list(APPEND CRC_SOURCES ${CRC_BASE_ALIASES_SOURCES})
 endif()
