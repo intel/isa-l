@@ -183,3 +183,15 @@ jobs:
         run: cmake --build build --config Release --parallel
       - name: Run tests
         run: ctest --test-dir build -C Release --output-on-failure
+
+  run_cmake_tests_linux-riscv64-v:
+    needs: check_format
+    runs-on: run_tests_linux-riscv64-v
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
