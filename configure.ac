@@ -45,7 +45,10 @@ AM_CONDITIONAL([HAVE_SYS_HWPROBE_H], [false])
 AM_CONDITIONAL([HAVE_ASM_HWPROBE_H], [false])
 
 # Check for programs
-AC_PROG_CC_STDC
+# AC_PROG_CC_STDC is a functional macro that probes for C99/C89 support on
+# autoconf < 2.70, but is a deprecated (warning-emitting) alias for AC_PROG_CC
+# on autoconf >= 2.70, where AC_PROG_CC itself performs the standard probing.
+m4_version_prereq([2.70], [AC_PROG_CC], [AC_PROG_CC_STDC])
 AC_USE_SYSTEM_EXTENSIONS
 AM_SILENT_RULES([yes])
 LT_INIT
