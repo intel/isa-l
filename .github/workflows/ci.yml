@@ -58,6 +58,21 @@ jobs:
       - name: Run extended tests
         run: bash tools/test_extended.sh
 
+  run_tests_linux_arm64:
+    needs: check_format
+    runs-on: ubuntu-26.04-arm
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Build
+        run: |
+          ./autogen.sh
+          ./configure --prefix ${HOME}/.local
+          bash -c 'make -j $(nproc)'
+      - name: Run tests
+        run: bash tools/test_checks.sh
+      - name: Run extended tests
+        run: bash tools/test_extended.sh
+
   run_tests_mingw_linux_64:
     needs: check_format
     runs-on: ubuntu-latest
@@ -159,6 +174,20 @@ jobs:
       - name: Install build dependencies (macOS)
         run: brew install nasm zlib
         if: runner.os == 'macOS'
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+
+  run_cmake_tests_linux_arm64:
+    needs: check_format
+    runs-on: ubuntu-26.04-arm
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install build dependencies
+        run: sudo apt install zlib1g-dev
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build
