@@ -25,6 +25,7 @@ jobs:
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           sudo ./llvm.sh 18
+          sudo apt update
           sudo apt install -y clang-format-18
       - name: Run format check
         run: bash tools/check_format.sh
@@ -43,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install build dependencies (Linux)
-        run: sudo apt install ${{ matrix.assembler }}
+        run: sudo apt update && sudo apt install ${{ matrix.assembler }}
         if: runner.os == 'Linux'
       - name: Untap untrusted taps (macOS)
         run: brew untap aws/tap || true
@@ -82,7 +83,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install build dependencies (Linux)
-        run: sudo apt install nasm mingw-w64
+        run: sudo apt update && sudo apt install nasm mingw-w64
       - name: Build
         shell: bash
         run: |
@@ -95,7 +96,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install build dependencies (Linux)
-        run: sudo apt install nasm mingw-w64
+        run: sudo apt update && sudo apt install nasm mingw-w64
       - name: Build
         shell: bash
         run: |
@@ -172,7 +173,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install build dependencies (Linux)
-        run: sudo apt install nasm zlib1g-dev
+        run: sudo apt update && sudo apt install nasm zlib1g-dev
         if: runner.os == 'Linux'
       - name: Untap untrusted taps (macOS)
         run: brew untap aws/tap || true
@@ -193,7 +194,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install build dependencies
-        run: sudo apt install zlib1g-dev
+        run: sudo apt update && sudo apt install zlib1g-dev
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build
