@@ -45,6 +45,9 @@ jobs:
       - name: Install build dependencies (Linux)
         run: sudo apt install ${{ matrix.assembler }}
         if: runner.os == 'Linux'
+      - name: Untap untrusted taps (macOS)
+        run: brew untap aws/tap || true
+        if: runner.os == 'macOS'
       - name: Install build dependencies (Macos)
         run: brew install ${{ matrix.assembler }} automake autoconf coreutils libtool
         if: runner.os == 'macOS'
@@ -171,6 +174,9 @@ jobs:
       - name: Install build dependencies (Linux)
         run: sudo apt install nasm zlib1g-dev
         if: runner.os == 'Linux'
+      - name: Untap untrusted taps (macOS)
+        run: brew untap aws/tap || true
+        if: runner.os == 'macOS'
       - name: Install build dependencies (macOS)
         run: brew install nasm zlib
         if: runner.os == 'macOS'
