@@ -185,6 +185,12 @@
 .endm
 
 crc32_iscsi_fusion_p8_c10_asm:
+    // This implementation uses a fixed 256-bit SVE vector layout.
+    // Fall back when the current thread uses a different vector length.
+    cntb x16
+    cmp x16, #32
+    b.ne crc32_iscsi_x6
+
     push_stack
     cmp len, blk_size       //if len < blk_size
     blt .Ltail_less_blk_size
