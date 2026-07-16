@@ -145,8 +145,10 @@ gf_nvect_dot_prod_sve_unrolled(int len, int vlen, unsigned char *gftbls, unsigne
                         svuint8_t src_data2 = svld1_u8(predicate_2, &src[v][pos + sve_len * 2]);
                         svuint8_t src_data3 = svld1_u8(predicate_3, &src[v][pos + sve_len * 3]);
 
-                        svuint8_t src_lo0, src_hi0, src_lo1, src_hi1, src_lo2, src_hi2, src_lo3,
-                                src_hi3;
+                        svuint8_t src_lo0 = svdup_u8(0), src_hi0 = svdup_u8(0);
+                        svuint8_t src_lo1 = svdup_u8(0), src_hi1 = svdup_u8(0);
+                        svuint8_t src_lo2 = svdup_u8(0), src_hi2 = svdup_u8(0);
+                        svuint8_t src_lo3 = svdup_u8(0), src_hi3 = svdup_u8(0);
                         int need_nibble = 0;
                         for (int d = 0; d < nvect; d++) {
                                 if (!is_all_one[d]) {
