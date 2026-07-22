@@ -200,9 +200,15 @@
 
 %ifdef INTEL_CET_ENABLED
  %ifdef __NASM_VER__
+   %ifidn __OUTPUT_FORMAT__,elf64
+%if __NASM_VERSION_ID__ >= 0x020f0000
 section .note.gnu.property  note  alloc noexec align=8
+%else
+section .note.gnu.property  progbits  alloc noexec align=8
+%endif
 DD 0x00000004,0x00000010,0x00000005,0x00554e47
 DD 0xc0000002,0x00000004,0x00000003,0x00000000
+   %endif
  %endif
 %endif
 
