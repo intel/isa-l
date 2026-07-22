@@ -149,22 +149,18 @@ gf_nvect_dot_prod_sve_unrolled(int len, int vlen, unsigned char *gftbls, unsigne
                         svuint8_t src_lo1 = svdup_u8(0), src_hi1 = svdup_u8(0);
                         svuint8_t src_lo2 = svdup_u8(0), src_hi2 = svdup_u8(0);
                         svuint8_t src_lo3 = svdup_u8(0), src_hi3 = svdup_u8(0);
-                        int need_nibble = 0;
                         for (int d = 0; d < nvect; d++) {
                                 if (!is_all_one[d]) {
-                                        need_nibble = 1;
+                                        src_lo0 = svand_x(predicate_0, src_data0, mask0f);
+                                        src_hi0 = svlsr_x(predicate_0, src_data0, 4);
+                                        src_lo1 = svand_x(predicate_1, src_data1, mask0f);
+                                        src_hi1 = svlsr_x(predicate_1, src_data1, 4);
+                                        src_lo2 = svand_x(predicate_2, src_data2, mask0f);
+                                        src_hi2 = svlsr_x(predicate_2, src_data2, 4);
+                                        src_lo3 = svand_x(predicate_3, src_data3, mask0f);
+                                        src_hi3 = svlsr_x(predicate_3, src_data3, 4);
                                         break;
                                 }
-                        }
-                        if (need_nibble) {
-                                src_lo0 = svand_x(predicate_0, src_data0, mask0f);
-                                src_hi0 = svlsr_x(predicate_0, src_data0, 4);
-                                src_lo1 = svand_x(predicate_1, src_data1, mask0f);
-                                src_hi1 = svlsr_x(predicate_1, src_data1, 4);
-                                src_lo2 = svand_x(predicate_2, src_data2, mask0f);
-                                src_hi2 = svlsr_x(predicate_2, src_data2, 4);
-                                src_lo3 = svand_x(predicate_3, src_data3, mask0f);
-                                src_hi3 = svlsr_x(predicate_3, src_data3, 4);
                         }
 
                         // Process each destination with unrolled batches
@@ -177,9 +173,11 @@ gf_nvect_dot_prod_sve_unrolled(int len, int vlen, unsigned char *gftbls, unsigne
                                         gf_result2 = src_data2;
                                         gf_result3 = src_data3;
                                 } else {
-                                        unsigned char *tbl_base = &gftbls[d * vlen * 32 + v * 32];
-                                        svuint8_t tbl_lo = svld1_u8(predicate_true, tbl_base);
-                                        svuint8_t tbl_hi = svld1_u8(predicate_true, tbl_base + 16);
+                                        const unsigned char *const tbl_base =
+                                                &gftbls[d * vlen * 32 + v * 32];
+                                        const svuint8_t tbl_lo = svld1_u8(predicate_true, tbl_base);
+                                        const svuint8_t tbl_hi =
+                                                svld1_u8(predicate_true, tbl_base + 16);
 
                                         // Batch 0
                                         svuint8_t gf_lo0 = svtbl_u8(tbl_lo, src_lo0);
