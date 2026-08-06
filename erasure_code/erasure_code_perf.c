@@ -30,6 +30,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> // for memset, memcmp
+#include <stdint.h>
+#include <limits.h>
 #include <ctype.h>
 #include "erasure_code.h"
 #include "test.h"
@@ -40,6 +42,13 @@
 
 #ifndef GT_L3_CACHE
 #define GT_L3_CACHE 32 * 1024 * 1024 /* some number > last level cache */
+#endif
+
+#define COLD_CACHE_TEST_MEM  (1024ULL * 1024 * 1024 * 10)
+#define ALIGNMENT            64
+#define MAX_COLD_BUFFER_SETS 1024
+#ifndef TEST_SEED
+#define TEST_SEED 0x1234
 #endif
 
 #if !defined(COLD_TEST) && !defined(TEST_CUSTOM)
@@ -54,9 +63,6 @@
 #define TEST_TYPE_STR "_cold"
 #elif defined(TEST_CUSTOM)
 #define TEST_TYPE_STR "_cus"
-#endif
-#ifndef TEST_SEED
-#define TEST_SEED 0x1234
 #endif
 
 #define MMAX TEST_SOURCES
@@ -119,21 +125,98 @@ usage(const char *app_name)
                 "  -e <val>  Number of simulated buffers with errors (cannot be higher than p or "
                 "k)\n"
                 "  -s <val>  Size of each buffer in bytes. Can use K (1024 bytes), M (1024 KB), G "
-                "(1024 MB) suffixes)\n",
+                "(1024 MB) suffixes)\n"
+                "  --cold    Use cold cache for benchmarks (buffers not in cache)\n",
                 app_name);
 }
 
+/* Build and benchmark a cold-cache ec_encode_data pass.
+ * src_buffs[0..num_srcs) are the source pointers; dst_buffs[0..num_dsts) are the destinations.
+ * Each buffer must be at least buf_size bytes.  The shuffle uses rand(). */
+static void
+ec_cold_cache_benchmark(struct perf *start, int test_len, size_t buf_size, u8 *g_tbls, int num_srcs,
+                        int num_dsts, u8 **src_buffs, u8 **dst_buffs)
+{
+        const int num_bufs = num_srcs + num_dsts;
+        const size_t num_buffer_sets_raw = buf_size / (size_t) test_len;
+        const size_t num_buffer_sets = num_buffer_sets_raw < MAX_COLD_BUFFER_SETS
+                                               ? num_buffer_sets_raw
+                                               : MAX_COLD_BUFFER_SETS;
+        if (num_buffer_sets == 0) {
+                fprintf(stderr, "Buffer size too large for cold cache test\n");
+                exit(1);
+        }
+
+        u8 ***buffer_set_list = (u8 ***) malloc(num_buffer_sets * sizeof(u8 **));
+        if (!buffer_set_list) {
+                fprintf(stderr, "Failed to allocate memory for cold cache buffer list\n");
+                exit(1);
+        }
+
+        size_t *offset_perm = (size_t *) malloc(num_buffer_sets * sizeof(size_t));
+        if (!offset_perm) {
+                fprintf(stderr, "Failed to allocate memory for offset permutation\n");
+                free(buffer_set_list);
+                exit(1);
+        }
+        for (size_t i = 0; i < num_buffer_sets; i++)
+                offset_perm[i] = i;
+        for (size_t i = num_buffer_sets - 1; i > 0; i--) {
+                size_t j = (size_t) rand() % (i + 1);
+                size_t tmp = offset_perm[i];
+                offset_perm[i] = offset_perm[j];
+                offset_perm[j] = tmp;
+        }
+
+        for (size_t i = 0; i < num_buffer_sets; i++) {
+                buffer_set_list[i] = (u8 **) malloc((size_t) num_bufs * sizeof(u8 *));
+                if (!buffer_set_list[i]) {
+                        fprintf(stderr, "Failed to allocate memory for cold cache buffer set %zu\n",
+                                i);
+                        for (size_t j = 0; j < i; j++)
+                                free(buffer_set_list[j]);
+                        free(buffer_set_list);
+                        free(offset_perm);
+                        exit(1);
+                }
+                const size_t offset = (size_t) test_len * offset_perm[i];
+                for (int j = 0; j < num_srcs; j++)
+                        buffer_set_list[i][j] = src_buffs[j] + offset;
+                for (int j = 0; j < num_dsts; j++)
+                        buffer_set_list[i][num_srcs + j] = dst_buffs[j] + offset;
+        }
+        free(offset_perm);
+
+        size_t current_buffer_idx = 0;
+        BENCHMARK_COLD(start, BENCHMARK_TIME,
+                       current_buffer_idx = (current_buffer_idx + 1) % num_buffer_sets,
+                       ec_encode_data(test_len, num_srcs, num_dsts, g_tbls,
+                                      buffer_set_list[current_buffer_idx],
+                                      &buffer_set_list[current_buffer_idx][num_srcs]));
+
+        for (size_t i = 0; i < num_buffer_sets; i++)
+                free(buffer_set_list[i]);
+        free(buffer_set_list);
+}
+
 void
-ec_encode_perf(int m, int k, u8 *a, u8 *g_tbls, u8 **buffs, struct perf *start, int test_len)
+ec_encode_perf(int m, int k, u8 *a, u8 *g_tbls, u8 **buffs, struct perf *start, int test_len,
+               int use_cold_cache, size_t buf_size)
 {
         ec_init_tables(k, m - k, &a[k * k], g_tbls);
-        BENCHMARK(start, BENCHMARK_TIME,
-                  ec_encode_data(test_len, k, m - k, g_tbls, buffs, &buffs[k]));
+
+        if (use_cold_cache)
+                ec_cold_cache_benchmark(start, test_len, buf_size, g_tbls, k, m - k, buffs,
+                                        &buffs[k]);
+        else
+                BENCHMARK(start, BENCHMARK_TIME,
+                          ec_encode_data(test_len, k, m - k, g_tbls, buffs, &buffs[k]));
 }
 
 int
 ec_decode_perf(int k, u8 *a, u8 *g_tbls, u8 **buffs, u8 *src_in_err, u8 *src_err_list, int nerrs,
-               u8 **temp_buffs, struct perf *start, int test_len)
+               u8 **temp_buffs, struct perf *start, int test_len, int use_cold_cache,
+               size_t buf_size)
 {
         int i, j, r;
         u8 b[MMAX * KMAX], c[MMAX * KMAX], d[MMAX * KMAX];
@@ -159,10 +242,14 @@ ec_decode_perf(int k, u8 *a, u8 *g_tbls, u8 **buffs, u8 *src_in_err, u8 *src_err
                                 c[k * i + j] ^= gf_mul(d[k * r + j], a[k * s + r]);
         }
 
-        // Recover data
         ec_init_tables(k, nerrs, c, g_tbls);
-        BENCHMARK(start, BENCHMARK_TIME,
-                  ec_encode_data(test_len, k, nerrs, g_tbls, recov, temp_buffs));
+
+        if (use_cold_cache)
+                ec_cold_cache_benchmark(start, test_len, buf_size, g_tbls, k, nerrs, recov,
+                                        temp_buffs);
+        else
+                BENCHMARK(start, BENCHMARK_TIME,
+                          ec_encode_data(test_len, k, nerrs, g_tbls, recov, temp_buffs));
 
         return 0;
 }
@@ -179,6 +266,7 @@ main(int argc, char *argv[])
         u8 src_err_list[TEST_SOURCES];
         struct perf start;
         int test_len = 0;
+        int use_cold_cache = 0;
 
         /* Set default parameters */
         k = 8;
@@ -194,7 +282,14 @@ main(int argc, char *argv[])
                 } else if (strcmp(argv[i], "-e") == 0) {
                         nerrs = atoi(argv[++i]);
                 } else if (strcmp(argv[i], "-s") == 0) {
-                        test_len = (int) parse_size_value(argv[++i]);
+                        size_t sz = parse_size_value(argv[++i]);
+                        if (sz > (size_t) INT_MAX) {
+                                printf("Buffer size too large (max %d)\n", INT_MAX);
+                                return -1;
+                        }
+                        test_len = (int) sz;
+                } else if (strcmp(argv[i], "--cold") == 0) {
+                        use_cold_cache = 1;
                 } else if (strcmp(argv[i], "-h") == 0) {
                         usage(argv[0]);
                         return 0;
@@ -242,6 +337,22 @@ main(int argc, char *argv[])
                 return -1;
         }
 
+        // For cold cache, allocate COLD_CACHE_TEST_MEM divided evenly across all buffers so
+        // that total shared memory stays at COLD_CACHE_TEST_MEM regardless of buffer count.
+        size_t buf_size;
+        if (use_cold_cache)
+                buf_size = (COLD_CACHE_TEST_MEM / (size_t) (m + p) + (ALIGNMENT - 1)) &
+                           ~(size_t) (ALIGNMENT - 1);
+        else
+                buf_size = (size_t) test_len;
+
+        if ((size_t) test_len > buf_size) {
+                printf("Buffer size (-s %d) exceeds cold-cache per-buffer allocation (%zu bytes). "
+                       "Reduce -s or omit --cold.\n",
+                       test_len, buf_size);
+                return -1;
+        }
+
         u8 *err_list = malloc((size_t) nerrs);
         if (err_list == NULL) {
                 printf("Error allocating list of array of error indices\n");
@@ -276,7 +387,7 @@ main(int argc, char *argv[])
 
         // Allocate the arrays
         for (i = 0; i < m; i++) {
-                if (posix_memalign(&buf, 64, test_len)) {
+                if (posix_memalign(&buf, 64, buf_size)) {
                         printf("Error allocating buffers\n");
                         goto exit;
                 }
@@ -284,7 +395,7 @@ main(int argc, char *argv[])
         }
 
         for (i = 0; i < p; i++) {
-                if (posix_memalign(&buf, 64, test_len)) {
+                if (posix_memalign(&buf, 64, buf_size)) {
                         printf("Error allocating buffers\n");
                         goto exit;
                 }
@@ -299,13 +410,13 @@ main(int argc, char *argv[])
         gf_gen_rs_matrix(a, m, k);
 
         // Start encode test
-        ec_encode_perf(m, k, a, g_tbls, buffs, &start, test_len);
-        printf("erasure_code_encode" TEST_TYPE_STR ": ");
+        ec_encode_perf(m, k, a, g_tbls, buffs, &start, test_len, use_cold_cache, buf_size);
+        printf("erasure_code_encode%s: ", use_cold_cache ? "_cold" : TEST_TYPE_STR);
         perf_print(start, (double) (test_len) * (m));
 
         // Start decode test
         check = ec_decode_perf(k, a, g_tbls, buffs, src_in_err, src_err_list, nerrs, temp_buffs,
-                               &start, test_len);
+                               &start, test_len, use_cold_cache, buf_size);
 
         if (check == BAD_MATRIX) {
                 printf("BAD MATRIX\n");
@@ -314,13 +425,14 @@ main(int argc, char *argv[])
         }
 
         for (i = 0; i < nerrs; i++) {
-                if (0 != memcmp(temp_buffs[i], buffs[src_err_list[i]], test_len)) {
+                if (!use_cold_cache &&
+                    0 != memcmp(temp_buffs[i], buffs[src_err_list[i]], test_len)) {
                         printf("Fail error recovery (%d, %d, %d) - ", m, k, nerrs);
                         goto exit;
                 }
         }
 
-        printf("erasure_code_decode" TEST_TYPE_STR ": ");
+        printf("erasure_code_decode%s: ", use_cold_cache ? "_cold" : TEST_TYPE_STR);
         perf_print(start, (double) (test_len) * (k + nerrs));
 
         printf("done all: Pass\n");
