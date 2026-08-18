@@ -7,9 +7,8 @@
 #include "igzip_lib.h"
 #include "unaligned.h"
 
-#define LEVEL_BITS   2
-#define HEADER_BITS  3
-#define LVL_BUF_BITS 3
+#define LEVEL_BITS  2
+#define HEADER_BITS 3
 
 #define LEVEL_BIT_MASK  ((1 << LEVEL_BITS) - 1)
 #define HEADER_BIT_MASK ((1 << HEADER_BITS) - 1)
