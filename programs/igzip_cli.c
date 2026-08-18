@@ -56,13 +56,11 @@
 
 #define BAD_OPTION       1
 #define BAD_LEVEL        1
-#define FILE_EXISTS      0
 #define MALLOC_FAILED    -1
 #define FILE_OPEN_ERROR  -2
 #define FILE_READ_ERROR  -3
 #define FILE_WRITE_ERROR -4
 
-#define BUF_SIZE   1024
 #define BLOCK_SIZE (1024 * 1024)
 
 #define MAX_FILEPATH_BUF 4096
@@ -76,8 +74,7 @@
 #define NO_TEST 0
 #define TEST    1
 
-#define LEVEL_DEFAULT      2
-#define DEFAULT_SUFFIX_LEN 3
+#define LEVEL_DEFAULT 2
 char *default_suffixes[] = { ".gz", ".z" };
 int default_suffixes_lens[] = { 3, 2 };
 
@@ -203,30 +200,6 @@ is_interactive(void)
         int ret;
         ret = !global_options.force && !global_options.quiet_level && isatty(fileno(stdin));
         return ret;
-}
-
-size_t
-get_filesize(FILE *fp)
-{
-        size_t file_size;
-        fpos_t pos, pos_curr;
-
-        if (fgetpos(fp, &pos_curr) != 0) /* Save current position */
-                return 0;
-#if defined(_WIN32) || defined(_WIN64)
-        if (_fseeki64(fp, 0, SEEK_END) != 0)
-                return 0;
-#else
-        if (fseeko(fp, 0, SEEK_END) != 0)
-                return 0;
-#endif
-        if (fgetpos(fp, &pos) != 0)
-                return 0;
-        file_size = *(size_t *) &pos;
-        if (fsetpos(fp, &pos_curr) != 0) /* Restore position */
-                return 0;
-
-        return file_size;
 }
 
 int
