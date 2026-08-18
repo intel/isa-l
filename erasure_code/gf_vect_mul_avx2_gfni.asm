@@ -32,7 +32,6 @@
 ;;;
 
 %include "reg_sizes.asm"
-%include "gf_vect_gfni.inc"
 
 %ifidn __OUTPUT_FORMAT__, elf64
  %define arg0  rdi
