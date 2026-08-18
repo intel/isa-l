@@ -69,7 +69,6 @@ section .text
 	%xdefine	arg3 rdx
 %endif
 
-%define TMP 16*0
 %ifidn __OUTPUT_FORMAT__, win64
 	%define XMM_SAVE 16*2
 	%define VARIABLE_OFFSET 16*12+8

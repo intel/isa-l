@@ -72,7 +72,6 @@ section .text
         %xdefine        arg1_low32 edi
 %endif
 
-%define TMP 16*0
 %ifidn __OUTPUT_FORMAT__, win64
         %define XMM_SAVE 16*2
         %define VARIABLE_OFFSET 16*10+8
