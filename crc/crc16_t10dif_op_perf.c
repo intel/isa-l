@@ -61,8 +61,6 @@ struct blk {
 
 struct blk_ext {
         uint8_t data[BLKSIZE];
-        uint32_t tag;
-        uint16_t meta;
         uint16_t crc;
 };
 

@@ -54,26 +54,21 @@
 #define TEST_SEED 0x1234
 #endif
 
-#define TEST_MEM TEST_LEN
-
 typedef uint64_t (*crc64_func_t)(uint64_t, const uint8_t *, uint64_t);
 
 typedef struct func_case {
         char *note;
         crc64_func_t crc64_func_call;
-        crc64_func_t crc64_ref_call;
 } func_case_t;
 
-func_case_t test_funcs[] = {
-        { "crc64_ecma_norm", crc64_ecma_norm, crc64_ecma_norm_base },
-        { "crc64_ecma_refl", crc64_ecma_refl, crc64_ecma_refl_base },
-        { "crc64_iso_norm", crc64_iso_norm, crc64_iso_norm_base },
-        { "crc64_iso_refl", crc64_iso_refl, crc64_iso_refl_base },
-        { "crc64_jones_norm", crc64_jones_norm, crc64_jones_norm_base },
-        { "crc64_jones_refl", crc64_jones_refl, crc64_jones_refl_base },
-        { "crc64_rocksoft_norm", crc64_rocksoft_norm, crc64_rocksoft_norm_base },
-        { "crc64_rocksoft_refl", crc64_rocksoft_refl, crc64_rocksoft_refl_base }
-};
+func_case_t test_funcs[] = { { "crc64_ecma_norm", crc64_ecma_norm },
+                             { "crc64_ecma_refl", crc64_ecma_refl },
+                             { "crc64_iso_norm", crc64_iso_norm },
+                             { "crc64_iso_refl", crc64_iso_refl },
+                             { "crc64_jones_norm", crc64_jones_norm },
+                             { "crc64_jones_refl", crc64_jones_refl },
+                             { "crc64_rocksoft_norm", crc64_rocksoft_norm },
+                             { "crc64_rocksoft_refl", crc64_rocksoft_refl } };
 
 int
 main(int argc, char *argv[])

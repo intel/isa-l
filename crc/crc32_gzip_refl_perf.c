@@ -52,8 +52,6 @@
 #define TEST_SEED 0x1234
 #endif
 
-#define TEST_MEM TEST_LEN
-
 int
 main(int argc, char *argv[])
 {
