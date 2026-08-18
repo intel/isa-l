@@ -153,9 +153,6 @@ extern void
 gf_6vect_mad_avx2(int len, int vec, int vec_i, unsigned char *gftbls, unsigned char *src,
                   unsigned char **dest);
 
-extern int
-gf_vect_mul_avx2_gfni(int len, unsigned char *gftbl, void *src, void *dest);
-
 void
 ec_encode_data_sse(int len, int k, int rows, unsigned char *g_tbls, unsigned char **data,
                    unsigned char **coding)

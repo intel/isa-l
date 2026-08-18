@@ -32,8 +32,6 @@
 
 #include <stdint.h>
 
-#define MAX_NUM_OUTPUTS_CALL 6
-
 static const uint64_t gf_table_gfni[256] = {
         0x0000000000000000, 0x102040810204080,  0x8001828488102040, 0x8103868c983060c0,
         0x408041c2c4881020, 0x418245cad4a850a0, 0xc081c3464c983060, 0xc183c74e5cb870e0,
