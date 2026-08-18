@@ -39,19 +39,15 @@
 
 #if !defined(COLD_TEST) && !defined(TEST_CUSTOM)
 // Cached test, loop many times over small dataset
-#define TEST_SOURCES  10
 #define TEST_LEN      8 * 1024
 #define TEST_TYPE_STR "_warm"
 #elif defined(COLD_TEST)
 // Uncached test.  Pull from large mem base.
-#define TEST_SOURCES  10
 #define TEST_LEN      (GT_L3_CACHE / 2)
 #define TEST_TYPE_STR "_cold"
 #elif defined(TEST_CUSTOM)
 #define TEST_TYPE_STR "_cus"
 #endif
-
-#define TEST_MEM (2 * TEST_LEN)
 
 typedef unsigned char u8;
 

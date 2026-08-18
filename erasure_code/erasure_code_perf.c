@@ -132,8 +132,8 @@ ec_encode_perf(int m, int k, u8 *a, u8 *g_tbls, u8 **buffs, struct perf *start, 
 }
 
 int
-ec_decode_perf(int m, int k, u8 *a, u8 *g_tbls, u8 **buffs, u8 *src_in_err, u8 *src_err_list,
-               int nerrs, u8 **temp_buffs, struct perf *start, int test_len)
+ec_decode_perf(int k, u8 *a, u8 *g_tbls, u8 **buffs, u8 *src_in_err, u8 *src_err_list, int nerrs,
+               u8 **temp_buffs, struct perf *start, int test_len)
 {
         int i, j, r;
         u8 b[MMAX * KMAX], c[MMAX * KMAX], d[MMAX * KMAX];
@@ -304,7 +304,7 @@ main(int argc, char *argv[])
         perf_print(start, (double) (test_len) * (m));
 
         // Start decode test
-        check = ec_decode_perf(m, k, a, g_tbls, buffs, src_in_err, src_err_list, nerrs, temp_buffs,
+        check = ec_decode_perf(k, a, g_tbls, buffs, src_in_err, src_err_list, nerrs, temp_buffs,
                                &start, test_len);
 
         if (check == BAD_MATRIX) {

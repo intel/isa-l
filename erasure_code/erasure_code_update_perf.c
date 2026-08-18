@@ -166,7 +166,7 @@ encode_single_src_test(const int m, const int k, u8 *g_tbls, u8 **perf_update_bu
 
 // Helper function for simple single source benchmark
 void
-encode_single_src_simple_test(const int m, const int k, u8 *g_tbls, u8 **perf_update_buffs, u8 *a)
+encode_single_src_simple_test(const int m, const int k, u8 *g_tbls, u8 **perf_update_buffs)
 {
         FUNCTION_UNDER_TEST(TEST_LEN(m), k, m - k, 0, g_tbls, perf_update_buffs[0],
                             &perf_update_buffs[k]);
@@ -349,7 +349,7 @@ main(int argc, char *argv[])
 
         // Start encode test
         BENCHMARK(&start, BENCHMARK_TIME,
-                  encode_single_src_simple_test(m, k, g_tbls, perf_update_buffs, a));
+                  encode_single_src_simple_test(m, k, g_tbls, perf_update_buffs));
         printf(xstr(FUNCTION_UNDER_TEST) "_single_src_simple" TEST_TYPE_STR ": ");
         perf_print(start, (double) (TEST_LEN(m)) * (m - k + 1));
 

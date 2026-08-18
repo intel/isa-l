@@ -34,8 +34,6 @@
 
 #include "erasure_code.h"
 
-#define TEST_LEN 8192
-
 #ifndef TEST_SOURCES
 #define TEST_SOURCES 128
 #endif

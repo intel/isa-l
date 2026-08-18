@@ -49,8 +49,7 @@
 #define REF_FUNCTION        ec_encode_data
 #endif
 
-#define TEST_LEN  8192
-#define TEST_SIZE (TEST_LEN / 2)
+#define TEST_LEN 8192
 
 #ifndef TEST_SOURCES
 #define TEST_SOURCES 127

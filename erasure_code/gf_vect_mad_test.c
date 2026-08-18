@@ -48,14 +48,8 @@
 #define TEST_MIN_SIZE 64
 #endif
 
-#define str(s)  #s
-#define xstr(s) str(s)
-
-#define TEST_LEN      8192
-#define TEST_SIZE     (TEST_LEN / 2)
-#define TEST_MEM      TEST_SIZE
-#define TEST_LOOPS    20000
-#define TEST_TYPE_STR ""
+#define TEST_LEN  8192
+#define TEST_SIZE (TEST_LEN / 2)
 
 #ifndef TEST_SOURCES
 #define TEST_SOURCES 16

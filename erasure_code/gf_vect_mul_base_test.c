@@ -32,10 +32,7 @@
 #include <string.h> // for memset
 #include "erasure_code.h"
 
-#define TEST_SIZE     8192
-#define TEST_MEM      TEST_SIZE
-#define TEST_LOOPS    100000
-#define TEST_TYPE_STR ""
+#define TEST_SIZE 8192
 
 typedef unsigned char u8;
 
