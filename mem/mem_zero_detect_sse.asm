@@ -33,9 +33,7 @@
  %define arg0  rdi
  %define arg1  rsi
  %define arg2  rdx
- %define arg3  rcx
  %define arg4  r8
- %define arg5  r9
  %define tmp   r11
  %define tmpb  r11b
  %define tmp3  arg4
@@ -49,7 +47,6 @@
  %define arg0  rcx
  %define arg1  rdx
  %define arg2  r8
- %define arg3  r9
  %define tmp   r11
  %define tmpb  r11b
  %define tmp3  r10
@@ -64,7 +61,6 @@
 
 %define src arg0
 %define	len arg1
-%define ptr arg2
 %define pos return
 
 default rel

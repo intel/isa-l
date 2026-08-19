@@ -34,12 +34,6 @@
  %define arg1  rsi
  %define arg2  rdx
  %define arg3  rcx
- %define arg4  r8
- %define arg5  r9
- %define tmp   r11
- %define tmpb  r11b
- %define tmp3  arg4
- %define return rax
  %define func(x) x: endbranch
  %define FUNC_SAVE
  %define FUNC_RESTORE
@@ -50,10 +44,6 @@
  %define arg1  rdx
  %define arg2  r8
  %define arg3  r9
- %define tmp   r11
- %define tmpb  r11b
- %define tmp3  r10
- %define return rax
  %define func(x) proc_frame x
  %macro FUNC_SAVE 0
 	end_prolog

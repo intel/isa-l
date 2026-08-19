@@ -30,15 +30,13 @@
 %include "reg_sizes.asm"
 
 %ifidn __OUTPUT_FORMAT__, elf64
- %define arg0  rdi
- %define arg1  rsi
- %define arg2  rdx
- %define arg3  rcx
- %define arg4  r8
- %define arg5  r9
+ %define arg1  rdi
+ %define arg2  rsi
+ %define arg3  rdx
+ %define arg5  r8
  %define tmp   r11
  %define tmpb  r11b
- %define tmp3  arg4
+ %define tmp3  arg5
  %define return rax
  %define func(x) x: endbranch
  %define FUNC_SAVE
@@ -46,10 +44,9 @@
 %endif
 
 %ifidn __OUTPUT_FORMAT__, win64
- %define arg0  rcx
- %define arg1  rdx
- %define arg2  r8
- %define arg3  r9
+ %define arg1  rcx
+ %define arg2  rdx
+ %define arg3  r8
  %define tmp   r11
  %define tmpb  r11b
  %define tmp3  r10
@@ -62,9 +59,8 @@
  %endmacro
 %endif
 
-%define src arg0
-%define	len arg1
-%define ptr arg2
+%define src arg1
+%define	len arg2
 %define pos return
 
 default rel
