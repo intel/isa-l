@@ -40,7 +40,6 @@
 %define FLAG_CPUID1_ECX_AESNI   (1<<25)
 %define FLAG_CPUID1_ECX_OSXSAVE (1<<27)
 %define FLAG_CPUID1_ECX_AVX     (1<<28)
-%define FLAG_CPUID1_EBX_AVX2    (1<<5)
 
 %define FLAG_CPUID7_EBX_AVX2           (1<<5)
 %define FLAG_CPUID7_EBX_AVX512F        (1<<16)
