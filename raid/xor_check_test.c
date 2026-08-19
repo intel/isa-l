@@ -36,7 +36,6 @@
 
 #define TEST_SOURCES 16
 #define TEST_LEN     1024
-#define TEST_MEM     ((TEST_SOURCES + 1) * (TEST_LEN))
 #ifndef TEST_SEED
 #define TEST_SEED 0x1234
 #endif

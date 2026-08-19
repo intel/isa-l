@@ -76,12 +76,10 @@ xorshift32(unsigned int *state)
 // Cross-platform threading definitions
 #ifdef _WIN32
 typedef HANDLE perf_thread_t;
-typedef DWORD(WINAPI *thread_func_t)(LPVOID);
 #define THREAD_RETURN     DWORD WINAPI
 #define THREAD_RETURN_VAL 0
 #else
 typedef pthread_t perf_thread_t;
-typedef void *(*thread_func_t)(void *);
 #define THREAD_RETURN     void *
 #define THREAD_RETURN_VAL NULL
 #endif
@@ -115,7 +113,6 @@ typedef int (*raid_func_t)(int vects, int len, void **array);
 
 // Thread data structure for multi-threaded benchmarking
 typedef struct {
-        int thread_id;
         int cpu_core; // CPU core number for affinity (-1 = no pinning)
         void **buffs; // This thread's buffer pointers
         size_t test_len;
@@ -152,21 +149,20 @@ size_t
 parse_size_value(const char *size_str);
 
 static void
-run_raid_type_range(const raid_type_t type, void *buffs[], const size_t min_len,
-                    const size_t max_len, const int is_multiplicative, const size_t abs_step,
-                    const int sources, const int csv_output, const int use_cold_cache,
-                    const int num_threads);
+run_raid_type_range(const raid_type_t type, const size_t min_len, const size_t max_len,
+                    const int is_multiplicative, const size_t abs_step, const int sources,
+                    const int csv_output, const int use_cold_cache, const int num_threads);
 static void
-run_raid_type_size_list(const raid_type_t type, void *buffs[], const size_t *size_list,
-                        const int size_count, const int sources, const int csv_output,
-                        const int use_cold_cache, const int num_threads);
+run_raid_type_size_list(const raid_type_t type, const size_t *size_list, const int size_count,
+                        const int sources, const int csv_output, const int use_cold_cache,
+                        const int num_threads);
 
 void
-benchmark_raid_type_range(const raid_type_t raid_type, void *buffs[], const size_t min_len,
-                          const size_t max_len, const ssize_t step_len, const int sources,
-                          const int csv_output, const int use_cold_cache, const int num_threads);
+benchmark_raid_type_range(const raid_type_t raid_type, const size_t min_len, const size_t max_len,
+                          const ssize_t step_len, const int sources, const int csv_output,
+                          const int use_cold_cache, const int num_threads);
 void
-benchmark_raid_type_size_list(const raid_type_t raid_type, void *buffs[], const size_t *size_list,
+benchmark_raid_type_size_list(const raid_type_t raid_type, const size_t *size_list,
                               const int size_count, const int sources, const int csv_output,
                               const int use_cold_cache, const int num_threads);
 
@@ -535,7 +531,6 @@ run_benchmark_multithreaded(const size_t len, const int sources, const raid_type
 
         // Create and start threads
         for (int i = 0; i < num_threads; i++) {
-                thread_data[i].thread_id = i;
                 thread_data[i].cpu_core = get_core_from_mask(g_coremask, i);
                 thread_data[i].buffs = g_thread_bufs[i];
                 thread_data[i].test_len = len;
@@ -591,7 +586,6 @@ run_benchmark_multithreaded(const size_t len, const int sources, const raid_type
 int
 main(int argc, char *argv[])
 {
-        void **buffs;
         raid_type_t raid_type = RAID_ALL;
         int csv_output = 0;         // Flag for CSV output mode
         int use_cold_cache = 0;     // Flag for cold cache mode
@@ -942,9 +936,6 @@ main(int argc, char *argv[])
                 }
         }
 
-        // For single-threaded case, use the first thread's buffers
-        buffs = bufs[0];
-
         // Store globally for potential future use by helper functions
         g_thread_bufs = bufs;
         g_coremask = coremask;
@@ -959,14 +950,14 @@ main(int argc, char *argv[])
                 }
 
                 // Call the benchmark function for specific type with range parameters
-                benchmark_raid_type_range(raid_type, buffs, min_len, max_len, step_len, sources,
+                benchmark_raid_type_range(raid_type, min_len, max_len, step_len, sources,
                                           csv_output, use_cold_cache, num_threads);
         } else {
                 // Use list of specific sizes
 
                 // Call the benchmark function for specific type with size list parameters
-                benchmark_raid_type_size_list(raid_type, buffs, size_list, size_count, sources,
-                                              csv_output, use_cold_cache, num_threads);
+                benchmark_raid_type_size_list(raid_type, size_list, size_count, sources, csv_output,
+                                              use_cold_cache, num_threads);
         }
 
         if (!csv_output) {
@@ -988,10 +979,9 @@ main(int argc, char *argv[])
 
 /* Helper function to process a specific RAID type for benchmark_raid_type_range */
 static void
-run_raid_type_range(const raid_type_t type, void *buffs[], const size_t min_len,
-                    const size_t max_len, const int is_multiplicative, const size_t abs_step,
-                    const int sources, const int csv_output, const int use_cold_cache,
-                    const int num_threads)
+run_raid_type_range(const raid_type_t type, const size_t min_len, const size_t max_len,
+                    const int is_multiplicative, const size_t abs_step, const int sources,
+                    const int csv_output, const int use_cold_cache, const int num_threads)
 {
         const char *type_names[] = { "XOR Generation", "P+Q Generation" };
         size_t len;
@@ -1020,9 +1010,9 @@ run_raid_type_range(const raid_type_t type, void *buffs[], const size_t min_len,
 
 /* Helper function to run benchmarks for a specific RAID type with range of sizes */
 void
-benchmark_raid_type_range(const raid_type_t raid_type, void *buffs[], const size_t min_len,
-                          const size_t max_len, const ssize_t step_len, const int sources,
-                          const int csv_output, const int use_cold_cache, const int num_threads)
+benchmark_raid_type_range(const raid_type_t raid_type, const size_t min_len, const size_t max_len,
+                          const ssize_t step_len, const int sources, const int csv_output,
+                          const int use_cold_cache, const int num_threads)
 {
         const int is_multiplicative = (step_len < 0);
         const size_t abs_step = is_multiplicative ? -step_len : step_len;
@@ -1032,25 +1022,25 @@ benchmark_raid_type_range(const raid_type_t raid_type, void *buffs[], const size
                 /* Run all RAID types */
                 if (!csv_output)
                         printf("\n=========== XOR FUNCTION ===========\n");
-                run_raid_type_range(XOR_GEN, buffs, min_len, max_len, is_multiplicative, abs_step,
-                                    sources, csv_output, use_cold_cache, num_threads);
+                run_raid_type_range(XOR_GEN, min_len, max_len, is_multiplicative, abs_step, sources,
+                                    csv_output, use_cold_cache, num_threads);
 
                 if (!csv_output)
                         printf("\n=========== P+Q FUNCTION ===========\n");
-                run_raid_type_range(PQ_GEN, buffs, min_len, max_len, is_multiplicative, abs_step,
-                                    sources, csv_output, use_cold_cache, num_threads);
+                run_raid_type_range(PQ_GEN, min_len, max_len, is_multiplicative, abs_step, sources,
+                                    csv_output, use_cold_cache, num_threads);
         } else {
                 /* Run just the specific RAID type */
-                run_raid_type_range(raid_type, buffs, min_len, max_len, is_multiplicative, abs_step,
+                run_raid_type_range(raid_type, min_len, max_len, is_multiplicative, abs_step,
                                     sources, csv_output, use_cold_cache, num_threads);
         }
 }
 
 /* Helper function to process a specific RAID type for benchmark_raid_type_size_list */
 static void
-run_raid_type_size_list(const raid_type_t type, void *buffs[], const size_t *size_list,
-                        const int size_count, const int sources, const int csv_output,
-                        const int use_cold_cache, const int num_threads)
+run_raid_type_size_list(const raid_type_t type, const size_t *size_list, const int size_count,
+                        const int sources, const int csv_output, const int use_cold_cache,
+                        const int num_threads)
 {
         const char *type_names[] = { "XOR Generation", "P+Q Generation" };
         int i;
@@ -1073,7 +1063,7 @@ run_raid_type_size_list(const raid_type_t type, void *buffs[], const size_t *siz
 
 /* Helper function to run benchmarks for a specific RAID type with list of sizes */
 void
-benchmark_raid_type_size_list(const raid_type_t raid_type, void *buffs[], const size_t *size_list,
+benchmark_raid_type_size_list(const raid_type_t raid_type, const size_t *size_list,
                               const int size_count, const int sources, const int csv_output,
                               const int use_cold_cache, const int num_threads)
 {
@@ -1082,16 +1072,16 @@ benchmark_raid_type_size_list(const raid_type_t raid_type, void *buffs[], const 
                 /* Run all RAID types */
                 if (!csv_output)
                         printf("\n=========== XOR FUNCTION ===========\n");
-                run_raid_type_size_list(XOR_GEN, buffs, size_list, size_count, sources, csv_output,
+                run_raid_type_size_list(XOR_GEN, size_list, size_count, sources, csv_output,
                                         use_cold_cache, num_threads);
 
                 if (!csv_output)
                         printf("\n=========== P+Q FUNCTION ===========\n");
-                run_raid_type_size_list(PQ_GEN, buffs, size_list, size_count, sources, csv_output,
+                run_raid_type_size_list(PQ_GEN, size_list, size_count, sources, csv_output,
                                         use_cold_cache, num_threads);
         } else {
                 /* Run just the specific RAID type */
-                run_raid_type_size_list(raid_type, buffs, size_list, size_count, sources,
-                                        csv_output, use_cold_cache, num_threads);
+                run_raid_type_size_list(raid_type, size_list, size_count, sources, csv_output,
+                                        use_cold_cache, num_threads);
         }
 }
