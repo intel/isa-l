@@ -42,7 +42,6 @@
  %define arg2  rdx
  %define arg3  rcx
  %define arg4  r8
- %define arg5  r9
  %define tmp   r11
  %define tmp2  rax
  %define tmp2.b al

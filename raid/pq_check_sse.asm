@@ -41,9 +41,7 @@
  %define arg2  rdx
  %define arg3  rcx
  %define arg4  r8
- %define arg5  r9
  %define tmp   r11
- %define tmp3  arg4
  %define return rax
  %define func(x) x: endbranch
  %define FUNC_SAVE
@@ -56,7 +54,6 @@
  %define arg2  r8
  %define arg3  r9
  %define tmp   r11
- %define tmp3  r10
  %define return rax
  %define stack_size  7*16 + 8 	; must be an odd multiple of 8
  %define func(x) proc_frame x
@@ -109,10 +106,8 @@
 ;;; Use Non-temporal load/stor
 %ifdef NO_NT_LDST
  %define XLDR movdqa
- %define XSTR movdqa
 %else
  %define XLDR movdqa
- %define XSTR movntdq
 %endif
 
 default rel

@@ -42,7 +42,6 @@
  %define arg2  rdx
  %define arg3  rcx
  %define arg4  r8
- %define arg5  r9
  %define tmp   r11
  %define tmp3  arg4
  %define func(x) x: endbranch
