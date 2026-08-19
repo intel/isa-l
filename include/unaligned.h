@@ -57,12 +57,8 @@
 #endif
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-#define to_be16(x)   isal_bswap16(x)
-#define from_be16(x) isal_bswap16(x)
 #define to_be32(x)   isal_bswap32(x)
 #define from_be32(x) isal_bswap32(x)
-#define to_be64(x)   isal_bswap64(x)
-#define from_be64(x) isal_bswap64(x)
 #define to_le16(x)   (x)
 #define from_le16(x) (x)
 #define to_le32(x)   (x)
@@ -70,12 +66,8 @@
 #define to_le64(x)   (x)
 #define from_le64(x) (x)
 #else
-#define to_be16(x)   (x)
-#define from_be16(x) (x)
 #define to_be32(x)   (x)
 #define from_be32(x) (x)
-#define to_be64(x)   (x)
-#define from_be64(x) (x)
 #define to_le16(x)   isal_bswap16(x)
 #define from_le16(x) isal_bswap16(x)
 #define to_le32(x)   isal_bswap32(x)
@@ -96,12 +88,6 @@ static inline uint16_t
 load_le_u16(uint8_t *buf)
 {
         return from_le16(load_native_u16(buf));
-}
-
-static inline uint16_t
-load_be_u16(uint8_t *buf)
-{
-        return from_be16(load_native_u16(buf));
 }
 
 static inline uint32_t
@@ -138,12 +124,6 @@ load_le_u64(uint8_t *buf)
         return from_le64(load_native_u64(buf));
 }
 
-static inline uint64_t
-load_be_u64(uint8_t *buf)
-{
-        return from_be64(load_native_u64(buf));
-}
-
 static inline uintmax_t
 load_le_umax(uint8_t *buf)
 {
@@ -167,12 +147,6 @@ static inline void
 store_le_u16(uint8_t *buf, uint16_t val)
 {
         store_native_u16(buf, to_le16(val));
-}
-
-static inline void
-store_be_u16(uint8_t *buf, uint16_t val)
-{
-        store_native_u16(buf, to_be16(val));
 }
 
 static inline void
@@ -213,12 +187,6 @@ static inline void
 store_le_u64(uint8_t *buf, uint64_t val)
 {
         store_native_u64(buf, to_le64(val));
-}
-
-static inline void
-store_be_u64(uint8_t *buf, uint64_t val)
-{
-        store_native_u64(buf, to_be64(val));
 }
 
 #endif
