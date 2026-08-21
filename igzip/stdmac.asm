@@ -32,7 +32,6 @@
 ;; internal macro used by push_all
 ;; push args L to R
 %macro push_all_ 1-*
-%xdefine _PUSH_ALL_REGS_COUNT_ %0
 %rep %0
 	push %1
 	%rotate 1
@@ -47,14 +46,6 @@
 	pop %1
 %endrep
 %endmacro
-
-%xdefine _PUSH_ALL_REGS_COUNT_ 0
-%xdefine _ALLOC_STACK_VAL_     0
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; STACK_OFFSET
-;; Number of bytes subtracted from stack due to PUSH_ALL and ALLOC_STACK
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%define STACK_OFFSET (_PUSH_ALL_REGS_COUNT_ * 8 + _ALLOC_STACK_VAL_)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; PUSH_ALL reg1, reg2, ...
@@ -71,44 +62,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro POP_ALL 0
 	pop_all_ _PUSH_ALL_REGS_
-%xdefine _PUSH_ALL_REGS_COUNT_ 0
-%endmacro
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ALLOC_STACK n
-;; subtract n from the stack pointer and remember the value for restore_stack
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro ALLOC_STACK 1
-%xdefine _ALLOC_STACK_VAL_ %1
-	sub	rsp, %1
-%endmacro
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; RESTORE_STACK
-;; add n to the stack pointer, where n is the arg to the previous alloc_stack
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro RESTORE_STACK 0
-	add	rsp, _ALLOC_STACK_VAL_
-%xdefine _ALLOC_STACK_VAL_     0
-%endmacro
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; NOPN n
-;; Create n bytes of NOP, using nops of up to 8 bytes each
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro NOPN 1
-
- %assign %%i %1
- %rep 200
-  %if (%%i < 9)
-	nopn %%i
-	%exitrep
-  %else
-	nopn 8
-	%assign %%i (%%i - 8)
-  %endif
- %endrep
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -174,38 +127,6 @@
 %error Invalid value to nopn
 %endif
 %endmacro
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rolx64 dst, src, amount
-;; Emulate a rolx instruction using rorx, assuming data 64 bits wide
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro rolx64 3
-	rorx %1, %2, (64-%3)
-%endm
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rolx32 dst, src, amount
-;; Emulate a rolx instruction using rorx, assuming data 32 bits wide
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro rolx32 3
-	rorx %1, %2, (32-%3)
-%endm
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Define a function void ssc(uint64_t x)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro DEF_SSC 0
-global ssc
-ssc:
-	mov	rax, rbx
-	mov	rbx, rcx
-	db	0x64
-	db	0x67
-	nop
-	mov	rbx, rax
-	ret
-%endm
 
 %macro	MOVDQU	2
 %define	%%dest	%1

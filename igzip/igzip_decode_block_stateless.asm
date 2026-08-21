@@ -76,12 +76,10 @@ extern rfc1951_lookup_table
 %define SMALL_FLAG_BIT_OFFSET 10
 %define SMALL_FLAG_BIT (1 << SMALL_FLAG_BIT_OFFSET)
 
-%define DIST_SYM_OFFSET 0
 %define DIST_SYM_LEN 5
 %define DIST_SYM_MASK ((1 << DIST_SYM_LEN) - 1)
 %define DIST_SYM_EXTRA_OFFSET 5
 %define DIST_SYM_EXTRA_LEN 4
-%define DIST_SYM_EXTRA_MASK ((1 << DIST_SYM_EXTRA_LEN) - 1)
 
 ;; rax
 %define	tmp3		rax
@@ -144,8 +142,6 @@ stack_size		equ	4 * 8 + 8 * 8
 
 %define	_dist_extra_bit_count	264
 %define	_dist_start		_dist_extra_bit_count + 1*32
-%define	_len_extra_bit_count	_dist_start + 4*32
-%define	_len_start		_len_extra_bit_count + 1*32
 
 %ifidn __OUTPUT_FORMAT__, elf64
 %define arg0	rdi

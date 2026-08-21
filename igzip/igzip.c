@@ -36,11 +36,7 @@
 #include <intrin.h>
 #endif
 
-#define MAX_WRITE_BITS_SIZE  8
-#define FORCE_FLUSH          64
-#define MIN_OBUF_SIZE        224
-#define NON_EMPTY_BLOCK_SIZE 6
-#define MAX_SYNC_FLUSH_SIZE  NON_EMPTY_BLOCK_SIZE + MAX_WRITE_BITS_SIZE
+#define FORCE_FLUSH 64
 
 #include "huffman.h"
 #include "bitbuf2.h"

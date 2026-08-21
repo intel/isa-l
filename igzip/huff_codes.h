@@ -63,20 +63,14 @@
 #define MAX_SAFE_LIT_CODE_LEN  13
 #define MAX_SAFE_DIST_CODE_LEN 12
 
-#define LONG_DIST_TABLE_SIZE  8192
-#define SHORT_DIST_TABLE_SIZE 2
-#define LEN_TABLE_SIZE        256
-#define LIT_TABLE_SIZE        257
-#define LAST_BLOCK            1
+#define LEN_TABLE_SIZE 256
+#define LIT_TABLE_SIZE 257
+#define LAST_BLOCK     1
 
 #define LEN_EXTRA_BITS_START     264
 #define LEN_EXTRA_BITS_INTERVAL  4
 #define DIST_EXTRA_BITS_START    3
 #define DIST_EXTRA_BITS_INTERVAL 2
-
-#define INVALID_LIT_LEN_HUFFCODE 1
-#define INVALID_DIST_HUFFCODE    1
-#define INVALID_HUFFCODE         1
 
 #define HASH8K_HASH_MASK    (IGZIP_HASH8K_HASH_SIZE - 1)
 #define HASH_HIST_HASH_MASK (IGZIP_HASH_HIST_SIZE - 1)
@@ -90,14 +84,8 @@
 
 #define LENGTH_BITS          5
 #define FREQ_SHIFT           16
-#define FREQ_MASK_HI         (0xFFFFFFFFFFFF0000)
-#define DEPTH_SHIFT          24
-#define DEPTH_MASK           0x7F
-#define DEPTH_MASK_HI        (DEPTH_MASK << DEPTH_SHIFT)
-#define DEPTH_1              (1 << DEPTH_SHIFT)
 #define HEAP_TREE_SIZE       (3 * MAX_HISTHEAP_SIZE + 1)
 #define HEAP_TREE_NODE_START (HEAP_TREE_SIZE - 1)
-#define MAX_BL_CODE_LEN      7
 
 /**
  * @brief Structure used to store huffman codes

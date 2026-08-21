@@ -71,8 +71,6 @@
 /*These max code lengths are limited by how the data is stored in
  * hufftables.asm. The deflate standard max is 15.*/
 
-#define MAX_HEADER_SIZE ISAL_DEF_MAX_HDR_SIZE
-
 #define GZIP_HEADER_SIZE  10
 #define GZIP_TRAILER_SIZE 8
 #define ZLIB_HEADER_SIZE  2

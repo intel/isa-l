@@ -36,15 +36,6 @@
 %include "reg_sizes.asm"
 
 %include "stdmac.asm"
-%ifdef DEBUG
-%macro MARK 1
-global %1
-%1:
-%endm
-%else
-%macro MARK 1
-%endm
-%endif
 
 %define LARGE_MATCH_HASH_REP 1 	; Hash 4 * LARGE_MATCH_HASH_REP elements
 %define LARGE_MATCH_MIN 264 	; Minimum match size to enter large match emit loop

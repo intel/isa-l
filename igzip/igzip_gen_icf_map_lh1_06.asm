@@ -76,7 +76,6 @@
 %define zlens2 zmm8
 %define zlookup zmm9
 %define zlookup2 zmm10
-%define match_lookups zmm11
 %define zindex zmm12
 %define zdist_extra zmm13
 %define zdists_tmp zmm14

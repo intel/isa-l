@@ -97,22 +97,6 @@
 	shr	%%code, 5
 %endm
 
-%macro get_packed_dist_code 3
-%define %%dist %1	; 64-bit IN
-%define %%code_len  %2d	; 32-bit OUT
-%define %%hufftables %3	; address of the hufftable
-	mov	%%code_len, [%%hufftables + DIST_TABLE_OFFSET + 4*%%dist ]
-%endm
-
-%macro unpack_dist_code 2
-%define %%code %1d	; 32-bit OUT
-%define %%len  %2d	; 32-bit OUT
-
-	mov	%%len, %%code
-	and	%%len, 0x1F;
-	shr	%%code, 5
-%endm
-
 %else
 ; Assumes (dist != 0)
 ; Uses RCX, clobbers dist
@@ -158,12 +142,6 @@
 %%do_compute:
 	compute_dist_code	%%distq, %%code, %%len, %%hufftables
 %%done:
-%endm
-
-%macro get_packed_dist_code 3
-%define %%dist %1	; 64-bit IN
-%define %%code_len  %2d	; 32-bit OUT
-%define %%hufftables %3	; address of the hufftable
 %endm
 
 %endif
