@@ -89,7 +89,6 @@ get_cpu_brand(char *brand_str, size_t size)
 #endif /* __x86_64__ || _M_X64 */
 
 #define COMPRESSION_QUEUE_LIMIT 32
-#define UNSET                   -1
 
 #define xstr(a) str(a)
 #define str(a)  #a
