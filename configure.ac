@@ -285,8 +285,29 @@ my_CFLAGS="\
 -Wstrict-prototypes \
 -Wtype-limits \
 -fstack-protector \
--D_FORTIFY_SOURCE=2 \
 "
+
+# Use _FORTIFY_SOURCE=3 on GCC >= 12 on Linux (adds runtime checks even when
+# the compiler can statically prove safety); fall back to =2 elsewhere.
+# _FORTIFY_SOURCE=3 requires glibc >= 2.35 at runtime; macOS (libSystem) and
+# FreeBSD libc do not support it.
+AC_MSG_CHECKING([whether compiler supports -D_FORTIFY_SOURCE=3])
+gcc_major=$($CC -dumpversion | cut -d. -f1)
+case $host_os in
+  *linux*)
+    if test "$GCC" = "yes" && test "$gcc_major" -ge 12 2>/dev/null; then
+        AC_MSG_RESULT([yes])
+        my_CFLAGS="$my_CFLAGS -D_FORTIFY_SOURCE=3"
+    else
+        AC_MSG_RESULT([no, using _FORTIFY_SOURCE=2])
+        my_CFLAGS="$my_CFLAGS -D_FORTIFY_SOURCE=2"
+    fi
+    ;;
+  *)
+    AC_MSG_RESULT([no, non-Linux host, using _FORTIFY_SOURCE=2])
+    my_CFLAGS="$my_CFLAGS -D_FORTIFY_SOURCE=2"
+    ;;
+esac
 AC_SUBST([my_CFLAGS])
 
 AC_CONFIG_FILES([\

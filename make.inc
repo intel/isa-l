@@ -56,7 +56,10 @@ DEBUG      = -g
 DEBUG_nasm = -g
 
 # Default arch= build options
-CFLAGS_    = -Wall -Wchar-subscripts -Wformat-security -Wnested-externs -Wpointer-arith -Wshadow -Wstrict-prototypes -Wtype-limits -fstack-protector -D_FORTIFY_SOURCE=2
+CFLAGS_    = -Wall -Wchar-subscripts -Wformat-security -Wnested-externs -Wpointer-arith -Wshadow -Wstrict-prototypes -Wtype-limits -fstack-protector \
+             $(if $(filter Linux,$(shell uname)),\
+               $(if $(filter 1,$(shell expr `$(CC) -dumpversion | cut -d. -f1` \>= 12)),-D_FORTIFY_SOURCE=3,-D_FORTIFY_SOURCE=2),\
+               -D_FORTIFY_SOURCE=2)
 ASFLAGS_   = -f elf64
 ARFLAGS_   = cr $@
 STRIP_gcc  = strip -d -R .comment $@
