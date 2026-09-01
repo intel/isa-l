@@ -56,6 +56,8 @@ extern void
 isal_deflate_icf_finish_hash_hist_base(struct isal_zstream *);
 
 extern void
+icf_body_lazyhash1_fillgreedy_greedy(struct isal_zstream *);
+extern void
 icf_body_hash1_fillgreedy_lazy(struct isal_zstream *);
 
 extern void
@@ -184,10 +186,10 @@ DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_body_lvl3)
 #if defined(__linux__)
         unsigned long auxval = getauxval(AT_HWCAP);
         if (auxval & HWCAP_CRC32)
-                return icf_body_hash1_fillgreedy_lazy;
+                return icf_body_lazyhash1_fillgreedy_greedy;
 #elif defined(__APPLE__)
         if (sysctlEnabled(SYSCTL_CRC32_KEY))
-                return icf_body_hash1_fillgreedy_lazy;
+                return icf_body_lazyhash1_fillgreedy_greedy;
 #endif
         return icf_body_hash1_fillgreedy_lazy;
 }
