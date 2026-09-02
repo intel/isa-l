@@ -91,6 +91,13 @@ set(IGZIP_RISCV64_SOURCES
     igzip/riscv64/igzip_multibinary_riscv64.S
     igzip/riscv64/igzip_isal_adler32_rvv.S
     igzip/riscv64/igzip_isal_adler32_rvv128.S
+    igzip/riscv64/igzip_deflate_hash_rvv.S
+    igzip/riscv64/compare258_rvv.S
+    igzip/riscv64/igzip_icf_body_hash_hist_rvv.c
+    igzip/riscv64/igzip_icf_finish_hash_hist_rvv.c
+    igzip/riscv64/igzip_deflate_body_rvv.c
+    igzip/riscv64/igzip_update_histogram_rvv.c
+    igzip/riscv64/igzip_set_long_icf_fg_rvv.c
 )
 
 # Build source list based on architecture

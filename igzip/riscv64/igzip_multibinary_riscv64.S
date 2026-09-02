@@ -38,17 +38,59 @@
 mbin_interface_base gen_icf_map_lh1, gen_icf_map_h1_base
 mbin_interface_base decode_huffman_code_block_stateless, decode_huffman_code_block_stateless_base
 mbin_interface_base isal_deflate_icf_finish_lvl3, isal_deflate_icf_finish_hash_map_base
+#if HAVE_RVV
+    mbin_interface	isal_deflate_hash_lvl3
+    mbin_interface	isal_deflate_hash_lvl1
+#else
 mbin_interface_base isal_deflate_hash_lvl3, isal_deflate_hash_base
 mbin_interface_base isal_deflate_hash_lvl1, isal_deflate_hash_base
+#endif
+#if HAVE_RVV
+    mbin_interface	isal_deflate_icf_body_lvl2
+#else
 mbin_interface_base isal_deflate_icf_body_lvl2, isal_deflate_icf_body_hash_hist_base
-mbin_interface_base isal_deflate_icf_finish_lvl1, isal_deflate_icf_finish_hash_hist_base
-mbin_interface_base isal_deflate_finish, isal_deflate_finish_base
-mbin_interface_base isal_deflate_body, isal_deflate_body_base
-mbin_interface_base isal_deflate_hash_lvl2, isal_deflate_hash_base
+#endif
+#if HAVE_RVV
+    mbin_interface	isal_deflate_icf_finish_lvl1
+#else
+    mbin_interface_base isal_deflate_icf_finish_lvl1, isal_deflate_icf_finish_hash_hist_base
+#endif
+#if HAVE_RVV
+    mbin_interface	isal_deflate_finish
+#else
+    mbin_interface_base isal_deflate_finish, isal_deflate_finish_base
+#endif
+#if HAVE_RVV
+    mbin_interface	isal_deflate_body
+#else
+    mbin_interface_base isal_deflate_body, isal_deflate_body_base
+#endif
+#if HAVE_RVV
+    mbin_interface	isal_deflate_hash_lvl2
+    mbin_interface	isal_deflate_hash_lvl0
+#else
+    mbin_interface_base isal_deflate_hash_lvl2, isal_deflate_hash_base
+    mbin_interface_base isal_deflate_hash_lvl0, isal_deflate_hash_base
+#endif
 mbin_interface_base encode_deflate_icf, encode_deflate_icf_base
-mbin_interface_base set_long_icf_fg, set_long_icf_fg_base
+#if HAVE_RVV
+    mbin_interface	set_long_icf_fg
+#else
+    mbin_interface_base set_long_icf_fg, set_long_icf_fg_base
+#endif
 mbin_interface_base isal_deflate_icf_body_lvl3, icf_body_hash1_fillgreedy_lazy
-mbin_interface_base isal_deflate_icf_body_lvl1, isal_deflate_icf_body_hash_hist_base
-mbin_interface_base isal_deflate_hash_lvl0, isal_deflate_hash_base
-mbin_interface_base isal_deflate_icf_finish_lvl2, isal_deflate_icf_finish_hash_hist_base
-mbin_interface_base isal_update_histogram, isal_update_histogram_base
+#if HAVE_RVV
+    mbin_interface	isal_deflate_icf_body_lvl1
+#else
+    mbin_interface_base isal_deflate_icf_body_lvl1, isal_deflate_icf_body_hash_hist_base
+#endif
+#if HAVE_RVV
+    mbin_interface	isal_deflate_icf_finish_lvl2
+#else
+    mbin_interface_base isal_deflate_icf_finish_lvl2, isal_deflate_icf_finish_hash_hist_base
+#endif
+#if HAVE_RVV
+    mbin_interface	isal_update_histogram
+#else
+    mbin_interface_base isal_update_histogram, isal_update_histogram_base
+#endif
