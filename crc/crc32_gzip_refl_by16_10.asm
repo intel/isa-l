@@ -50,7 +50,7 @@
 ;       http://www.ietf.org/rfc/rfc1952.txt
 
 %include "reg_sizes.asm"
-%include "include/crc.inc"
+%include "crc.inc"
 
 %ifndef FUNCTION_NAME
 %define FUNCTION_NAME crc32_gzip_refl_by16_10

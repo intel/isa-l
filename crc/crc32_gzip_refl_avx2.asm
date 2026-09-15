@@ -51,7 +51,7 @@
 
 %include "reg_sizes.asm"
 %include "memcpy.asm"
-%include "include/crc.inc"
+%include "crc.inc"
 
 %ifndef fetch_dist
 %define	fetch_dist	4096
