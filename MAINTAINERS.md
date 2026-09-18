@@ -15,15 +15,15 @@ Descriptions of section entries:
 
 General Project Administration
 ------------------------------
-M: Pablo de Lara <pablo.de.lara.guarch@intel.com>
+M: Tomasz Kantecki <tomasz.kantecki@intel.com>
 
 Base Implementations
 --------------------
-M: Pablo de Lara <pablo.de.lara.guarch@intel.com>
+M: Tomasz Kantecki <tomasz.kantecki@intel.com>
 
 x86 Architecture
 ----------------
-M: Pablo de Lara <pablo.de.lara.guarch@intel.com>
+M: Tomasz Kantecki <tomasz.kantecki@intel.com>
 
 ARM Architecture
 ----------------
