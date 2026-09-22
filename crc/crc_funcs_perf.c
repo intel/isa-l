@@ -286,6 +286,7 @@ run_benchmark(const void *buf, const size_t len, const crc_type_t type, const in
         switch (type) {
         case CRC16_T10DIF_COPY:
                 crc_type_str = "crc16_t10dif_copy";
+                uint16_t crc = 0;
                 uint8_t *dst_buf = malloc(len);
                 if (!dst_buf) {
                         printf("Failed to allocate destination buffer for crc16_t10dif_copy\n");
@@ -296,11 +297,12 @@ run_benchmark(const void *buf, const size_t len, const crc_type_t type, const in
 
                 if (run_base_version) {
                         BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc16_t10dif_copy_base(TEST_SEED, dst_buf, buffer, len));
+                                  crc = crc16_t10dif_copy_base(TEST_SEED, dst_buf, buffer, len));
                 } else {
                         BENCHMARK(&start, BENCHMARK_TIME,
-                                  crc16_t10dif_copy(TEST_SEED, dst_buf, buffer, len));
+                                  crc = crc16_t10dif_copy(TEST_SEED, dst_buf, buffer, len));
                 }
+                printf("finish 0x%x\n", crc);
                 free(dst_buf);
                 break;
         default:
