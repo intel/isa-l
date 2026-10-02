@@ -77,7 +77,6 @@ inflateInit2_(z_streamp strm, int windowBits)
         s->strm = strm;
         s->isal_strm_inflate = isal_strm_inflate;
         s->w_bits = windowBits;
-        s->trailer_overconsumption_fixed = 0; // Initialize the workaround flag
 
         // Sanity checks on windowBits
         // Valid ranges: 0 (default), 8-15 (standard), -8 to -15 (raw), 16-31 (gzip)
@@ -197,46 +196,6 @@ inflate(z_streamp strm, int flush)
         }
 #endif
 
-        // WORKAROUND: ISA-L over-consumption fix for raw deflate mode
-        if ((isal_strm_inflate->block_state == ISAL_BLOCK_FINISH ||
-             isal_strm_inflate->block_state == ISAL_BLOCK_INPUT_DONE) &&
-            (isal_strm_inflate->crc_flag == 0) &&    // raw deflate
-            s->trailer_overconsumption_fixed == 0 && // hasn't been applied yet
-            decomp == ISAL_DECOMP_OK &&              // successful decompression
-            isal_strm_inflate->avail_in < 8 && isal_strm_inflate->avail_in > 0) {
-
-                // Calculate how many bytes were likely over-consumed
-                const unsigned int expected_trailer_bytes = 8;
-                const unsigned int over_consumed =
-                        expected_trailer_bytes - isal_strm_inflate->avail_in;
-
-                // Only apply fix if the over-consumption is reasonable (1-7 bytes)
-                if (over_consumed >= 1 && over_consumed <= 7) {
-#ifdef DEBUG
-                        fprintf(stderr,
-                                "APPLYING WORKAROUND: Detected ISA-L over-consumption of %u "
-                                "bytes\n",
-                                over_consumed);
-                        fprintf(stderr, "Adjusting next_in from %p to %p, avail_in from %u to %u\n",
-                                isal_strm_inflate->next_in,
-                                (unsigned char *) isal_strm_inflate->next_in - over_consumed,
-                                isal_strm_inflate->avail_in,
-                                isal_strm_inflate->avail_in + over_consumed);
-#endif
-                        // Rewind the input pointer to restore over-consumed bytes
-                        isal_strm_inflate->next_in =
-                                (unsigned char *) isal_strm_inflate->next_in - over_consumed;
-                        isal_strm_inflate->avail_in += over_consumed;
-
-                        // Mark that the workaround has been applied
-                        s->trailer_overconsumption_fixed = 1;
-
-                        // Also adjust the byte consumption count to reflect the actual deflate data
-                        // consumed Note: bytes_consumed is calculated later, so we'll need to
-                        // adjust it after the calculation
-                }
-        }
-
         // Update stream state - handle byte accounting correctly
         strm->avail_out = isal_strm_inflate->avail_out;
         strm->avail_in = isal_strm_inflate->avail_in;
@@ -245,8 +204,7 @@ inflate(z_streamp strm, int flush)
         strm->total_out = isal_strm_inflate->total_out;
 
         // Calculate bytes consumed by ISA-L from the original input
-        const unsigned int bytes_consumed_by_isal = original_avail_in - isal_strm_inflate->avail_in;
-        strm->total_in = total_in + bytes_consumed_by_isal;
+        strm->total_in = total_in + bytes_consumed;
 
         int ret;
 
@@ -270,7 +228,7 @@ inflate(z_streamp strm, int flush)
         if (ret == Z_OK) {
                 const unsigned int bytes_produced =
                         original_avail_out - isal_strm_inflate->avail_out;
-                if (bytes_consumed_by_isal == 0 && bytes_produced == 0)
+                if (bytes_consumed == 0 && bytes_produced == 0)
                         ret = Z_BUF_ERROR;
         }
 
@@ -447,9 +405,6 @@ inflateReset(z_streamp strm)
         strm->total_out = 0;
         strm->total_in = 0;
         strm->msg = NULL;
-
-        // Reset workaround flag
-        s->trailer_overconsumption_fixed = 0;
 
         return Z_OK;
 }

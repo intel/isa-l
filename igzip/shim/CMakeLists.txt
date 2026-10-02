@@ -88,3 +88,22 @@ if(TARGET isal)
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
 endif()
+
+# Shim unit tests (run by CTest)
+# The shim is only supported on Linux (see README.md), so the tests are not
+# built on Windows.
+if(ISAL_BUILD_TESTS AND TARGET isal AND NOT WIN32)
+    set(SHIM_CHECK_TESTS
+        shim_inflate_test
+    )
+
+    foreach(test ${SHIM_CHECK_TESTS})
+        add_executable(${test} "${CMAKE_CURRENT_SOURCE_DIR}/tests/${test}.c")
+        target_link_libraries(${test} PRIVATE ${LIBRARY_NAME})
+        target_include_directories(${test} PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../include"
+        )
+        add_test(NAME ${test} COMMAND ${test})
+    endforeach()
+endif()
