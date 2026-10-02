@@ -830,6 +830,10 @@ decompress_file(void)
                                                              ? outfile_name_len + 1
                                                              : MAX_FILEPATH_BUF);
                         outfile_name = allocated_name;
+                        // The gzip NAME field is optional, so the header parser
+                        // may leave this buffer untouched. Terminate it now so
+                        // the uninitialized contents are never read as a string.
+                        outfile_name[0] = 0;
                 }
         }
 

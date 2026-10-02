@@ -257,6 +257,50 @@ if command -V md5sum >/dev/null 2>&1 && command -V dd >/dev/null 2>&1; then
     fi
 fi
 
+# Regression: gzip stream with no NAME field must not expose the
+# uninitialized output-name buffer used by -N / -dN.
+#
+# When the header carries no FNAME, isal_read_gzip_header() leaves the
+# name buffer untouched, so the CLI must fall back to the name derived
+# from the input file instead of reading uninitialized heap bytes. The
+# multi-file case is the sensitive one: a recycled allocation is not
+# zeroed, so stale buffer contents could end up as the output file name
+# and make later archives collide on it.
+ret=0
+clear_dir
+cp $TEST_FILE $file1 && cp $TEST_FILE $file2 && cp $TEST_FILE $file3 || ret=1
+$IGZIP -N $file1 -o $file1$ds || ret=1
+$IGZIP -n $file2 -o $file2$ds || ret=1
+$IGZIP -n $file3 -o $file3$ds || ret=1
+rm -f $file1 $file2 $file3 || ret=1
+
+$IGZIP -dN $file1$ds $file2$ds $file3$ds || ret=1
+$DIFF $TEST_FILE $file1 && $DIFF $TEST_FILE $file2 && $DIFF $TEST_FILE $file3 || ret=1
+
+# Only the expected inputs and outputs may exist, any other entry means a
+# file was created under a name taken from uninitialized memory
+unexpected=$(ls -A | grep -a -v -x -e "$file1" -e "$file2" -e "$file3" \
+		  -e "$file1$ds" -e "$file2$ds" -e "$file3$ds")
+if [ -n "$unexpected" ]; then
+    echo "FAIL: unexpected output file(s) created: $unexpected"
+    ret=1
+fi
+pass_check $ret "Decompress multiple files with no-name info"
+clear_dir
+
+# Same check for a single archive on a fresh process
+ret=0
+cp $TEST_FILE $file1 && $IGZIP -n $file1 -o $file2$ds && rm -f $file1 || ret=1
+$IGZIP -dN $file2$ds || ret=1
+$DIFF $TEST_FILE $file2 || ret=1
+unexpected=$(ls -A | grep -a -v -x -e "$file2" -e "$file2$ds")
+if [ -n "$unexpected" ]; then
+    echo "FAIL: unexpected output file(s) created: $unexpected"
+    ret=1
+fi
+pass_check $ret "Decompress single file with no-name info"
+clear_dir
+
 # Path-traversal via gzip NAME field
 # A crafted .gz whose NAME is an absolute path must decompress to a file
 # named only by the basename in the CWD, never to the absolute path.
