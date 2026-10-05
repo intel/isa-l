@@ -811,6 +811,105 @@ read_zlib_header_streaming(uint8_t *hdr_buf, uint32_t hdr_buf_len,
         return ret;
 }
 
+static int
+inflate_incomplete_wrapper_test(void)
+{
+        uint8_t gzip_header[] = { 0x1f, 0x8b, 8,   0x1e, 0,   0, 0,   0, 0, 3,
+                                  2,    0,    'x', 'y',  'n', 0, 'c', 0, 0, 0 };
+        uint8_t zlib_header[] = { 0x78, 0x20, 0, 0, 0, 1 };
+        uint8_t body[] = { 3, 0 };
+        uint8_t out[4096];
+        const struct {
+                uint8_t *header;
+                uint32_t len;
+                uint32_t split;
+                enum isal_block_state block_state;
+        } cases[] = {
+                { gzip_header, sizeof(gzip_header), 10, ISAL_GZIP_EXTRA_LEN },
+                { gzip_header, sizeof(gzip_header), 13, ISAL_GZIP_EXTRA },
+                { gzip_header, sizeof(gzip_header), 15, ISAL_GZIP_NAME },
+                { gzip_header, sizeof(gzip_header), 17, ISAL_GZIP_COMMENT },
+                { gzip_header, sizeof(gzip_header), 19, ISAL_GZIP_HCRC },
+                { zlib_header, sizeof(zlib_header), 3, ISAL_ZLIB_DICT },
+        };
+        const int flags[] = { ISAL_DEFLATE, ISAL_GZIP_NO_HDR, ISAL_GZIP_NO_HDR_VER,
+                              ISAL_ZLIB_NO_HDR, ISAL_ZLIB_NO_HDR_VER };
+        struct inflate_state state, saved;
+        struct isal_gzip_header gz_hdr;
+        struct isal_zlib_header z_hdr;
+        uint32_t hcrc = crc32_gzip_refl_ref(0, gzip_header, sizeof(gzip_header) - 2);
+        unsigned int i, j, in_size, out_size;
+        int ret, is_zlib;
+
+        gzip_header[18] = hcrc;
+        gzip_header[19] = hcrc >> 8;
+
+        for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+                memset(&state, 0, sizeof(state));
+                isal_inflate_init(&state);
+                isal_gzip_header_init(&gz_hdr);
+                isal_zlib_header_init(&z_hdr);
+                state.next_in = cases[i].header;
+                state.avail_in = cases[i].split;
+                is_zlib = cases[i].block_state == ISAL_ZLIB_DICT;
+                ret = is_zlib ? isal_read_zlib_header(&state, &z_hdr)
+                              : isal_read_gzip_header(&state, &gz_hdr);
+                if (ret != ISAL_END_INPUT || state.block_state != cases[i].block_state ||
+                    state.avail_in != 0) {
+                        printf("Failed to enter wrapper state %d: ret=%d state=%d\n",
+                               cases[i].block_state, ret, state.block_state);
+                        return 1;
+                }
+
+                for (j = 0; j < sizeof(flags) / sizeof(flags[0]); j++) {
+                        for (in_size = 0; in_size <= sizeof(body); in_size += sizeof(body)) {
+                                for (out_size = 0; out_size <= sizeof(out);
+                                     out_size += sizeof(out)) {
+                                        state.crc_flag = flags[j];
+                                        state.next_in = body;
+                                        state.avail_in = in_size;
+                                        state.next_out = out;
+                                        state.avail_out = out_size;
+                                        memcpy(&saved, &state, sizeof(state));
+                                        ret = isal_inflate(&state);
+                                        if (ret != ISAL_INVALID_WRAPPER ||
+                                            memcmp(&saved, &state, sizeof(state)) != 0) {
+                                                printf("Incomplete wrapper state %d, flag %d, "
+                                                       "input %u, output %u: ret=%d\n",
+                                                       cases[i].block_state, flags[j], in_size,
+                                                       out_size, ret);
+                                                return 1;
+                                        }
+                                }
+                        }
+                }
+
+                state.next_in = cases[i].header + cases[i].split;
+                state.avail_in = cases[i].len - cases[i].split;
+                ret = is_zlib ? isal_read_zlib_header(&state, &z_hdr)
+                              : isal_read_gzip_header(&state, &gz_hdr);
+                if (ret != ISAL_DECOMP_OK || state.block_state != ISAL_BLOCK_NEW_HDR ||
+                    state.avail_in != 0) {
+                        printf("Failed to resume wrapper state %d: ret=%d\n", cases[i].block_state,
+                               ret);
+                        return 1;
+                }
+                state.crc_flag = is_zlib ? ISAL_ZLIB_NO_HDR : ISAL_GZIP_NO_HDR;
+                state.next_in = body;
+                state.avail_in = sizeof(body);
+                state.next_out = out;
+                state.avail_out = sizeof(out);
+                ret = isal_inflate(&state);
+                if (ret != ISAL_DECOMP_OK || state.block_state != ISAL_BLOCK_FINISH ||
+                    state.total_out != 0 || state.avail_in != 0) {
+                        printf("Failed to inflate after wrapper state %d: ret=%d\n",
+                               cases[i].block_state, ret);
+                        return 1;
+                }
+        }
+        return 0;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -827,6 +926,12 @@ main(int argc, char *argv[])
         printf("Test Seed  : %d\n", TEST_SEED);
         printf("Randoms    : %d\n", RANDOMS);
         srand(TEST_SEED);
+
+        printf("incomplete wrapper inflate test: ");
+        ret = inflate_incomplete_wrapper_test();
+        if (ret)
+                goto exit;
+        printf("Pass \n");
 
         printf("gzip wrapper test: ");
         for (i = 0; i < RANDOMS; i++) {

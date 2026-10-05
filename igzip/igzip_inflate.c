@@ -2272,6 +2272,19 @@ isal_inflate(struct inflate_state *state)
                 return (ret > 0) ? ISAL_DECOMP_OK : ret;
         }
 
+        /* An unfinished wrapper header cannot be decoded as a deflate block. */
+        switch (state->block_state) {
+        case ISAL_GZIP_EXTRA_LEN:
+        case ISAL_GZIP_EXTRA:
+        case ISAL_GZIP_NAME:
+        case ISAL_GZIP_COMMENT:
+        case ISAL_GZIP_HCRC:
+        case ISAL_ZLIB_DICT:
+                return ISAL_INVALID_WRAPPER;
+        default:
+                break;
+        }
+
         if (state->block_state != ISAL_BLOCK_FINISH) {
                 state->total_out += state->tmp_out_valid - state->tmp_out_processed;
                 /* If space in tmp_out buffer, decompress into the tmp_out_buffer */

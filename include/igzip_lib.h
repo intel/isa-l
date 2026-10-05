@@ -915,6 +915,10 @@ isal_inflate_set_dict(struct inflate_state *state, uint8_t *dict, uint32_t dict_
  * the user can reallocate a larger buffer and call this function again to
  * continue reading the header information.
  *
+ * If ISAL_END_INPUT is returned, supply more input and call this function again.
+ * The header is complete only when ISAL_DECOMP_OK is returned. Complete header
+ * parsing before passing the state to isal_inflate() with a no-header crc_flag.
+ *
  * @param state: Structure holding state information on the decompression stream.
  * @param gz_hdr: Structure to return data encoded in the gzip header
  * @returns ISAL_DECOMP_OK (header was successfully parsed)
@@ -934,6 +938,10 @@ isal_read_gzip_header(struct inflate_state *state, struct isal_gzip_header *gz_h
  *
  * On entry state must be initialized and next_in pointing to a zlib compressed
  * buffer.
+ *
+ * If ISAL_END_INPUT is returned, supply more input and call this function again.
+ * The header is complete only when ISAL_DECOMP_OK is returned. Complete header
+ * parsing before passing the state to isal_inflate() with a no-header crc_flag.
  *
  * @param state: Structure holding state information on the decompression stream.
  * @param zlib_hdr: Structure to return data encoded in the zlib header
@@ -972,6 +980,11 @@ isal_read_zlib_header(struct inflate_state *state, struct isal_zlib_header *zlib
  * gzip/zlib header is parsed, state->crc is set to the appropriate checksum,
  * and the checksum is verified. If the crc_flag is set to ISAL_DEFLATE
  * (default), then the data is treated as a raw deflate block.
+ *
+ * When parsing a wrapper header separately, complete isal_read_gzip_header() or
+ * isal_read_zlib_header() successfully before decoding the body. Intermediate
+ * gzip/zlib header states are rejected with ISAL_INVALID_WRAPPER when wrapper
+ * parsing is disabled.
  *
  * The element state->hist_bits has values from 0 to 15, where values of 1 to 15
  * are the log base 2 size of the matching window and 0 is the default with
