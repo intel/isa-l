@@ -20,6 +20,13 @@ builds tests with a new random test seed that ensures that each run is unique to
 the seed but deterministic for debugging. Tests are also built with sanitizers
 and Electric Fence if available.
 
+`igzip_bounds_test` places compression and histogram input immediately before an
+inaccessible guard page. It checks streaming and stateless compression at every
+level, including literal tails, the 258-byte match limit, and longer level-3
+matches, and verifies compression round trips. These guard-page checks detect
+out-of-bounds reads in handwritten assembly that AddressSanitizer cannot
+instrument. The test runs as part of `make check` and CTest.
+
 ## Extended tests
 
 Extended tests are initiated with the command `./tools/test_autorun.sh

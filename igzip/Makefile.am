@@ -84,6 +84,7 @@ src_include += -I $(srcdir)/igzip
 extern_hdrs +=	include/igzip_lib.h
 
 check_tests +=  igzip/igzip_rand_test
+check_tests +=  igzip/igzip_bounds_test
 check_tests +=  igzip/igzip_wrapper_hdr_test
 check_tests +=  igzip/checksum32_funcs_test
 

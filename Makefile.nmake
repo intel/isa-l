@@ -312,6 +312,7 @@ checks = \
 	crc64_funcs_test.exe \
 	crc32_funcs_test.exe \
 	igzip_rand_test.exe \
+	igzip_bounds_test.exe \
 	igzip_wrapper_hdr_test.exe \
 	checksum32_funcs_test.exe \
 	mem_zero_detect_test.exe \

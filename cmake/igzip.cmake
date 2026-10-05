@@ -126,6 +126,7 @@ if(ISAL_BUILD_TESTS)
     # Check tests (unit tests that are run by CTest)
     set(IGZIP_CHECK_TESTS
         igzip_rand_test
+        igzip_bounds_test
         igzip_wrapper_hdr_test
         checksum32_funcs_test
     )
