@@ -35,6 +35,43 @@ adler32_rvv128(uint32_t, uint8_t *, uint64_t);
 extern uint32_t
 adler32_base(uint32_t, uint8_t *, uint64_t);
 
+extern void
+isal_deflate_hash_riscv64(uint16_t *, uint32_t, uint32_t, uint8_t *, uint32_t);
+extern void
+isal_deflate_hash_base(uint16_t *, uint32_t, uint32_t, uint8_t *, uint32_t);
+
+struct isal_zstream;
+extern void
+isal_deflate_icf_body_hash_hist_rvv(struct isal_zstream *);
+extern void
+isal_deflate_icf_body_hash_hist_base(struct isal_zstream *);
+
+extern void
+isal_deflate_icf_finish_hash_hist_rvv(struct isal_zstream *);
+extern void
+isal_deflate_icf_finish_hash_hist_base(struct isal_zstream *);
+
+extern void
+isal_deflate_body_rvv(struct isal_zstream *);
+extern void
+isal_deflate_body_base(struct isal_zstream *);
+extern void
+isal_deflate_finish_rvv(struct isal_zstream *);
+extern void
+isal_deflate_finish_base(struct isal_zstream *);
+
+struct isal_huff_histogram;
+extern void
+isal_update_histogram_rvv(uint8_t *, int, struct isal_huff_histogram *);
+extern void
+isal_update_histogram_base(uint8_t *, int, struct isal_huff_histogram *);
+
+struct deflate_icf;
+extern void
+set_long_icf_fg_rvv(uint8_t *, uint64_t, uint64_t, struct deflate_icf *);
+extern void
+set_long_icf_fg_base(uint8_t *, uint64_t, uint64_t, struct deflate_icf *);
+
 DEFINE_INTERFACE_DISPATCHER(isal_adler32)
 {
 #if HAVE_RVV
@@ -49,4 +86,81 @@ DEFINE_INTERFACE_DISPATCHER(isal_adler32)
         } else
 #endif
                 return adler32_base;
+}
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_hash_lvl0) { return isal_deflate_hash_riscv64; }
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_hash_lvl1) { return isal_deflate_hash_riscv64; }
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_hash_lvl2) { return isal_deflate_hash_riscv64; }
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_hash_lvl3) { return isal_deflate_hash_riscv64; }
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_body_lvl1)
+{
+#if HAVE_RVV
+        if (getauxval(AT_HWCAP) & HWCAP_RV('V'))
+                return isal_deflate_icf_body_hash_hist_rvv;
+#endif
+        return isal_deflate_icf_body_hash_hist_base;
+}
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_body_lvl2)
+{
+#if HAVE_RVV
+        if (getauxval(AT_HWCAP) & HWCAP_RV('V'))
+                return isal_deflate_icf_body_hash_hist_rvv;
+#endif
+        return isal_deflate_icf_body_hash_hist_base;
+}
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_finish_lvl1)
+{
+#if HAVE_RVV
+        if (getauxval(AT_HWCAP) & HWCAP_RV('V'))
+                return isal_deflate_icf_finish_hash_hist_rvv;
+#endif
+        return isal_deflate_icf_finish_hash_hist_base;
+}
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_icf_finish_lvl2)
+{
+#if HAVE_RVV
+        if (getauxval(AT_HWCAP) & HWCAP_RV('V'))
+                return isal_deflate_icf_finish_hash_hist_rvv;
+#endif
+        return isal_deflate_icf_finish_hash_hist_base;
+}
+
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_body)
+{
+#if HAVE_RVV
+        if (getauxval(AT_HWCAP) & HWCAP_RV('V'))
+                return isal_deflate_body_rvv;
+#endif
+        return isal_deflate_body_base;
+}
+DEFINE_INTERFACE_DISPATCHER(isal_deflate_finish)
+{
+#if HAVE_RVV
+        if (getauxval(AT_HWCAP) & HWCAP_RV('V'))
+                return isal_deflate_finish_rvv;
+#endif
+        return isal_deflate_finish_base;
+}
+
+DEFINE_INTERFACE_DISPATCHER(isal_update_histogram)
+{
+#if HAVE_RVV
+        if (getauxval(AT_HWCAP) & HWCAP_RV('V'))
+                return isal_update_histogram_rvv;
+#endif
+        return isal_update_histogram_base;
+}
+
+DEFINE_INTERFACE_DISPATCHER(set_long_icf_fg)
+{
+#if HAVE_RVV
+        if (getauxval(AT_HWCAP) & HWCAP_RV('V'))
+                return set_long_icf_fg_rvv;
+#endif
+        return set_long_icf_fg_base;
 }
