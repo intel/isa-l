@@ -232,8 +232,7 @@ main_loop_end:
 second_loop_start:
 	cmp	m_out_buf,m_out_end
 	bhi	update_state_exit
-	ldr	literal,[next_in]
-	and		literal,literal,0xff
+	ldrb	literal,[next_in]
 	get_lit_code	hufftables,literal,code,code_len
 	//next_in++;
 	add	next_in,next_in,1
