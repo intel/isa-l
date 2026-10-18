@@ -310,7 +310,6 @@ cdecl(isal_deflate_icf_body_hash_hist_aarch64):
 	add	w19, w_total_in, w19
 	ldr	w0, [stream_saved, offset_end_of_stream] // 56
 	sub	x12, end_out, next_out
-	asr	x12, x12, 2                                   // x12 => end_out - next_out
 	str	next_in, [stream_saved]
 	str	w19, [stream_saved, offset_total_in] // 12
 	sub	next_in, end_in, next_in
@@ -341,7 +340,6 @@ cdecl(isal_deflate_icf_body_hash_hist_aarch64):
 .skip_igzip_hist:
 	add	w_total_in, w_total_in, w19
 	sub	x12, end_out, next_out
-	asr	x12, x12, 2                                  // x12 => end_out - next_out
 	str	next_in, [stream_saved]
 	sub	next_in, end_in, next_in
 	str	w_total_in, [stream_saved, offset_total_in] // 12
