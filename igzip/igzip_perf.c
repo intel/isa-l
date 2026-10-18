@@ -287,13 +287,16 @@ get_cycle_cost(const struct perf *p, size_t file_size, double *total_cycles_out,
 void
 print_perf_line(struct perf_info *info, const char *direction)
 {
-        if (info->strategy.mode == ISAL_STATELESS)
+        /* Label inflate runs by the inflate mode, not the deflate strategy */
+        int32_t mode = strcmp(direction, "inflate") ? info->strategy.mode : info->inflate_mode;
+
+        if (mode == ISAL_STATELESS)
                 printf("    isal_stateless_%s-> ", direction);
-        else if (info->strategy.mode == ISAL_STATEFUL)
+        else if (mode == ISAL_STATEFUL)
                 printf("    isal_stateful_%s->  ", direction);
-        else if (info->strategy.mode == ISAL_WITH_DICTIONARY)
+        else if (mode == ISAL_WITH_DICTIONARY)
                 printf("    isal_dictionary_%s-> ", direction);
-        else if (info->strategy.mode == ZLIB)
+        else if (mode == ZLIB)
                 printf("    zlib_%s->           ", direction);
 
 #if defined(__x86_64__) || defined(_M_X64)
