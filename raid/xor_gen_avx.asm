@@ -58,17 +58,17 @@
  %define tmp3  r10
  %define func(x) proc_frame x
  %define return rax
- %define stack_size  2*32 + 8 	;must be an odd multiple of 8
+ %define stack_size  2*16 + 8 	;must be an odd multiple of 8
 
  %macro FUNC_SAVE 0
 	alloc_stack	stack_size
-	vmovdqu	[rsp + 0*32], ymm6
-	vmovdqu	[rsp + 1*32], ymm7
+	vmovdqu	[rsp + 0*16], xmm6
+	vmovdqu	[rsp + 1*16], xmm7
 	end_prolog
  %endmacro
  %macro FUNC_RESTORE 0
-	vmovdqu	ymm6, [rsp + 0*32]
-	vmovdqu	ymm7, [rsp + 1*32]
+	vmovdqu	xmm6, [rsp + 0*16]
+	vmovdqu	xmm7, [rsp + 1*16]
 	add	rsp, stack_size
  %endmacro
 
