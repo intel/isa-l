@@ -29,14 +29,9 @@
 
 #include "../include/aarch64_label.h"
 
-	.arch armv8-a+crc
+	.arch armv8-a
 	.text
 	.align	2
-#include "lz0a_const_aarch64.h"
-#include "data_struct_aarch64.h"
-#include "huffman_aarch64.h"
-#include "bitbuf2_aarch64.h"
-#include "stdmac_aarch64.h"
 
 /*
 declare Macros
@@ -58,6 +53,9 @@ declare Macros
 				struct deflate_icf *end_in, struct BitBuf2 *bb,
 				struct hufftables_icf *hufftables)
 
+	The bit buffer stays in registers for the whole loop. Each token adds at
+	most 48 bits (20 lit/len, 15 dist, and 13 dist extra) to at most 7
+	pending bits, so one 64-bit store and one flush per token are enough.
 */
 
 	// parameters
@@ -66,23 +64,21 @@ declare Macros
 	declare_generic_reg	bb,			2,x
 	declare_generic_reg	hufftables,		3,x
 
-	// local variable
-	declare_generic_reg	bb_out_end,		4,x
-	declare_generic_reg	bb_bit_count,		5,w
-	declare_generic_reg	dist_extra,		6,x
-	declare_generic_reg	dist_lit_table,		7,x
-	declare_generic_reg	code_and_extra,		8,x
-	declare_generic_reg	bb_out_buf,		9,x
-	declare_generic_reg	bb_bits,		10,x
-	declare_generic_reg	d_length,		11,x
-	declare_generic_reg	l_length,		12,x
-	declare_generic_reg	d_extra_bit_count,	13,x
-
-	declare_generic_reg	code_sum,		4,x
-	declare_generic_reg	count_sum,		7,x
-
+	// local variables
+	declare_generic_reg	bits,			4,x
+	declare_generic_reg	bit_count,		5,x
+	declare_generic_reg	out_buf,		6,x
+	declare_generic_reg	out_end,		7,x
+	declare_generic_reg	lit_len_table,		8,x
+	declare_generic_reg	icf,			9,x
+	declare_generic_reg	lsym,			10,x
+	declare_generic_reg	dsym,			11,x
+	declare_generic_reg	code,			12,x
+	declare_generic_reg	len,			13,x
 	declare_generic_reg	tmp0,			14,x
 	declare_generic_reg	tmp1,			15,x
+	declare_generic_reg	tmp2,			16,x
+	declare_generic_reg	tmp3,			17,x
 
 // bit buffer offset
 .equ	offset_m_bits, 0
@@ -90,74 +86,63 @@ declare Macros
 .equ	offset_m_out_buf, 16
 .equ	offset_m_out_end, 24
 
+// hufftables_icf offset
+.equ	offset_lit_len_table, 31 * 4
+
 cdecl(encode_deflate_icf_aarch64):
 	cmp	next_in, end_in
-	bcs	.done
+	bhs	.done
 
-	ldp	bb_out_buf, bb_out_end, [bb, offset_m_out_buf]
-	cmp	bb_out_end, bb_out_buf
-	bcc	.done
+	ldp	out_buf, out_end, [bb, offset_m_out_buf]
+	cmp	out_buf, out_end
+	bhi	.done
 
-	ldr	bb_bit_count, [bb, offset_m_bit_count]
-	ldr	bb_bits, [bb, offset_m_bits]
-	b	.loop_start
+	ldr	bits, [bb, offset_m_bits]
+	ldr	w_bit_count, [bb, offset_m_bit_count]
+	add	lit_len_table, hufftables, offset_lit_len_table
 
-	.align 3
+	.align 4
 .loop:
-	ldr	bb_out_end, [bb, offset_m_out_end]
-	cmp	bb_out_end, bb_out_buf
-	bcc	.done
+	ldr	w_icf, [next_in], 4
 
-.loop_start:
-	ldrh	w_code_and_extra, [next_in]
-	add	next_in, next_in, 4
-	ldr	w_dist_lit_table, [next_in, -4]
-	and	code_and_extra, code_and_extra, 1023
+	/* lsym = lit_len_table[lit_len], dsym = dist_table[lit_dist] */
+	and	w_tmp0, w_icf, 0x3ff
+	ubfx	w_tmp1, w_icf, 10, 9
+	ldr	w_lsym, [lit_len_table, x_tmp0, lsl 2]
+	ldr	w_dsym, [hufftables, x_tmp1, lsl 2]
 
-	ldrh	w_dist_extra, [next_in, -2]
-	add	code_and_extra, code_and_extra, 31
-	ubfx	x_dist_lit_table, x_dist_lit_table, 10, 9
-	add	x_tmp0, hufftables, code_and_extra, lsl 2
-	ubfx	x_dist_extra, x_dist_extra, 3, 13
-	lsl	x_dist_lit_table, x_dist_lit_table, 2
+	/* code = lit code | dist code << lit len | dist extra << (lit len + dist len) */
+	lsr	w_tmp0, w_icf, 19
+	lsr	w_tmp1, w_dsym, 24
+	and	w_tmp2, w_dsym, 0xffff
+	lsl	x_tmp0, x_tmp0, x_tmp1
+	lsr	w_len, w_lsym, 24
+	orr	x_tmp0, x_tmp0, x_tmp2
+	and	w_code, w_lsym, 0xffffff
+	lsl	x_tmp0, x_tmp0, x_len
+	ubfx	w_tmp3, w_dsym, 16, 8
+	orr	x_code, x_code, x_tmp0
+	add	w_len, w_len, w_tmp1
+	add	w_len, w_len, w_tmp3
 
-	ldr	w_code_and_extra, [hufftables, code_and_extra, lsl 2]
-	add	x_d_extra_bit_count, hufftables, x_dist_lit_table
-	ldrb	w_l_length, [x_tmp0, 3]
-	and	code_and_extra, code_and_extra, 0xffffff
-	ldrh	w_code_sum, [hufftables, x_dist_lit_table]
-	ldrb	w_d_length, [x_d_extra_bit_count, 3]
-	add	w_l_length, w_l_length, bb_bit_count
-	ldrb	w_d_extra_bit_count, [x_d_extra_bit_count, 2]
+	/* write_bits_unsafe and flush_bits */
+	lsl	x_code, x_code, bit_count
+	add	w_bit_count, w_bit_count, w_len
+	orr	bits, bits, x_code
+	and	w_tmp0, w_bit_count, -8
+	str	bits, [out_buf]
+	add	out_buf, out_buf, bit_count, lsr 3
+	lsr	bits, bits, x_tmp0
+	and	w_bit_count, w_bit_count, 7
 
-	lsl	x_tmp0, code_and_extra, x_bb_bit_count
-	add	bb_bit_count, w_d_length, w_l_length
-	lsl	x_code_sum, x_code_sum, x_l_length
-	orr	x_code_sum, x_code_sum, x_tmp0
-	add	w_count_sum, w_d_extra_bit_count, bb_bit_count
-	lsl	x_bb_bit_count, x_dist_extra, x_bb_bit_count
+	/* Continue while next_in < end_in and the output is not full */
+	cmp	next_in, end_in
+	ccmp	out_buf, out_end, 2, lo
+	bls	.loop
 
-	orr	x_bb_bit_count, x_bb_bit_count, bb_bits
-	orr	x_tmp0, x_code_sum, x_bb_bit_count         // me->m_bits => x_tmp0
-	str	x_tmp0, [bb, offset_m_bits]                // me->m_bits => x_tmp0
-	str	w_count_sum, [bb, offset_m_bit_count]
-
-	str	x_tmp0, [bb_out_buf]                       // me->m_bits => x_tmp0
-	ldr	bb_bit_count, [bb, offset_m_bit_count]
-	ldr	bb_bits, [bb, offset_m_bits]
-	and	w_tmp0, bb_bit_count, -8                   // bits => w_tmp0
-	ldr	bb_out_buf, [bb, offset_m_out_buf]
-	lsr	w_tmp1, bb_bit_count, 3                    // bits/8 => w_tmp1
-	lsr	bb_bits, bb_bits, x_tmp0                   // bits => x_tmp0
-	sub	bb_bit_count, bb_bit_count, w_tmp0         // bits => w_tmp0
-	add	bb_out_buf, bb_out_buf, x_tmp1             // bits/8 => x_tmp1
-	str	bb_bits, [bb,offset_m_bits]
-	str	bb_bit_count, [bb, offset_m_bit_count]
-	str	bb_out_buf, [bb, offset_m_out_buf]
-
-	cmp	end_in, next_in
-	bhi	.loop
-
+	str	bits, [bb, offset_m_bits]
+	str	w_bit_count, [bb, offset_m_bit_count]
+	str	out_buf, [bb, offset_m_out_buf]
 .done:
 	ret
 #ifndef __APPLE__
