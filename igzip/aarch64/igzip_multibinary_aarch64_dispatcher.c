@@ -279,14 +279,8 @@ DEFINE_INTERFACE_DISPATCHER(isal_deflate_hash_lvl2)
 
 DEFINE_INTERFACE_DISPATCHER(isal_deflate_hash_lvl3)
 {
-#if defined(__linux__)
-        unsigned long auxval = getauxval(AT_HWCAP);
-        if (auxval & HWCAP_CRC32)
-                return isal_deflate_hash_aarch64;
-#elif defined(__APPLE__)
-        if (sysctlEnabled(SYSCTL_CRC32_KEY))
-                return isal_deflate_hash_aarch64;
-#endif
+        /* Level 3 finds matches with compute_hash(), the same hash that
+         * isal_deflate_hash_base() uses to insert dictionary entries. */
         return isal_deflate_hash_base;
 }
 
