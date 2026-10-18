@@ -2549,6 +2549,91 @@ test_full_flush(uint8_t *in_buf, uint32_t in_size)
         return ret;
 }
 
+/* Compress with FULL_FLUSH and small output buffers at each level, supplying more input
+ * while a flush is still pending. Each input chunk is placed after data like the input,
+ * so a match against history that the flush has dropped decodes to the wrong data. */
+int
+test_full_flush_pending(uint8_t *in_buf, uint32_t in_size)
+{
+        int ret = IGZIP_COMP_OK;
+        struct isal_zstream stream;
+        uint32_t i, level, chunk, out_size, in_processed, z_size, level_buf_size;
+        uint8_t *z_buf, *chunk_buf, *level_buf = NULL;
+        const uint32_t max_chunk = 128;
+
+        if (in_size > 64 * 1024)
+                in_size = 64 * 1024;
+        if (in_size == 0)
+                return IGZIP_COMP_OK;
+
+        z_size = in_size + (in_size / 32 + 2) * (hdr_bytes + 5);
+        z_buf = malloc(z_size);
+        chunk_buf = malloc(IGZIP_HIST_SIZE + max_chunk);
+        level_buf = malloc(ISAL_DEF_LVL3_DEFAULT);
+        if (z_buf == NULL || chunk_buf == NULL || level_buf == NULL) {
+                ret = MALLOC_FAILED;
+                goto test_full_flush_pending_exit;
+        }
+
+        for (i = 0; i < IGZIP_HIST_SIZE; i++)
+                chunk_buf[i] = in_buf[(i + in_size / 2) % in_size];
+
+        for (level = ISAL_DEF_MIN_LEVEL; level <= ISAL_DEF_MAX_LEVEL && !ret; level++) {
+                level_buf_size = get_rand_level_buf_size(level);
+                if (level_buf_size > ISAL_DEF_LVL3_DEFAULT)
+                        level_buf_size = ISAL_DEF_LVL3_DEFAULT;
+
+                isal_deflate_init(&stream);
+                stream.level = level;
+                stream.level_buf = level_buf;
+                stream.level_buf_size = level_buf_size;
+                stream.flush = FULL_FLUSH;
+                stream.avail_in = 0;
+                stream.next_out = z_buf;
+                in_processed = 0;
+
+                while (stream.internal_state.state != ZSTATE_END) {
+                        if (stream.avail_in == 0 && in_processed < in_size) {
+                                chunk = rand() % (max_chunk - 31) + 32;
+                                if (chunk > in_size - in_processed)
+                                        chunk = in_size - in_processed;
+                                memcpy(chunk_buf + IGZIP_HIST_SIZE, in_buf + in_processed, chunk);
+                                stream.next_in = chunk_buf + IGZIP_HIST_SIZE;
+                                stream.avail_in = chunk;
+                                in_processed += chunk;
+                                stream.end_of_stream = in_processed == in_size;
+                        }
+
+                        out_size = rand() % 96 + 1;
+                        if (out_size > z_size - stream.total_out) {
+                                ret = COMPRESS_OUT_BUFFER_OVERFLOW;
+                                break;
+                        }
+                        stream.avail_out = out_size;
+
+                        ret = isal_deflate(&stream);
+                        if (ret)
+                                break;
+                }
+
+                if (!ret)
+                        ret = inflate_check(z_buf, stream.total_out, in_buf, in_size, 0, NULL, 0,
+                                            0);
+
+                if (ret) {
+                        printf("Failed on compress with pending full flush at level %u\n", level);
+                        print_error(ret);
+                }
+        }
+
+test_full_flush_pending_exit:
+        free(level_buf);
+        free(chunk_buf);
+        free(z_buf);
+
+        return ret;
+}
+
 int
 test_inflate(struct vect_result *in_vector)
 {
@@ -3069,6 +3154,7 @@ exit_stateful_sync_flush:
                 create_rand_repeat_data(in_buf, in_size);
 
                 ret |= test_full_flush(in_buf, in_size);
+                ret |= test_full_flush_pending(in_buf, in_size);
 
                 in_buf -= offset;
 

@@ -1506,7 +1506,11 @@ get_hist_size(struct isal_zstream *stream, uint8_t *start_in, int32_t buf_hist_s
                         history_size = (stream->total_in - state->block_next);
                 }
         } else if (stream->avail_in + buffered_size == 0 &&
-                   (stream->end_of_stream || stream->flush == FULL_FLUSH)) {
+                   (stream->end_of_stream ||
+                    (stream->flush == FULL_FLUSH && state->has_hist == IGZIP_NO_HIST))) {
+                /* A full flush drops the history only after it writes the sync
+                 * marker. Until then, the next call can still match its input
+                 * against the history. */
                 history_size = 0;
         }
         return history_size;
