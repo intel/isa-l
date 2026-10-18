@@ -1706,6 +1706,17 @@ isal_deflate(struct isal_zstream *stream)
                 stream->avail_in -= future_size;
         }
 
+        /* All input is compressed, but the full flush has not yet written its
+         * sync marker, which resets the match history. Reset it on the next call
+         * already, so that input supplied before the flush completes cannot match
+         * the history the flush drops. A stored block resets the match history
+         * itself when it completes a full flush. */
+        if (stream->flush == FULL_FLUSH && stream->avail_in == 0 &&
+            state->b_bytes_valid == state->b_bytes_processed && state->has_hist != IGZIP_NO_HIST &&
+            state->state != ZSTATE_TYPE0_HDR && state->state != ZSTATE_TYPE0_BODY &&
+            state->state != ZSTATE_TMP_TYPE0_HDR && state->state != ZSTATE_TMP_TYPE0_BODY)
+                state->has_hist = IGZIP_NO_HIST;
+
         return ret;
 }
 
