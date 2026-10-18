@@ -68,7 +68,7 @@
  %endmacro
  %macro FUNC_RESTORE 0
 	vmovdqu	xmm6, [rsp + 0*16]
-	vmovdqu	xmm7, [rsp + 1*316]
+	vmovdqu	xmm7, [rsp + 1*16]
 	add	rsp, stack_size
  %endmacro
 
