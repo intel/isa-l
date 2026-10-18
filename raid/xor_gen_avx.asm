@@ -146,6 +146,7 @@ next_vect:
 	jle	loop128
 
 return_pass:
+	vzeroupper
 	FUNC_RESTORE
 	xor	DWORD(return), DWORD(return)
 	ret
@@ -213,6 +214,7 @@ nextvect_8bytes:
 	je	return_pass
 
 return_fail:
+	vzeroupper
 	FUNC_RESTORE
 	mov	return, 1
 	ret
