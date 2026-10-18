@@ -47,222 +47,280 @@ declare Macros
 	x_\name		.req	x\reg
 .endm
 
-.macro  update_state	stream:req,start_in:req,next_in:req,end_in:req,	\
-	m_out_buf:req,m_out_start:req,tmp0:req,tmp1:req
-
-	//m_out_buf=bytes_written
-	sub	x_\m_out_buf,x_\m_out_buf,x_\m_out_start
-	cmp	next_in,start_in
-	bls	skip_has_hist
-	mov	w_\tmp0,1
-	strb	w_\tmp0,[x_\stream,_internal_state_has_hist]
-skip_has_hist:
-	ldr	w_\tmp0,[\stream,_total_in]
-	ldr	x_\m_out_start,[\stream,_next_out] //m_out_start = next_out
-
-	str	x_\next_in,[\stream,_next_in]
-	sub	x_\start_in,x_\next_in,x_\start_in
-	sub	x_\end_in,x_\end_in,x_\next_in
-	add	w_\tmp0,w_\tmp0,w_\start_in
-	stp	w_\end_in,w_\tmp0,[\stream,_avail_in]
-	//next_in=avail_out,start_in=total_out
-	ldp	w_\next_in,w_\start_in,[\stream,_avail_out]
-	add	x_\m_out_start,x_\m_out_start,x_\m_out_buf
-	str	x_\m_out_start,[\stream,_next_out]
-	add	w_\start_in,w_\start_in,w_\m_out_buf
-	sub	w_\next_in,w_\next_in,w_\m_out_buf
-	stp	w_\next_in,w_\start_in,[\stream,_avail_out]
-.endm
-
-
 	.global	cdecl(isal_deflate_body_aarch64)
 #ifndef __APPLE__
 	.type	isal_deflate_body_aarch64, %function
 #endif
 /*
 	void isal_deflate_body_aarch64(struct isal_zstream *stream)
+
+	The main loop keeps the bit buffer in registers and writes it back to
+	stream->internal_state.bitbuf on exit.
 */
-	declare_generic_reg	stream,		0,x	//struct isal_zstream *stream
-	declare_generic_reg	state,		8,x	//&stream->state
-	declare_generic_reg	avail_in,	9,w
-	declare_generic_reg	end_of_stream,	10,w	//can be used in loop
+	declare_generic_reg	stream,		0,x
+	declare_generic_reg	hufftables,	1,x
+	declare_generic_reg	bits,		2,x
+	declare_generic_reg	bit_count,	3,x
+	declare_generic_reg	out_buf,	4,x
+	declare_generic_reg	out_end,	5,x
+	declare_generic_reg	out_start,	6,x
+	declare_generic_reg	start_in,	7,x
+	declare_generic_reg	end_in,		8,x
+	declare_generic_reg	next_in,	9,x
+	declare_generic_reg	end_loop,	10,x
+	declare_generic_reg	last_seen,	11,x
+	declare_generic_reg	file_start,	12,x
+	declare_generic_reg	hist_size,	13,w
+	declare_generic_reg	hash_mask,	14,w
+	declare_generic_reg	lit_table,	15,x
+	declare_generic_reg	lit_sizes,	16,x
+	declare_generic_reg	literal,	17,x
+	declare_generic_reg	hash,		19,x
+	declare_generic_reg	pos,		20,x
+	declare_generic_reg	dist,		21,x
+	declare_generic_reg	match_src,	22,x
+	declare_generic_reg	match_len,	23,x
+	declare_generic_reg	code,		24,x
+	declare_generic_reg	code_len,	25,x
+	declare_generic_reg	tmp0,		26,x
+	declare_generic_reg	tmp1,		27,x
+	declare_generic_reg	tmp2,		28,x
+	declare_generic_reg	tmp3,		30,x
 
-	declare_generic_reg	hash_mask,	11,w
-	declare_generic_reg	match_length,	12,w
-	declare_generic_reg	hufftables,	13,x
-
-	declare_generic_reg	m_out_buf,	14,x
-	declare_generic_reg	m_out_start,	15,x
-	declare_generic_reg	m_out_end,	16,x
-	declare_generic_reg	m_bits,		17,x
-	declare_generic_reg	m_bit_count,	2,w
-
-	declare_generic_reg	start_in,	19,x
-	declare_generic_reg	end_in,		20,x
-	declare_generic_reg	next_in,	21,x
-	declare_generic_reg	loop_end_cnt,	22,x
-
-	declare_generic_reg	literal,	23,w
-	declare_generic_reg	hash,		24,w
-	declare_generic_reg	dist,		25,w
-
-	declare_generic_reg	last_seen,	26,x
-	declare_generic_reg	file_start,	27,x
-	declare_generic_reg	hist_size,	28,w
-
-	declare_generic_reg	tmp0,		5 ,w
-	declare_generic_reg	tmp1,		6 ,w
-	declare_generic_reg	tmp2,		7 ,w
-
-	declare_generic_reg	code,		3,x
-	declare_generic_reg	code_len,	24,x
-	declare_generic_reg	code2,		10,x
-	declare_generic_reg	code_len2,	4,x
-
+/* write_bits(&state->bitbuf, code, code_len) */
+.macro write_code
+	lsl	code, code, bit_count
+	add	bit_count, bit_count, code_len
+	orr	bits, bits, code
+	and	tmp0, bit_count, -8
+	str	bits, [out_buf]
+	add	out_buf, out_buf, bit_count, lsr 3
+	lsr	bits, bits, tmp0
+	and	bit_count, bit_count, 7
+.endm
 
 cdecl(isal_deflate_body_aarch64):
-	//save registers
 	push_stack
-	ldr	avail_in, [stream, _avail_in]
-	cbz	avail_in, exit_save_state
+	ldr	w_tmp0, [stream, _avail_in]
+	cbz	w_tmp0, .exit_save_state
 
-	//	set_buf(&state->bitbuf, stream->next_out, stream->avail_out);
-	ldr	w_m_out_end,[stream,_avail_out]
-	ldr	m_out_buf,[stream,_next_out]
-	add	m_out_end,m_out_buf,w_m_out_end,uxtw
-	sub	m_out_end,m_out_end , 8
-	mov	m_out_start,m_out_buf
-	stp	m_out_buf,m_out_end,[stream, _bitbuf + _internal_state + _m_out_buf]
-	str	m_out_start,[stream, _bitbuf + _internal_state + _m_out_start]
-	ldr	m_bit_count ,[stream,_internal_state_bitbuf_m_bit_count]
-	ldr	m_bits ,[stream,_internal_state_bitbuf_m_bits]
+	/* set_buf(&state->bitbuf, stream->next_out, stream->avail_out) */
+	ldr	w_out_end, [stream, _avail_out]
+	ldr	out_buf, [stream, _next_out]
+	add	out_end, out_buf, out_end
+	sub	out_end, out_end, 8
+	mov	out_start, out_buf
+	stp	out_buf, out_end, [stream, _internal_state + _bitbuf_m_out_buf]
+	str	out_start, [stream, _internal_state + _bitbuf_m_out_start]
+	ldr	w_bit_count, [stream, _internal_state_bitbuf_m_bit_count]
+	ldr	bits, [stream, _internal_state_bitbuf_m_bits]
 
+	/* last_seen = stream->internal_state.head */
+	add	last_seen, stream, 65536
+	add	last_seen, last_seen, _internal_state + _head - 65536
 
-	//init variables
-	//last_seen=&stream.internal_state.head = _internal_state+_head
-	add	last_seen,stream,65536
-	add	last_seen,last_seen,_internal_state+_head -65536
+	ldr	start_in, [stream, _next_in]
+	mov	next_in, start_in
+	add	end_in, start_in, tmp0
+	sub	end_loop, end_in, 289		// ISAL_LOOK_AHEAD + 1
+	ldr	w_tmp1, [stream, _total_in]
+	sub	file_start, next_in, tmp1
+	ldr	hist_size, [stream, _internal_state_dist_mask]
+	ldr	hash_mask, [stream, _internal_state_hash_mask]
+	ldr	hufftables, [stream, _hufftables]
+	add	lit_table, hufftables, LIT_TABLE_OFFSET
+	add	lit_sizes, hufftables, LIT_TABLE_SIZES_OFFSET
 
+	/* while (next_in + ISAL_LOOK_AHEAD < end_in), ISAL_LOOK_AHEAD = 288 */
+	cmp	next_in, end_loop
+	bhi	.loop_end
 
-	//start_in=stream->next_in;next_in=start_in
-	ldr	start_in,[stream,_next_in]
-	mov	next_in,start_in
-	add	end_in,start_in,avail_in,uxtw  //avail_in reg is free now
-	sub	loop_end_cnt,end_in,289		//loop end
-	cmp	next_in,loop_end_cnt
+	.align	5
+.loop:
+	/* is_full(&state->bitbuf) */
+	cmp	out_buf, out_end
+	bhi	.update_state_exit
 
+	ldr	literal, [next_in]
+	sub	pos, next_in, file_start
+	crc32cw	w_hash, wzr, w_literal
+	and	w_hash, w_hash, hash_mask
+	ldrh	w_dist, [last_seen, hash, lsl 1]
+	strh	w_pos, [last_seen, hash, lsl 1]
+	sub	w_dist, w_pos, w_dist
+	and	w_dist, w_dist, 0xffff
 
-	//file_start = (uint8_t *) ((uintptr_t) stream->next_in - stream->total_in);
-	ldr	w_file_start,[stream,_total_in]
-	sub	file_start,next_in,w_file_start,uxtw
+	/*
+		Compare the first 8 bytes against the candidate. If the distance is
+		out of range (the -1 handles dist = 0), compare next_in against
+		itself to keep the load in bounds, then force the length to 0. This
+		leaves one data-dependent branch per position.
+	*/
+	sub	w_tmp0, w_dist, 1
+	cmp	w_tmp0, hist_size
+	sub	match_src, next_in, dist
+	csel	match_src, match_src, next_in, lo
+	ldr	tmp1, [match_src]
+	eor	tmp0, literal, tmp1
+	csinv	tmp0, tmp0, xzr, lo
+	rbit	tmp0, tmp0
+	clz	tmp0, tmp0
+	lsr	w_match_len, w_tmp0, 3
+	cmp	w_match_len, SHORTEST_MATCH
+	bhs	.check_match
 
-	//uint32_t hist_size = state->dist_mask;
-	ldr	hist_size,[stream,_internal_state + _dist_mask]
+.literal:
+	/* get_lit_code(stream->hufftables, literal & 0xFF, &code, &code_len) */
+	and	w_literal, w_literal, 0xff
+	ldrh	w_code, [lit_table, literal, lsl 1]
+	ldrb	w_code_len, [lit_sizes, literal]
+	add	next_in, next_in, 1
+	write_code
 
-	//uint32_t hash_mask = state->hash_mask;
-	ldr	hash_mask,[stream,_internal_state + _hash_mask]
+.loop_check:
+	cmp	next_in, end_loop
+	bls	.loop
+	b	.loop_end
 
-	ldr	hufftables,[stream,_hufftables]
+.check_match:
+	/* All of the first 8 bytes match; keep comparing */
+	cmp	w_match_len, 8
+	beq	.long_match
 
-	bhi	main_loop_end
-main_loop_start:
-	//is_full(&state->bitbuf)
-	cmp	m_out_buf,m_out_end
-	bhi	update_state_exit
+.match:
+	/* Hash the next two positions inside the match */
+	ldur	w_tmp0, [next_in, 1]
+	ldur	w_tmp1, [next_in, 2]
+	add	w_tmp2, w_pos, 1
+	add	w_tmp3, w_pos, 2
+	crc32cw	w_tmp0, wzr, w_tmp0
+	crc32cw	w_tmp1, wzr, w_tmp1
+	and	w_tmp0, w_tmp0, hash_mask
+	and	w_tmp1, w_tmp1, hash_mask
+	strh	w_tmp2, [last_seen, tmp0, lsl 1]
+	strh	w_tmp3, [last_seen, tmp1, lsl 1]
 
-	ldr	literal,[next_in]
-	crc32cw	hash,wzr,literal
-	and	hash,hash,hash_mask
+	/* get_len_code(stream->hufftables, match_length, &code, &code_len) */
+	add	tmp0, hufftables, LEN_TABLE_OFFSET
+	ldr	w_code, [tmp0, match_len, lsl 2]
 
-	///dist = (next_in - file_start - last_seen[hash]) & 0xFFFF;
-	ldrh	w_tmp0,[last_seen,x_hash,lsl 1] 	//tmp_w last_seen[hash]
-	sub 	x_dist,next_in,file_start
-	//last_seen[hash] = (uint64_t) (next_in - file_start);
-	strh	dist,[last_seen,x_hash,lsl 1]
-	sub 	dist,dist,w_tmp0
-	and	dist,dist,0xffff
+	/* get_dist_code(stream->hufftables, dist, &code2, &code_len2) */
+	cmp	w_dist, DIST_TABLE_SIZE
+	bls	.small_dist
+	sub	w_tmp0, w_dist, 1
+	clz	w_tmp1, w_tmp0
+	mov	w_tmp2, 30
+	sub	w_tmp1, w_tmp2, w_tmp1
+	mov	w_tmp2, -1
+	lsl	w_tmp2, w_tmp2, w_tmp1
+	bic	w_tmp3, w_tmp0, w_tmp2
+	lsr	w_tmp0, w_tmp0, w_tmp1
+	add	w_tmp0, w_tmp0, w_tmp1, lsl 1
+	add	tmp2, hufftables, DCODE_TABLE_OFFSET
+	ldrh	w_tmp2, [tmp2, tmp0, lsl 1]
+	add	hash, hufftables, DCODE_TABLE_SIZE_OFFSET
+	ldrb	w_hash, [hash, tmp0]
+	lsl	w_tmp3, w_tmp3, w_hash
+	orr	w_tmp2, w_tmp2, w_tmp3
+	add	w_hash, w_hash, w_tmp1
 
-	sub	w_tmp0,dist,1
-	cmp	hist_size,w_tmp0
-	bls	get_lit_code
+.dist_code_done:
+	/* code |= code2 << code_len; code_len += code_len2 */
+	and	w_code_len, w_code, 0x1f
+	lsr	w_code, w_code, 5
+	lsl	tmp2, tmp2, code_len
+	orr	code, code, tmp2
+	add	code_len, code_len, hash
+	add	next_in, next_in, match_len
+	write_code
+	b	.loop_check
 
-	///match_length = compare258(next_in - dist, next_in, 258);
-	sub	x_tmp2,next_in,x_dist
-	compare_258_bytes	tmp2,next_in,match_length,tmp0,tmp1
-	cmp	match_length,3
-	bls	get_lit_code
+.small_dist:
+	add	tmp0, hufftables, DIST_TABLE_OFFSET
+	ldr	w_tmp2, [tmp0, dist, lsl 2]
+	and	w_hash, w_tmp2, 0x1f
+	lsr	w_tmp2, w_tmp2, 5
+	b	.dist_code_done
 
-	sub	x_tmp0,next_in,file_start
-	ldr	literal,[next_in,1]
-	crc32cw	hash,wzr,literal
-	and	hash,hash,hash_mask
-	add	tmp0,tmp0,1
-	strh	tmp0,[last_seen,x_hash,lsl 1]
-	//call_print_b hash,dist,last_seen
+	/*
+		The first 8 bytes match. Compare 16 bytes per iteration from offset
+		8. The lookahead guarantees 288 readable bytes past next_in.
+	*/
+.long_match:
+	add	tmp0, next_in, 8
+	add	tmp1, match_src, 8
+	add	tmp2, next_in, 258
+.long_match_loop:
+	ldp	tmp3, code, [tmp0], 16
+	ldp	code_len, hash, [tmp1], 16
+	eor	tmp3, tmp3, code_len
+	eor	code, code, hash
+	orr	code_len, tmp3, code
+	cbnz	code_len, .long_match_diff
+	cmp	tmp0, tmp2
+	blo	.long_match_loop
+	mov	w_match_len, 258
+	b	.match
 
-	ldr	literal,[next_in,2]
-	crc32cw	hash,wzr,literal
-	and	hash,hash,hash_mask
-	add	tmp0,tmp0,1
-	strh	tmp0,[last_seen,x_hash,lsl 1]
+.long_match_diff:
+	/* tmp0 points 16 bytes past the start of the chunk with the mismatch */
+	sub	tmp0, tmp0, next_in
+	sub	tmp1, tmp0, 16
+	sub	tmp0, tmp0, 8
+	cmp	tmp3, 0
+	csel	tmp3, tmp3, code, ne
+	csel	tmp0, tmp1, tmp0, ne
+	rbit	tmp3, tmp3
+	clz	tmp3, tmp3
+	add	match_len, tmp0, tmp3, lsr 3
+	mov	tmp1, 258
+	cmp	match_len, tmp1
+	csel	match_len, match_len, tmp1, ls
+	b	.match
 
-	//get_len_code(stream->hufftables, match_length, &code,
-	//	&code_len);
-	get_len_code 	hufftables,match_length,code,code_len,tmp0
+.loop_end:
+	/* Load end_of_stream and flush together */
+	ldr	w_tmp0, [stream, _end_of_stream]
+	cbz	w_tmp0, .update_state_exit
+	mov	w_tmp0, ZSTATE_FLUSH_READ_BUFFER
+	str	w_tmp0, [stream, _internal_state_state]
 
-	//get_dist_code(stream->hufftables, dist, &code2, &code_len2);
-	get_dist_code 	hufftables,dist,code2,code_len2,tmp0,tmp1,tmp2
+.update_state_exit:
+	str	bits, [stream, _internal_state_bitbuf_m_bits]
+	str	w_bit_count, [stream, _internal_state_bitbuf_m_bit_count]
+	str	out_buf, [stream, _internal_state + _bitbuf_m_out_buf]
 
-	//code |= code2 << code_len;
-	//code_len += code_len2;
-	lsl	code2,code2,code_len
-	orr	code,code,code2
-	add	code_len,code_len,code_len2
-
-	//next_in += match_length;
-	add	next_in,next_in,match_length,uxtw
-
-	//write_bits(&state->bitbuf, code, code_len);
-	update_bits	stream,code,code_len,m_bits,m_bit_count,m_out_buf
-
-
-
-	cmp	next_in,loop_end_cnt
-	bls	main_loop_start
-	b	main_loop_end
-get_lit_code:
-	//get_lit_code(stream->hufftables, literal & 0xFF, &code, &code_len);
-	and		literal,literal,0xff
-	get_lit_code	hufftables,literal,code,code_len
-
-	//next_in++;
-	add	next_in,next_in,1
-
-	//write_bits(&state->bitbuf, code, code_len);
-	update_bits	stream,code,code_len,m_bits,m_bit_count,m_out_buf
-	cmp	next_in,loop_end_cnt
-	bls	main_loop_start
-
-main_loop_end:
-	//update state here
-
-	//load end_of_stream and flush together
-	ldr	w_end_of_stream, [stream, _end_of_stream]
-	//(stream->end_of_stream || stream->flush != 0)
-	cbz	w_end_of_stream, update_state_exit
-	mov	w_tmp0 , ZSTATE_FLUSH_READ_BUFFER
-	str	w_tmp0, [stream, _internal_state+_state]
-update_state_exit:
-	update_state	stream,start_in,next_in,end_in,m_out_buf,m_out_start,tmp0,tmp1
-exit_ret:
+	/* update_state() */
+	sub	tmp0, out_buf, out_start
+	cmp	next_in, start_in
+	bls	1f
+	mov	w_tmp1, 1
+	strb	w_tmp1, [stream, _internal_state_has_hist]
+1:
+	ldr	w_tmp1, [stream, _total_in]
+	ldr	tmp2, [stream, _next_out]
+	str	next_in, [stream, _next_in]
+	sub	tmp3, next_in, start_in
+	sub	end_in, end_in, next_in
+	add	w_tmp1, w_tmp1, w_tmp3
+	stp	w_end_in, w_tmp1, [stream, _avail_in]
+	ldp	w_tmp1, w_tmp3, [stream, _avail_out]
+	add	tmp2, tmp2, tmp0
+	str	tmp2, [stream, _next_out]
+	sub	w_tmp1, w_tmp1, w_tmp0
+	add	w_tmp3, w_tmp3, w_tmp0
+	stp	w_tmp1, w_tmp3, [stream, _avail_out]
+.exit_ret:
 	pop_stack
 	ret
-exit_save_state:
-	ldr	w_end_of_stream, [stream, _end_of_stream]
-	cbz	w_end_of_stream, exit_ret	//(stream->end_of_stream || stream->flush != 0)
-	mov	w_tmp0 , ZSTATE_FLUSH_READ_BUFFER
-	str	w_tmp0, [stream, _internal_state+_state]
-	b	exit_ret
+
+.exit_save_state:
+	/* (stream->end_of_stream || stream->flush != 0) */
+	ldr	w_tmp0, [stream, _end_of_stream]
+	cbz	w_tmp0, .exit_ret
+	mov	w_tmp0, ZSTATE_FLUSH_READ_BUFFER
+	str	w_tmp0, [stream, _internal_state_state]
+	b	.exit_ret
 #ifndef __APPLE__
 	.size	isal_deflate_body_aarch64, .-isal_deflate_body_aarch64
 #endif
