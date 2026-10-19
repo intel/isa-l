@@ -136,33 +136,5 @@ _compare_258_tail:
 _compare_258_done:
 .endm
 
-.macro compare_aarch64 str0:req,str1:req,max_length:req,match_length:req,tmp0:req,tmp1:req
-	mov	x_\match_length,0
-_compare_loop:
-	sub	x_\tmp0,x_\max_length,x_\match_length
-	cmp	x_\tmp0,8
-	b.lo	_compare_tail
-	ldr	x_\tmp0,[x_\str0,x_\match_length]
-	ldr	x_\tmp1,[x_\str1,x_\match_length]
-	eor 	x_\tmp0,x_\tmp1,x_\tmp0
-	rbit	x_\tmp0,x_\tmp0
-	clz	x_\tmp0,x_\tmp0
-	lsr	x_\tmp0,x_\tmp0,3
-	add	x_\match_length,x_\match_length,x_\tmp0
-	cmp	x_\tmp0,8
-	b.eq	_compare_loop
-	b	_compare_done
-_compare_tail:
-	cmp	x_\match_length,x_\max_length
-	b.hs	_compare_done
-	ldrb	w_\tmp0,[x_\str0,x_\match_length]
-	ldrb	w_\tmp1,[x_\str1,x_\match_length]
-	cmp	w_\tmp0,w_\tmp1
-	b.ne	_compare_done
-	add	x_\match_length,x_\match_length,1
-	b	_compare_tail
-_compare_done:
-.endm
-
 #endif
 #endif
