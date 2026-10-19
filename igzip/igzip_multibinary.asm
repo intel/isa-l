@@ -67,6 +67,7 @@ extern gen_icf_map_lh1_06
 
 extern adler32_base
 extern adler32_avx2_4
+extern adler32_avx512
 extern adler32_sse
 
 extern isal_deflate_hash_base
@@ -117,7 +118,7 @@ mbin_interface		gen_icf_map_lh1
 mbin_dispatch_init6	gen_icf_map_lh1, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_lh1_04, gen_icf_map_lh1_06
 
 mbin_interface		isal_adler32
-mbin_dispatch_init5	isal_adler32, adler32_base, adler32_sse, adler32_sse, adler32_avx2_4
+mbin_dispatch_init8	isal_adler32, adler32_base, adler32_sse, adler32_sse, adler32_avx2_4, adler32_avx2_4, adler32_avx2_4, adler32_avx512
 
 mbin_interface		isal_deflate_hash_lvl0
 mbin_dispatch_init5	isal_deflate_hash_lvl0, isal_deflate_hash_base, isal_deflate_hash_crc_01, isal_deflate_hash_crc_01, isal_deflate_hash_crc_01

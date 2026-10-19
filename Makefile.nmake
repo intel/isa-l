@@ -185,6 +185,7 @@ objs = \
 	bin\rfc1951_lookup.obj \
 	bin\adler32_sse.obj \
 	bin\adler32_avx2_4.obj \
+	bin\adler32_avx512.obj \
 	bin\igzip_multibinary.obj \
 	bin\igzip_update_histogram_01.obj \
 	bin\igzip_update_histogram_04.obj \

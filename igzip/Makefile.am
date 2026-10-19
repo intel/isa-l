@@ -65,6 +65,7 @@ lsrc_x86_64 +=	igzip/igzip_body.asm \
 		igzip/rfc1951_lookup.asm \
 		igzip/adler32_sse.asm \
 		igzip/adler32_avx2_4.asm \
+		igzip/adler32_avx512.asm \
 		igzip/igzip_multibinary.asm \
 		igzip/igzip_update_histogram_01.asm \
 		igzip/igzip_update_histogram_04.asm \
