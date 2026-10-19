@@ -44,6 +44,7 @@ objs = \
 	bin\flatten_ll.obj \
 	bin\encode_df.obj \
 	bin\igzip_icf_body.obj \
+	bin\proc_heap_base.obj \
 	bin\huff_codes.obj \
 	bin\igzip_inflate.obj \
 	bin\mem_zero_detect_base.obj \
@@ -193,7 +194,6 @@ objs = \
 	bin\igzip_inflate_multibinary.obj \
 	bin\encode_df_04.obj \
 	bin\encode_df_06.obj \
-	bin\proc_heap.obj \
 	bin\igzip_deflate_hash.obj \
 	bin\igzip_gen_icf_map_lh1_06.obj \
 	bin\igzip_gen_icf_map_lh1_04.obj \
