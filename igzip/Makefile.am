@@ -36,11 +36,11 @@ lsrc        += 	igzip/igzip.c \
 		igzip/adler32_base.c \
 		igzip/flatten_ll.c \
 		igzip/encode_df.c \
-		igzip/igzip_icf_body.c
+		igzip/igzip_icf_body.c \
+		igzip/proc_heap_base.c
 
-lsrc_base_aliases += igzip/igzip_base_aliases.c igzip/proc_heap_base.c
-lsrc_ppc64le      += igzip/igzip_base_aliases.c igzip/proc_heap_base.c
-lsrc_riscv64      +=                            igzip/proc_heap_base.c
+lsrc_base_aliases += igzip/igzip_base_aliases.c
+lsrc_ppc64le      += igzip/igzip_base_aliases.c
 
 lsrc_aarch64 +=	igzip/aarch64/igzip_inflate_multibinary_arm64.S  \
 		igzip/aarch64/igzip_multibinary_arm64.S	\
@@ -55,8 +55,7 @@ lsrc_aarch64 +=	igzip/aarch64/igzip_inflate_multibinary_arm64.S  \
 		igzip/aarch64/isal_update_histogram.S \
 		igzip/aarch64/gen_icf_map.S \
 		igzip/aarch64/igzip_deflate_hash_aarch64.S \
-		igzip/aarch64/igzip_decode_huffman_code_block_aarch64.S \
-		igzip/proc_heap_base.c
+		igzip/aarch64/igzip_decode_huffman_code_block_aarch64.S
 
 lsrc_x86_64 +=	igzip/igzip_body.asm \
 		igzip/igzip_finish.asm \
@@ -73,7 +72,6 @@ lsrc_x86_64 +=	igzip/igzip_body.asm \
 		igzip/igzip_inflate_multibinary.asm \
 		igzip/encode_df_04.asm \
 		igzip/encode_df_06.asm \
-		igzip/proc_heap.asm \
 		igzip/igzip_deflate_hash.asm \
 		igzip/igzip_gen_icf_map_lh1_06.asm \
 		igzip/igzip_gen_icf_map_lh1_04.asm \
@@ -114,7 +112,6 @@ other_src   += 	igzip/bitbuf2.asm  \
 		igzip/inflate_std_vects.h \
 		igzip/flatten_ll.h \
 		igzip/encode_df.h \
-		igzip/heap_macros.asm \
 		igzip/igzip_wrapper.h \
 		igzip/static_inflate.h \
 		igzip/igzip_checksums.h

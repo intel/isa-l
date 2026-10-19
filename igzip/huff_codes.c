@@ -593,8 +593,6 @@ static struct hufftables_icf static_hufftables = {
 
 extern uint32_t
 build_huff_tree(struct heap_tree *heap, uint64_t heap_size, uint64_t node_ptr);
-extern void
-build_heap(uint64_t *heap, uint64_t heap_size);
 
 static uint32_t
 convert_dist_to_dist_sym(uint32_t dist);
@@ -731,14 +729,6 @@ convert_length_to_len_sym(uint32_t length)
 // Upon return, codes[] contains the code lengths,
 // and bl_count is the count of the lengths
 
-/* Clears the tree nodes that build_huff_tree() fills for a heap of heap_size keys */
-static inline void
-clear_tree_nodes(struct heap_tree *heap_space, uint32_t heap_size)
-{
-        memset(&heap_space->heap[HEAP_TREE_NODE_START + 2 - 2 * heap_size], 0,
-               (2 * heap_size - 1) * sizeof(heap_space->heap[0]));
-}
-
 /* Init heap with the histogram, and return the histogram size */
 static inline uint32_t
 init_heap32(struct heap_tree *heap_space, uint32_t *histogram, uint32_t hist_size)
@@ -766,9 +756,6 @@ init_heap32(struct heap_tree *heap_space, uint32_t *histogram, uint32_t hist_siz
                         heap_size = 2;
                 }
         }
-
-        clear_tree_nodes(heap_space, heap_size);
-        build_heap(heap_space->heap, heap_size);
 
         return heap_size;
 }
@@ -799,9 +786,6 @@ init_heap64(struct heap_tree *heap_space, uint64_t *histogram, uint64_t hist_siz
                         heap_size = 2;
                 }
         }
-
-        clear_tree_nodes(heap_space, heap_size);
-        build_heap(heap_space->heap, heap_size);
 
         return heap_size;
 }
@@ -837,9 +821,6 @@ init_heap64_semi_complete(struct heap_tree *heap_space, uint64_t *histogram, uin
                 }
         }
 
-        clear_tree_nodes(heap_space, heap_size);
-        build_heap(heap_space->heap, heap_size);
-
         return heap_size;
 }
 
@@ -851,9 +832,6 @@ init_heap64_complete(struct heap_tree *heap_space, uint64_t *histogram, uint64_t
         heap_size = 0;
         for (i = 0; i < hist_size; i++)
                 heap_space->heap[++heap_size] = ((histogram[i]) << FREQ_SHIFT) | i;
-
-        clear_tree_nodes(heap_space, heap_size);
-        build_heap(heap_space->heap, heap_size);
 
         return heap_size;
 }
