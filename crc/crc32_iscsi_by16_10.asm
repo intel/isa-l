@@ -60,6 +60,12 @@
 %define PREFETCH        prefetcht0
 %endif
 
+;; Parameters of the fused folding and crc32 in FUSED_CRC32 builds
+%define FUSED_ITERS	7			; fold iterations per fused chunk
+%define FUSED_VEC	(256 * FUSED_ITERS)	; folded bytes per fused chunk
+%define FUSED_STREAM	(32 * FUSED_ITERS)	; bytes per crc32 stream per fused chunk
+%define FUSED_CHUNK	(FUSED_VEC + 8 * FUSED_STREAM)
+
 [bits 64]
 default rel
 
@@ -142,6 +148,12 @@ FUNCTION_NAME:
 	vbroadcasti32x4 zmm16, [r10 + crc_fold_const_fold_16x128b]	;zmm16 has rk-1 and rk-2
 	sub		arg3, 256
 
+%ifdef FUSED_CRC32
+	; with room for a fused chunk and two blocks after it, also use crc32
+	cmp		arg3, FUSED_CHUNK
+	jae		.fused
+%endif
+
 %if fetch_dist != 0
 	; check if there is at least 1.5KB (fetch distance) + 256B in the buffer
         cmp             arg3, (fetch_dist + 256)
@@ -199,6 +211,7 @@ align 16
 	sub		arg3, 256
 	jge     	.fold_256_B_loop
 
+.fold_256_B_end:
 	;; Fold 256 into 128
 	add		arg2, 256
 	vpclmulqdq	zmm1, zmm0, zmm10, 0x01
@@ -483,5 +496,182 @@ align 16
 	jz	.cleanup		; no, done
 	crc32	eax, byte[arg2]		; calculate 1 byte
 	jmp	.cleanup		; all done
+
+%ifdef FUSED_CRC32
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Fused folding and crc32
+;;
+;; vpclmulqdq leaves the crc32 instruction idle, so for long buffers each
+;; chunk of FUSED_CHUNK bytes is split into FUSED_VEC bytes for the folding
+;; loop, followed by eight streams of FUSED_STREAM bytes for crc32. Each fold
+;; iteration also takes 32 bytes of each stream. The folding treats the
+;; streams as a gap: the first block after them is folded with constants for
+;; 256 + 8 * FUSED_STREAM bytes. The stream crcs are shifted to the start of
+;; the second block after the gap, combined, and xored into that block like an
+;; initial crc, which gives their latency a block of folding to hide behind.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+%define f_c0	rax
+%define f_c1	rbx
+%define f_c2	rbp
+%define f_c3	r8
+%define f_c4	r11
+%define f_c5	r12
+%define f_c6	r13
+%define f_c7	r15
+%define f_sp	r9
+%define f_tmp	r14
+
+;; Fold the accumulators with the constants in %1 into the block at arg2 + %2
+%macro FUSED_FOLD 2
+	vpclmulqdq	zmm1, zmm0, %1, 0x10
+	vpclmulqdq	zmm0, zmm0, %1, 0x01
+	vpternlogq	zmm0, zmm1, [arg2 + %2 + 64*0], 0x96
+	vpclmulqdq	zmm2, zmm4, %1, 0x10
+	vpclmulqdq	zmm4, zmm4, %1, 0x01
+	vpternlogq	zmm4, zmm2, [arg2 + %2 + 64*1], 0x96
+	vpclmulqdq	zmm3, zmm7, %1, 0x10
+	vpclmulqdq	zmm7, zmm7, %1, 0x01
+	vpternlogq	zmm7, zmm3, [arg2 + %2 + 64*2], 0x96
+	vpclmulqdq	zmm5, zmm8, %1, 0x10
+	vpclmulqdq	zmm8, zmm8, %1, 0x01
+	vpternlogq	zmm8, zmm5, [arg2 + %2 + 64*3], 0x96
+%endmacro
+
+;; crc32 of the 32 bytes at offset 32 * %1 of each stream
+%macro FUSED_SCALAR 1
+%assign %%t 0
+%rep 4
+	crc32	f_c0, qword [f_sp + 0*FUSED_STREAM + 32*%1 + 8*%%t]
+	crc32	f_c1, qword [f_sp + 1*FUSED_STREAM + 32*%1 + 8*%%t]
+	crc32	f_c2, qword [f_sp + 2*FUSED_STREAM + 32*%1 + 8*%%t]
+	crc32	f_c3, qword [f_sp + 3*FUSED_STREAM + 32*%1 + 8*%%t]
+	crc32	f_c4, qword [f_sp + 4*FUSED_STREAM + 32*%1 + 8*%%t]
+	crc32	f_c5, qword [f_sp + 5*FUSED_STREAM + 32*%1 + 8*%%t]
+	crc32	f_c6, qword [f_sp + 6*FUSED_STREAM + 32*%1 + 8*%%t]
+	crc32	f_c7, qword [f_sp + 7*FUSED_STREAM + 32*%1 + 8*%%t]
+%assign %%t %%t+1
+%endrep
+%endmacro
+
+;; Start the streams of the chunk at arg2
+%macro FUSED_START 0
+	lea	f_sp, [arg2 + FUSED_VEC]
+	xor	f_c0 %+ d, f_c0 %+ d
+	xor	f_c1 %+ d, f_c1 %+ d
+	xor	f_c2 %+ d, f_c2 %+ d
+	xor	f_c3 %+ d, f_c3 %+ d
+	xor	f_c4 %+ d, f_c4 %+ d
+	xor	f_c5 %+ d, f_c5 %+ d
+	xor	f_c6 %+ d, f_c6 %+ d
+	xor	f_c7 %+ d, f_c7 %+ d
+%endmacro
+
+;; Combine the stream crcs into xmm19. Stream i is shifted over the
+;; (7 - i) * FUSED_STREAM + 256 bytes before the second block after the
+;; streams: crc32(0, xor of clmul(crc_i, x^(8 * shift_i - 33) mod P)).
+;; zmm20 holds the eight crcs, and two vpclmulqdq multiply them all.
+%macro FUSED_COMBINE 0
+	vmovq		xmm20, f_c0
+	vpinsrq		xmm20, xmm20, f_c1, 1
+	vmovq		xmm21, f_c2
+	vpinsrq		xmm21, xmm21, f_c3, 1
+	vmovq		xmm22, f_c4
+	vpinsrq		xmm22, xmm22, f_c5, 1
+	vmovq		xmm23, f_c6
+	vpinsrq		xmm23, xmm23, f_c7, 1
+	vinserti32x4	ymm20, ymm20, xmm21, 1
+	vinserti32x4	ymm22, ymm22, xmm23, 1
+	vinserti64x4	zmm20, zmm20, ymm22, 1
+	vpclmulqdq	zmm21, zmm20, zmm18, 0x00
+	vpclmulqdq	zmm20, zmm20, zmm18, 0x11
+	vpxorq		zmm20, zmm20, zmm21
+	vextracti64x4	ymm21, zmm20, 1
+	vpxorq		ymm20, ymm20, ymm21
+	vextracti32x4	xmm21, ymm20, 1
+	vpxorq		xmm20, xmm20, xmm21
+	vmovq		f_tmp, xmm20
+	xor		eax, eax
+	crc32		rax, f_tmp
+	vmovd		xmm19, eax
+%endmacro
+
+align 32
+.fused:
+	push	rbx
+	push	rbp
+	push	r12
+	push	r13
+	push	r14
+	push	r15
+	vbroadcasti32x4	zmm17, [rel fused_fold_gap]
+	vmovdqu64	zmm18, [rel fused_shift]
+
+	;; The first block of the first chunk is already in the accumulators
+	FUSED_START
+	FUSED_SCALAR 0
+%assign i 1
+%rep FUSED_ITERS - 1
+	FUSED_FOLD	zmm16, 256*i
+	FUSED_SCALAR	i
+%assign i i+1
+%endrep
+	FUSED_COMBINE
+	add	arg2, FUSED_CHUNK
+	sub	arg3, FUSED_CHUNK
+	cmp	arg3, FUSED_CHUNK
+	jb	.fused_end
+
+align 32
+.fused_loop:
+	FUSED_START
+	FUSED_FOLD	zmm17, 0
+	FUSED_SCALAR	0
+	FUSED_FOLD	zmm16, 256
+	vpxorq		zmm0, zmm0, zmm19
+	FUSED_SCALAR	1
+%assign i 2
+%rep FUSED_ITERS - 2
+	FUSED_FOLD	zmm16, 256*i
+	FUSED_SCALAR	i
+%assign i i+1
+%endrep
+	FUSED_COMBINE
+	add	arg2, FUSED_CHUNK
+	sub	arg3, FUSED_CHUNK
+	cmp	arg3, FUSED_CHUNK
+	jae	.fused_loop
+
+.fused_end:
+	;; The two blocks after the last streams take the gap and their crc
+	FUSED_FOLD	zmm17, 0
+	FUSED_FOLD	zmm16, 256
+	vpxorq		zmm0, zmm0, zmm19
+
+	pop	r15
+	pop	r14
+	pop	r13
+	pop	r12
+	pop	rbp
+	pop	rbx
+
+	;; Continue in the folding loop after the second block
+	add	arg2, 256
+	sub	arg3, 256
+	jge	.fold_256_B_loop
+	jmp	.fold_256_B_end
+
+section .rodata
+align 64
+;; x^(8 * ((7 - i) * FUSED_STREAM + 256) - 33) mod P for stream i
+fused_shift:
+	dq 0x00000000ded288f8, 0x000000002664fd8b
+	dq 0x0000000093e106a4, 0x0000000086d8e4d2
+	dq 0x000000006956fc3b, 0x00000000e6fc4e6a
+	dq 0x00000000b3e32c28, 0x00000000b9e02b86
+;; Folding constants for 256 + 8 * FUSED_STREAM bytes
+fused_fold_gap:
+	dq 0x00000001a0f717c4, 0x00000000f7506984
+%endif ; FUSED_CRC32
 
 %include "crc_const_extern.asm"

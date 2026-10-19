@@ -137,6 +137,80 @@
 		ret
 %endmacro
 ;;;;;
+; mbin_dispatch_init_clmul_fused 7 parameters
+; Like mbin_dispatch_init_clmul, with a function for AMD Zen 5
+; 1-> function name
+; 2-> base function
+; 3-> SSE4_1 and CLMUL optimized function
+; 4-> AVX/02 opt func
+; 5-> AVX2 opt func
+; 6-> AVX512/10 opt func
+; 7-> AVX512/10 opt func for AMD Zen 5
+;;;;;
+%macro mbin_dispatch_init_clmul_fused 7
+	section .data
+	align 8
+	%1_generic_dispatched:
+		dq	0
+
+	mbin_dispatch_init_clmul %1_generic, %2, %3, %4, %5, %6
+	section .text
+	%1_dispatch_init:
+		push	rax
+		push	rbx
+		push	rcx
+		push	rdx
+		call	%1_generic_dispatch_init
+		mov	rax, [%1_generic_dispatched]
+		mov	[%1_dispatched], rax
+
+		;; Use the Zen 5 function where the AVX512/10 function was chosen
+		lea	rbx, [%6 WRT_OPT]
+		cmp	rax, rbx
+		jne	_%1_init_done
+
+		xor	eax, eax
+		cpuid
+		cmp	ebx, FLAG_CPUID0_EBX_AMD
+		jne	_%1_init_done
+		cmp	edx, FLAG_CPUID0_EDX_AMD
+		jne	_%1_init_done
+		cmp	ecx, FLAG_CPUID0_ECX_AMD
+		jne	_%1_init_done
+
+		;; Family 1Ah is base family Fh with extended family 0Bh
+		mov	eax, 1
+		cpuid
+		mov	ecx, eax
+		and	eax, CPUID1_EAX_FAMILY_MASK
+		cmp	eax, CPUID1_EAX_AMD_ZEN5_FAMILY
+		jne	_%1_init_done
+
+		;; Family 1Ah also has Zen 6 models, so check the model, which is
+		;; the base model plus the extended model times 16
+		mov	eax, ecx
+		shr	eax, 4
+		and	eax, 0xf
+		shr	ecx, 12
+		and	ecx, 0xf0
+		or	eax, ecx
+		shr	eax, 3
+		mov	ebx, CPUID1_EAX_AMD_ZEN5_MODELS
+		bt	ebx, eax
+		jnc	_%1_init_done
+
+		lea	rax, [%7 WRT_OPT]
+		mov	[%1_dispatched], rax
+
+	_%1_init_done:
+		pop	rdx
+		pop	rcx
+		pop	rbx
+		pop	rax
+		ret
+%endmacro
+
+;;;;;
 ; mbin_dispatch_init5 parameters
 ; 1-> function name
 ; 2-> base function

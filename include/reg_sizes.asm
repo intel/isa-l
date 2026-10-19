@@ -78,6 +78,16 @@
 %define FLAG_CPUID0_EDX_HYGON	0x6e65476e	;"neGn"
 %define FLAG_CPUID0_ECX_HYGON	0x656e6975	;"eniu"
 
+%define FLAG_CPUID0_EBX_AMD	0x68747541	;"htuA"
+%define FLAG_CPUID0_EDX_AMD	0x69746e65	;"itne"
+%define FLAG_CPUID0_ECX_AMD	0x444d4163	;"DMAc"
+; Family 1Ah: base family Fh and extended family 0Bh in CPUID 1 EAX
+%define CPUID1_EAX_FAMILY_MASK		0x0ff00f00
+%define CPUID1_EAX_AMD_ZEN5_FAMILY	0x00b00f00
+; Bit n is set if family 1Ah models 8n to 8n+7 are Zen 5: models 00h-2Fh,
+; 40h-4Fh, 60h-7Fh and D0h-D7h, as listed in Linux arch/x86/kernel/cpu/amd.c
+%define CPUID1_EAX_AMD_ZEN5_MODELS	0x0400f33f
+
 ; define d and w variants for registers
 
 %define	raxd	eax
