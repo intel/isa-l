@@ -334,10 +334,13 @@ declare Macros
 
 /*
 	A refill loads 8 bytes. One fast loop iteration writes at most 2 literals,
-	a 258-byte match, and 31 bytes of over-copy past next_out.
+	a 258-byte match, and 31 bytes of over-copy past next_out. Closer than
+	FAST_OUT_SLOP to the end of the output, the loop checks each symbol before
+	decoding it, and it stops FAST_OUT_MIN bytes from the end.
 */
 #define FAST_IN_SLOP	8
 #define FAST_OUT_SLOP	320
+#define FAST_OUT_MIN	64
 
 #define AUX_DIST_START	0
 #define AUX_PATTERN_IDX	64
@@ -414,7 +417,7 @@ cdecl(decode_huffman_code_block_stateless_aarch64):
 	bne	block_state_loop
 	cmp	avail_in, FAST_IN_SLOP
 	blo	block_state_loop
-	cmp	avail_out, FAST_OUT_SLOP
+	cmp	avail_out, FAST_OUT_MIN
 	blo	block_state_loop
 
 	add	f_end_in, next_in, x_avail_in
@@ -770,7 +773,8 @@ byte_copy_loop:
 fast_loop:
 	cmp	next_in, f_end_in
 	ccmp	next_out, f_end_out, 2, ls
-	bhi	fast_exit
+	bhi	fast_near_end
+fast_loop_body:
 	tbnz	f_entry, LARGE_FLAG_BIT_OFFSET, fast_long_lit
 	lsr	f_cnt, f_entry, LARGE_SHORT_CODE_LEN_OFFSET
 	ubfx	f_sym_cnt, f_entry, LARGE_SYM_COUNT_OFFSET, LARGE_SYM_COUNT_LEN
@@ -924,6 +928,34 @@ fast_long_dist:
 	ldrh	f_dist, [f_tmp0, x_f_dist, lsl 1]
 	lsr	f_cnt, f_dist, SMALL_LONG_CODE_LEN_OFFSET
 	b	fast_dist_decoded
+
+	/*
+		Near the end of the output, decode the next symbol only if its
+		output fits. Literals write 4 bytes, and a match of length len
+		after up to 2 literals writes at most len + 33 bytes. Leave long
+		codes to the slow path.
+	*/
+fast_near_end:
+	cmp	next_in, f_end_in
+	bhi	fast_exit
+	add	f_tmp1, f_end_out, FAST_OUT_SLOP
+	sub	f_tmp1, f_tmp1, next_out
+	cmp	f_tmp1, FAST_OUT_MIN
+	blo	fast_exit
+	tbnz	f_entry, LARGE_FLAG_BIT_OFFSET, fast_exit
+	ubfx	f_sym_cnt, f_entry, LARGE_SYM_COUNT_OFFSET, LARGE_SYM_COUNT_LEN
+	lsl	f_last, f_sym_cnt, 3
+	lsr	f_last, f_entry, f_last
+	tst	f_last, 3
+	beq	fast_loop_body
+	sub	f_last, f_sym_cnt, 1
+	lsl	f_last, f_last, 3
+	lsr	f_last, f_entry, f_last
+	and	f_last, f_last, 0x3ff
+	sub	f_last, f_last, 254 - 33
+	cmp	x_f_last, f_tmp1
+	bhi	fast_exit
+	b	fast_loop_body
 
 fast_eob:
 	mov	block_state, ISAL_BLOCK_INPUT_DONE
