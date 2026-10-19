@@ -33,12 +33,6 @@
 	.text
 	.align	2
 
-#include "lz0a_const_aarch64.h"
-#include "data_struct_aarch64.h"
-#include "huffman_aarch64.h"
-#include "bitbuf2_aarch64.h"
-#include "stdmac_aarch64.h"
-
 /*
 declare Macros
 */
@@ -57,142 +51,184 @@ declare Macros
 #endif
 
 /*
-void set_long_icf_fg_aarch64(uint8_t * next_in, uint64_t processed, uint64_t input_size,
-			  struct deflate_icf *match_lookup)
+	void set_long_icf_fg_aarch64(uint8_t * next_in, uint64_t processed, uint64_t input_size,
+				  struct deflate_icf *match_lookup)
+
+	Produces the same output as set_long_icf_fg_base(). gen_icf_map compares
+	at most 8 bytes. For each position whose entry has an 8-byte match, this
+	extends the match, and writes it into that entry and the entries after
+	it, one byte shorter each time, while it is longer than the match the
+	entry already has. A NEON loop finds those positions 8 entries at a time.
 */
 
 	/* arguments */
-	declare_generic_reg	next_in_param,		0,x
-	declare_generic_reg	processed_param,	1,x
-	declare_generic_reg	input_size_param,	2,x
-	declare_generic_reg	match_lookup_param,	3,x
+	declare_generic_reg	next_in,		0,x
+	declare_generic_reg	processed,		1,x
+	declare_generic_reg	input_size,		2,x
+	declare_generic_reg	match_lookup,		3,x
 
-	declare_generic_reg	param0,			0,x
-	declare_generic_reg	param1,			1,x
-	declare_generic_reg	param2,			2,x
-
-	/* local variable */
-	declare_generic_reg	len,			7,w
-	declare_generic_reg	dist_code,		8,w
-	declare_generic_reg	shortest_match_len,	9,w
-	declare_generic_reg	len_max,		10,w
-	declare_generic_reg	dist_extra,		11,w
-	declare_generic_reg	const_8,		13,x
-	declare_generic_reg	next_in,		20,x
-	declare_generic_reg	dist_start,		21,x
-	declare_generic_reg	end_processed,		22,x
-	declare_generic_reg	end_in,			23,x
-	declare_generic_reg	match_lookup,		19,x
-
-	declare_generic_reg	match_length,		4,w
-	declare_generic_reg	tmp0,			5,w
-	declare_generic_reg	tmp1,			6,w
+	/* variables */
+	declare_generic_reg	end_processed,		4,x
+	declare_generic_reg	end_in,			5,x
+	declare_generic_reg	end_scan,		6,x
+	declare_generic_reg	dist_start,		7,x
+	declare_generic_reg	entry,			8,x
+	declare_generic_reg	len,			9,x
+	declare_generic_reg	dist,			10,x
+	declare_generic_reg	src,			11,x
+	declare_generic_reg	dst,			12,x
+	declare_generic_reg	cmp_end,		13,x
+	declare_generic_reg	match_len,		14,x
+	declare_generic_reg	tmp0,			15,x
+	declare_generic_reg	tmp1,			16,x
+	declare_generic_reg	tmp2,			17,x
+	declare_generic_reg	tmp3,			1,x
+	declare_generic_reg	cmp_start,		2,x
 
 /* constant */
-.equ	DIST_START_SIZE, 128
 .equ	ISAL_LOOK_AHEAD, 288
 .equ	LEN_OFFSET, 254
 .equ	SHORTEST_MATCH, 4
-.equ	LEN_MAX_CONST, 512
+.equ	LEN_MAX, 512
+.equ	ICF_LIT_LEN_MASK, 0x3ff
 
 cdecl(set_long_icf_fg_aarch64):
-	stp	x29, x30, [sp, -192]!
-	add	x29, sp, 0
-	stp	x21, x22, [sp, 32]
-	add	x21, x29, 64
-	stp	x19, x20, [sp, 16]
-	str	x23, [sp, 48]
-
-	add	end_processed, next_in_param, processed_param
-	mov	next_in, next_in_param
-	add	end_in, next_in_param, input_size_param
-	mov	match_lookup, match_lookup_param
-
-#ifndef __APPLE__
-	adrp	x1, .data_dist_start
-	mov	x2, DIST_START_SIZE // 128
-	add	x1, x1, :lo12:.data_dist_start
-	mov	x0, dist_start
-#else
-	adrp	x1, .data_dist_start@PAGE
-	mov	x2, DIST_START_SIZE // 128
-	add	x1, x1, .data_dist_start@PAGEOFF
-	mov	x0, dist_start
-#endif
-	bl	cdecl(memcpy)
-
-	add	x_tmp0, end_processed, ISAL_LOOK_AHEAD // 288
-	cmp	end_in, x_tmp0
-	csel	end_in, end_in, x_tmp0, cc
+	add	end_processed, next_in, processed
+	add	end_in, next_in, input_size
+	add	tmp0, end_processed, ISAL_LOOK_AHEAD
+	cmp	end_in, tmp0
+	csel	end_in, end_in, tmp0, ls
 	cmp	next_in, end_processed
-	bcs	.done
+	bhs	.done
 
-	mov	const_8, 8
-	mov	len_max, LEN_MAX_CONST // 512
-	mov	shortest_match_len, (LEN_OFFSET + SHORTEST_MATCH - 1)
-	b	.while_outer_loop
+	sub	end_scan, end_processed, 8
+#ifndef __APPLE__
+	adrp	dist_start, .data_dist_start
+	add	dist_start, dist_start, :lo12:.data_dist_start
+#else
+	adrp	dist_start, .data_dist_start@PAGE
+	add	dist_start, dist_start, .data_dist_start@PAGEOFF
+#endif
+	movi	v16.4s, (ICF_LIT_LEN_MASK >> 8), msl 8
+	mov	w_tmp0, LEN_OFFSET + 8 - 1
+	dup	v17.4s, w_tmp0
 
-	.align 2
-.while_outer_check:
+	/* Find the next entry with an 8-byte match, 8 entries at a time */
+.scan8:
+	cmp	next_in, end_scan
+	bhi	.scan1
+	ldp	q0, q1, [match_lookup]
+	and	v0.16b, v0.16b, v16.16b
+	and	v1.16b, v1.16b, v16.16b
+	cmhi	v0.4s, v0.4s, v17.4s
+	cmhi	v1.4s, v1.4s, v17.4s
+	uzp1	v0.8h, v0.8h, v1.8h
+	xtn	v0.8b, v0.8h
+	fmov	tmp0, d0
+	cbnz	tmp0, .found
+	add	next_in, next_in, 8
+	add	match_lookup, match_lookup, 32
+	b	.scan8
+
+.found:
+	rbit	tmp0, tmp0
+	clz	tmp0, tmp0
+	lsr	tmp0, tmp0, 3
+	add	next_in, next_in, tmp0
+	add	match_lookup, match_lookup, tmp0, lsl 2
+	b	.long_match
+
+	/* Fewer than 8 entries are left */
+.scan1:
+	cmp	next_in, end_processed
+	bhs	.done
+	ldrh	w_len, [match_lookup]
+	and	w_len, w_len, ICF_LIT_LEN_MASK
+	cmp	w_len, LEN_OFFSET + 8 - 1
+	bhi	.long_match
 	add	next_in, next_in, 1
 	add	match_lookup, match_lookup, 4
-	cmp	end_processed, next_in
-	bls	.done
+	b	.scan1
 
-.while_outer_loop:
-	ldrh	len, [match_lookup]
-	and	len, len, LIT_LEN_MASK // 1023
-	cmp	len, (LEN_OFFSET + 8 - 1) // 261
-	bls	.while_outer_check
+.long_match:
+	ldr	w_entry, [match_lookup]
+	and	w_len, w_entry, ICF_LIT_LEN_MASK
+	ubfx	w_tmp0, w_entry, 10, 9
+	lsr	w_tmp1, w_entry, 19
+	ldr	w_dist, [dist_start, x_tmp0, lsl 2]
+	add	w_dist, w_dist, w_tmp1
 
-	ldr	dist_code, [match_lookup]
-	add	x1, next_in, 8
-	ldrh	dist_extra, [match_lookup, 2]
-	sub	w2, w_end_in, w1
-	ubfx	x_dist_code, x_dist_code, 10, 9
-	ubfx	x_dist_extra, x_dist_extra, 3, 13
-	uxtw	x0, dist_code
-	ldr	w0, [dist_start, x0, lsl 2]
-	add	w0, dist_extra, w0
-	sub	x0, const_8, x0
-	add	x0, next_in, x0
+	/*
+		match_len = number of equal bytes at next_in + 8 and dist bytes
+		before it, up to end_in. Compare 16 bytes at a time.
+	*/
+	add	dst, next_in, 8
+	sub	src, dst, dist
+	mov	cmp_start, dst
+	mov	cmp_end, end_in
+.cmp16:
+	sub	tmp0, cmp_end, dst
+	cmp	tmp0, 16
+	blo	.cmp_tail
+	ldp	tmp0, tmp1, [src], 16
+	ldp	tmp2, tmp3, [dst], 16
+	eor	tmp0, tmp0, tmp2
+	eor	tmp1, tmp1, tmp3
+	orr	tmp2, tmp0, tmp1
+	cbz	tmp2, .cmp16
+	/* Count the equal bytes of the 16 before dst */
+	sub	dst, dst, 16
+	add	tmp2, dst, 8
+	cmp	tmp0, 0
+	csel	tmp0, tmp0, tmp1, ne
+	csel	dst, dst, tmp2, ne
+	rbit	tmp0, tmp0
+	clz	tmp0, tmp0
+	add	dst, dst, tmp0, lsr 3
+	b	.cmp_done
+.cmp_tail:
+	cmp	dst, cmp_end
+	bhs	.cmp_done
+	ldrb	w_tmp0, [src], 1
+	ldrb	w_tmp1, [dst]
+	cmp	w_tmp0, w_tmp1
+	bne	.cmp_done
+	add	dst, dst, 1
+	b	.cmp_tail
+.cmp_done:
+	sub	match_len, dst, cmp_start
+	add	w_match_len, w_match_len, LEN_OFFSET + 8
+	cmp	w_match_len, w_len
+	bls	.skip
 
-	compare_aarch64 param0,param1,param2,match_length,tmp0,tmp1
-	mov	w0, w_match_length
-
-	add	w0, w0, (LEN_OFFSET + 8) // 262
-	cmp	w0, len
-	bls	.while_outer_check
-
-	lsl	w2, dist_extra, 19
-	orr	w2, w2, dist_code, lsl 10
-
-	.align 3
-.while_inner_loop:
-	cmp	w0, LEN_MAX_CONST // 512
+	/*
+		Write the match while it is longer than the match of the entry
+		and at least SHORTEST_MATCH. The entry keeps its distance bits.
+	*/
+	and	w_entry, w_entry, ~ICF_LIT_LEN_MASK
+	mov	w_tmp1, LEN_MAX
+	mov	w_tmp2, LEN_OFFSET + SHORTEST_MATCH - 1
+.fill:
+	cmp	w_match_len, w_tmp1
+	csel	w_tmp0, w_match_len, w_tmp1, ls
+	orr	w_tmp0, w_tmp0, w_entry
+	str	w_tmp0, [match_lookup], 4
 	add	next_in, next_in, 1
-	csel	w1, w0, len_max, ls
-	sub	w0, w0, #1
-	orr	w1, w1, w2
-	str	w1, [match_lookup]
-	ldrh	w1, [match_lookup, 4]!
+	sub	w_match_len, w_match_len, 1
+	ldrh	w_tmp0, [match_lookup]
+	and	w_tmp0, w_tmp0, ICF_LIT_LEN_MASK
+	cmp	w_tmp0, w_tmp2
+	csel	w_tmp0, w_tmp0, w_tmp2, hs
+	cmp	w_tmp0, w_match_len
+	blo	.fill
 
-	and	w1, w1, LIT_LEN_MASK // 1023
-	cmp	w1, (LEN_OFFSET + SHORTEST_MATCH - 1) // 257
-	csel	w1, w1, shortest_match_len, cs
-	cmp	w1, w0
-	bcc	.while_inner_loop
-
+	/* Like set_long_icf_fg_base(), skip the entry that ends the match */
+.skip:
 	add	next_in, next_in, 1
 	add	match_lookup, match_lookup, 4
-	cmp	end_processed, next_in
-	bhi	.while_outer_loop
+	b	.scan8
 
 .done:
-	ldp	x19, x20, [sp, 16]
-	ldp	x21, x22, [sp, 32]
-	ldr	x23, [sp, 48]
-	ldp	x29, x30, [sp], 192
 	ret
 #ifndef __APPLE__
 	.size	set_long_icf_fg_aarch64, .-set_long_icf_fg_aarch64
