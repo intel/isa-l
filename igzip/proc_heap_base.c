@@ -35,14 +35,13 @@
  * build_huff_tree() builds a Huffman tree from the keys in heap[1..heap_size]. Each key holds
  * a frequency at FREQ_SHIFT and up, and a node id in the bits below. Each step removes the two
  * smallest keys h1 and h2, stores their ids as the children of a new node with id node_ptr, and
- * inserts the key of the new node, ((h1 + h2) & ~0xFFFF) | node_ptr. The x86 version keeps the
- * keys in a binary heap.
+ * inserts the key of the new node, ((h1 + h2) & ~0xFFFF) | node_ptr.
  *
- * This version gives the same tree without a heap. It sorts the leaf keys, and it keeps the
- * keys of new nodes in the order they are made, which is ascending order of frequency. New
- * nodes get decreasing ids, so among new nodes with the same frequency, the newest one has the
- * smallest key. The smallest remaining key is then either the smallest leaf, or the newest new
- * node with the lowest frequency.
+ * It gives the same tree as a binary heap of the keys, without the heap. It sorts the leaf
+ * keys, and it keeps the keys of new nodes in the order they are made, which is ascending order
+ * of frequency. New nodes get decreasing ids, so among new nodes with the same frequency, the
+ * newest one has the smallest key. The smallest remaining key is then either the smallest leaf,
+ * or the newest new node with the lowest frequency.
  */
 
 #define SORT_MAX_DIGIT_BITS 8
@@ -155,14 +154,6 @@ add_node(struct node_queue *q, uint64_t key)
                 }
         }
         q->node[q->end++] = key;
-}
-
-void
-build_heap(uint64_t *heap, uint64_t heap_size)
-{
-        /* build_huff_tree() does not need the keys in heap order */
-        (void) heap;
-        (void) heap_size;
 }
 
 uint32_t
