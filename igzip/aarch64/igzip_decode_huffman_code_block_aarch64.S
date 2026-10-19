@@ -784,14 +784,22 @@ fast_lit_decoded:
 	/* Look up the next symbol before the refill to shorten the dependency chain */
 	and	f_tmp0, read_in, (1 << ISAL_DECODE_LONG_BITS) - 1
 	ldr	f_next_entry, [f_lit_tbl, f_tmp0, lsl 2]
+	/*
+		If the last symbol is a length, the distance code follows it. Look
+		it up now, so a mispredicted length does not wait for the load.
+	*/
+	and	f_tmp0, read_in, (1 << ISAL_DECODE_SHORT_BITS) - 1
+	ldrh	f_dist, [f_dist_tbl, f_tmp0, lsl 1]
 	fast_refill
-	/* Only the last packed symbol can be a length or end of block */
+	/*
+		Only the last packed symbol can be a length or end of block, and
+		then bit 8 or 9 of it is set. Those bits land at bits 0 and 1 of
+		f_entry >> (8 * f_sym_cnt).
+	*/
 	lsl	f_last, f_sym_cnt, 3
-	sub	f_last, f_last, 8
 	lsr	f_last, f_entry, f_last
-	and	f_last, f_last, 0x3ff
-	cmp	f_last, 256
-	bhs	fast_len_or_eob
+	tst	f_last, 3
+	bne	fast_len_or_eob
 	add	next_out, next_out, x_f_sym_cnt
 	mov	f_entry, f_next_entry
 	b	fast_loop
@@ -800,12 +808,14 @@ fast_len_or_eob:
 	/* Keep the literals that precede the length or end of block symbol */
 	sub	f_sym_cnt, f_sym_cnt, 1
 	add	next_out, next_out, x_f_sym_cnt
+	lsl	f_last, f_sym_cnt, 3
+	lsr	f_last, f_entry, f_last
+	and	f_last, f_last, 0x3ff
+	cmp	f_last, 256
 	beq	fast_eob
 	sub	f_len, f_last, 254
 
 	/* Decode the distance symbol */
-	and	f_tmp0, read_in, (1 << ISAL_DECODE_SHORT_BITS) - 1
-	ldrh	f_dist, [f_dist_tbl, f_tmp0, lsl 1]
 	tbnz	f_dist, SMALL_FLAG_BIT_OFFSET, fast_long_dist
 	lsr	f_cnt, f_dist, SMALL_SHORT_CODE_LEN_OFFSET
 fast_dist_decoded:
