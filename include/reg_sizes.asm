@@ -78,6 +78,11 @@
 %define FLAG_CPUID0_EDX_HYGON	0x6e65476e	;"neGn"
 %define FLAG_CPUID0_ECX_HYGON	0x656e6975	;"eniu"
 
+%define FLAG_CPUID0_EBX_AMD	0x68747541	;"htuA"
+%define FLAG_CPUID0_EDX_AMD	0x69746e65	;"itne"
+%define FLAG_CPUID0_ECX_AMD	0x444d4163	;"DMAc"
+%define CPUID1_EAX_AMD_ZEN5_FAMILY	0x1a
+
 ; define d and w variants for registers
 
 %define	raxd	eax
