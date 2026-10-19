@@ -179,6 +179,7 @@ len_not_aligned:
 	and	tmp3, (128-1)		;Do the unaligned bytes 8 at a time
 
 	;; Run backwards 8 bytes at a time for (tmp3) bytes
+align 16
 loop8_bytes:
 	mov	tmp, vec		;Back to last vector
 	mov 	ptr, [arg2+vec*PS] 	;Fetch last pointer in array
