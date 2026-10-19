@@ -80,6 +80,8 @@ declare Macros
 	declare_generic_reg	tmp0,		16,x
 	declare_generic_reg	tmp1,		17,x
 	declare_generic_reg	tmp2,		2,x
+	/* stream is not used after the setup */
+	declare_generic_reg	const_30,	0,x
 
 /* constant */
 .equ	ISAL_LOOK_AHEAD, 288
@@ -100,15 +102,43 @@ declare Macros
 
 /*
 	compute_hash(): hash = ((data * 0xB2D06057) >> 16) * 0xB2D06057 >> 16,
-	with 64-bit wrapping multiplies, then masked with hash_mask.
+	with 64-bit wrapping multiplies, then masked with hash_mask. hash_mask
+	is less than 1 << 16, so the masked hash only depends on the low 32 bits
+	of the second product, and a 32-bit multiply gives the same result.
 */
 .macro compute_hash data:req, hash:req
-	mov	w_\hash, w_\data
-	mul	\hash, \hash, hash_mult
+	umull	\hash, w_\data, w_hash_mult
 	lsr	\hash, \hash, 16
-	mul	\hash, \hash, hash_mult
-	lsr	\hash, \hash, 16
-	and	w_\hash, w_\hash, hash_mask
+	mul	w_\hash, w_\hash, w_hash_mult
+	and	w_\hash, hash_mask, w_\hash, lsr 16
+.endm
+
+/*
+	One position of the 4-wide loop: update the hash table, compute d and
+	match_len like the scalar loop, and put them in lane \lane of v4 and v5.
+	pos holds the position on entry and the next position on exit.
+*/
+.macro icf_map_lane lane:req, hash_reg:req
+	ldrh	w_dist, [hash_table, w_\hash_reg, uxtw 1]
+	strh	w_pos, [hash_table, w_\hash_reg, uxtw 1]
+	sub	w_dist, w_pos, w_dist
+	sub	w_dist, w_dist, 1
+	and	w_dist, w_dist, hist_size
+	sub	tmp0, next_in, dist
+	ldur	tmp0, [tmp0, \lane - 1]
+	ldur	bytes, [next_in, \lane]
+	eor	tmp0, tmp0, bytes
+	rbit	tmp0, tmp0
+	clz	tmp0, tmp0
+	lsr	w_match_len, w_tmp0, 3
+.if \lane == 0
+	fmov	s4, w_dist
+	fmov	s5, w_match_len
+.else
+	mov	v4.s[\lane], w_dist
+	mov	v5.s[\lane], w_match_len
+.endif
+	add	w_pos, w_pos, 1
 .endm
 
 cdecl(gen_icf_map_h1_aarch64):
@@ -143,6 +173,82 @@ cdecl(gen_icf_map_h1_aarch64):
 	strb	w_tmp0, [stream, offset_state_has_hist]
 
 .loop_entry:
+	/*
+		Four positions per iteration while at least four remain. NEON
+		computes the hashes, distance codes, and deflate_icf entries. The
+		hash table updates, the candidate loads, and the match lengths stay
+		scalar, one position after the other, so a position sees the hash
+		table update of the position before it.
+	*/
+	sub	tmp1, end_loop, 3
+	cmp	next_in, tmp1
+	bhs	.loop1_entry
+
+	adr	tmp0, .hash_word_idx
+	ldr	q16, [tmp0]
+	dup	v17.4s, w_hash_mult
+	dup	v18.4s, hash_mask
+	movi	v19.4s, 30
+	movi	v20.4s, 0
+	movi	v21.4s, LEN_OFFSET
+	movi	v22.4s, 0xff
+	movi	v23.4s, (LIT_ICF_DIST >> 8), lsl 8
+	movi	v24.4s, SHORTEST_MATCH
+
+	.align	5
+.loop4:
+	/* v2 = compute_hash() of the 4-byte words at next_in + 0..3 */
+	ldr	q0, [next_in]
+	tbl	v1.16b, {v0.16b}, v16.16b
+	umull	v2.2d, v1.2s, v17.2s
+	umull2	v3.2d, v1.4s, v17.4s
+	shrn	v2.2s, v2.2d, 16
+	shrn2	v2.4s, v3.2d, 16
+	mul	v2.4s, v2.4s, v17.4s
+	ushr	v2.4s, v2.4s, 16
+	and	v2.16b, v2.16b, v18.16b
+	fmov	hash, d2
+	mov	tmp2, v2.d[1]
+	sub	pos, next_in, file_start
+
+	icf_map_lane	0, hash
+	lsr	hash, hash, 32
+	icf_map_lane	1, hash
+	icf_map_lane	2, tmp2
+	lsr	tmp2, tmp2, 32
+	icf_map_lane	3, tmp2
+
+	/*
+		v4 = d and v5 = match_len for the 4 positions. Distance code:
+		with n = max(30 - clz(d), 0), code = (d >> n) + 2 * n and
+		extra = d - ((d >> n) << n).
+	*/
+	clz	v6.4s, v4.4s
+	sub	v6.4s, v19.4s, v6.4s
+	smax	v6.4s, v6.4s, v20.4s
+	neg	v7.4s, v6.4s
+	ushl	v7.4s, v4.4s, v7.4s
+	ushl	v3.4s, v7.4s, v6.4s
+	sub	v3.4s, v4.4s, v3.4s
+	add	v7.4s, v7.4s, v6.4s
+	add	v7.4s, v7.4s, v6.4s
+
+	/* Select the match code when match_len >= SHORTEST_MATCH */
+	add	v4.4s, v5.4s, v21.4s
+	sli	v4.4s, v7.4s, 10
+	sli	v4.4s, v3.4s, 19
+	and	v6.16b, v1.16b, v22.16b
+	orr	v6.16b, v6.16b, v23.16b
+	cmhs	v7.4s, v5.4s, v24.4s
+	bif	v4.16b, v6.16b, v7.16b
+	st1	{v4.4s}, [next_icf], 16
+
+	add	next_in, next_in, 4
+	cmp	next_in, tmp1
+	blo	.loop4
+
+.loop1_entry:
+	mov	w_const_30, 30
 	cmp	next_in, end_loop
 	bhs	.done
 
@@ -169,16 +275,14 @@ cdecl(gen_icf_map_h1_aarch64):
 
 	/*
 		Distance code: with n = max(30 - clz(d), 0) extra bits,
-		code = (d >> n) + 2 * n and extra = d & ((1 << n) - 1).
+		code = (d >> n) + 2 * n and extra = d - ((d >> n) << n).
 	*/
 	clz	w_tmp0, w_dist
-	mov	w_tmp1, 30
-	subs	w_tmp0, w_tmp1, w_tmp0
+	subs	w_tmp0, w_const_30, w_tmp0
 	csel	w_tmp0, w_tmp0, wzr, gt
-	mov	w_tmp1, -1
-	lsl	w_tmp1, w_tmp1, w_tmp0
-	bic	w_tmp1, w_dist, w_tmp1
 	lsr	w_tmp2, w_dist, w_tmp0
+	lsl	w_tmp1, w_tmp2, w_tmp0
+	sub	w_tmp1, w_dist, w_tmp1
 	add	w_tmp2, w_tmp2, w_tmp0, lsl 1
 
 	/* Select the match code when match_len >= SHORTEST_MATCH */
@@ -202,6 +306,11 @@ cdecl(gen_icf_map_h1_aarch64):
 .return_zero:
 	mov	x0, 0
 	ret
+
+	/* tbl indices that put the 4-byte words at offsets 0..3 in 4 lanes */
+	.balign	16
+.hash_word_idx:
+	.byte	0, 1, 2, 3, 1, 2, 3, 4, 2, 3, 4, 5, 3, 4, 5, 6
 #ifndef __APPLE__
 	.size	gen_icf_map_h1_aarch64, .-gen_icf_map_h1_aarch64
 #endif
