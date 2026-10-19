@@ -76,7 +76,6 @@ void isal_deflate_icf_body_hash_hist_base(struct isal_zstream *stream);
 .equ	ZSTATE_FLUSH_READ_BUFFER, 4
 
 .equ	ISAL_LOOK_AHEAD, 288
-.equ	SHORTEST_MATCH, 4
 .equ	MAX_MATCH, 258
 .equ	LEN_OFFSET, 254
 .equ	NULL_DIST_SYM, 30
@@ -206,23 +205,19 @@ cdecl(isal_deflate_icf_body_hash_hist_aarch64):
 	and	w_dist, w_dist, 0xffff
 
 	/*
-		Compare the first 8 bytes against the candidate. If the distance is
-		out of range (the -1 handles dist = 0), compare next_in against
-		itself to keep the load in bounds, then force the length to 0. This
-		leaves one data-dependent branch per position.
+		Compare the first 4 bytes against the candidate. If the distance is
+		out of range (the -1 handles dist = 0), load from next_in instead to
+		keep the load in bounds, and make the comparison fail. This leaves
+		one data-dependent branch per position, and it resolves as soon as
+		the candidate loads.
 	*/
 	sub	w_tmp0, w_dist, 1
 	cmp	w_tmp0, hist_size
 	sub	match_src, next_in, dist
 	csel	match_src, match_src, next_in, lo
 	ldr	tmp1, [match_src]
-	eor	tmp0, literal, tmp1
-	csinv	tmp0, tmp0, xzr, lo
-	rbit	tmp0, tmp0
-	clz	tmp0, tmp0
-	lsr	w_match_len, w_tmp0, 3
-	cmp	w_match_len, SHORTEST_MATCH
-	bhs	.check_match
+	ccmp	w_literal, w_tmp1, 0, lo
+	beq	.check_match
 
 .literal:
 	and	w_literal, w_literal, 0xff
@@ -241,6 +236,11 @@ cdecl(isal_deflate_icf_body_hash_hist_aarch64):
 	b	.create_hdr
 
 .check_match:
+	/* At least 4 bytes match. Count the matching bytes of the first 8. */
+	eor	tmp0, literal, tmp1
+	rbit	tmp0, tmp0
+	clz	tmp0, tmp0
+	lsr	w_match_len, w_tmp0, 3
 	/* All of the first 8 bytes match; keep comparing */
 	cmp	w_match_len, 8
 	beq	.long_match
