@@ -731,19 +731,24 @@ convert_length_to_len_sym(uint32_t length)
 // Upon return, codes[] contains the code lengths,
 // and bl_count is the count of the lengths
 
+/* Clears the tree nodes that build_huff_tree() fills for a heap of heap_size keys */
+static inline void
+clear_tree_nodes(struct heap_tree *heap_space, uint32_t heap_size)
+{
+        memset(&heap_space->heap[HEAP_TREE_NODE_START + 2 - 2 * heap_size], 0,
+               (2 * heap_size - 1) * sizeof(heap_space->heap[0]));
+}
+
 /* Init heap with the histogram, and return the histogram size */
 static inline uint32_t
 init_heap32(struct heap_tree *heap_space, uint32_t *histogram, uint32_t hist_size)
 {
         uint32_t heap_size, i;
 
-        memset(heap_space, 0, sizeof(struct heap_tree));
-
         heap_size = 0;
         for (i = 0; i < hist_size; i++) {
-                if (histogram[i] != 0)
-                        heap_space->heap[++heap_size] =
-                                (((uint64_t) histogram[i]) << FREQ_SHIFT) | i;
+                heap_space->heap[heap_size + 1] = (((uint64_t) histogram[i]) << FREQ_SHIFT) | i;
+                heap_size += histogram[i] != 0;
         }
 
         // make sure heap has at least two elements in it
@@ -762,6 +767,7 @@ init_heap32(struct heap_tree *heap_space, uint32_t *histogram, uint32_t hist_siz
                 }
         }
 
+        clear_tree_nodes(heap_space, heap_size);
         build_heap(heap_space->heap, heap_size);
 
         return heap_size;
@@ -772,12 +778,10 @@ init_heap64(struct heap_tree *heap_space, uint64_t *histogram, uint64_t hist_siz
 {
         uint32_t heap_size, i;
 
-        memset(heap_space, 0, sizeof(struct heap_tree));
-
         heap_size = 0;
         for (i = 0; i < hist_size; i++) {
-                if (histogram[i] != 0)
-                        heap_space->heap[++heap_size] = ((histogram[i]) << FREQ_SHIFT) | i;
+                heap_space->heap[heap_size + 1] = ((histogram[i]) << FREQ_SHIFT) | i;
+                heap_size += histogram[i] != 0;
         }
 
         // make sure heap has at least two elements in it
@@ -796,6 +800,7 @@ init_heap64(struct heap_tree *heap_space, uint64_t *histogram, uint64_t hist_siz
                 }
         }
 
+        clear_tree_nodes(heap_space, heap_size);
         build_heap(heap_space->heap, heap_size);
 
         return heap_size;
@@ -807,12 +812,10 @@ init_heap64_semi_complete(struct heap_tree *heap_space, uint64_t *histogram, uin
 {
         uint32_t heap_size, i;
 
-        memset(heap_space, 0, sizeof(struct heap_tree));
-
         heap_size = 0;
         for (i = 0; i < complete_start; i++) {
-                if (histogram[i] != 0)
-                        heap_space->heap[++heap_size] = ((histogram[i]) << FREQ_SHIFT) | i;
+                heap_space->heap[heap_size + 1] = ((histogram[i]) << FREQ_SHIFT) | i;
+                heap_size += histogram[i] != 0;
         }
 
         for (; i < hist_size; i++)
@@ -834,6 +837,7 @@ init_heap64_semi_complete(struct heap_tree *heap_space, uint64_t *histogram, uin
                 }
         }
 
+        clear_tree_nodes(heap_space, heap_size);
         build_heap(heap_space->heap, heap_size);
 
         return heap_size;
@@ -844,12 +848,11 @@ init_heap64_complete(struct heap_tree *heap_space, uint64_t *histogram, uint64_t
 {
         uint32_t heap_size, i;
 
-        memset(heap_space, 0, sizeof(struct heap_tree));
-
         heap_size = 0;
         for (i = 0; i < hist_size; i++)
                 heap_space->heap[++heap_size] = ((histogram[i]) << FREQ_SHIFT) | i;
 
+        clear_tree_nodes(heap_space, heap_size);
         build_heap(heap_space->heap, heap_size);
 
         return heap_size;
@@ -861,27 +864,32 @@ fix_code_lens(struct heap_tree *heap_space, uint32_t root_node, uint32_t *bl_cou
 {
         struct tree_node *tree = heap_space->tree;
         uint32_t *code_len_count = (uint32_t *) heap_space->code_len_count;
-        uint32_t i, j, k, child, depth, code_len;
+        uint32_t i, j, k, child, depth, code_len, leaf;
 
         // compute code lengths and code length counts
         code_len = 0;
         j = root_node;
         for (i = root_node; i <= HEAP_TREE_NODE_START; i++) {
+                /*
+                 * Handle internal nodes and leaves without a branch. An internal node sets the
+                 * depth of its children, and a leaf sets two unused nodes below root_node. A leaf
+                 * moves to the list of leaves at tree[root_node..j) and counts toward its depth,
+                 * and an internal node counts toward the unused code_len_count[0].
+                 */
                 child = tree[i].child;
-                if (child > MAX_HISTHEAP_SIZE) {
-                        depth = 1 + tree[i].depth;
-
-                        tree[child].depth = depth;
-                        tree[child - 1].depth = depth;
-                } else {
-                        tree[j++] = tree[i];
-                        depth = tree[i].depth;
-                        while (code_len < depth) {
-                                code_len++;
-                                code_len_count[code_len] = 0;
-                        }
-                        code_len_count[depth]++;
+                depth = tree[i].depth;
+                leaf = child <= MAX_HISTHEAP_SIZE;
+                k = leaf ? root_node - 1 : child;
+                tree[k].depth = depth + 1;
+                tree[k - 1].depth = depth + 1;
+                tree[j] = tree[i];
+                j += leaf;
+                depth = leaf ? depth : 0;
+                while (code_len < depth) {
+                        code_len++;
+                        code_len_count[code_len] = 0;
                 }
+                code_len_count[depth]++;
         }
 
         if (code_len > max_code_len) {
@@ -956,7 +964,7 @@ set_huff_codes(struct huff_code *huff_code_table, int table_length, uint32_t *co
         int i;
         uint16_t code = 0;
         uint16_t next_code[MAX_HUFF_TREE_DEPTH + 1];
-        uint32_t max_code = 0;
+        uint32_t max_code = 0, len;
 
         next_code[0] = code;
 
@@ -964,12 +972,11 @@ set_huff_codes(struct huff_code *huff_code_table, int table_length, uint32_t *co
                 next_code[i] = (next_code[i - 1] + count[i - 1]) << 1;
 
         for (i = 0; i < table_length; i++) {
-                if (huff_code_table[i].length != 0) {
-                        huff_code_table[i].code = bit_reverse(next_code[huff_code_table[i].length],
-                                                              huff_code_table[i].length);
-                        next_code[huff_code_table[i].length] += 1;
-                        max_code = i;
-                }
+                /* Unused symbols get the code 0 they already have, and next_code[0] is unused */
+                len = huff_code_table[i].length;
+                huff_code_table[i].code = bit_reverse(next_code[len], len);
+                next_code[len] += 1;
+                max_code = len != 0 ? i : max_code;
         }
 
         return max_code;
