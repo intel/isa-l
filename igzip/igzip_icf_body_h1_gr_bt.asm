@@ -250,6 +250,7 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	MOVDQU	xdata, [file_start + f_i]
 	mov	curr_data, [file_start + f_i]
 	mov	tmp1, curr_data
+	mov	tmp2, curr_data
 
 	compute_hash	hash, curr_data
 
