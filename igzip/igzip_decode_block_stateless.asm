@@ -772,7 +772,10 @@ end:
 	mov	[state + _read_in], read_in
 	mov	[state + _read_in_length], read_in_length %+ d
 
-	;; Set avail_out
+	;; Set avail_out. The error exits of the main loop leave end_out and
+	;; end_in short by the buffer slops, so use the ends from the state.
+	mov	end_out %+ d, dword [state + _avail_out]
+	add	end_out, [state + _next_out]
 	sub	end_out, next_out
 	mov	dword [state + _avail_out], end_out %+ d
 
@@ -784,12 +787,14 @@ end:
 	;; Set next_out
 	mov	[state + _next_out], next_out
 
-	;; Set next_in
-	mov	[state + _next_in], next_in
-
 	;; Set avail_in
+	mov	end_in %+ d, dword [state + _avail_in]
+	add	end_in, [state + _next_in]
 	sub	end_in, next_in
 	mov	[state + _avail_in], end_in %+ d
+
+	;; Set next_in
+	mov	[state + _next_in], next_in
 
 	FUNC_RESTORE
 
