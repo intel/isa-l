@@ -490,8 +490,11 @@ stack_size		equ	4 * 8 + 8 * 8
 
 [bits 64]
 default rel
-section .text
+section .text align=64
 
+;; Start the function on a cache line, so the main loop does not move with the
+;; code linked before it
+align 64
 global decode_huffman_code_block_stateless_ %+ ARCH
 decode_huffman_code_block_stateless_ %+ ARCH %+ :
 	endbranch
@@ -538,7 +541,7 @@ loop_block:
 	cmp	next_in, end_in
 	jg	end_loop_block_pre
 	cmp	next_out, end_out
-	jg	end_loop_block_pre
+	jg	near_end_out
 
 	;; Check for a code longer than the lookup, or an invalid code, which
 	;; is 0. Other entries have a code length but not LARGE_FLAG_BIT.
@@ -682,6 +685,31 @@ small_byte_copy:
 	sub	repeat_length, look_back_dist2
 	jge	large_byte_copy
 	jmp	loop_block
+
+near_end_out:
+	;; Within OUT_BUFFER_SLOP of the end of the out buffer, keep decoding
+	;; while the output of the next codes fits. Literals write 8 bytes. A
+	;; match after up to one literal writes at most 1 + its length + COPY_SIZE
+	;; bytes, or 1 + 2 * COPY_SIZE bytes when small_byte_copy doubles a short
+	;; distance up to COPY_SIZE. Leave longer codes to the end of the loop.
+	lea	rcx, [next_sym - 1]
+	test	rcx, LARGE_FLAG_BIT
+	jnz	end_loop_block_pre
+	lea	tmp1, [end_out + OUT_BUFFER_SLOP]
+	sub	tmp1, next_out
+	test	next_sym, LARGE_SYM_COUNT_MASK << LARGE_SYM_COUNT_OFFSET
+	jz	near_end_out_len
+	cmp	tmp1, 8
+	jge	lit_len_decoded
+	jmp	end_loop_block_pre
+near_end_out_len:
+	mov	rcx, next_sym
+	shr	rcx, LARGE_LEN_SYM_OFFSET
+	and	rcx, LARGE_LONG_SYM_MASK
+	add	rcx, 2 * COPY_SIZE + 1 - 254
+	cmp	tmp1, rcx
+	jge	lit_len_decoded
+	jmp	end_loop_block_pre
 
 decode_long_lit_len:
 	test	next_sym, next_sym
