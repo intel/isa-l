@@ -493,7 +493,9 @@ stack_size		equ	4 * 8 + 8 * 8
 
 [bits 64]
 default rel
-section .text
+;; Start the decoder functions on a cache line, so that the main loop does not
+;; move with the code linked before them
+section .text align=64
 
 global decode_huffman_code_block_stateless_ %+ ARCH
 decode_huffman_code_block_stateless_ %+ ARCH %+ :
