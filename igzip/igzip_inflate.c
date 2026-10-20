@@ -83,8 +83,8 @@ extern struct isal_hufftables hufftables_default; /* For known header detection 
 #define SINGLE_SYM_FLAG  DOUBLE_SYM_FLAG + 1
 #define DEFAULT_SYM_FLAG TRIPLE_SYM_FLAG
 
-#define SINGLE_SYM_THRESH (2 * 1024)
-#define DOUBLE_SYM_THRESH (4 * 1024)
+#define SINGLE_SYM_THRESH (1 * 1024)
+#define DOUBLE_SYM_THRESH (8 * 1024)
 
 /* structure contain lookup data based on RFC 1951 */
 struct rfc1951_tables {
