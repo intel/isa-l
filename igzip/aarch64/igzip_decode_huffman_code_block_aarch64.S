@@ -144,18 +144,28 @@ end_struct inflate_state
 
 
 #define ISAL_DEF_MAX_CODE_LEN 15
-#define LARGE_SHORT_SYM_LEN 25
-#define LARGE_SHORT_SYM_MASK ((1 << LARGE_SHORT_SYM_LEN) - 1)
+/*
+	A lit/len short code entry holds the number of bits of its codes in bits
+	4:0. An entry for 1 to 3 literals holds their number in bits 7:6 and the
+	literals from bit 8 on. An entry that ends with a length or end of block
+	symbol has 0 in bits 7:6 and the symbol in bits 25:16, and if a literal
+	comes first, the literal in bits 15:8 and bit LARGE_LIT_FLAG_OFFSET set.
+	Any other entry is 0 if it is invalid, or has bit LARGE_FLAG_BIT_OFFSET
+	set and points to a subtable for longer codes, with the longest length in
+	bits 4:0 and the offset from bit 8 on. A long code entry holds the symbol
+	in bits 9:0 and the length in bits 14:10.
+*/
+#define LARGE_CODE_LEN_MASK 0x1f
+#define LARGE_FLAG_BIT_OFFSET 5
+#define LARGE_SYM_COUNT_OFFSET 6
+#define LARGE_SYM_COUNT_LEN 2
+#define LARGE_SYM_OFFSET 8
+#define LARGE_LEN_SYM_OFFSET 16
+#define LARGE_LIT_FLAG_OFFSET 26
+#define LARGE_OFFSET_LEN 13
 #define LARGE_LONG_SYM_LEN 10
 #define LARGE_LONG_SYM_MASK ((1 << LARGE_LONG_SYM_LEN) - 1)
-#define LARGE_SHORT_CODE_LEN_OFFSET 28
 #define LARGE_LONG_CODE_LEN_OFFSET 10
-#define LARGE_FLAG_BIT_OFFSET 25
-#define LARGE_FLAG_BIT (1 << LARGE_FLAG_BIT_OFFSET)
-#define LARGE_SYM_COUNT_OFFSET 26
-#define LARGE_SYM_COUNT_LEN 2
-#define LARGE_SYM_COUNT_MASK ((1 << LARGE_SYM_COUNT_LEN) - 1)
-#define LARGE_SHORT_MAX_LEN_OFFSET 26
 
 /*
 	A dist code entry holds the length of the code plus its extra bits in
@@ -335,7 +345,7 @@ declare Macros
 	declare_generic_reg	f_tmp2,		30,x
 
 /*
-	A refill loads 8 bytes. One fast loop iteration writes at most 2 literals,
+	A refill loads 8 bytes. One fast loop iteration writes at most 1 literal,
 	a 258-byte match, and 31 bytes of over-copy past next_out. Closer than
 	FAST_OUT_SLOP to the end of the output, the loop checks each symbol before
 	decoding it, and it stops FAST_OUT_MIN bytes from the end.
@@ -467,19 +477,27 @@ decode_next_lit_len_start:
 	ldr	next_sym,[state,x_next_bits,lsl 2]
 	/*if ((next_sym & LARGE_FLAG_BIT) == 0) {*/
 	tbnz	next_sym,LARGE_FLAG_BIT_OFFSET,long_code_lookup_routine
-	lsr	bit_count,next_sym,LARGE_SHORT_CODE_LEN_OFFSET
+	and	bit_count,next_sym,LARGE_CODE_LEN_MASK
 	sub	read_in_length,read_in_length,bit_count
 	lsr	read_in,read_in,x_bit_count
-	mov	temp,0x1fff
-	cmp	bit_count,0
-	csel	next_sym,next_sym,w_temp,ne
 	ubfx	sym_count,next_sym,LARGE_SYM_COUNT_OFFSET,LARGE_SYM_COUNT_LEN
-	and	next_lits,next_sym,LARGE_SHORT_SYM_MASK
+	lsr	next_lits,next_sym,LARGE_SYM_OFFSET
+	cbnz	sym_count,decode_next_lit_len_end
+	/* An invalid entry is 0 and has no symbols */
+	cbz	bit_count,decode_next_lit_len_end
+	/* A length or end of block symbol, maybe after a literal */
+	mov	sym_count,1
+	tbnz	next_sym,LARGE_LIT_FLAG_OFFSET,1f
+	lsr	next_lits,next_sym,LARGE_LEN_SYM_OFFSET
+	b	decode_next_lit_len_end
+1:
+	mov	sym_count,2
+	and	next_lits,next_lits,(1 << (LARGE_LEN_SYM_OFFSET - LARGE_SYM_OFFSET + LARGE_LONG_SYM_LEN)) - 1
 	b	decode_next_lit_len_end
 long_code_lookup_routine:
-	lsr	bit_mask,next_sym,LARGE_SHORT_MAX_LEN_OFFSET
+	and	bit_mask,next_sym,LARGE_CODE_LEN_MASK
 	mov	sym_count,1
-	and	next_sym,next_sym,LARGE_SHORT_SYM_MASK
+	ubfx	next_sym,next_sym,LARGE_SYM_OFFSET,LARGE_OFFSET_LEN
 	mov	temp,1023
 	lsl	bit_mask,sym_count,bit_mask
 	sub	bit_mask,bit_mask,1
@@ -775,15 +793,19 @@ fast_loop:
 	bhi	fast_near_end
 fast_loop_body:
 	tbnz	f_entry, LARGE_FLAG_BIT_OFFSET, fast_long_lit
-	lsr	f_cnt, f_entry, LARGE_SHORT_CODE_LEN_OFFSET
+	and	f_cnt, f_entry, LARGE_CODE_LEN_MASK
 	ubfx	f_sym_cnt, f_entry, LARGE_SYM_COUNT_OFFSET, LARGE_SYM_COUNT_LEN
 	/* Invalid symbol: the slow path reports it */
 	cbz	f_cnt, fast_exit
 fast_lit_decoded:
 	lsr	read_in, read_in, x_f_cnt
 	sub	read_in_length, read_in_length, f_cnt
-	/* Speculatively write all packed symbols as literals */
-	str	f_entry, [next_out]
+	/*
+		Speculatively write the literals, or the literal before a length or
+		end of block symbol
+	*/
+	lsr	f_last, f_entry, LARGE_SYM_OFFSET
+	str	f_last, [next_out]
 	/* Look up the next symbol before the refill to shorten the dependency chain */
 	and	f_tmp0, read_in, (1 << ISAL_DECODE_LONG_BITS) - 1
 	ldr	f_next_entry, [f_lit_tbl, f_tmp0, lsl 2]
@@ -794,26 +816,17 @@ fast_lit_decoded:
 	and	f_tmp0, read_in, (1 << ISAL_DECODE_SHORT_BITS) - 1
 	ldrh	f_dist, [f_dist_tbl, f_tmp0, lsl 1]
 	fast_refill
-	/*
-		Only the last packed symbol can be a length or end of block, and
-		then bit 8 or 9 of it is set. Those bits land at bits 0 and 1 of
-		f_entry >> (8 * f_sym_cnt).
-	*/
-	lsl	f_last, f_sym_cnt, 3
-	lsr	f_last, f_entry, f_last
-	tst	f_last, 3
-	bne	fast_len_or_eob
+	/* An entry with no literals ends with a length or end of block */
+	cbz	f_sym_cnt, fast_len_or_eob
 	add	next_out, next_out, x_f_sym_cnt
 	mov	f_entry, f_next_entry
 	b	fast_loop
 
 fast_len_or_eob:
-	/* Keep the literals that precede the length or end of block symbol */
-	sub	f_sym_cnt, f_sym_cnt, 1
+	/* Keep the literal that precedes the length or end of block symbol */
+	ubfx	f_sym_cnt, f_entry, LARGE_LIT_FLAG_OFFSET, 1
 	add	next_out, next_out, x_f_sym_cnt
-	lsl	f_last, f_sym_cnt, 3
-	lsr	f_last, f_entry, f_last
-	and	f_last, f_last, 0x3ff
+	ubfx	f_last, f_entry, LARGE_LEN_SYM_OFFSET, LARGE_LONG_SYM_LEN
 	cmp	f_last, 256
 	beq	fast_eob
 	sub	f_len, f_last, 254
@@ -902,20 +915,28 @@ fast_copy_short_dist:
 
 	/* The lit/len code is longer than ISAL_DECODE_LONG_BITS */
 fast_long_lit:
-	lsr	f_cnt, f_entry, LARGE_SHORT_MAX_LEN_OFFSET
+	and	f_cnt, f_entry, LARGE_CODE_LEN_MASK
 	mov	f_tmp1, -1
 	lsl	f_tmp1, f_tmp1, x_f_cnt
 	bic	f_tmp1, read_in, f_tmp1
-	and	f_entry, f_entry, LARGE_SHORT_SYM_MASK
+	ubfx	f_entry, f_entry, LARGE_SYM_OFFSET, LARGE_OFFSET_LEN
 	add	f_entry, f_entry, w_f_tmp1, lsr ISAL_DECODE_LONG_BITS
 	add	f_tmp0, f_lit_tbl, _long_code_lookup_large
 	ldrh	f_entry, [f_tmp0, x_f_entry, lsl 1]
 	lsr	f_cnt, f_entry, LARGE_LONG_CODE_LEN_OFFSET
 	and	f_entry, f_entry, LARGE_LONG_SYM_MASK
-	mov	f_sym_cnt, 1
-	cbnz	f_cnt, fast_lit_decoded
 	/* Invalid symbol: the slow path reports it */
-	b	fast_exit
+	cbz	f_cnt, fast_exit
+	/* Make it a short code entry with one symbol */
+	cmp	f_entry, 256
+	bhs	1f
+	lsl	f_entry, f_entry, LARGE_SYM_OFFSET
+	mov	f_sym_cnt, 1
+	b	fast_lit_decoded
+1:
+	lsl	f_entry, f_entry, LARGE_LEN_SYM_OFFSET
+	mov	f_sym_cnt, 0
+	b	fast_lit_decoded
 
 	/* The distance code is longer than ISAL_DECODE_SHORT_BITS */
 fast_long_dist:
@@ -932,7 +953,7 @@ fast_long_dist:
 	/*
 		Near the end of the output, decode the next symbol only if its
 		output fits. Literals write 4 bytes, and a match of length len
-		after up to 2 literals writes at most len + 33 bytes. Leave long
+		after up to 1 literal writes at most len + 33 bytes. Leave long
 		codes to the slow path.
 	*/
 fast_near_end:
@@ -944,14 +965,8 @@ fast_near_end:
 	blo	fast_exit
 	tbnz	f_entry, LARGE_FLAG_BIT_OFFSET, fast_exit
 	ubfx	f_sym_cnt, f_entry, LARGE_SYM_COUNT_OFFSET, LARGE_SYM_COUNT_LEN
-	lsl	f_last, f_sym_cnt, 3
-	lsr	f_last, f_entry, f_last
-	tst	f_last, 3
-	beq	fast_loop_body
-	sub	f_last, f_sym_cnt, 1
-	lsl	f_last, f_last, 3
-	lsr	f_last, f_entry, f_last
-	and	f_last, f_last, 0x3ff
+	cbnz	f_sym_cnt, fast_loop_body
+	ubfx	f_last, f_entry, LARGE_LEN_SYM_OFFSET, LARGE_LONG_SYM_LEN
 	sub	f_last, f_last, 254 - 33
 	cmp	x_f_last, f_tmp1
 	bhi	fast_exit

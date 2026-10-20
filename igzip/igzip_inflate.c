@@ -43,18 +43,30 @@ extern int
 decode_huffman_code_block_stateless(struct inflate_state *, uint8_t *start_out);
 extern struct isal_hufftables hufftables_default; /* For known header detection */
 
-#define LARGE_SHORT_SYM_LEN         25
-#define LARGE_SHORT_SYM_MASK        ((1 << LARGE_SHORT_SYM_LEN) - 1)
-#define LARGE_LONG_SYM_LEN          10
-#define LARGE_LONG_SYM_MASK         ((1 << LARGE_LONG_SYM_LEN) - 1)
-#define LARGE_SHORT_CODE_LEN_OFFSET 28
-#define LARGE_LONG_CODE_LEN_OFFSET  10
-#define LARGE_FLAG_BIT_OFFSET       25
-#define LARGE_FLAG_BIT              (1 << LARGE_FLAG_BIT_OFFSET)
-#define LARGE_SYM_COUNT_OFFSET      26
-#define LARGE_SYM_COUNT_LEN         2
-#define LARGE_SYM_COUNT_MASK        ((1 << LARGE_SYM_COUNT_LEN) - 1)
-#define LARGE_SHORT_MAX_LEN_OFFSET  26
+/*
+ * A short_code_lookup entry of the lit/len decode tables holds the number of bits of the codes it
+ * decodes in bits 4:0, so that a decoder can consume them with one shift. An entry for 1 to 3
+ * literals holds their number in bits 7:6 and the literals from bit 8 on, 8 bits each. An entry
+ * that ends with a length or end of block symbol has 0 in bits 7:6 and the symbol in bits 25:16,
+ * and if a literal comes first, the literal in bits 15:8 and LARGE_LIT_FLAG set. Any other entry
+ * is 0 if it is invalid, or has LARGE_FLAG_BIT set and points to a long_code_lookup subtable for
+ * the codes longer than ISAL_DECODE_LONG_BITS that start with its bits, with the length of the
+ * longest of them in bits 4:0 and the offset of the subtable from bit 8 on. A long_code_lookup
+ * entry holds a symbol in bits 9:0 and the length of its code in bits 14:10, or is 0 if it is
+ * invalid.
+ */
+#define LARGE_CODE_LEN_MASK        0x1f
+#define LARGE_SYM_COUNT_OFFSET     6
+#define LARGE_SYM_COUNT_LEN        2
+#define LARGE_SYM_COUNT_MASK       ((1 << LARGE_SYM_COUNT_LEN) - 1)
+#define LARGE_SYM_OFFSET           8
+#define LARGE_LEN_SYM_OFFSET       16
+#define LARGE_LIT_FLAG             (1 << 26)
+#define LARGE_FLAG_BIT             (1 << 5)
+#define LARGE_OFFSET_MASK          0x1fff
+#define LARGE_LONG_SYM_LEN         10
+#define LARGE_LONG_SYM_MASK        ((1 << LARGE_LONG_SYM_LEN) - 1)
+#define LARGE_LONG_CODE_LEN_OFFSET 10
 
 /*
  * An entry of the distance decode tables for a code holds the length of the code plus its extra
@@ -444,16 +456,18 @@ make_inflate_huff_code_lit_len(struct inflate_huff_code_large *result, const uin
                        size * sizeof(*short_code_lookup));
                 size *= 2;
 
-                entry = last_len << LARGE_SHORT_CODE_LEN_OFFSET | 1 << LARGE_SYM_COUNT_OFFSET;
-                for (k = start[last_len]; k < start[last_len + 1]; k++)
+                entry = last_len | 1 << LARGE_SYM_COUNT_OFFSET;
+                for (k = start[last_len]; k < start[last_len] + lit_first[last_len]; k++)
                         short_code_lookup[elist[k] & ELIST_CODE_MASK] =
-                                entry | elist[k] >> ELIST_SYM_SHIFT;
+                                entry | elist[k] >> ELIST_SYM_SHIFT << LARGE_SYM_OFFSET;
+                for (; k < start[last_len + 1]; k++)
+                        short_code_lookup[elist[k] & ELIST_CODE_MASK] =
+                                last_len | elist[k] >> ELIST_SYM_SHIFT << LARGE_LEN_SYM_OFFSET;
 
                 if (multisym >= SINGLE_SYM_FLAG || last_len < 2 * min_len)
                         continue;
 
                 /* A literal followed by any symbol */
-                entry = last_len << LARGE_SHORT_CODE_LEN_OFFSET | 2 << LARGE_SYM_COUNT_OFFSET;
                 for (len1 = min_len; len1 <= last_len - min_len; len1++) {
                         len2 = last_len - len1;
                         end2 = start[len2 + 1];
@@ -461,43 +475,49 @@ make_inflate_huff_code_lit_len(struct inflate_huff_code_large *result, const uin
                                 continue;
                         for (k1 = start[len1]; k1 < start[len1] + lit_first[len1]; k1++) {
                                 code1 = elist[k1] & ELIST_CODE_MASK;
-                                sym1 = entry | elist[k1] >> ELIST_SYM_SHIFT;
-                                for (k2 = start[len2]; k2 < end2; k2++)
+                                sym1 = last_len | elist[k1] >> ELIST_SYM_SHIFT << LARGE_SYM_OFFSET;
+                                entry = sym1 | 2 << LARGE_SYM_COUNT_OFFSET;
+                                for (k2 = start[len2]; k2 < start[len2] + lit_first[len2]; k2++)
                                         short_code_lookup[code1 | (elist[k2] & ELIST_CODE_MASK)
                                                                           << len1] =
-                                                sym1 | (elist[k2] >> ELIST_SYM_SHIFT) << 8;
+                                                entry | (elist[k2] >> ELIST_SYM_SHIFT)
+                                                                << (LARGE_SYM_OFFSET + 8);
+                                entry = sym1 | LARGE_LIT_FLAG;
+                                for (; k2 < end2; k2++)
+                                        short_code_lookup[code1 | (elist[k2] & ELIST_CODE_MASK)
+                                                                          << len1] =
+                                                entry | (elist[k2] >> ELIST_SYM_SHIFT)
+                                                                << LARGE_LEN_SYM_OFFSET;
                         }
                 }
 
                 if (multisym >= DOUBLE_SYM_FLAG || last_len < 3 * min_len)
                         continue;
 
-                /* Two literals followed by any symbol but a length of 258 */
-                entry = last_len << LARGE_SHORT_CODE_LEN_OFFSET | 3 << LARGE_SYM_COUNT_OFFSET;
+                /* Three literals */
+                entry = last_len | 3 << LARGE_SYM_COUNT_OFFSET;
                 for (len1 = min_len; len1 <= last_len - 2 * min_len; len1++) {
                         for (k1 = start[len1]; k1 < start[len1] + lit_first[len1]; k1++) {
                                 code1 = elist[k1] & ELIST_CODE_MASK;
-                                sym1 = entry | elist[k1] >> ELIST_SYM_SHIFT;
+                                sym1 = entry | elist[k1] >> ELIST_SYM_SHIFT << LARGE_SYM_OFFSET;
                                 for (len2 = min_len; len2 <= last_len - len1 - min_len; len2++) {
                                         len3 = last_len - len1 - len2;
-                                        end3 = start[len3 + 1];
+                                        end3 = start[len3] + lit_first[len3];
                                         for (k2 = start[len2]; k2 < start[len2] + lit_first[len2];
                                              k2++) {
                                                 code12 = code1 | (elist[k2] & ELIST_CODE_MASK)
                                                                          << len1;
-                                                sym = sym1 | (elist[k2] >> ELIST_SYM_SHIFT) << 8;
-                                                for (k3 = start[len3]; k3 < end3; k3++) {
-                                                        if ((elist[k3] >> ELIST_SYM_SHIFT) >=
-                                                            MAX_LIT_LEN_SYM)
-                                                                break;
+                                                sym = sym1 | (elist[k2] >> ELIST_SYM_SHIFT)
+                                                                     << (LARGE_SYM_OFFSET + 8);
+                                                for (k3 = start[len3]; k3 < end3; k3++)
                                                         short_code_lookup[code12 |
                                                                           (elist[k3] &
                                                                            ELIST_CODE_MASK)
                                                                                   << (len1 +
                                                                                       len2)] =
                                                                 sym | (elist[k3] >> ELIST_SYM_SHIFT)
-                                                                              << 16;
-                                                }
+                                                                              << (LARGE_SYM_OFFSET +
+                                                                                  16);
                                         }
                                 }
                         }
@@ -508,16 +528,17 @@ make_inflate_huff_code_lit_len(struct inflate_huff_code_large *result, const uin
          * Codes longer than ISAL_DECODE_LONG_BITS share a long_code_lookup subtable with the
          * codes that start with the same ISAL_DECODE_LONG_BITS bits, in the order the groups
          * first appear. No shorter code starts with these bits, so their short_code_lookup
-         * entries are 0 until they point to the subtables, and number the groups meanwhile.
+         * entries are 0 until they point to the subtables, and hold the group numbers from bit
+         * LARGE_SYM_OFFSET on meanwhile.
          */
         num_groups = 0;
         for (len = ISAL_DECODE_LONG_BITS + 1; len <= MAX_LIT_LEN_CODE_LEN; len++) {
                 for (k = start[len]; k < start[len + 1]; k++) {
                         code = elist[k] & ((1 << ISAL_DECODE_LONG_BITS) - 1);
-                        i = short_code_lookup[code];
+                        i = short_code_lookup[code] >> LARGE_SYM_OFFSET;
                         if (i == 0) {
                                 i = ++num_groups;
-                                short_code_lookup[code] = i;
+                                short_code_lookup[code] = i << LARGE_SYM_OFFSET;
                         }
                         /* The longest code of each group comes last */
                         group_len[i] = len;
@@ -535,7 +556,8 @@ make_inflate_huff_code_lit_len(struct inflate_huff_code_large *result, const uin
 
         for (len = ISAL_DECODE_LONG_BITS + 1; len <= MAX_LIT_LEN_CODE_LEN; len++) {
                 for (k = start[len]; k < start[len + 1]; k++) {
-                        i = short_code_lookup[elist[k] & ((1 << ISAL_DECODE_LONG_BITS) - 1)];
+                        i = short_code_lookup[elist[k] & ((1 << ISAL_DECODE_LONG_BITS) - 1)] >>
+                            LARGE_SYM_OFFSET;
                         entry = elist[k] >> ELIST_SYM_SHIFT | len << LARGE_LONG_CODE_LEN_OFFSET;
                         size = 1 << (group_len[i] - ISAL_DECODE_LONG_BITS);
                         for (code = (elist[k] & ELIST_CODE_MASK) >> ISAL_DECODE_LONG_BITS;
@@ -547,11 +569,12 @@ make_inflate_huff_code_lit_len(struct inflate_huff_code_large *result, const uin
         /* Point the entry of each group at its subtable, the first time the group comes up */
         for (k = start[ISAL_DECODE_LONG_BITS + 1]; k < start[MAX_LIT_LEN_CODE_LEN + 1]; k++) {
                 code = elist[k] & ((1 << ISAL_DECODE_LONG_BITS) - 1);
-                i = short_code_lookup[code];
-                if (i <= num_groups)
-                        short_code_lookup[code] = group_offset[i] |
-                                                  group_len[i] << LARGE_SHORT_MAX_LEN_OFFSET |
-                                                  LARGE_FLAG_BIT;
+                entry = short_code_lookup[code];
+                if ((entry & LARGE_FLAG_BIT) == 0) {
+                        i = entry >> LARGE_SYM_OFFSET;
+                        short_code_lookup[code] = group_offset[i] << LARGE_SYM_OFFSET |
+                                                  group_len[i] | LARGE_FLAG_BIT;
+                }
         }
 
         return 0;
@@ -826,24 +849,36 @@ static void inline decode_next_lit_len(uint32_t *next_lits, uint32_t *sym_count,
 
         if ((next_sym & LARGE_FLAG_BIT) == 0) {
                 /* Return symbol found if next_code is a complete huffman code
-                 * and shift in buffer over by the length of the next_code */
-                bit_count = next_sym >> LARGE_SHORT_CODE_LEN_OFFSET;
+                 * and shift in buffer over by the length of the next_code. An
+                 * invalid entry is 0 and has no symbols. */
+                bit_count = next_sym & LARGE_CODE_LEN_MASK;
                 state->read_in >>= bit_count;
                 state->read_in_length -= bit_count;
 
-                if (bit_count == 0)
-                        next_sym = INVALID_SYMBOL;
-
                 *sym_count = (next_sym >> LARGE_SYM_COUNT_OFFSET) & LARGE_SYM_COUNT_MASK;
-                *next_lits = next_sym & LARGE_SHORT_SYM_MASK;
+                *next_lits = next_sym >> LARGE_SYM_OFFSET;
+
+                if (*sym_count == 0 && bit_count != 0) {
+                        /* A length or end of block symbol, maybe after a literal */
+                        if (next_sym & LARGE_LIT_FLAG) {
+                                *sym_count = 2;
+                                *next_lits &= (1 << (LARGE_LEN_SYM_OFFSET - LARGE_SYM_OFFSET +
+                                                     LARGE_LONG_SYM_LEN)) -
+                                              1;
+                        } else {
+                                *sym_count = 1;
+                                *next_lits = next_sym >> LARGE_LEN_SYM_OFFSET;
+                        }
+                }
 
         } else {
                 /* If a symbol is not found, do a lookup in the long code
                  * list starting from the hint in next_sym */
-                bit_mask = next_sym >> LARGE_SHORT_MAX_LEN_OFFSET;
+                bit_mask = next_sym & LARGE_CODE_LEN_MASK;
                 bit_mask = (1 << bit_mask) - 1;
                 next_bits = state->read_in & bit_mask;
-                next_sym = huff_code->long_code_lookup[(next_sym & LARGE_SHORT_SYM_MASK) +
+                next_sym = huff_code->long_code_lookup[((next_sym >> LARGE_SYM_OFFSET) &
+                                                        LARGE_OFFSET_MASK) +
                                                        (next_bits >> ISAL_DECODE_LONG_BITS)];
                 bit_count = next_sym >> LARGE_LONG_CODE_LEN_OFFSET;
                 state->read_in >>= bit_count;

@@ -54,18 +54,26 @@ extern rfc1951_lookup_table
 
 
 
-%define LARGE_SHORT_SYM_LEN 25
-%define LARGE_SHORT_SYM_MASK ((1 << LARGE_SHORT_SYM_LEN) - 1)
-%define LARGE_LONG_SYM_LEN 10
-%define LARGE_LONG_SYM_MASK ((1 << LARGE_LONG_SYM_LEN) - 1)
-%define LARGE_SHORT_CODE_LEN_OFFSET 28
-%define LARGE_LONG_CODE_LEN_OFFSET 10
-%define LARGE_FLAG_BIT_OFFSET 25
-%define LARGE_FLAG_BIT (1 << LARGE_FLAG_BIT_OFFSET)
-%define LARGE_SYM_COUNT_OFFSET 26
+;; A lit/len short code entry holds the number of bits of its codes in bits 4:0.
+;; An entry for 1 to 3 literals holds their number in bits 7:6 and the literals
+;; from bit 8 on. An entry that ends with a length or end of block symbol has 0
+;; in bits 7:6 and the symbol in bits 25:16, and if a literal comes first, the
+;; literal in bits 15:8 and LARGE_LIT_FLAG set. Any other entry is 0 if it is
+;; invalid, or has LARGE_FLAG_BIT set and points to a subtable for longer codes,
+;; with the longest length in bits 4:0 and the offset from bit 8 on. A long code
+;; entry holds the symbol in bits 9:0 and the length in bits 14:10.
+%define LARGE_CODE_LEN_MASK 0x1f
+%define LARGE_SYM_COUNT_OFFSET 6
 %define LARGE_SYM_COUNT_LEN 2
 %define LARGE_SYM_COUNT_MASK ((1 << LARGE_SYM_COUNT_LEN) - 1)
-%define LARGE_SHORT_MAX_LEN_OFFSET 26
+%define LARGE_SYM_OFFSET 8
+%define LARGE_LEN_SYM_OFFSET 16
+%define LARGE_LIT_FLAG_OFFSET 26
+%define LARGE_FLAG_BIT (1 << 5)
+%define LARGE_OFFSET_MASK 0x1fff
+%define LARGE_LONG_SYM_LEN 10
+%define LARGE_LONG_SYM_MASK ((1 << LARGE_LONG_SYM_LEN) - 1)
+%define LARGE_LONG_CODE_LEN_OFFSET 10
 
 ;; A dist code entry holds the length of the code plus its extra bits in bits
 ;; 4:0, the symbol in bits 10:6 and the length of the code in bits 14:11. An
@@ -327,30 +335,44 @@ stack_size		equ	4 * 8 + 8 * 8
 %define %%next_sym_num		%7 ; Returned symbols count
 %define	%%next_bits		%8
 
+	;; Check if literals, another symbol or a hint was looked up
 	mov	%%next_sym_num, %%next_sym
-	mov	rcx, %%next_sym
-	shr	rcx, LARGE_SHORT_CODE_LEN_OFFSET
-	jz	invalid_symbol
-
-	and	%%next_sym_num, LARGE_SYM_COUNT_MASK << LARGE_SYM_COUNT_OFFSET
 	shr	%%next_sym_num, LARGE_SYM_COUNT_OFFSET
-
-	;; Check if symbol or hint was looked up
-	and	%%next_sym, LARGE_FLAG_BIT | LARGE_SHORT_SYM_MASK
+	and	%%next_sym_num, LARGE_SYM_COUNT_MASK
+	jnz	%%short_code
+	test	%%next_sym, %%next_sym
+	jz	invalid_symbol
 	test	%%next_sym, LARGE_FLAG_BIT
-	jz	%%end
+	jnz	%%long_code
 
-	shl	rcx, LARGE_SYM_COUNT_LEN
-	or	rcx, %%next_sym_num
+	;; A length or end of block symbol, maybe after a literal
+	mov	rcx, %%next_sym
+	and	rcx, LARGE_CODE_LEN_MASK
+	mov	%%next_bits, %%next_sym
+	shr	%%next_bits, LARGE_LIT_FLAG_OFFSET
+	lea	%%next_sym_num, [%%next_bits + 1]
+	shr	%%next_sym, LARGE_SYM_OFFSET
+	test	%%next_bits, %%next_bits
+	jnz	%%with_literal
+	shr	%%next_sym, LARGE_LEN_SYM_OFFSET - LARGE_SYM_OFFSET
+%%with_literal:
+	and	%%next_sym, (1 << (LARGE_LEN_SYM_OFFSET - LARGE_SYM_OFFSET + LARGE_LONG_SYM_LEN)) - 1
+	jmp	%%end
+
+%%long_code:
 
 	;; Save length associated with symbol
 	mov	%%next_bits, %%read_in
 	shr	%%next_bits, %%lookup_size
 
+	mov	rcx, %%next_sym
+	and	rcx, LARGE_CODE_LEN_MASK
+
 	;; Extract the bits beyond the first %%lookup_size bits.
 	CLEAR_HIGH_BITS %%next_bits, rcx, %%lookup_size
 
-	and	%%next_sym, LARGE_SHORT_SYM_MASK
+	shr	%%next_sym, LARGE_SYM_OFFSET
+	and	%%next_sym, LARGE_OFFSET_MASK
 	add	%%next_sym, %%next_bits
 
 	;; Lookup actual next symbol
@@ -362,6 +384,12 @@ stack_size		equ	4 * 8 + 8 * 8
 	shr	rcx, LARGE_LONG_CODE_LEN_OFFSET
 	jz	invalid_symbol
 	and	%%next_sym, LARGE_LONG_SYM_MASK
+	jmp	%%end
+
+%%short_code:
+	mov	rcx, %%next_sym
+	and	rcx, LARGE_CODE_LEN_MASK
+	shr	%%next_sym, LARGE_SYM_OFFSET
 
 %%end:
 ;; Updated read_in to reflect the bits which were decoded
@@ -512,40 +540,46 @@ loop_block:
 	cmp	next_out, end_out
 	jg	end_loop_block_pre
 
-	;; Decode next symbol and reload the read_in buffer
-	decode_next_lit_len	state, ISAL_DECODE_LONG_BITS, _lit_huff_code, read_in, read_in_length, next_sym, next_sym_num, tmp1
+	;; Check for a code longer than the lookup, or an invalid code, which
+	;; is 0. Other entries have a code length but not LARGE_FLAG_BIT.
+	lea	rcx, [next_sym - 1]
+	test	rcx, LARGE_FLAG_BIT
+	jnz	decode_long_lit_len
 
-	;; Specutively write next_sym if it is a literal
-	mov	[next_out], next_sym
-	add	next_out, next_sym_num
-	lea	next_sym2, [8 * next_sym_num - 8]
-	SHRX	next_sym2, next_sym, next_sym2
+lit_len_decoded:
+	;; Consume the bits of the decoded codes with one shift
+	SHRX	read_in, read_in, next_sym
 
-	;; Find index to specutively preload next_sym from
-	mov	tmp3, (1 << ISAL_DECODE_LONG_BITS) - 1
-	and	tmp3, read_in
-
-	;; Find index to specutively preload the next dist code from. Before
+	;; Find indexes to preload next_sym and the next dist code from. Before
 	;; the reload, read_in still holds at least 16 bits of the stream.
-	mov	next_sym_num %+ d, (1 << ISAL_DECODE_SHORT_BITS) - 1
-	and	next_sym_num, read_in
+	mov	tmp3 %+ d, read_in %+ d
+	and	tmp3 %+ d, (1 << ISAL_DECODE_LONG_BITS) - 1
+	mov	next_sym_num %+ d, read_in %+ d
+	and	next_sym_num %+ d, (1 << ISAL_DECODE_SHORT_BITS) - 1
+
+	mov	rcx, next_sym
+	and	rcx, LARGE_CODE_LEN_MASK
+	sub	read_in_length, rcx
 
 	;; Start reloading read_in
 	mov	tmp1, [next_in]
 	SHLX	tmp1, tmp1, read_in_length
 	or	read_in, tmp1
 
-	;; Specutively load data associated with length symbol
-	lea	repeat_length, [next_sym2 - 254]
+	;; Write the literals, or the literal before a length or end of block
+	;; symbol, and move next_out past the literals
+	mov	tmp1, next_sym
+	shr	tmp1, LARGE_SYM_OFFSET
+	mov	[next_out], tmp1
+	mov	rcx, next_sym
+	shr	rcx, LARGE_SYM_COUNT_OFFSET
+	and	rcx, LARGE_SYM_COUNT_MASK
+	add	next_out, rcx
 
-	;; Test for end of block symbol
-	cmp	next_sym2, 256
-	je	end_symbol_pre
-
-	;; Specutively load next_sym for next loop if a literal was decoded
+	;; Load next_sym for the next loop, and specultively load the next dist
+	;; code
+	mov	next_sym2, next_sym
 	mov	next_sym %+ d, dword [state + _lit_huff_code + LARGE_SHORT_CODE_SIZE * tmp3]
-
-	;; Specultively load next dist code
 	movzx	next_sym3, word [state + _dist_huff_code + SMALL_SHORT_CODE_SIZE * next_sym_num]
 
 	;; Finish updating read_in_length for read_in
@@ -555,13 +589,25 @@ loop_block:
 	add	next_in, next_sym_num
 	lea	read_in_length, [read_in_length + 8 * next_sym_num]
 
-	;; Check if next_sym2 is a literal, length, or end of block symbol
+	;; Check if only literals were decoded
+	test	next_sym2, LARGE_SYM_COUNT_MASK << LARGE_SYM_COUNT_OFFSET
+	jnz	loop_block
+
+	;; A length or end of block symbol, maybe after a literal
+	mov	rcx, next_sym2
+	shr	rcx, LARGE_LIT_FLAG_OFFSET
+	add	next_out, rcx
+	shr	next_sym2, LARGE_LEN_SYM_OFFSET
+	and	next_sym2, LARGE_LONG_SYM_MASK
+	lea	repeat_length, [next_sym2 - 254]
+
+	;; Test for end of block symbol
 	cmp	next_sym2, 256
-	jl	loop_block
+	je	end_symbol_pre
 
 decode_len_dist:
 	;; Determine next_out after the copy is finished
-	lea	next_out, [next_out + repeat_length - 1]
+	add	next_out, repeat_length
 
 	;; Check for a code longer than the lookup or an invalid code
 	test	next_sym3, DIST_CODE_LEN_MASK
@@ -572,8 +618,8 @@ dist_decoded:
 	;; next_sym for the next loop
 	mov	next_bits, read_in
 	SHRX	read_in, read_in, next_sym3
-	mov	read_in_2, (1 << ISAL_DECODE_LONG_BITS) - 1
-	and	read_in_2, read_in
+	mov	read_in_2 %+ d, read_in %+ d
+	and	read_in_2 %+ d, (1 << ISAL_DECODE_LONG_BITS) - 1
 	mov	next_sym %+ d, dword [state + _lit_huff_code + LARGE_SHORT_CODE_SIZE * read_in_2]
 
 	;; Extract the extra bits
@@ -636,6 +682,36 @@ small_byte_copy:
 	sub	repeat_length, look_back_dist2
 	jge	large_byte_copy
 	jmp	loop_block
+
+decode_long_lit_len:
+	test	next_sym, next_sym
+	jz	invalid_symbol
+
+	;; Lookup the code in the subtable for its first bits
+	mov	tmp1, read_in
+	shr	tmp1, ISAL_DECODE_LONG_BITS
+	mov	rcx, next_sym
+	and	rcx, LARGE_CODE_LEN_MASK
+	CLEAR_HIGH_BITS tmp1, rcx, ISAL_DECODE_LONG_BITS
+	shr	next_sym, LARGE_SYM_OFFSET
+	and	next_sym, LARGE_OFFSET_MASK
+	add	next_sym, tmp1
+	movzx	next_sym, word [state + _lit_huff_code + LARGE_LONG_CODE_SIZE * next_sym + LARGE_SHORT_CODE_SIZE * (1 << ISAL_DECODE_LONG_BITS)]
+
+	;; Make it a short code entry with one symbol
+	mov	rcx, next_sym
+	shr	rcx, LARGE_LONG_CODE_LEN_OFFSET
+	jz	invalid_symbol
+	and	next_sym, LARGE_LONG_SYM_MASK
+	cmp	next_sym, 256
+	jae	long_len_sym
+	shl	next_sym, LARGE_SYM_OFFSET
+	lea	next_sym, [next_sym + rcx + (1 << LARGE_SYM_COUNT_OFFSET)]
+	jmp	lit_len_decoded
+long_len_sym:
+	shl	next_sym, LARGE_LEN_SYM_OFFSET
+	or	next_sym, rcx
+	jmp	lit_len_decoded
 
 decode_long_dist:
 	test	next_sym3, SMALL_FLAG_BIT
@@ -789,7 +865,6 @@ invalid_symbol:
 
 end_symbol_pre:
 	;; Fix up in buffer and out buffer to reflect the actual buffer
-	sub	next_out, 1
 	add	end_out, OUT_BUFFER_SLOP
 	add	end_in, IN_BUFFER_SLOP
 end_symbol:
