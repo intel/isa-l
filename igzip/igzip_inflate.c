@@ -2195,9 +2195,13 @@ isal_inflate_stateless(struct inflate_state *state)
                         state->block_state = ISAL_BLOCK_FINISH;
         }
 
-        /* Undo count stuff of bytes read into the read buffer */
-        state->next_in -= state->read_in_length / 8;
-        state->avail_in += state->read_in_length / 8;
+        /* Undo count stuff of bytes read into the read buffer. When the input ends
+         * inside a block header, read_in_length can be negative, and no bytes are
+         * left to give back. */
+        if (state->read_in_length > 0) {
+                state->next_in -= state->read_in_length / 8;
+                state->avail_in += state->read_in_length / 8;
+        }
         state->read_in_length = 0;
         state->read_in = 0;
 
