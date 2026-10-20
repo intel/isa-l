@@ -134,16 +134,16 @@ stack_size		equ	gpr_save_mem_size + xmm_save_mem_size + bitbuf_mem_size
 	mov	[rsp + gpr_save_mem_offset + 3*8], rsi
 	mov	[rsp + gpr_save_mem_offset + 4*8], rdi
 
-	MOVDQU	[rsp + xmm_save_mem_offset + 0*8], xmm6
-	MOVDQU	[rsp + xmm_save_mem_offset + 1*8], xmm7
-	MOVDQU	[rsp + xmm_save_mem_offset + 2*8], xmm8
-	MOVDQU	[rsp + xmm_save_mem_offset + 3*8], xmm9
-	MOVDQU	[rsp + xmm_save_mem_offset + 4*8], xmm10
-	MOVDQU	[rsp + xmm_save_mem_offset + 5*8], xmm11
-	MOVDQU	[rsp + xmm_save_mem_offset + 6*8], xmm12
-	MOVDQU	[rsp + xmm_save_mem_offset + 7*8], xmm13
-	MOVDQU	[rsp + xmm_save_mem_offset + 8*8], xmm14
-	MOVDQU	[rsp + xmm_save_mem_offset + 9*8], xmm15
+	MOVDQU	[rsp + xmm_save_mem_offset + 0*16], xmm6
+	MOVDQU	[rsp + xmm_save_mem_offset + 1*16], xmm7
+	MOVDQU	[rsp + xmm_save_mem_offset + 2*16], xmm8
+	MOVDQU	[rsp + xmm_save_mem_offset + 3*16], xmm9
+	MOVDQU	[rsp + xmm_save_mem_offset + 4*16], xmm10
+	MOVDQU	[rsp + xmm_save_mem_offset + 5*16], xmm11
+	MOVDQU	[rsp + xmm_save_mem_offset + 6*16], xmm12
+	MOVDQU	[rsp + xmm_save_mem_offset + 7*16], xmm13
+	MOVDQU	[rsp + xmm_save_mem_offset + 8*16], xmm14
+	MOVDQU	[rsp + xmm_save_mem_offset + 9*16], xmm15
 %endif
 
 %endm
@@ -157,16 +157,16 @@ stack_size		equ	gpr_save_mem_size + xmm_save_mem_size + bitbuf_mem_size
 	mov	rsi, [rsp + gpr_save_mem_offset + 3*8]
 	mov	rdi, [rsp + gpr_save_mem_offset + 4*8]
 
-	MOVDQU	xmm6, [rsp + xmm_save_mem_offset + 0*8]
-	MOVDQU	xmm7, [rsp + xmm_save_mem_offset + 1*8]
-	MOVDQU	xmm8, [rsp + xmm_save_mem_offset + 2*8]
-	MOVDQU	xmm9, [rsp + xmm_save_mem_offset + 3*8]
-	MOVDQU	xmm10, [rsp + xmm_save_mem_offset + 4*8]
-	MOVDQU	xmm11, [rsp + xmm_save_mem_offset + 5*8]
-	MOVDQU	xmm12, [rsp + xmm_save_mem_offset + 6*8]
-	MOVDQU	xmm13, [rsp + xmm_save_mem_offset + 7*8]
-	MOVDQU	xmm14, [rsp + xmm_save_mem_offset + 8*8]
-	MOVDQU	xmm15, [rsp + xmm_save_mem_offset + 9*8]
+	MOVDQU	xmm6, [rsp + xmm_save_mem_offset + 0*16]
+	MOVDQU	xmm7, [rsp + xmm_save_mem_offset + 1*16]
+	MOVDQU	xmm8, [rsp + xmm_save_mem_offset + 2*16]
+	MOVDQU	xmm9, [rsp + xmm_save_mem_offset + 3*16]
+	MOVDQU	xmm10, [rsp + xmm_save_mem_offset + 4*16]
+	MOVDQU	xmm11, [rsp + xmm_save_mem_offset + 5*16]
+	MOVDQU	xmm12, [rsp + xmm_save_mem_offset + 6*16]
+	MOVDQU	xmm13, [rsp + xmm_save_mem_offset + 7*16]
+	MOVDQU	xmm14, [rsp + xmm_save_mem_offset + 8*16]
+	MOVDQU	xmm15, [rsp + xmm_save_mem_offset + 9*16]
 %endif
 	add	rsp, stack_size
 
