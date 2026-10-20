@@ -382,8 +382,9 @@ static int inline index_to_sym(int index) { return (index != 513) ? index : 512;
 
 /* Sets result to the inflate_huff_code corresponding to the huffcode defined by
  * the lengths in huff_code_table,where count is a histogram of the appearance
- * of each code length */
-static void
+ * of each code length. Returns ISAL_INVALID_BLOCK if the long codes do not fit
+ * in long_code_lookup, and 0 otherwise. */
+static int
 make_inflate_huff_code_lit_len(struct inflate_huff_code_large *result,
                                struct huff_code *huff_code_table, uint32_t table_length,
                                uint16_t *count_total, uint32_t *code_list, uint32_t multisym)
@@ -414,7 +415,7 @@ make_inflate_huff_code_lit_len(struct inflate_huff_code_large *result,
 
         if (code_list_len == 0) {
                 memset(result->short_code_lookup, 0, sizeof(result->short_code_lookup));
-                return;
+                return 0;
         }
 
         /* Determine the length of the first code */
@@ -571,6 +572,10 @@ make_inflate_huff_code_lit_len(struct inflate_huff_code_large *result,
                         }
                 }
 
+                if (long_code_lookup_length + (1 << (max_length - ISAL_DECODE_LONG_BITS)) >
+                    ISAL_HUFF_CODE_LARGE_LONG_ALIGNED)
+                        return ISAL_INVALID_BLOCK;
+
                 memset(&result->long_code_lookup[long_code_lookup_length], 0x00,
                        sizeof(*result->long_code_lookup) *
                                ((uint64_t) 1 << (max_length - ISAL_DECODE_LONG_BITS)));
@@ -596,12 +601,17 @@ make_inflate_huff_code_lit_len(struct inflate_huff_code_large *result,
                                                         LARGE_FLAG_BIT;
                 long_code_lookup_length += 1 << (max_length - ISAL_DECODE_LONG_BITS);
         }
+
+        return 0;
 }
 
-static void inline make_inflate_huff_code_dist(struct inflate_huff_code_small *result,
-                                               struct huff_code *huff_code_table,
-                                               uint32_t table_length, uint16_t *count,
-                                               uint32_t max_symbol)
+/* Like make_inflate_huff_code_lit_len(), for the distance code. The long codes
+ * of an incomplete distance code can need more entries than long_code_lookup
+ * has. */
+static int inline make_inflate_huff_code_dist(struct inflate_huff_code_small *result,
+                                              struct huff_code *huff_code_table,
+                                              uint32_t table_length, uint16_t *count,
+                                              uint32_t max_symbol)
 {
         uint32_t i, j, k;
         uint32_t *long_code_list;
@@ -632,7 +642,7 @@ static void inline make_inflate_huff_code_dist(struct inflate_huff_code_small *r
         code_list_len = count_total[16];
         if (code_list_len == 0) {
                 memset(result->short_code_lookup, 0, sizeof(result->short_code_lookup));
-                return;
+                return 0;
         }
 
         for (i = 0; i < table_length; i++) {
@@ -708,6 +718,10 @@ static void inline make_inflate_huff_code_dist(struct inflate_huff_code_small *r
                         }
                 }
 
+                if (long_code_lookup_length + (1 << (max_length - ISAL_DECODE_SHORT_BITS)) >
+                    ISAL_HUFF_CODE_SMALL_LONG_ALIGNED)
+                        return ISAL_INVALID_BLOCK;
+
                 memset(&result->long_code_lookup[long_code_lookup_length], 0x00,
                        2 * (1 << (max_length - ISAL_DECODE_SHORT_BITS)));
 
@@ -739,6 +753,8 @@ static void inline make_inflate_huff_code_dist(struct inflate_huff_code_small *r
                         SMALL_FLAG_BIT;
                 long_code_lookup_length += 1 << (max_length - ISAL_DECODE_SHORT_BITS);
         }
+
+        return 0;
 }
 
 static void inline make_inflate_huff_code_header(struct inflate_huff_code_small *result,
@@ -989,14 +1005,16 @@ static int inline setup_static_header(struct inflate_state *state)
 
         set_codes(dist_code, DIST_LEN + 2, dist_count);
 
-        make_inflate_huff_code_lit_len(&state->lit_huff_code, lit_code, LIT_LEN_ELEMS, lit_count,
-                                       code_list, multisym);
+        if (make_inflate_huff_code_lit_len(&state->lit_huff_code, lit_code, LIT_LEN_ELEMS,
+                                           lit_count, code_list, multisym))
+                return ISAL_INVALID_BLOCK;
 
         if (state->hist_bits && state->hist_bits < 15)
                 max_dist = 2 * state->hist_bits;
 
-        make_inflate_huff_code_dist(&state->dist_huff_code, dist_code, DIST_LEN + 2, dist_count,
-                                    max_dist);
+        if (make_inflate_huff_code_dist(&state->dist_huff_code, dist_code, DIST_LEN + 2, dist_count,
+                                        max_dist))
+                return ISAL_INVALID_BLOCK;
 #endif
         state->block_state = ISAL_BLOCK_CODED;
 
@@ -1378,15 +1396,17 @@ static int inline setup_dynamic_header(struct inflate_state *state)
         if (state->hist_bits && state->hist_bits < 15)
                 max_dist = 2 * state->hist_bits;
 
-        make_inflate_huff_code_dist(&state->dist_huff_code, &lit_and_dist_huff[LIT_LEN], DIST_LEN,
-                                    dist_count, max_dist);
+        if (make_inflate_huff_code_dist(&state->dist_huff_code, &lit_and_dist_huff[LIT_LEN],
+                                        DIST_LEN, dist_count, max_dist))
+                return ISAL_INVALID_BLOCK;
 
         if (set_and_expand_lit_len_huffcode(lit_and_dist_huff, LIT_LEN, lit_count, lit_expand_count,
                                             code_list))
                 return ISAL_INVALID_BLOCK;
 
-        make_inflate_huff_code_lit_len(&state->lit_huff_code, lit_and_dist_huff, LIT_LEN_ELEMS,
-                                       lit_count, code_list, multisym);
+        if (make_inflate_huff_code_lit_len(&state->lit_huff_code, lit_and_dist_huff, LIT_LEN_ELEMS,
+                                           lit_count, code_list, multisym))
+                return ISAL_INVALID_BLOCK;
 
         state->block_state = ISAL_BLOCK_CODED;
 

@@ -801,6 +801,10 @@ uint8_t std_vect_150[] = { 0x1c, 0xe5, 0x03, 0x97, 0x00, 0x80, 0xff, 0xff, 0xa5,
                            0x10, 0x6d, 0x6d, 0xa5, 0xa5, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
                            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30 };
 
+/* An incomplete distance code that needs 86 entries in long_code_lookup, which has 80 */
+uint8_t std_vect_151[] = { 0x05, 0xfd, 0x81, 0x01, 0x00, 0x80, 0x61, 0x18, 0xb6, 0xed, 0xbf, 0x35,
+                           0x48, 0x49, 0x92, 0xe4, 0x24, 0x49, 0x92, 0x24, 0x49, 0x92, 0xb4, 0x05 };
+
 struct vect_result {
         uint8_t *vector;
         int vector_length;
@@ -958,5 +962,6 @@ struct vect_result std_vect_array[] = {
         { std_vect_147, sizeof(std_vect_147), ISAL_INVALID_BLOCK },
         { std_vect_148, sizeof(std_vect_148), ISAL_INVALID_BLOCK },
         { std_vect_149, sizeof(std_vect_149), ISAL_INVALID_BLOCK },
-        { std_vect_150, sizeof(std_vect_150), ISAL_INVALID_BLOCK }
+        { std_vect_150, sizeof(std_vect_150), ISAL_INVALID_BLOCK },
+        { std_vect_151, sizeof(std_vect_151), ISAL_INVALID_BLOCK }
 };
