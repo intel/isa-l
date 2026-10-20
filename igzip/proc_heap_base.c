@@ -62,13 +62,18 @@ sort_keys(uint64_t *keys, uint64_t *tmp, uint32_t n)
         }
 
         if (n <= SORT_SMALL || !sorted_ids) {
-                /* Small sorts, and the two element heaps that init_heap pads */
-                for (i = 1; i < n; i++) {
+                /*
+                 * Small sorts, and the two keys make_code_lens() pads to, which can be out of
+                 * order. The keys are distinct, so the position of each is the number of
+                 * smaller keys, which takes no branches to count.
+                 */
+                for (i = 0; i < n; i++) {
                         key = keys[i];
-                        for (j = i; j > 0 && keys[j - 1] > key; j--)
-                                keys[j] = keys[j - 1];
-                        keys[j] = key;
+                        for (j = 0, pos = 0; j < n; j++)
+                                pos += keys[j] < key;
+                        tmp[pos] = key;
                 }
+                memcpy(keys, tmp, n * sizeof(*keys));
                 return;
         }
 
