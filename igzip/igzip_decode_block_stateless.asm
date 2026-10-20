@@ -41,10 +41,17 @@ default rel
 %define ISAL_DECODE_LONG_BITS 12
 %define ISAL_DECODE_SHORT_BITS 10
 
+%ifdef USE_HSWNI
+%define COPY_SIZE 32
+%define copy_reg ymm1
+%else
 %define COPY_SIZE 16
+%define copy_reg xmm1
+%endif
 %define	COPY_LEN_MAX 258
 
 %define IN_BUFFER_SLOP 8
+;; Exactly enough: one main loop pass writes up to OUT_BUFFER_SLOP bytes past next_out
 %define OUT_BUFFER_SLOP	COPY_SIZE + COPY_LEN_MAX
 
 %include "inflate_data_structs.asm"
@@ -584,7 +591,7 @@ decode_len_dist:
 	;; Check if a valid look back distances was decoded
 	cmp	copy_start, [rsp + start_out_mem_offset]
 	jl	invalid_look_back_distance
-	MOVDQU	xmm1, [copy_start]
+	MOVDQU	copy_reg, [copy_start]
 
 	;; Set tmp2 to be the minimum of COPY_SIZE and repeat_length
 	;; This is to decrease use of small_byte_copy branch
@@ -598,23 +605,23 @@ decode_len_dist:
 
 large_byte_copy:
 	;; Copy length distance pair when memory overlap is not an issue
-	MOVDQU [copy_start + look_back_dist2], xmm1
+	MOVDQU [copy_start + look_back_dist2], copy_reg
 
 	sub	repeat_length, COPY_SIZE
 	jle	loop_block
 
 	add	copy_start, COPY_SIZE
-	MOVDQU	xmm1, [copy_start]
+	MOVDQU	copy_reg, [copy_start]
 	jmp	large_byte_copy
 
 small_byte_copy_pre:
 	;; Copy length distance pair when source and destination overlap
 	add	repeat_length, look_back_dist2
 small_byte_copy:
-	MOVDQU [copy_start + look_back_dist2], xmm1
+	MOVDQU [copy_start + look_back_dist2], copy_reg
 
 	shl	look_back_dist2, 1
-	MOVDQU	xmm1, [copy_start]
+	MOVDQU	copy_reg, [copy_start]
 	cmp	look_back_dist2, COPY_SIZE
 	jl	small_byte_copy
 
@@ -791,6 +798,9 @@ end:
 	sub	end_in, next_in
 	mov	[state + _avail_in], end_in %+ d
 
+%ifdef USE_HSWNI
+	vzeroupper
+%endif
 	FUNC_RESTORE
 
 	ret
