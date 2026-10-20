@@ -56,19 +56,24 @@ extern struct isal_hufftables hufftables_default; /* For known header detection 
 #define LARGE_SYM_COUNT_MASK        ((1 << LARGE_SYM_COUNT_LEN) - 1)
 #define LARGE_SHORT_MAX_LEN_OFFSET  26
 
-#define SMALL_SHORT_SYM_LEN         9
-#define SMALL_SHORT_SYM_MASK        ((1 << SMALL_SHORT_SYM_LEN) - 1)
-#define SMALL_SHORT_CODE_LEN_OFFSET 11
-#define SMALL_LONG_CODE_LEN_OFFSET  10
-#define SMALL_FLAG_BIT_OFFSET       10
-#define SMALL_FLAG_BIT              (1 << SMALL_FLAG_BIT_OFFSET)
-
-#define DIST_SYM_OFFSET       0
-#define DIST_SYM_LEN          5
-#define DIST_SYM_MASK         ((1 << DIST_SYM_LEN) - 1)
-#define DIST_SYM_EXTRA_OFFSET 5
-#define DIST_SYM_EXTRA_LEN    4
-#define DIST_SYM_EXTRA_MASK   ((1 << DIST_SYM_EXTRA_LEN) - 1)
+/*
+ * An entry of the distance decode tables for a code holds the length of the code plus its extra
+ * bits in bits 4:0, so that a decoder can consume both with one shift, the symbol in bits 10:6
+ * and the length of the code in bits 14:11. An entry for an invalid symbol holds just the length
+ * of its code, in bits 4:0. A short_code_lookup entry for bits that start a code longer than
+ * ISAL_DECODE_SHORT_BITS has SMALL_FLAG_BIT set, the length of the longest code that starts with
+ * them in bits 10:7 and the offset of their subtable in long_code_lookup in bits 6:0.
+ */
+#define DIST_TOTAL_LEN_MASK  0x1f
+#define DIST_SYM_OFFSET      6
+#define DIST_SYM_LEN         5
+#define DIST_SYM_MASK        ((1 << DIST_SYM_LEN) - 1)
+#define DIST_CODE_LEN_OFFSET 11
+#define DIST_CODE_LEN_MASK   (0xf << DIST_CODE_LEN_OFFSET)
+#define SMALL_FLAG_BIT       (1 << 15)
+#define SMALL_MAX_LEN_OFFSET 7
+#define SMALL_MAX_LEN_MASK   0xf
+#define SMALL_OFFSET_MASK    0x7f
 
 #define MAX_LIT_LEN_CODE_LEN 21
 #define MAX_LIT_LEN_SYM      512
@@ -612,10 +617,9 @@ make_inflate_huff_code_dist(struct inflate_huff_code_small *result, const uint8_
                         if (sym >= max_symbol)
                                 entry = last_len;
                         else
-                                entry = sym |
-                                        rfc_lookup_table.dist_extra_bit_count[sym]
-                                                << DIST_SYM_EXTRA_OFFSET |
-                                        last_len << SMALL_SHORT_CODE_LEN_OFFSET;
+                                entry = (last_len + rfc_lookup_table.dist_extra_bit_count[sym]) |
+                                        sym << DIST_SYM_OFFSET |
+                                        last_len << DIST_CODE_LEN_OFFSET;
                         short_code_lookup[list[k] & 0xFFFF] = entry;
                 }
         }
@@ -650,10 +654,8 @@ make_inflate_huff_code_dist(struct inflate_huff_code_small *result, const uint8_
                         if (sym >= max_symbol)
                                 entry = len;
                         else
-                                entry = sym |
-                                        rfc_lookup_table.dist_extra_bit_count[sym]
-                                                << DIST_SYM_EXTRA_OFFSET |
-                                        len << SMALL_LONG_CODE_LEN_OFFSET;
+                                entry = (len + rfc_lookup_table.dist_extra_bit_count[sym]) |
+                                        sym << DIST_SYM_OFFSET | len << DIST_CODE_LEN_OFFSET;
                         size = 1 << (group_len[i] - ISAL_DECODE_SHORT_BITS);
                         for (code = (list[k] & 0xFFFF) >> ISAL_DECODE_SHORT_BITS; code < size;
                              code += 1 << (len - ISAL_DECODE_SHORT_BITS))
@@ -666,7 +668,7 @@ make_inflate_huff_code_dist(struct inflate_huff_code_small *result, const uint8_
                 i = short_code_lookup[code];
                 if (i <= num_groups)
                         short_code_lookup[code] = group_offset[i] |
-                                                  group_len[i] << SMALL_SHORT_CODE_LEN_OFFSET |
+                                                  group_len[i] << SMALL_MAX_LEN_OFFSET |
                                                   SMALL_FLAG_BIT;
         }
 
@@ -879,7 +881,7 @@ static uint16_t inline decode_next_dist(struct inflate_state *state,
         if ((next_sym & SMALL_FLAG_BIT) == 0) {
                 /* Return symbol found if next_code is a complete huffman code
                  * and shift in buffer over by the length of the next_code */
-                bit_count = next_sym >> SMALL_SHORT_CODE_LEN_OFFSET;
+                bit_count = next_sym >> DIST_CODE_LEN_OFFSET;
                 state->read_in >>= bit_count;
                 state->read_in_length -= bit_count;
 
@@ -888,17 +890,17 @@ static uint16_t inline decode_next_dist(struct inflate_state *state,
                         next_sym = INVALID_SYMBOL;
                 }
 
-                return next_sym & DIST_SYM_MASK;
+                return (next_sym >> DIST_SYM_OFFSET) & DIST_SYM_MASK;
 
         } else {
                 /* If a symbol is not found, perform a linear search of the long code
                  * list starting from the hint in next_sym */
-                bit_mask = (next_sym - SMALL_FLAG_BIT) >> SMALL_SHORT_CODE_LEN_OFFSET;
+                bit_mask = (next_sym >> SMALL_MAX_LEN_OFFSET) & SMALL_MAX_LEN_MASK;
                 bit_mask = (1 << bit_mask) - 1;
                 next_bits = state->read_in & bit_mask;
-                next_sym = huff_code->long_code_lookup[(next_sym & SMALL_SHORT_SYM_MASK) +
+                next_sym = huff_code->long_code_lookup[(next_sym & SMALL_OFFSET_MASK) +
                                                        (next_bits >> ISAL_DECODE_SHORT_BITS)];
-                bit_count = next_sym >> SMALL_LONG_CODE_LEN_OFFSET;
+                bit_count = next_sym >> DIST_CODE_LEN_OFFSET;
                 state->read_in >>= bit_count;
                 state->read_in_length -= bit_count;
 
@@ -907,7 +909,7 @@ static uint16_t inline decode_next_dist(struct inflate_state *state,
                         next_sym = INVALID_SYMBOL;
                 }
 
-                return next_sym & DIST_SYM_MASK;
+                return (next_sym >> DIST_SYM_OFFSET) & DIST_SYM_MASK;
         }
 }
 
