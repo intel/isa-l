@@ -157,21 +157,23 @@ end_struct inflate_state
 #define LARGE_SYM_COUNT_MASK ((1 << LARGE_SYM_COUNT_LEN) - 1)
 #define LARGE_SHORT_MAX_LEN_OFFSET 26
 
-#define SMALL_SHORT_SYM_LEN 9
-#define SMALL_SHORT_SYM_MASK ((1 << SMALL_SHORT_SYM_LEN) - 1)
-#define SMALL_LONG_SYM_LEN 9
-#define SMALL_LONG_SYM_MASK ((1 << SMALL_LONG_SYM_LEN) - 1)
-#define SMALL_SHORT_CODE_LEN_OFFSET 11
-#define SMALL_LONG_CODE_LEN_OFFSET 10
-#define SMALL_FLAG_BIT_OFFSET 10
-#define SMALL_FLAG_BIT (1 << SMALL_FLAG_BIT_OFFSET)
-
-#define DIST_SYM_OFFSET 0
+/*
+	A dist code entry holds the length of the code plus its extra bits in
+	bits 4:0, the symbol in bits 10:6 and the length of the code in bits
+	14:11. An entry with a code length of 0 is either invalid, holding the
+	length of its code in bits 4:0, or has bit SMALL_FLAG_BIT_OFFSET set and
+	points to a subtable for longer codes, with the longest length in bits
+	10:7 and the offset in bits 6:0.
+*/
+#define DIST_TOTAL_LEN_MASK 0x1f
+#define DIST_SYM_OFFSET 6
 #define DIST_SYM_LEN 5
-#define DIST_SYM_MASK ((1 << DIST_SYM_LEN) - 1)
-#define DIST_SYM_EXTRA_OFFSET 5
-#define DIST_SYM_EXTRA_LEN 4
-#define DIST_SYM_EXTRA_MASK ((1 << DIST_SYM_EXTRA_LEN) - 1)
+#define DIST_CODE_LEN_OFFSET 11
+#define DIST_CODE_LEN_LEN 4
+#define SMALL_FLAG_BIT_OFFSET 15
+#define SMALL_MAX_LEN_OFFSET 7
+#define SMALL_MAX_LEN_LEN 4
+#define SMALL_OFFSET_MASK 0x7f
 
 #define MAX_LIT_LEN_CODE_LEN 21
 #define MAX_LIT_LEN_COUNT (MAX_LIT_LEN_CODE_LEN + 2)
@@ -563,10 +565,9 @@ decode_next_dist_start:
 	add	next_bits,next_bits,next_sym
 	ldrh	next_sym, [state,x_next_bits,lsl 1]
 	tbz	next_sym,SMALL_FLAG_BIT_OFFSET,decode_next_dist_flag
-	sub	bit_mask,next_sym,SMALL_FLAG_BIT
+	ubfx	bit_mask,next_sym,SMALL_MAX_LEN_OFFSET,SMALL_MAX_LEN_LEN
 	mov	temp,1
-	asr	bit_mask,bit_mask,SMALL_SHORT_CODE_LEN_OFFSET
-	and	next_sym,next_sym,SMALL_SHORT_SYM_MASK
+	and	next_sym,next_sym,SMALL_OFFSET_MASK
 	lsl	bit_mask,w_temp,bit_mask
 	sub	bit_mask,bit_mask,1
 	and	x_next_bits,read_in,x_bit_mask
@@ -574,10 +575,8 @@ decode_next_dist_start:
 	mov	next_sym,(_dist_huff_code + _long_code_lookup_small)>>1
 	add	next_bits,next_bits,next_sym
 	ldrh	next_sym,[state,x_next_bits,lsl 1]
-	lsr	bit_count,next_sym,SMALL_LONG_CODE_LEN_OFFSET
-	b	decode_next_dist_adjust
 decode_next_dist_flag:
-	lsr	bit_count,next_sym,SMALL_SHORT_CODE_LEN_OFFSET
+	lsr	bit_count,next_sym,DIST_CODE_LEN_OFFSET
 decode_next_dist_adjust:
 	sub	read_in_length,read_in_length,bit_count
 	lsr	read_in,read_in,x_bit_count
@@ -585,7 +584,7 @@ decode_next_dist_adjust:
 	sub	read_in_length,read_in_length,next_sym
 	mov	next_sym,INVALID_SYMBOL
 decode_next_dist_end:
-	and	next_sym,next_sym,DIST_SYM_MASK
+	ubfx	next_sym,next_sym,DIST_SYM_OFFSET,DIST_SYM_LEN
 
 	tbnz	read_in_length,31,end_input_1
 	cmp	next_dist,29
@@ -821,21 +820,23 @@ fast_len_or_eob:
 
 	/* Decode the distance symbol */
 	tbnz	f_dist, SMALL_FLAG_BIT_OFFSET, fast_long_dist
-	lsr	f_cnt, f_dist, SMALL_SHORT_CODE_LEN_OFFSET
 fast_dist_decoded:
+	ubfx	f_cnt, f_dist, DIST_CODE_LEN_OFFSET, DIST_CODE_LEN_LEN
 	cbz	f_cnt, fast_invalid_dist
-	lsr	read_in, read_in, x_f_cnt
-	sub	read_in_length, read_in_length, f_cnt
 
-	/* Read the distance extra bits and add the distance base */
-	ubfx	f_cnt, f_dist, DIST_SYM_EXTRA_OFFSET, DIST_SYM_EXTRA_LEN
-	and	f_dist, f_dist, DIST_SYM_MASK
+	/*
+		Consume the code and its extra bits with one shift, read the extra
+		bits and add the distance base
+	*/
+	and	f_last, f_dist, DIST_TOTAL_LEN_MASK
+	ubfx	f_dist, f_dist, DIST_SYM_OFFSET, DIST_SYM_LEN
 	ldrh	f_dist, [f_aux_tbl, x_f_dist, lsl 1]
 	mov	f_tmp1, -1
-	lsl	f_tmp1, f_tmp1, x_f_cnt
+	lsl	f_tmp1, f_tmp1, x_f_last
 	bic	f_tmp1, read_in, f_tmp1
-	lsr	read_in, read_in, x_f_cnt
-	sub	read_in_length, read_in_length, f_cnt
+	lsr	f_tmp1, f_tmp1, x_f_cnt
+	lsr	read_in, read_in, x_f_last
+	sub	read_in_length, read_in_length, f_last
 	add	f_dist, f_dist, w_f_tmp1
 
 	/* Look up the next symbol before copying the match */
@@ -918,15 +919,14 @@ fast_long_lit:
 
 	/* The distance code is longer than ISAL_DECODE_SHORT_BITS */
 fast_long_dist:
-	lsr	f_cnt, f_dist, SMALL_SHORT_CODE_LEN_OFFSET
+	ubfx	f_cnt, f_dist, SMALL_MAX_LEN_OFFSET, SMALL_MAX_LEN_LEN
 	mov	f_tmp1, -1
 	lsl	f_tmp1, f_tmp1, x_f_cnt
 	bic	f_tmp1, read_in, f_tmp1
-	and	f_dist, f_dist, SMALL_SHORT_SYM_MASK
+	and	f_dist, f_dist, SMALL_OFFSET_MASK
 	add	f_dist, f_dist, w_f_tmp1, lsr ISAL_DECODE_SHORT_BITS
 	add	f_tmp0, f_dist_tbl, _long_code_lookup_small
 	ldrh	f_dist, [f_tmp0, x_f_dist, lsl 1]
-	lsr	f_cnt, f_dist, SMALL_LONG_CODE_LEN_OFFSET
 	b	fast_dist_decoded
 
 	/*

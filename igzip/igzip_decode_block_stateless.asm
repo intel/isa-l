@@ -67,19 +67,21 @@ extern rfc1951_lookup_table
 %define LARGE_SYM_COUNT_MASK ((1 << LARGE_SYM_COUNT_LEN) - 1)
 %define LARGE_SHORT_MAX_LEN_OFFSET 26
 
-%define SMALL_SHORT_SYM_LEN 9
-%define SMALL_SHORT_SYM_MASK ((1 << SMALL_SHORT_SYM_LEN) - 1)
-%define SMALL_LONG_SYM_LEN 9
-%define SMALL_LONG_SYM_MASK ((1 << SMALL_LONG_SYM_LEN) - 1)
-%define SMALL_SHORT_CODE_LEN_OFFSET 11
-%define SMALL_LONG_CODE_LEN_OFFSET 10
-%define SMALL_FLAG_BIT_OFFSET 10
-%define SMALL_FLAG_BIT (1 << SMALL_FLAG_BIT_OFFSET)
-
+;; A dist code entry holds the length of the code plus its extra bits in bits
+;; 4:0, the symbol in bits 10:6 and the length of the code in bits 14:11. An
+;; entry with a code length of 0 is either invalid, holding the length of its
+;; code in bits 4:0, or has SMALL_FLAG_BIT set and points to a subtable for
+;; longer codes, with the longest length in bits 10:7 and the offset in 6:0.
+%define DIST_TOTAL_LEN_MASK 0x1f
+%define DIST_SYM_OFFSET 6
 %define DIST_SYM_LEN 5
 %define DIST_SYM_MASK ((1 << DIST_SYM_LEN) - 1)
-%define DIST_SYM_EXTRA_OFFSET 5
-%define DIST_SYM_EXTRA_LEN 4
+%define DIST_CODE_LEN_OFFSET 11
+%define DIST_CODE_LEN_MASK (0xf << DIST_CODE_LEN_OFFSET)
+%define SMALL_FLAG_BIT (1 << 15)
+%define SMALL_MAX_LEN_OFFSET 7
+%define SMALL_MAX_LEN_MASK 0xf
+%define SMALL_OFFSET_MASK 0x7f
 
 ;; rax
 %define	tmp3		rax
@@ -399,39 +401,42 @@ stack_size		equ	4 * 8 + 8 * 8
 %define %%next_extra_bits	%7
 %define	%%next_bits		%8
 
-	mov	rcx, %%next_sym
-	shr	rcx, SMALL_SHORT_CODE_LEN_OFFSET
-	jz	invalid_dist_symbol_ %+ %%next_sym
-
 	;; Check if symbol or hint was looked up
-	and	%%next_sym, SMALL_FLAG_BIT | SMALL_SHORT_SYM_MASK
+	test	%%next_sym, DIST_CODE_LEN_MASK
+	jnz	%%end
 	test	%%next_sym, SMALL_FLAG_BIT
-	jz	%%end
+	jz	invalid_dist_symbol_ %+ %%next_sym
 
 	;; Save length associated with symbol
 	mov	%%next_bits, %%read_in
 	shr	%%next_bits, %%lookup_size
 
-	;; Extract the 15-DECODE_LOOKUP_SIZE bits beyond the first %%lookup_size bits.
-	lea	%%next_sym, [%%state + SMALL_LONG_CODE_SIZE * %%next_sym]
+	mov	rcx, %%next_sym
+	shr	rcx, SMALL_MAX_LEN_OFFSET
+	and	rcx, SMALL_MAX_LEN_MASK
 
+	;; Extract the 15-DECODE_LOOKUP_SIZE bits beyond the first %%lookup_size bits.
 	CLEAR_HIGH_BITS %%next_bits, rcx, %%lookup_size
 
-	;; Lookup actual next symbol
-	movzx	%%next_sym, word [%%next_sym + %%state_offset + SMALL_LONG_CODE_SIZE * %%next_bits + SMALL_SHORT_CODE_SIZE * (1 << %%lookup_size) - SMALL_LONG_CODE_SIZE * SMALL_FLAG_BIT]
+	and	%%next_sym, SMALL_OFFSET_MASK
+	add	%%next_sym, %%next_bits
 
-	;; Save length associated with symbol
-	mov	rcx, %%next_sym
-	shr	rcx, SMALL_LONG_CODE_LEN_OFFSET
+	;; Lookup actual next symbol
+	movzx	%%next_sym, word [%%state + %%state_offset + SMALL_LONG_CODE_SIZE * %%next_sym + SMALL_SHORT_CODE_SIZE * (1 << %%lookup_size)]
+
+	test	%%next_sym, DIST_CODE_LEN_MASK
 	jz	invalid_dist_symbol_ %+ %%next_sym
-	and	%%next_sym, SMALL_SHORT_SYM_MASK
 
 %%end:
 	;; Updated read_in to reflect the bits which were decoded
-	SHRX	%%read_in, %%read_in, rcx
-	sub	%%read_in_length, rcx
+	mov	%%next_bits, %%next_sym
+	shr	%%next_bits, DIST_CODE_LEN_OFFSET
+	SHRX	%%read_in, %%read_in, %%next_bits
+	sub	%%read_in_length, %%next_bits
 	mov	rcx, %%next_sym
-	shr	rcx, DIST_SYM_EXTRA_OFFSET
+	and	rcx, DIST_TOTAL_LEN_MASK
+	sub	rcx, %%next_bits
+	shr	%%next_sym, DIST_SYM_OFFSET
 	and	%%next_sym, DIST_SYM_MASK
 %endm
 
@@ -561,25 +566,32 @@ decode_len_dist:
 	;; Determine next_out after the copy is finished
 	lea	next_out, [next_out + repeat_length - 1]
 
-	;; Decode distance code
-	decode_next_dist state, ISAL_DECODE_SHORT_BITS, _dist_huff_code, read_in, read_in_length, next_sym3, rcx, tmp2
+	;; Check for a code longer than the lookup or an invalid code
+	test	next_sym3, DIST_CODE_LEN_MASK
+	jz	decode_long_dist
 
-	mov	look_back_dist2 %+ d, [rfc_lookup + _dist_start + 4 * next_sym3]
-
-	; ;; Load distance code extra bits
+dist_decoded:
+	;; Consume the dist code and its extra bits with one shift, and setup
+	;; next_sym for the next loop
 	mov	next_bits, read_in
-
-	;; Calculate the look back distance
-	BZHI	next_bits, next_bits, rcx, tmp4
-	SHRX	read_in, read_in, rcx
-
-	;; Setup next_sym, read_in, and read_in_length for next loop
+	SHRX	read_in, read_in, next_sym3
 	mov	read_in_2, (1 << ISAL_DECODE_LONG_BITS) - 1
 	and	read_in_2, read_in
 	mov	next_sym %+ d, dword [state + _lit_huff_code + LARGE_SHORT_CODE_SIZE * read_in_2]
-	sub	read_in_length, rcx
 
-	;; Copy distance in len/dist pair
+	;; Extract the extra bits
+	mov	rcx, next_sym3
+	and	rcx, DIST_TOTAL_LEN_MASK
+	sub	read_in_length, rcx
+	BZHI	next_bits, next_bits, rcx, tmp4
+	mov	rcx, next_sym3
+	shr	rcx, DIST_CODE_LEN_OFFSET
+	SHRX	next_bits, next_bits, rcx
+
+	;; Calculate the look back distance
+	shr	next_sym3, DIST_SYM_OFFSET
+	and	next_sym3, DIST_SYM_MASK
+	mov	look_back_dist2 %+ d, [rfc_lookup + _dist_start + 4 * next_sym3]
 	add	look_back_dist2, next_bits
 
 	;; Find beginning of copy
@@ -627,6 +639,25 @@ small_byte_copy:
 	sub	repeat_length, look_back_dist2
 	jge	large_byte_copy
 	jmp	loop_block
+
+decode_long_dist:
+	test	next_sym3, SMALL_FLAG_BIT
+	jz	invalid_dist_symbol_ %+ next_sym3
+
+	;; Lookup the code in the subtable for its first bits
+	mov	next_bits, read_in
+	shr	next_bits, ISAL_DECODE_SHORT_BITS
+	mov	rcx, next_sym3
+	shr	rcx, SMALL_MAX_LEN_OFFSET
+	and	rcx, SMALL_MAX_LEN_MASK
+	CLEAR_HIGH_BITS next_bits, rcx, ISAL_DECODE_SHORT_BITS
+	and	next_sym3, SMALL_OFFSET_MASK
+	add	next_sym3, next_bits
+	movzx	next_sym3, word [state + _dist_huff_code + SMALL_LONG_CODE_SIZE * next_sym3 + SMALL_SHORT_CODE_SIZE * (1 << ISAL_DECODE_SHORT_BITS)]
+
+	test	next_sym3, DIST_CODE_LEN_MASK
+	jnz	dist_decoded
+	jmp	invalid_dist_symbol_ %+ next_sym3
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Finish Main Loop
