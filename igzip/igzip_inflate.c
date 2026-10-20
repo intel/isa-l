@@ -341,8 +341,10 @@ struct lit_order {
  * appended to the code, and the decoded symbol is the match length + 254. The table is built
  * from the expanded codes sorted by length and then by symbol, so the literals of each length
  * come first.
+ *
+ * Returns ISAL_INVALID_BLOCK if the long codes do not fit in long_code_lookup, and 0 otherwise.
  */
-static void
+static int
 make_inflate_huff_code_lit_len(struct inflate_huff_code_large *result, const uint8_t *lens,
                                uint32_t nlit, const uint32_t *first_code,
                                const struct lit_order *lits, uint32_t multisym)
@@ -415,7 +417,7 @@ make_inflate_huff_code_lit_len(struct inflate_huff_code_large *result, const uin
 
         if (start[MAX_LIT_LEN_CODE_LEN + 1] == 0) {
                 memset(short_code_lookup, 0, sizeof(result->short_code_lookup));
-                return;
+                return 0;
         }
 
         for (min_len = 1; start[min_len + 1] == 0; min_len++)
@@ -522,6 +524,8 @@ make_inflate_huff_code_lit_len(struct inflate_huff_code_large *result, const uin
                 group_offset[i] = offset;
                 offset += 1 << (group_len[i] - ISAL_DECODE_LONG_BITS);
         }
+        if (offset > ISAL_HUFF_CODE_LARGE_LONG_ALIGNED)
+                return ISAL_INVALID_BLOCK;
         memset(long_code_lookup, 0, offset * sizeof(*long_code_lookup));
 
         for (len = ISAL_DECODE_LONG_BITS + 1; len <= MAX_LIT_LEN_CODE_LEN; len++) {
@@ -544,14 +548,18 @@ make_inflate_huff_code_lit_len(struct inflate_huff_code_large *result, const uin
                                                   group_len[i] << LARGE_SHORT_MAX_LEN_OFFSET |
                                                   LARGE_FLAG_BIT;
         }
+
+        return 0;
 }
 
 /*
  * Sets result to the decode tables of the distance code with the code lengths lens[0..n),
  * where count[] counts the lengths and first_code[] is from set_next_codes(). Symbols from
  * max_symbol on decode to their code length with a length of 0, which marks them invalid.
+ * Returns ISAL_INVALID_BLOCK if the long codes do not fit in long_code_lookup, which can happen
+ * when the code is incomplete, and 0 otherwise.
  */
-static void
+static int
 make_inflate_huff_code_dist(struct inflate_huff_code_small *result, const uint8_t *lens, uint32_t n,
                             const uint16_t *count, const uint32_t *first_code, uint32_t max_symbol)
 {
@@ -575,7 +583,7 @@ make_inflate_huff_code_dist(struct inflate_huff_code_small *result, const uint8_
 
         if (start[MAX_HUFF_TREE_DEPTH + 1] == 0) {
                 memset(short_code_lookup, 0, sizeof(result->short_code_lookup));
-                return;
+                return 0;
         }
 
         /* Sort the codes by length and then by symbol */
@@ -631,6 +639,8 @@ make_inflate_huff_code_dist(struct inflate_huff_code_small *result, const uint8_
                 group_offset[i] = offset;
                 offset += 1 << (group_len[i] - ISAL_DECODE_SHORT_BITS);
         }
+        if (offset > ISAL_HUFF_CODE_SMALL_LONG_ALIGNED)
+                return ISAL_INVALID_BLOCK;
         memset(long_code_lookup, 0, offset * sizeof(*long_code_lookup));
 
         for (len = ISAL_DECODE_SHORT_BITS + 1; len <= MAX_HUFF_TREE_DEPTH; len++) {
@@ -659,6 +669,8 @@ make_inflate_huff_code_dist(struct inflate_huff_code_small *result, const uint8_
                                                   group_len[i] << SMALL_SHORT_CODE_LEN_OFFSET |
                                                   SMALL_FLAG_BIT;
         }
+
+        return 0;
 }
 
 static int
@@ -769,15 +781,17 @@ static int inline setup_static_header(struct inflate_state *state)
                 lits.sym[lens[i]][lits.num[lens[i]]++] = i;
 
         set_next_codes(lit_count, next_code);
-        make_inflate_huff_code_lit_len(&state->lit_huff_code, lens, LIT_LEN + 2, next_code, &lits,
-                                       SINGLE_SYM_FLAG);
+        if (make_inflate_huff_code_lit_len(&state->lit_huff_code, lens, LIT_LEN + 2, next_code,
+                                           &lits, SINGLE_SYM_FLAG))
+                return ISAL_INVALID_BLOCK;
 
         if (state->hist_bits && state->hist_bits < 15)
                 max_dist = 2 * state->hist_bits;
 
         set_next_codes(dist_count, next_code);
-        make_inflate_huff_code_dist(&state->dist_huff_code, dist_lens, DIST_LEN + 2, dist_count,
-                                    next_code, max_dist);
+        if (make_inflate_huff_code_dist(&state->dist_huff_code, dist_lens, DIST_LEN + 2, dist_count,
+                                        next_code, max_dist))
+                return ISAL_INVALID_BLOCK;
 #endif
         state->block_state = ISAL_BLOCK_CODED;
 
@@ -1099,8 +1113,11 @@ static int inline setup_dynamic_header(struct inflate_state *state)
         if (state->hist_bits && state->hist_bits < 15)
                 max_dist = 2 * state->hist_bits;
 
-        make_inflate_huff_code_dist(&state->dist_huff_code, &lens[LIT_TABLE_SIZE + hlit], hdist + 1,
-                                    dist_count, next_code, max_dist);
+        if (make_inflate_huff_code_dist(&state->dist_huff_code, &lens[LIT_TABLE_SIZE + hlit],
+                                        hdist + 1, dist_count, next_code, max_dist)) {
+                ret = ISAL_INVALID_BLOCK;
+                goto done;
+        }
 
         /* Count the lengths of end of block and the length symbols, and add the literals */
         count_lengths(&lens[NUM_LITERALS], hlit + 1, lit_count);
@@ -1112,8 +1129,11 @@ static int inline setup_dynamic_header(struct inflate_state *state)
                 goto done;
         }
 
-        make_inflate_huff_code_lit_len(&state->lit_huff_code, lens, LIT_TABLE_SIZE + hlit,
-                                       next_code, &lits, multisym);
+        if (make_inflate_huff_code_lit_len(&state->lit_huff_code, lens, LIT_TABLE_SIZE + hlit,
+                                           next_code, &lits, multisym)) {
+                ret = ISAL_INVALID_BLOCK;
+                goto done;
+        }
 
         state->block_state = ISAL_BLOCK_CODED;
 
