@@ -923,13 +923,14 @@ make_code_lens(const uint32_t *count, uint32_t n, uint32_t max_len, uint16_t *sy
         uint32_t leaf[MAX_HISTHEAP_SIZE];
         uint16_t depth_count[MAX_HISTHEAP_SIZE];
         uint32_t i, num, root, child, d, internal, num_leaves, max_depth, code_len, k;
+        uint64_t j;
 
-        num = 0;
-        for (i = 0; i < n; i++) {
-                heap[num + 1] = (uint64_t) count[i] << FREQ_SHIFT | i;
-                syms[num] = i;
-                num += count[i] != 0;
+        for (i = 0, j = 0; i < n; i++) {
+                heap[j + 1] = (uint64_t) count[i] << FREQ_SHIFT | i;
+                syms[j] = i;
+                j += count[i] != 0;
         }
+        num = j;
 
         if (num < 2) {
                 /* Add symbols with a count of 1 */
@@ -949,6 +950,33 @@ make_code_lens(const uint32_t *count, uint32_t n, uint32_t max_len, uint16_t *sy
         }
 
         root = build_huff_tree(heap_space, num, HEAP_TREE_NODE_START);
+
+        /*
+         * The children of internal node id are at heap[id] and heap[id - 1], and the root has
+         * the id root + 2. A node gets a lower id than its children, so going through the
+         * internal nodes in increasing id order, from the root down, gives each one its depth
+         * before its children, and depth[] then holds the depth of each leaf at its symbol.
+         */
+        depth[root + 2] = 0;
+        max_depth = 0;
+        for (i = root + 2; i <= HEAP_TREE_NODE_START; i += 2) {
+                d = depth[i] + 1;
+                depth[(uint32_t) heap[i]] = d;
+                depth[(uint32_t) heap[i - 1]] = d;
+                max_depth = d > max_depth ? d : max_depth;
+        }
+
+        if (max_depth <= max_len) {
+                bl_count[0] = 0;
+                for (i = 1; i <= max_len; i++)
+                        bl_count[i] = 0;
+                for (i = 0; i < num; i++) {
+                        d = depth[syms[i]];
+                        lens[syms[i]] = d;
+                        bl_count[d]++;
+                }
+                return num;
+        }
 
         /*
          * Visit the tree in the order fix_code_lens() does. An internal node sets the depth of
@@ -995,16 +1023,14 @@ make_code_lens(const uint32_t *count, uint32_t n, uint32_t max_len, uint16_t *sy
         for (; i <= max_len; i++)
                 bl_count[i] = 0;
 
-        if (max_depth > max_len) {
-                /* Give the leaves the limited lengths in the order they were visited */
-                for (k = 1; depth_count[k] == 0; k++)
-                        ;
-                for (i = 0; i < num_leaves; i++) {
-                        leaf[i] = (leaf[i] & 0xFFFF) | k << 16;
-                        depth_count[k]--;
-                        while (depth_count[k] == 0 && k < code_len)
-                                k++;
-                }
+        /* Give the leaves the limited lengths in the order they were visited */
+        for (k = 1; depth_count[k] == 0; k++)
+                ;
+        for (i = 0; i < num_leaves; i++) {
+                leaf[i] = (leaf[i] & 0xFFFF) | k << 16;
+                depth_count[k]--;
+                while (depth_count[k] == 0 && k < code_len)
+                        k++;
         }
 
         for (i = 0; i < num_leaves; i++)
@@ -1503,7 +1529,7 @@ isal_create_hufftables_subset(struct isal_hufftables *hufftables,
 static void
 expand_hufftables_icf(struct hufftables_icf *hufftables)
 {
-        uint32_t i, eb, j, k, len, code;
+        uint32_t i, eb, j, k, len, entry;
         struct huff_code orig[21];
         struct huff_code *lit_len_codes = hufftables->lit_len_table;
         struct huff_code *dist_codes = hufftables->dist_table;
@@ -1511,14 +1537,19 @@ expand_hufftables_icf(struct hufftables_icf *hufftables)
         for (i = 0; i < 21; i++)
                 orig[i] = lit_len_codes[i + 265];
 
-        /* Each length code with eb extra bits takes 1 << eb entries, one per length */
+        /*
+         * Each length code with eb extra bits takes 1 << eb entries, one per length, which
+         * append the extra bits j to the code: code | j << len, or code + (j << len).
+         */
         k = 265;
         for (i = 0; i < 20; i++) {
                 eb = i / 4 + 1;
                 len = orig[i].length;
-                code = orig[i].code;
-                for (j = 0; j < (1u << eb); j++)
-                        lit_len_codes[k + j].code_and_length = (code | j << len) | (len + eb) << 24;
+                entry = orig[i].code | (len + eb) << 24;
+                for (j = 0; j < (1u << eb); j += 2, entry += 2 << len) {
+                        lit_len_codes[k + j].code_and_length = entry;
+                        lit_len_codes[k + j + 1].code_and_length = entry + (1 << len);
+                }
                 k += 1 << eb;
         }
         /* The last entry is length 258, which has its own code */
