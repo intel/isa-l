@@ -199,6 +199,7 @@ objs = \
 	bin\igzip_gen_icf_map_lh1_04.obj \
 	bin\igzip_set_long_icf_fg_04.obj \
 	bin\igzip_set_long_icf_fg_06.obj \
+	bin\igzip_parse_icf_map_g_06.obj \
 	bin\mem_zero_detect_avx512.obj \
 	bin\mem_zero_detect_avx2.obj \
 	bin\mem_zero_detect_avx.obj \

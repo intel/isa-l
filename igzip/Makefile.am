@@ -78,7 +78,8 @@ lsrc_x86_64 +=	igzip/igzip_body.asm \
 		igzip/igzip_gen_icf_map_lh1_06.asm \
 		igzip/igzip_gen_icf_map_lh1_04.asm \
 		igzip/igzip_set_long_icf_fg_04.asm \
-		igzip/igzip_set_long_icf_fg_06.asm
+		igzip/igzip_set_long_icf_fg_06.asm \
+		igzip/igzip_parse_icf_map_g_06.asm
 
 src_include += -I $(srcdir)/igzip
 extern_hdrs +=	include/igzip_lib.h

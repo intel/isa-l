@@ -66,6 +66,11 @@ uint32_t
 gen_icf_map_h1_base(struct isal_zstream *stream, struct deflate_icf *matches_icf_lookup,
                     uint64_t input_size);
 
+struct deflate_icf *
+parse_icf_map_g_base(struct deflate_icf *matches_next, struct deflate_icf *matches_end,
+                     struct deflate_icf **icf_next, struct deflate_icf *icf_end,
+                     struct isal_mod_hist *hist);
+
 void
 isal_deflate_body(struct isal_zstream *stream)
 {
@@ -179,4 +184,12 @@ gen_icf_map_lh1(struct isal_zstream *stream, struct deflate_icf *matches_icf_loo
                 uint64_t input_size)
 {
         return gen_icf_map_h1_base(stream, matches_icf_lookup, input_size);
+}
+
+struct deflate_icf *
+parse_icf_map_g(struct deflate_icf *matches_next, struct deflate_icf *matches_end,
+                struct deflate_icf **icf_next, struct deflate_icf *icf_end,
+                struct isal_mod_hist *hist)
+{
+        return parse_icf_map_g_base(matches_next, matches_end, icf_next, icf_end, hist);
 }

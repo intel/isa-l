@@ -36,6 +36,7 @@
 #endif
 
 mbin_interface_base gen_icf_map_lh1, gen_icf_map_h1_base
+mbin_interface_base parse_icf_map_g, parse_icf_map_g_base
 mbin_interface_base decode_huffman_code_block_stateless, decode_huffman_code_block_stateless_base
 mbin_interface_base isal_deflate_icf_finish_lvl3, isal_deflate_icf_finish_hash_map_base
 mbin_interface_base isal_deflate_hash_lvl3, isal_deflate_hash_base

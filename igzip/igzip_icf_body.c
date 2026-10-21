@@ -7,6 +7,14 @@ extern uint32_t
 gen_icf_map_lh1(struct isal_zstream *, struct deflate_icf *, uint64_t);
 extern void
 set_long_icf_fg(uint8_t *, uint64_t, uint64_t, struct deflate_icf *);
+extern struct deflate_icf *
+parse_icf_map_g(struct deflate_icf *, struct deflate_icf *, struct deflate_icf **,
+                struct deflate_icf *, struct isal_mod_hist *);
+
+/* parse_icf_map_g_06 has room on its stack for the advances of 4K + 64 match map entries */
+#if MATCH_BUF_SIZE + 16 > 4 * 1024 + 64
+#error "parse_icf_map_g_06 has no room for MATCH_BUF_SIZE entries"
+#endif
 extern void
 isal_deflate_icf_body_lvl1(struct isal_zstream *);
 extern void
@@ -140,19 +148,22 @@ gen_icf_map_h1_base(struct isal_zstream *stream, struct deflate_icf *matches_icf
 * One pass methods for parsing provided match lookup table
 ************************************************************
 */
-static struct deflate_icf *
-compress_icf_map_g(struct isal_zstream *stream, struct deflate_icf *matches_next,
-                   struct deflate_icf *matches_end)
+/*
+ * Parses the match map from matches_next to matches_end greedily, writing the codes from
+ * *icf_next on while they fit before icf_end and adding them to hist, and returns where the
+ * parse stopped. Each step takes the match at the next position, or a literal and the match
+ * after it, or two literals in one code.
+ */
+struct deflate_icf *
+parse_icf_map_g_base(struct deflate_icf *matches_next, struct deflate_icf *matches_end,
+                     struct deflate_icf **icf_next, struct deflate_icf *icf_end,
+                     struct isal_mod_hist *hist)
 {
         uint32_t lit_len, lit_len2, dist;
         uint64_t code;
-        struct isal_zstate *state = &stream->internal_state;
-        struct level_buf *level_buf = (struct level_buf *) stream->level_buf;
-        struct deflate_icf *matches_start = matches_next;
-        struct deflate_icf *icf_buf_end =
-                level_buf->icf_buf_next + level_buf->icf_buf_avail_out / sizeof(struct deflate_icf);
+        struct deflate_icf *out = *icf_next;
 
-        while (matches_next + 1 < matches_end && level_buf->icf_buf_next + 1 < icf_buf_end) {
+        while (matches_next + 1 < matches_end && out + 1 < icf_end) {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
                 code = load_native_u64((uint8_t *) matches_next);
 #else
@@ -161,61 +172,77 @@ compress_icf_map_g(struct isal_zstream *stream, struct deflate_icf *matches_next
 #endif
                 lit_len = code & LIT_LEN_MASK;
                 lit_len2 = (code >> ICF_CODE_LEN) & LIT_LEN_MASK;
-                level_buf->hist.ll_hist[lit_len]++;
+                hist->ll_hist[lit_len]++;
 
                 if (lit_len >= LEN_START) {
-                        store_native_u32((uint8_t *) level_buf->icf_buf_next, (uint32_t) code);
-                        level_buf->icf_buf_next++;
+                        store_native_u32((uint8_t *) out, (uint32_t) code);
+                        out++;
 
                         dist = (code >> ICF_DIST_OFFSET) & DIST_LIT_MASK;
-                        level_buf->hist.d_hist[dist]++;
+                        hist->d_hist[dist]++;
                         lit_len -= LEN_OFFSET;
                         matches_next += lit_len;
 
                 } else if (lit_len2 >= LEN_START) {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-                        store_native_u64((uint8_t *) level_buf->icf_buf_next, code);
+                        store_native_u64((uint8_t *) out, code);
 #else
-                        store_native_u32((uint8_t *) level_buf->icf_buf_next, (uint32_t) code);
-                        store_native_u32((uint8_t *) (level_buf->icf_buf_next + 1),
-                                         (uint32_t) (code >> 32));
+                        store_native_u32((uint8_t *) out, (uint32_t) code);
+                        store_native_u32((uint8_t *) (out + 1), (uint32_t) (code >> 32));
 #endif
-                        level_buf->icf_buf_next += 2;
+                        out += 2;
 
-                        level_buf->hist.ll_hist[lit_len2]++;
+                        hist->ll_hist[lit_len2]++;
 
                         dist = (code >> (ICF_CODE_LEN + ICF_DIST_OFFSET)) & DIST_LIT_MASK;
-                        level_buf->hist.d_hist[dist]++;
+                        hist->d_hist[dist]++;
                         lit_len2 -= LEN_OFFSET - 1;
                         matches_next += lit_len2;
 
                 } else {
                         code = ((lit_len2 + LIT_START) << ICF_DIST_OFFSET) | lit_len;
-                        store_native_u32((uint8_t *) level_buf->icf_buf_next, (uint32_t) code);
-                        level_buf->icf_buf_next++;
+                        store_native_u32((uint8_t *) out, (uint32_t) code);
+                        out++;
 
-                        level_buf->hist.ll_hist[lit_len2]++;
+                        hist->ll_hist[lit_len2]++;
 
                         matches_next += 2;
                 }
         }
 
-        while (matches_next < matches_end && level_buf->icf_buf_next < icf_buf_end) {
+        while (matches_next < matches_end && out < icf_end) {
                 code = load_native_u32((uint8_t *) matches_next);
                 lit_len = code & LIT_LEN_MASK;
-                store_native_u32((uint8_t *) level_buf->icf_buf_next, (uint32_t) code);
-                level_buf->icf_buf_next++;
+                store_native_u32((uint8_t *) out, (uint32_t) code);
+                out++;
 
-                level_buf->hist.ll_hist[lit_len]++;
+                hist->ll_hist[lit_len]++;
                 if (lit_len >= LEN_START) {
                         dist = (code >> 10) & 0x1ff;
-                        level_buf->hist.d_hist[dist]++;
+                        hist->d_hist[dist]++;
                         lit_len -= LEN_OFFSET;
                         matches_next += lit_len;
                 } else {
                         matches_next++;
                 }
         }
+
+        *icf_next = out;
+        return matches_next;
+}
+
+static struct deflate_icf *
+compress_icf_map_g(struct isal_zstream *stream, struct deflate_icf *matches_next,
+                   struct deflate_icf *matches_end)
+{
+        struct isal_zstate *state = &stream->internal_state;
+        struct level_buf *level_buf = (struct level_buf *) stream->level_buf;
+        struct deflate_icf *matches_start = matches_next;
+        struct deflate_icf *icf_buf_end =
+                level_buf->icf_buf_next + level_buf->icf_buf_avail_out / sizeof(struct deflate_icf);
+
+        matches_next = parse_icf_map_g(matches_next, matches_end, &level_buf->icf_buf_next,
+                                       icf_buf_end, &level_buf->hist);
 
         level_buf->icf_buf_avail_out =
                 (icf_buf_end - level_buf->icf_buf_next) * sizeof(struct deflate_icf);

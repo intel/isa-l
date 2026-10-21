@@ -78,6 +78,10 @@ gen_icf_map_h1_aarch64(struct isal_zstream *, struct deflate_icf *, uint64_t inp
 extern uint32_t
 gen_icf_map_h1_base(struct isal_zstream *, struct deflate_icf *, uint64_t input_size);
 
+extern struct deflate_icf *
+parse_icf_map_g_base(struct deflate_icf *, struct deflate_icf *, struct deflate_icf **,
+                     struct deflate_icf *, struct isal_mod_hist *);
+
 extern void
 isal_deflate_hash_aarch64(uint16_t *, uint32_t, uint32_t, uint8_t *, uint32_t);
 extern void
@@ -235,6 +239,8 @@ DEFINE_INTERFACE_DISPATCHER(gen_icf_map_lh1)
 #endif
         return gen_icf_map_h1_base;
 }
+
+DEFINE_INTERFACE_DISPATCHER(parse_icf_map_g) { return parse_icf_map_g_base; }
 
 DEFINE_INTERFACE_DISPATCHER(isal_deflate_hash_lvl0)
 {

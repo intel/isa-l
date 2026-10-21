@@ -67,6 +67,7 @@ set(IGZIP_X86_64_SOURCES
     igzip/igzip_gen_icf_map_lh1_04.asm
     igzip/igzip_set_long_icf_fg_04.asm
     igzip/igzip_set_long_icf_fg_06.asm
+    igzip/igzip_parse_icf_map_g_06.asm
 )
 
 set(IGZIP_AARCH64_SOURCES

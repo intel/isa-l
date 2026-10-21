@@ -64,6 +64,8 @@ extern set_long_icf_fg_04
 extern encode_deflate_icf_06
 extern set_long_icf_fg_06
 extern gen_icf_map_lh1_06
+extern parse_icf_map_g_base
+extern parse_icf_map_g_06
 
 extern adler32_base
 extern adler32_avx2_4
@@ -115,6 +117,9 @@ mbin_dispatch_init6	set_long_icf_fg, set_long_icf_fg_base, set_long_icf_fg_base,
 
 mbin_interface		gen_icf_map_lh1
 mbin_dispatch_init6	gen_icf_map_lh1, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_lh1_04, gen_icf_map_lh1_06
+
+mbin_interface		parse_icf_map_g
+mbin_dispatch_init6	parse_icf_map_g, parse_icf_map_g_base, parse_icf_map_g_base, parse_icf_map_g_base, parse_icf_map_g_base, parse_icf_map_g_06
 
 mbin_interface		isal_adler32
 mbin_dispatch_init5	isal_adler32, adler32_base, adler32_sse, adler32_sse, adler32_avx2_4
