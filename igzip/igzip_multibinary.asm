@@ -62,6 +62,7 @@ extern set_long_icf_fg_base
 extern set_long_icf_fg_04
 
 extern encode_deflate_icf_06
+extern encode_deflate_icf_10
 extern set_long_icf_fg_06
 extern gen_icf_map_lh1_06
 
@@ -80,6 +81,12 @@ extern icf_body_lazyhash1_fillgreedy_greedy
 section .text
 
 %include "multibinary.asm"
+
+%ifndef FLAG_CPUID0_EBX_AMD
+%define FLAG_CPUID0_EBX_AMD	0x68747541	;"htuA"
+%define FLAG_CPUID0_EDX_AMD	0x69746e65	;"itne"
+%define FLAG_CPUID0_ECX_AMD	0x444d4163	;"DMAc"
+%endif
 
 mbin_interface		isal_deflate_body
 mbin_dispatch_init5	isal_deflate_body, isal_deflate_body_base, isal_deflate_body_01, isal_deflate_body_02, isal_deflate_body_04
@@ -108,7 +115,9 @@ mbin_interface		isal_update_histogram
 mbin_dispatch_init5	isal_update_histogram, isal_update_histogram_base, isal_update_histogram_01, isal_update_histogram_01, isal_update_histogram_04
 
 mbin_interface		encode_deflate_icf
-mbin_dispatch_init6	encode_deflate_icf, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_04, encode_deflate_icf_06
+;; The byte plane lookups of encode_deflate_icf_10 beat the gathers of
+;; encode_deflate_icf_06 on AMD, but not on Emerald Rapids or Granite Rapids
+mbin_dispatch_init6	encode_deflate_icf, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_04, encode_deflate_icf_06, encode_deflate_icf_10, FLAGS_CPUID7_ECX_AVX512_G2 | FLAG_CPUID7_ECX_AVX512VBMI
 
 mbin_interface		set_long_icf_fg
 mbin_dispatch_init6	set_long_icf_fg, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_04, set_long_icf_fg_06

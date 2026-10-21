@@ -193,6 +193,7 @@ objs = \
 	bin\igzip_inflate_multibinary.obj \
 	bin\encode_df_04.obj \
 	bin\encode_df_06.obj \
+	bin\encode_df_10.obj \
 	bin\proc_heap.obj \
 	bin\igzip_deflate_hash.obj \
 	bin\igzip_gen_icf_map_lh1_06.obj \

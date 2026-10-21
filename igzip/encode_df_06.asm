@@ -32,8 +32,13 @@
 %include "data_struct2.asm"
 %include "stdmac.asm"
 
+%ifndef ARCH
 %define ARCH 06
+%endif
 %define USE_HSWNI
+
+;; With USE_BYTE_PLANES, which encode_df_10.asm defines, the encoder looks up
+;; codes with AVX-512 VBMI instead of gathers
 
 ; tree entry is 4 bytes:
 ; lit/len tree (513 entries)
@@ -87,6 +92,10 @@
 %define len 		dsym
 %define tmp2 		r10
 %define end_ptr		rbp
+%ifdef USE_BYTE_PLANES
+%define planes		data	; byte planes of the code tables, and lookups of 64 entries
+%define lidx		dsym	; offset of the next 16 lookups in the lookups of 64 entries
+%endif
 
 %define LIT_MASK	((0x1 << LIT_LEN_BIT_COUNT) - 1)
 %define DIST_MASK	((0x1 << DIST_LIT_BIT_COUNT) - 1)
@@ -122,9 +131,37 @@
 %define zrot_perm	zmm21
 %define zq_8		zmm22
 
+%ifdef USE_BYTE_PLANES
+;; Registers for looking up codes in byte planes
+%define zidx_lit	zmm24
+%define zidx_dist	zmm25
+%define zp0		zmm26
+%define zp1		zmm27
+%define zp2		zmm28
+%define zp3		zmm29
+%define zt0		zmm30
+%define zt1		zmm31
+%define zt2		zmm7
+%define zt3		zmm8
+%endif
+
 %define VECTOR_SIZE 0x40
 %define VECTOR_LOOP_PROCESSED (2 * VECTOR_SIZE)
 %define VECTOR_SLOP 0x40 - 8
+
+%ifdef USE_BYTE_PLANES
+;; Byte plane p of a code table holds byte p of each entry. Plane p of the
+;; 513 entry lit/len table is at LIT_PLANES + 512 * p, without entry 512,
+;; and plane p of the 288 entry dist table is at DIST_PLANES + 288 * p, with
+;; room after the last for the 64 bytes that a lookup reads from entry 256.
+;; LOOKUPS holds the lit/len and then the dist lookups of 64 entries.
+%define LIT_PLANES	0
+%define LOOKUPS		(LIT_PLANES + 4 * 512)
+%define DIST_PLANES	(LOOKUPS + 2 * 4 * 64)
+%define PLANES_SIZE	(DIST_PLANES + 3 * 288 + 320)
+;; Fewest entries for which making the planes pays off
+%define PLANES_MIN_ENTRIES 256
+%endif
 
 gpr_save_mem_offset	equ	0
 gpr_save_mem_size	equ	8 * 6
@@ -132,7 +169,19 @@ xmm_save_mem_offset	equ	gpr_save_mem_offset + gpr_save_mem_size
 xmm_save_mem_size	equ	10 * 16
 bitbuf_mem_offset	equ	xmm_save_mem_offset + xmm_save_mem_size
 bitbuf_mem_size		equ	8
+%ifdef USE_BYTE_PLANES
+refill_end_mem_offset	equ	bitbuf_mem_offset + bitbuf_mem_size
+refill_end_mem_size	equ	8
+planes_mem_offset	equ	refill_end_mem_offset + refill_end_mem_size
+;; rsp + planes_mem_offset is 16 byte aligned, so 48 bytes are enough to align
+;; the planes to 64. Keep stack_size under 4 KB, past which a win64 stack
+;; frame must probe its pages.
+planes_mem_size		equ	PLANES_SIZE + 48 + 8	; 8 keeps the stack 16 byte aligned
+stack_size		equ	planes_mem_offset + planes_mem_size
+%else
 stack_size		equ	gpr_save_mem_size + xmm_save_mem_size + bitbuf_mem_size
+%endif
+
 
 
 %macro FUNC_SAVE 0
@@ -183,6 +232,109 @@ stack_size		equ	gpr_save_mem_size + xmm_save_mem_size + bitbuf_mem_size
 
 %endmacro
 
+
+%ifdef USE_BYTE_PLANES
+;; Looks up the codes of the 64 entries at ptr in the byte planes, and writes
+;; them to LOOKUPS. Byte k of zidx_lit and zidx_dist holds the indexes of
+;; entry entry_order[k], which puts the entries back in order when
+;; PLANES_TO_ENTRIES interleaves the planes. Clobbers k1-k7, and restores the
+;; masks of the main loop in k1-k5.
+%macro LOOKUP_64 0
+	kmovq	k7, [upper_entries]
+	vmovdqu64	zp0, [ptr]
+	vmovdqu64	zp1, [ptr + 64]
+	vmovdqu64	zp2, [ptr + 128]
+	vmovdqu64	zp3, [ptr + 192]
+
+	;; Bytes 0, 1 and 2 of each entry
+	vmovdqa64	zidx_lit, [entry_byte0]
+	vmovdqa64	zt0, zidx_lit
+	vpermi2b	zidx_lit, zp0, zp1
+	vpermi2b	zt0, zp2, zp3
+	vmovdqu8	zidx_lit {k7}, zt0
+	vmovdqa64	zt2, [entry_byte1]
+	vmovdqa64	zt0, zt2
+	vpermi2b	zt2, zp0, zp1
+	vpermi2b	zt0, zp2, zp3
+	vmovdqu8	zt2 {k7}, zt0
+	vmovdqa64	zt3, [entry_byte2]
+	vmovdqa64	zt0, zt3
+	vpermi2b	zt3, zp0, zp1
+	vpermi2b	zt0, zp2, zp3
+	vmovdqu8	zt3 {k7}, zt0
+
+	;; The lit/len index is bits 9:0 of an entry, and the dist index bits
+	;; 18:10. k1 and k2 get bits 7 and 8 of the lit/len index, and k3 bit 9,
+	;; which is set only for entry 512. k4 and k5 get bits 7 and 8 of the
+	;; dist index, which is less than 288.
+	vpmovb2m	k1, zidx_lit
+	vptestmb	k2, zt2, [bytes_1]
+	vptestmb	k3, zt2, [bytes_2]
+	vpsrlw	zt0, zt2, 2
+	vpsllw	zidx_dist, zt3, 6
+	vpternlogd	zidx_dist, zt0, [bytes_3f]{1to16}, 0xd8
+	vpmovb2m	k4, zidx_dist
+	vptestmb	k5, zt3, [bytes_4]
+
+	;; vpermt2b looks up the low 7 bits of an index in 128 entries
+%assign p 0
+%rep 4
+	vmovdqa64	zt0, [planes + LIT_PLANES + 512 * p]
+	vpermt2b	zt0, zidx_lit, [planes + LIT_PLANES + 512 * p + 64]
+	vmovdqa64	zt1, [planes + LIT_PLANES + 512 * p + 128]
+	vpermt2b	zt1, zidx_lit, [planes + LIT_PLANES + 512 * p + 192]
+	vmovdqu8	zt0 {k1}, zt1
+	vmovdqa64	zt1, [planes + LIT_PLANES + 512 * p + 256]
+	vpermt2b	zt1, zidx_lit, [planes + LIT_PLANES + 512 * p + 320]
+	vmovdqa64	zp %+ p, [planes + LIT_PLANES + 512 * p + 384]
+	vpermt2b	zp %+ p, zidx_lit, [planes + LIT_PLANES + 512 * p + 448]
+	vmovdqu8	zt1 {k1}, zp %+ p
+	vmovdqu8	zt0 {k2}, zt1
+	vpbroadcastb	zt0 {k3}, [hufftables + _lit_len_table + 4 * 512 + p]
+	vmovdqa64	zp %+ p, zt0
+%assign p (p + 1)
+%endrep
+	PLANES_TO_ENTRIES	planes + LOOKUPS
+
+%assign p 0
+%rep 4
+	vmovdqu64	zt0, [planes + DIST_PLANES + 288 * p]
+	vpermt2b	zt0, zidx_dist, [planes + DIST_PLANES + 288 * p + 64]
+	vmovdqu64	zt1, [planes + DIST_PLANES + 288 * p + 128]
+	vpermt2b	zt1, zidx_dist, [planes + DIST_PLANES + 288 * p + 192]
+	vmovdqu8	zt0 {k4}, zt1
+	vpermb	zt1, zidx_dist, [planes + DIST_PLANES + 288 * p + 256]
+	vmovdqu8	zt0 {k5}, zt1
+	vmovdqa64	zp %+ p, zt0
+%assign p (p + 1)
+%endrep
+	PLANES_TO_ENTRIES	planes + LOOKUPS + 4 * 64
+
+	kmovq	k1, [k_mask_1]
+	kmovq	k2, [k_mask_2]
+	kmovq	k3, [k_mask_3]
+	kmovq	k4, [k_mask_4]
+	kmovq	k5, [k_mask_5]
+	xor	lidx, lidx
+%endm
+
+;; Interleaves the byte planes zp0-zp3 of 64 lookups into dwords at %1
+%macro PLANES_TO_ENTRIES 1
+	vpunpcklbw	zt0, zp0, zp1
+	vpunpckhbw	zt1, zp0, zp1
+	vpunpcklbw	zt2, zp2, zp3
+	vpunpckhbw	zt3, zp2, zp3
+	vpunpcklwd	zp0, zt0, zt2
+	vmovdqu64	[%1], zp0
+	vpunpckhwd	zp1, zt0, zt2
+	vmovdqu64	[%1 + 64], zp1
+	vpunpcklwd	zp2, zt1, zt3
+	vmovdqu64	[%1 + 128], zp2
+	vpunpckhwd	zp3, zt1, zt3
+	vmovdqu64	[%1 + 192], zp3
+%endm
+%endif
+
 default rel
 section .text
 
@@ -230,6 +382,48 @@ encode_deflate_icf_ %+ ARCH:
 	vpbroadcastd zeb_icr_mask, [eb_icr_mask]
 	vpbroadcastd zmax_write, [max_write_d]
 
+%ifdef USE_BYTE_PLANES
+	;; With enough entries, look up their codes 64 at a time in byte planes
+	;; of the code tables with vpermi2b, which takes less time than gathers
+	mov	lidx, 4 * 64
+	mov	qword [rsp + refill_end_mem_offset], 0
+	mov	tmp, in_buf_end
+	sub	tmp, ptr
+	cmp	tmp, 4 * PLANES_MIN_ENTRIES
+	jl	.planes_done
+
+	;; Lookups of 64 entries read 256 bytes from ptr, and in_buf_end is
+	;; 128 bytes before the end of the entries
+	lea	tmp, [in_buf_end - 2 * VECTOR_SIZE]
+	mov	[rsp + refill_end_mem_offset], tmp
+
+	lea	planes, [rsp + planes_mem_offset + 48]
+	and	planes, -64
+	vmovdqa64	zt0, [plane_perm]
+	xor	tmp, tmp
+.lit_planes:
+	vpermb	zt1, zt0, [hufftables + _lit_len_table + 4 * tmp]
+	vmovdqu64	[planes + LIT_PLANES + tmp], zt1 %+ x
+	vextracti32x4	[planes + LIT_PLANES + 512 + tmp], zt1, 1
+	vextracti32x4	[planes + LIT_PLANES + 2 * 512 + tmp], zt1, 2
+	vextracti32x4	[planes + LIT_PLANES + 3 * 512 + tmp], zt1, 3
+	add	tmp, 16
+	cmp	tmp, 512
+	jb	.lit_planes
+
+	xor	tmp, tmp
+.dist_planes:
+	vpermb	zt1, zt0, [hufftables + _dist_table + 4 * tmp]
+	vmovdqu64	[planes + DIST_PLANES + tmp], zt1 %+ x
+	vextracti32x4	[planes + DIST_PLANES + 288 + tmp], zt1, 1
+	vextracti32x4	[planes + DIST_PLANES + 2 * 288 + tmp], zt1, 2
+	vextracti32x4	[planes + DIST_PLANES + 3 * 288 + tmp], zt1, 3
+	add	tmp, 16
+	cmp	tmp, 288
+	jb	.dist_planes
+.planes_done:
+%endif
+
 	knotq	k6, k0
 	vmovdqu64	datas, [ptr]
 	vpandd	syms, datas, zlit_mask
@@ -262,6 +456,20 @@ encode_deflate_icf_ %+ ARCH:
 	ja	.main_loop_exit
 
 	;; Start code lookups for next iteration
+%ifdef USE_BYTE_PLANES
+	add	ptr, VECTOR_SIZE
+	vmovdqu64	datas, [ptr]
+	cmp	lidx, 4 * 64
+	jb	.next_lookups
+	cmp	ptr, [rsp + refill_end_mem_offset]
+	ja	.gather_lookups
+	LOOKUP_64
+.next_lookups:
+	vmovdqu64	codes_lookup1, [planes + LOOKUPS + lidx]
+	vmovdqu64	codes_lookup2, [planes + LOOKUPS + 4 * 64 + lidx]
+	add	lidx, 64
+.lookups_done:
+%else
 	knotq	k6, k0
 	add	ptr, VECTOR_SIZE
 	vmovdqu64	datas, [ptr]
@@ -272,6 +480,7 @@ encode_deflate_icf_ %+ ARCH:
 	vpsrld	dsyms, datas, DIST_OFFSET
 	vpandd	dsyms, dsyms, zdist_mask
 	vpgatherdd codes_lookup2 {k7}, [hufftables + _dist_table + 4 * dsyms]
+%endif
 
 	;; Merge dist code with extra bits
 	vpsllvd	codes3, codes3, code_lens2
@@ -357,6 +566,19 @@ encode_deflate_icf_ %+ ARCH:
 	vmovq	rcx, zbits_count %+ x
 	vmovq	bits, zbits %+ x
 	jmp	.finish
+
+%ifdef USE_BYTE_PLANES
+.gather_lookups:
+	knotq	k6, k0
+	vpandd	syms, datas, zlit_mask
+	vpgatherdd codes_lookup1 {k6}, [hufftables + _lit_len_table + 4 * syms]
+
+	knotq	k7, k0
+	vpsrld	dsyms, datas, DIST_OFFSET
+	vpandd	dsyms, dsyms, zdist_mask
+	vpgatherdd codes_lookup2 {k7}, [hufftables + _dist_table + 4 * dsyms]
+	jmp	.lookups_done
+%endif
 
 .small_codes:
 	;; Merge overlapping last bytes
@@ -589,6 +811,50 @@ section .data
 rot_perm:
 	dq 0x00000007, 0x00000000, 0x00000001, 0x00000002
 	dq 0x00000003, 0x00000004, 0x00000005, 0x00000006
+%ifdef USE_BYTE_PLANES
+section .rodata
+	align 64
+;; Byte 16 * p + k is byte p of dword k, to split 16 dwords into byte planes
+plane_perm:
+	db 0x00, 0x04, 0x08, 0x0c, 0x10, 0x14, 0x18, 0x1c, 0x20, 0x24, 0x28, 0x2c, 0x30, 0x34, 0x38, 0x3c
+	db 0x01, 0x05, 0x09, 0x0d, 0x11, 0x15, 0x19, 0x1d, 0x21, 0x25, 0x29, 0x2d, 0x31, 0x35, 0x39, 0x3d
+	db 0x02, 0x06, 0x0a, 0x0e, 0x12, 0x16, 0x1a, 0x1e, 0x22, 0x26, 0x2a, 0x2e, 0x32, 0x36, 0x3a, 0x3e
+	db 0x03, 0x07, 0x0b, 0x0f, 0x13, 0x17, 0x1b, 0x1f, 0x23, 0x27, 0x2b, 0x2f, 0x33, 0x37, 0x3b, 0x3f
+;; The entry whose indexes byte k of a lookup index vector holds
+;; entry_order: 0 1 2 3 16 17 18 19 32 33 34 35 48 49 50 51 4 5 6 7 20 21 22 23 36 37 38 39 52 53 54 55 8 9 10 11 24 25 26 27 40 41 42 43 56 57 58 59 12 13 14 15 28 29 30 31 44 45 46 47 60 61 62 63
+;; Byte 0 of entry entry_order[k], in two vectors of 32 entries
+entry_byte0:
+	db 0x00, 0x04, 0x08, 0x0c, 0x40, 0x44, 0x48, 0x4c, 0x00, 0x04, 0x08, 0x0c, 0x40, 0x44, 0x48, 0x4c
+	db 0x10, 0x14, 0x18, 0x1c, 0x50, 0x54, 0x58, 0x5c, 0x10, 0x14, 0x18, 0x1c, 0x50, 0x54, 0x58, 0x5c
+	db 0x20, 0x24, 0x28, 0x2c, 0x60, 0x64, 0x68, 0x6c, 0x20, 0x24, 0x28, 0x2c, 0x60, 0x64, 0x68, 0x6c
+	db 0x30, 0x34, 0x38, 0x3c, 0x70, 0x74, 0x78, 0x7c, 0x30, 0x34, 0x38, 0x3c, 0x70, 0x74, 0x78, 0x7c
+;; Byte 1 of entry entry_order[k], in two vectors of 32 entries
+entry_byte1:
+	db 0x01, 0x05, 0x09, 0x0d, 0x41, 0x45, 0x49, 0x4d, 0x01, 0x05, 0x09, 0x0d, 0x41, 0x45, 0x49, 0x4d
+	db 0x11, 0x15, 0x19, 0x1d, 0x51, 0x55, 0x59, 0x5d, 0x11, 0x15, 0x19, 0x1d, 0x51, 0x55, 0x59, 0x5d
+	db 0x21, 0x25, 0x29, 0x2d, 0x61, 0x65, 0x69, 0x6d, 0x21, 0x25, 0x29, 0x2d, 0x61, 0x65, 0x69, 0x6d
+	db 0x31, 0x35, 0x39, 0x3d, 0x71, 0x75, 0x79, 0x7d, 0x31, 0x35, 0x39, 0x3d, 0x71, 0x75, 0x79, 0x7d
+;; Byte 2 of entry entry_order[k], in two vectors of 32 entries
+entry_byte2:
+	db 0x02, 0x06, 0x0a, 0x0e, 0x42, 0x46, 0x4a, 0x4e, 0x02, 0x06, 0x0a, 0x0e, 0x42, 0x46, 0x4a, 0x4e
+	db 0x12, 0x16, 0x1a, 0x1e, 0x52, 0x56, 0x5a, 0x5e, 0x12, 0x16, 0x1a, 0x1e, 0x52, 0x56, 0x5a, 0x5e
+	db 0x22, 0x26, 0x2a, 0x2e, 0x62, 0x66, 0x6a, 0x6e, 0x22, 0x26, 0x2a, 0x2e, 0x62, 0x66, 0x6a, 0x6e
+	db 0x32, 0x36, 0x3a, 0x3e, 0x72, 0x76, 0x7a, 0x7e, 0x32, 0x36, 0x3a, 0x3e, 0x72, 0x76, 0x7a, 0x7e
+bytes_1:
+	times 64 db 0x01
+bytes_2:
+	times 64 db 0x02
+bytes_4:
+	times 64 db 0x04
+;; 32 bit constant for vpternlogd, applied to every byte
+bytes_3f:
+	dd 0x3f3f3f3f
+;; Bytes of entry_order with entries 32 to 63
+upper_entries:
+	dq 0xff00ff00ff00ff00
+
+section .data
+%endif
 
 ;; 16 byte data
 q_64:

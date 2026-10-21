@@ -73,6 +73,7 @@ lsrc_x86_64 +=	igzip/igzip_body.asm \
 		igzip/igzip_inflate_multibinary.asm \
 		igzip/encode_df_04.asm \
 		igzip/encode_df_06.asm \
+		igzip/encode_df_10.asm \
 		igzip/proc_heap.asm \
 		igzip/igzip_deflate_hash.asm \
 		igzip/igzip_gen_icf_map_lh1_06.asm \
