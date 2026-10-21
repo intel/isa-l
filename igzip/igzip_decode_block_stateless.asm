@@ -735,8 +735,12 @@ out_buffer_overflow_lit:
 	cmp	next_sym, 256
 	jl	end
 	mov	dword [state + _write_overflow_len], next_sym_num %+ d
-	jg	decode_len_dist_2
-	jmp	end_state
+	je	end_state
+
+	;; The match starts after the literals held in write_overflow_lits,
+	;; so its distance also counts them
+	sub	[rsp + start_out_mem_offset], next_sym_num
+	jmp	decode_len_dist_2
 
 invalid_look_back_distance:
 	mov	rax, INVALID_LOOKBACK
