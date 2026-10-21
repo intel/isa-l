@@ -201,8 +201,10 @@
 ; 4-> AVX/02 opt func
 ; 5-> AVX2/04 opt func
 ; 6-> AVX512/06 opt func
+; 7-> AVX512/06 opt func for AMD processors (optional)
+; 8-> CPUID.7.0:ECX features that the 7th function also needs (optional)
 ;;;;;
-%macro mbin_dispatch_init6 6
+%macro mbin_dispatch_init6 6-8
 	section .text
 	%1_dispatch_init:
 		push	rsi
@@ -250,6 +252,27 @@
 		cmp	ebx, FLAGS_CPUID7_EBX_AVX512_G1
 		lea	rbx, [%6 WRT_OPT] ; AVX512/06 opt
 		cmove	rsi, rbx
+%if %0 > 6
+		jne	_%1_init_done
+
+%if %0 > 7
+		;; Test for the other features of the 7th function
+		and	ecx, %8
+		cmp	ecx, %8
+		jne	_%1_init_done
+%endif
+
+		;; Test for an AMD processor
+		xor	eax, eax
+		cpuid
+		cmp	ebx, FLAG_CPUID0_EBX_AMD
+		jne	_%1_init_done
+		cmp	edx, FLAG_CPUID0_EDX_AMD
+		jne	_%1_init_done
+		cmp	ecx, FLAG_CPUID0_ECX_AMD
+		jne	_%1_init_done
+		lea	rsi, [%7 WRT_OPT] ; AVX512/06 opt func for AMD
+%endif
 
 	_%1_init_done:
 		pop	rdi

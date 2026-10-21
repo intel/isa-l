@@ -63,6 +63,7 @@ extern set_long_icf_fg_04
 
 extern encode_deflate_icf_06
 extern set_long_icf_fg_06
+extern gen_icf_map_lh1_06_nogather
 extern gen_icf_map_lh1_06
 
 extern adler32_base
@@ -80,6 +81,12 @@ extern icf_body_lazyhash1_fillgreedy_greedy
 section .text
 
 %include "multibinary.asm"
+
+%ifndef FLAG_CPUID0_EBX_AMD
+%define FLAG_CPUID0_EBX_AMD	0x68747541	;"htuA"
+%define FLAG_CPUID0_EDX_AMD	0x69746e65	;"itne"
+%define FLAG_CPUID0_ECX_AMD	0x444d4163	;"DMAc"
+%endif
 
 mbin_interface		isal_deflate_body
 mbin_dispatch_init5	isal_deflate_body, isal_deflate_body_base, isal_deflate_body_01, isal_deflate_body_02, isal_deflate_body_04
@@ -114,7 +121,10 @@ mbin_interface		set_long_icf_fg
 mbin_dispatch_init6	set_long_icf_fg, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_04, set_long_icf_fg_06
 
 mbin_interface		gen_icf_map_lh1
-mbin_dispatch_init6	gen_icf_map_lh1, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_lh1_04, gen_icf_map_lh1_06
+;; gen_icf_map_lh1_06_nogather looks up the hash table with scalar loads, which
+;; beat the gathers and scatters of gen_icf_map_lh1_06 on AMD, but not on
+;; Emerald Rapids or Granite Rapids
+mbin_dispatch_init6	gen_icf_map_lh1, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_h1_base, gen_icf_map_lh1_04, gen_icf_map_lh1_06, gen_icf_map_lh1_06_nogather
 
 mbin_interface		isal_adler32
 mbin_dispatch_init5	isal_adler32, adler32_base, adler32_sse, adler32_sse, adler32_avx2_4

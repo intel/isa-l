@@ -64,6 +64,7 @@ set(IGZIP_X86_64_SOURCES
     igzip/proc_heap.asm
     igzip/igzip_deflate_hash.asm
     igzip/igzip_gen_icf_map_lh1_06.asm
+    igzip/igzip_gen_icf_map_lh1_06_nogather.asm
     igzip/igzip_gen_icf_map_lh1_04.asm
     igzip/igzip_set_long_icf_fg_04.asm
     igzip/igzip_set_long_icf_fg_06.asm
