@@ -1037,6 +1037,24 @@ set_codes_by_sym(struct huff_code *codes, const uint16_t *syms, uint32_t num, co
         }
 }
 
+static inline uint32_t
+tzbitcnt(uint64_t val)
+{
+        /* val is not 0 */
+#if defined(_MSC_VER) && defined(_M_X64)
+        unsigned long cnt;
+        _BitScanForward64(&cnt, val);
+        return cnt;
+#elif defined(__GNUC__) || defined(__clang__)
+        return __builtin_ctzll(val);
+#else
+        uint32_t cnt;
+        for (cnt = 0; (val & 1) == 0; val >>= 1)
+                cnt++;
+        return cnt;
+#endif
+}
+
 /*
  * Run length encodes the code lengths lens[0..n) with the code length codes of RFC 1951, writes
  * the codes and their extra bits to out[], adds the count of each code to counts[], and returns
@@ -1052,73 +1070,83 @@ set_codes_by_sym(struct huff_code *codes, const uint16_t *syms, uint32_t num, co
 static uint32_t
 rl_encode_lens(uint8_t *lens, uint32_t n, uint32_t *counts, struct rl_code *out)
 {
+        uint64_t x, diff, prev, bits;
+        uint32_t i, w, s, e, len, lead, rest, big, mask, long_zeros, code;
+        uint32_t count16 = 0, count17 = 0, count18 = 0;
         struct rl_code *pout = out;
-        uint32_t i = 0, len, run_len;
-        uint64_t mismatch;
 
-        while (i < n) {
-                len = lens[i];
-                run_len = 0;
-                do {
-                        mismatch = load_le_u64(&lens[i + run_len]) ^ (len * 0x0101010101010101ULL);
-                        run_len += tzbytecnt(mismatch);
-                } while (mismatch == 0);
-                i += run_len;
+        prev = (uint8_t) ~lens[0];
+        s = 0;
+        for (w = 0; w <= n / 64; w++) {
+                /*
+                 * Set a bit in bits for each i in 64 * w..64 * w + 63 up to n where a run starts,
+                 * where lens[i] differs from lens[i - 1], 8 lengths at a time. A byte of diff
+                 * that is not 0 gets its top bit set, and the multiply gathers the top bits of
+                 * the 8 bytes. The run at 0 is the first one, and the run at n is not encoded.
+                 */
+                bits = 0;
+                for (i = 64 * w; i < 64 * w + 64 && i <= n; i += 8) {
+                        x = load_le_u64(&lens[i]);
+                        diff = x ^ (x << 8 | prev);
+                        prev = x >> 56;
+                        diff |= (diff & 0x7F7F7F7F7F7F7F7FULL) + 0x7F7F7F7F7F7F7F7FULL;
+                        bits |= ((diff >> 7) & 0x0101010101010101ULL) * 0x0102040810204080ULL >>
+                                56 << (i % 64);
+                }
+                if (w == n / 64)
+                        bits &= (2ULL << (n % 64)) - 1;
+                if (w == 0)
+                        bits &= ~1ULL;
 
-                if (len == 0) {
-                        while (run_len > 138) {
-                                pout->code = 18;
-                                pout->extra_bits = 138 - 11;
-                                pout++;
-                                run_len -= 138;
-                                counts[18]++;
-                        }
-                        if (run_len > 10) {
-                                pout->code = 18;
-                                pout->extra_bits = run_len - 11;
-                                pout++;
-                                counts[18]++;
-                        } else if (run_len > 2) {
-                                pout->code = 17;
-                                pout->extra_bits = run_len - 3;
-                                pout++;
-                                counts[17]++;
-                        } else {
-                                pout[0].code = 0;
-                                pout[0].extra_bits = 0;
-                                pout[1].code = 0;
-                                pout[1].extra_bits = 0;
-                                pout += run_len;
-                                counts[0] += run_len;
-                        }
-                } else {
+                /*
+                 * Each run from s to the next start e writes its codes without branches, unless
+                 * it needs more than one code 18 or code 16. Two codes are written, and the ones
+                 * needed kept.
+                 */
+                for (; bits != 0; bits &= bits - 1) {
+                        e = w * 64 + tzbitcnt(bits);
+                        len = lens[s];
+                        lead = (len + 15) >> 4; /* A nonzero length starts with the length */
+                        rest = e - s - lead;
+                        s = e;
+
                         pout->code = len;
                         pout->extra_bits = 0;
-                        pout++;
-                        counts[len]++;
-                        run_len--;
-                        while (run_len > 6) {
-                                pout->code = 16;
-                                pout->extra_bits = 6 - 3;
-                                pout++;
-                                run_len -= 6;
-                                counts[16]++;
+                        pout += lead;
+
+                        if (rest > 138 - 132 * lead) {
+                                code = lead ? 16 : 18;
+                                while (rest > 138 - 132 * lead) {
+                                        pout->code = code;
+                                        pout->extra_bits = lead ? 6 - 3 : 138 - 11;
+                                        pout++;
+                                        counts[code]++;
+                                        rest -= 138 - 132 * lead;
+                                }
                         }
-                        if (run_len > 2) {
-                                pout->code = 16;
-                                pout->extra_bits = run_len - 3;
-                                pout++;
-                                counts[16]++;
-                        } else {
-                                pout[0].code = len;
-                                pout[0].extra_bits = 0;
-                                pout[1].code = len;
-                                pout[1].extra_bits = 0;
-                                pout += run_len;
-                                counts[len] += run_len;
-                        }
+
+                        /*
+                         * Code 16, 17, or 18 for 3 or more repeats, or the length 0 to 2 times.
+                         * rest is at most 138 here.
+                         */
+                        big = (rest + 253) >> 8;
+                        mask = 0 - big;
+                        long_zeros = ((rest + 245) >> 8) & (lead ^ 1);
+                        code = 17 + long_zeros - lead;
+                        pout[0].code = len ^ ((len ^ code) & mask);
+                        pout[0].extra_bits = (rest - 3 - 8 * long_zeros) & mask;
+                        pout[1].code = len;
+                        pout[1].extra_bits = 0;
+                        pout += rest ^ ((rest ^ 1) & mask);
+                        counts[len] += lead + (rest & ~mask);
+                        count16 += big & lead;
+                        count17 += big & ~(lead | long_zeros);
+                        count18 += long_zeros & big;
                 }
         }
+        counts[16] += count16;
+        counts[17] += count17;
+        counts[18] += count18;
 
         return (uint32_t) (pout - out);
 }
