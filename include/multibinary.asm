@@ -319,6 +319,7 @@
 		jne	_%1_check_avx2_g2	  ; No AVX512 possible
 		and	ebx, FLAGS_CPUID7_EBX_AVX512_G1
 		cmp	ebx, FLAGS_CPUID7_EBX_AVX512_G1
+		jne	_%1_init_done	  ; No AVX512 G1, keep AVX2/04
 		lea	rbx, [%6 WRT_OPT] ; AVX512/06 opt
 		cmove	rsi, rbx
 
@@ -443,6 +444,7 @@
 		jne	_%1_check_avx2_g2	  ; No AVX512 possible
 		and	ebx, FLAGS_CPUID7_EBX_AVX512_G1
 		cmp	ebx, FLAGS_CPUID7_EBX_AVX512_G1
+		jne	_%1_init_done	  ; No AVX512 G1, keep AVX2/04
 		lea	rbx, [%6 WRT_OPT] ; AVX512/06 opt
 		cmove	rsi, rbx
 
