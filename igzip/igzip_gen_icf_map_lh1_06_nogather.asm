@@ -71,36 +71,40 @@
 ;; Results of each stage kept for the next stage
 %define zold zmm0
 %define zold_next zmm16
-%define zmatch1 zmm1
-%define zmatch2 zmm2
-%define zdcode zmm3
-%define zoffs zmm4
+%define zmatch0 zmm1
+%define zmatch1 zmm2
+%define zmatch2 zmm3
+%define zmatch3 zmm4
+%define zdcode zmm5
+%define zoffs zmm6
 
 ;; Temporaries
-%define ztmp0 zmm5
-%define ztmp1 zmm6
-%define ztmp2 zmm7
-%define ztmp3 zmm8
-%define ztmp4 zmm9
-%define ztmp5 zmm10
-%define ztmp6 zmm11
-%define ztmp7 zmm12
+%define ztmp0 zmm7
+%define ztmp1 zmm8
+%define ztmp2 zmm9
+%define ztmp3 zmm10
+%define ztmp4 zmm11
+%define ztmp5 zmm12
+%define ztmp6 zmm13
+%define ztmp7 zmm14
 
-%define znull_dist_syms zmm15
-%define zthirty zmm17
-%define zdist_mask zmm18
-%define zshortest_matches zmm19
-%define zrot_left zmm20
-%define zdatas_perm zmm21
-%define zdatas_perm2 zmm22
-%define zdatas_perm3 zmm23
-%define zdatas_shuf zmm24
+;; The 8 byte lengths, 16 byte lengths and distance codes of the vector before
+%define zprev_len zmm15
+%define zprev_len16 zmm17
+%define zprev_dcode zmm18
+
+%define zdist_mask zmm19
+%define zthirty zmm20
+%define zwindow_lo zmm21
+%define zwindow_hi zmm22
+%define zpack1 zmm23
+%define zpack2 zmm24
 %define zhash_prod zmm25
 %define zhash_mask zmm26
 %define zincrement zmm27
-%define zqword_shuf zmm28
+%define zdatas_perm zmm28
 %define zones zmm29
-%define ztwofiftyfour zmm30
+%define zdatas_shuf zmm30
 %define zbswap zmm31
 
 ;; Scratch space for the hashes of two vectors, and the hash table entries and look back
@@ -114,8 +118,8 @@
 %define hslot hash
 
 %ifidn __OUTPUT_FORMAT__, win64
-%define stack_size  8*16 + 8 * 8 + 8 + SBUF_SIZE + 128
-%define sbuf_offset 8*16 + 8 * 8 + 8
+%define stack_size  10*16 + 8 * 8 + 8 + SBUF_SIZE + 128
+%define sbuf_offset 10*16 + 8 * 8 + 8
 %define func(x) proc_frame x
 
 %macro FUNC_SAVE 0
@@ -127,15 +131,17 @@
 	vmovdqa	[rsp + 4*16], xmm10
 	vmovdqa	[rsp + 5*16], xmm11
 	vmovdqa	[rsp + 6*16], xmm12
-	vmovdqa	[rsp + 7*16], xmm15
-	save_reg	rsi, 8*16 + 0*8
-	save_reg	rdi, 8*16 + 1*8
-	save_reg	rbp, 8*16 + 2*8
-	save_reg	r12, 8*16 + 3*8
-	save_reg	r13, 8*16 + 4*8
-	save_reg	rbx, 8*16 + 5*8
-	save_reg	r14, 8*16 + 6*8
-	save_reg	r15, 8*16 + 7*8
+	vmovdqa	[rsp + 7*16], xmm13
+	vmovdqa	[rsp + 8*16], xmm14
+	vmovdqa	[rsp + 9*16], xmm15
+	save_reg	rsi, 10*16 + 0*8
+	save_reg	rdi, 10*16 + 1*8
+	save_reg	rbp, 10*16 + 2*8
+	save_reg	r12, 10*16 + 3*8
+	save_reg	r13, 10*16 + 4*8
+	save_reg	rbx, 10*16 + 5*8
+	save_reg	r14, 10*16 + 6*8
+	save_reg	r15, 10*16 + 7*8
 	end_prolog
 %endm
 
@@ -147,16 +153,18 @@
 	vmovdqa	xmm10, [rsp + 4*16]
 	vmovdqa	xmm11, [rsp + 5*16]
 	vmovdqa	xmm12, [rsp + 6*16]
-	vmovdqa	xmm15, [rsp + 7*16]
+	vmovdqa	xmm13, [rsp + 7*16]
+	vmovdqa	xmm14, [rsp + 8*16]
+	vmovdqa	xmm15, [rsp + 9*16]
 
-	mov	rsi, [rsp + 8*16 + 0*8]
-	mov	rdi, [rsp + 8*16 + 1*8]
-	mov	rbp, [rsp + 8*16 + 2*8]
-	mov	r12, [rsp + 8*16 + 3*8]
-	mov	r13, [rsp + 8*16 + 4*8]
-	mov	rbx, [rsp + 8*16 + 5*8]
-	mov	r14, [rsp + 8*16 + 6*8]
-	mov	r15, [rsp + 8*16 + 7*8]
+	mov	rsi, [rsp + 10*16 + 0*8]
+	mov	rdi, [rsp + 10*16 + 1*8]
+	mov	rbp, [rsp + 10*16 + 2*8]
+	mov	r12, [rsp + 10*16 + 3*8]
+	mov	r13, [rsp + 10*16 + 4*8]
+	mov	rbx, [rsp + 10*16 + 5*8]
+	mov	r14, [rsp + 10*16 + 6*8]
+	mov	r15, [rsp + 10*16 + 7*8]
 	add	rsp, stack_size
 %endm
 %else
@@ -299,8 +307,8 @@
 %endm
 
 ;; Finds the look back distances of the vector at f_i + %1 from zold, and sets zoffs to the
-;; offsets of the matches, zdcode to their distance codes, and zmatch1 and zmatch2 to the
-;; qwords at them
+;; offsets of the matches, zdcode to their distance codes, and zmatch0 to zmatch3 to the 16
+;; bytes at them: zmatch<k> holds the matches of positions k, k + 4, k + 8 and k + 12.
 %macro STAGE_B 1
 	lea	tmp %+ d, [f_i + %1]
 	vpbroadcastd ztmp0, tmp %+ d
@@ -326,88 +334,84 @@
 	vpaddd	ztmp1, ztmp1, ztmp3
 	vpslld	zdcode, ztmp1, DIST_OFFSET
 
-	;; Load the qwords at the matches, two at a time
+	;; Load the 16 bytes at each match
 	lea	next_in, [f_i + file_start + %1]
-%assign %%i 0
-%rep 8
-%if %%i == 0
-%xdefine %%x zmatch1 %+ x
-%elif %%i == 4
-%xdefine %%x zmatch2 %+ x
-%elif (%%i & 3) == 1
-%xdefine %%x ztmp4 %+ x
-%elif (%%i & 3) == 2
-%xdefine %%x ztmp5 %+ x
-%else
-%xdefine %%x ztmp6 %+ x
-%endif
-	movsxd	tmp, dword [sbuf + SBUF_OFFSETS + 8 * %%i]
-	movsxd	tmp2, dword [sbuf + SBUF_OFFSETS + 8 * %%i + 4]
-	vmovq	%%x, [next_in + tmp]
-	vpinsrq	%%x, %%x, [next_in + tmp2], 1
-%if %%i == 1
-	vinserti128 zmatch1 %+ y, zmatch1 %+ y, ztmp4 %+ x, 1
-%elif %%i == 5
-	vinserti128 zmatch2 %+ y, zmatch2 %+ y, ztmp4 %+ x, 1
-%elif %%i == 3
-	vinserti128 ztmp5 %+ y, ztmp5 %+ y, ztmp6 %+ x, 1
-	vinserti64x4 zmatch1, zmatch1, ztmp5 %+ y, 1
-%elif %%i == 7
-	vinserti128 ztmp5 %+ y, ztmp5 %+ y, ztmp6 %+ x, 1
-	vinserti64x4 zmatch2, zmatch2, ztmp5 %+ y, 1
-%endif
-%assign %%i (%%i + 1)
-%endrep
+	LOAD_MATCH zmatch0, 0
+	LOAD_MATCH zmatch1, 1
+	LOAD_MATCH zmatch2, 2
+	LOAD_MATCH zmatch3, 3
 %endm
 
-;; Finds the match lengths of the vector at f_i and writes the match map entries of the
-;; positions one before, taking each match unless the next position has a longer one
+;; Loads the 16 bytes at the matches of positions %2, %2 + 4, %2 + 8 and %2 + 12 to %1
+%macro LOAD_MATCH 2
+	movsxd	tmp, dword [sbuf + SBUF_OFFSETS + 4 * %2]
+	movsxd	tmp2, dword [sbuf + SBUF_OFFSETS + 4 * (%2 + 4)]
+	movsxd	tmp3, dword [sbuf + SBUF_OFFSETS + 4 * (%2 + 8)]
+	movsxd	tmp4, dword [sbuf + SBUF_OFFSETS + 4 * (%2 + 12)]
+	vmovdqu	%1 %+ x, [next_in + tmp]
+	vinserti32x4 %1, %1, [next_in + tmp2], 1
+	vinserti32x4 %1, %1, [next_in + tmp3], 2
+	vinserti32x4 %1, %1, [next_in + tmp4], 3
+%endm
+
+;; Sets the even qwords of %1 to 8 times the number of bytes that the 16 bytes in each lane of
+;; %1 and %2 have in common at the start
+%macro MATCH_LEN16 3
+	vpxorq	%1, %1, %2
+	vpshufb	%1, %1, zbswap
+	vplzcntq %1, %1
+	vpshufd	%3, %1, 0x4e
+	vpcmpeqq k3, %1, [sixtyfour]{1to8}
+	vpaddq	%1 {k3}, %1, %3
+%endm
+
+;; Finds the match lengths of the vector at f_i, up to 16 bytes, and writes the match map entries
+;; of the positions one before. Each match is taken unless the next position has a longer one,
+;; comparing lengths of at most 8 bytes, and gets its length of up to 16 bytes.
 %macro STAGE_C 0
-	vmovdqu64 ztmp0 %+ y, [f_i + file_start]
-	vpermq	ztmp1, zdatas_perm2, ztmp0
-	vpshufb	ztmp1, ztmp1, zqword_shuf
-	vpermq	ztmp2, zdatas_perm3, ztmp0
-	vpshufb	ztmp2, ztmp2, zqword_shuf
+	;; Lane k of the windows has the 16 bytes at position 4 * k + s for s from 0 to 3
+	vmovdqu64 ztmp0, [f_i + file_start]
+	vpermd	ztmp1, zwindow_lo, ztmp0
+	vpermd	ztmp2, zwindow_hi, ztmp0
+	vpalignr ztmp4, ztmp2, ztmp1, 1
+	vpalignr ztmp5, ztmp2, ztmp1, 2
+	vpalignr ztmp6, ztmp2, ztmp1, 3
 
-	;; Compute match length
-	vpxorq	ztmp1, ztmp1, zmatch1
-	vpxorq	ztmp2, ztmp2, zmatch2
-	vpshufb	ztmp1, ztmp1, zbswap
-	vpshufb	ztmp2, ztmp2, zbswap
-	vplzcntq ztmp1, ztmp1
-	vplzcntq ztmp2, ztmp2
-	vpmovqd	ztmp1 %+ y, ztmp1
-	vpmovqd	ztmp2 %+ y, ztmp2
-	vinserti32x8 ztmp1, ztmp1, ztmp2 %+ y, 1
+	MATCH_LEN16 ztmp1, zmatch0, ztmp7
+	MATCH_LEN16 ztmp4, zmatch1, ztmp7
+	MATCH_LEN16 ztmp5, zmatch2, ztmp7
+	MATCH_LEN16 ztmp6, zmatch3, ztmp7
+
+	;; Put the lengths in position order
+	vpermt2d ztmp1, zpack1, ztmp4
+	vpermt2d ztmp5, zpack1, ztmp6
+	vpermt2d ztmp1, zpack2, ztmp5
 	vpsrld	ztmp1, ztmp1, 3
+	vpminud	ztmp0, ztmp1, [eight]{1to16}
 
-	;; Zero out matches which should not be taken
-	vpermd	ztmp2, zrot_left, ztmp1
-	vpermd	ztmp3, zrot_left, zdcode
+	;; Zero out matches which should not be taken, using the values of the position before
+	valignd	ztmp2, ztmp0, zprev_len, 15
+	valignd	ztmp3, ztmp1, zprev_len16, 15
+	valignd	ztmp4, zdcode, zprev_dcode, 15
+	vmovdqa64 zprev_len, ztmp0
+	vmovdqa64 zprev_len16, ztmp1
+	vmovdqa64 zprev_dcode, zdcode
 
-	vmovd	ztmp4 %+ x, prev_len %+ d
-	vmovd	prev_len %+ d, ztmp2 %+ x
-	vmovdqu32 ztmp2 {k1}, ztmp4
+	vpcmpgtd k3, ztmp2, [shortest_matches]{1to16}
+	vpcmpgtd k4, ztmp0, ztmp2
 
-	vmovd	ztmp4 %+ x, prev_dist %+ d
-	vmovd	prev_dist %+ d, ztmp3 %+ x
-	vmovdqu32 ztmp3 {k1}, ztmp4
-
-	vpcmpgtd k3, ztmp2, zshortest_matches
-	vpcmpgtd k4, ztmp1, ztmp2
-
-	knotq	k3, k3
-	korq	k3, k3, k4
-	knotq	k4, k3
-	vmovdqu32 ztmp1 {k4}{z}, ztmp2
+	knotw	k3, k3
+	korw	k3, k3, k4
+	knotw	k4, k3
+	vmovdqu32 ztmp3 {k4}{z}, ztmp3
 
 	;; Update the distance codes to match the lengths
-	vpaddd	ztmp3, ztmp3, ztmp1
-	vpaddd	ztmp3, ztmp3, ztwofiftyfour
-	vpmovzxbd ztmp3 {k3}, [f_i + file_start - 1]
-	vpaddd	ztmp3 {k3}, ztmp3, znull_dist_syms
+	vpaddd	ztmp4, ztmp4, ztmp3
+	vpaddd	ztmp4, ztmp4, [twofiftyfour]{1to16}
+	vpmovzxbd ztmp4 {k3}, [f_i + file_start - 1]
+	vpaddd	ztmp4 {k3}, ztmp4, [null_dist_syms]{1to16}
 
-	vmovdqu64 [matches_next], ztmp3
+	vmovdqu64 [matches_next], ztmp4
 	add	matches_next, ICF_CODE_BYTES * VECT_SIZE
 %endm
 
@@ -445,18 +449,13 @@ func(gen_icf_map_lh1_06_nogather)
 	vbroadcasti32x8 zdatas_shuf, [datas_shuf]
 	vpbroadcastd zhash_prod, [hash_prod]
 	vmovdqu64 zincrement, [increment]
-	vmovdqu64 zqword_shuf, [qword_shuf]
-	vbroadcasti64x2 zdatas_perm2, [datas_perm2]
-	vbroadcasti64x2 zdatas_perm3, [datas_perm3]
 	vpbroadcastd zones, [ones]
 	vbroadcasti32x4 zbswap, [bswap_shuf]
 	vpbroadcastd zthirty, [thirty]
-	vmovdqu64 zrot_left, [drot_left]
-	vpbroadcastd zshortest_matches, [shortest_matches]
-	vpbroadcastd ztwofiftyfour, [twofiftyfour]
-	vpbroadcastd znull_dist_syms, [null_dist_syms]
-	mov	tmp2 %+ d, 1
-	kmovw	k1, tmp2 %+ d
+	vmovdqu64 zwindow_lo, [window_lo]
+	vmovdqu64 zwindow_hi, [window_hi]
+	vmovdqu64 zpack1, [pack1]
+	vmovdqu64 zpack2, [pack2]
 
 ;; Process first byte
 	vmovd	ztmp0 %+ x, dword [f_i + file_start]
@@ -470,6 +469,7 @@ func(gen_icf_map_lh1_06_nogather)
 	;; No history, the byte is a literal
 	xor	prev_len, prev_len
 	xor	prev_dist, prev_dist
+	xor	tmp3, tmp3
 	mov	byte [tmp + _internal_state_has_hist], IGZIP_HIST
 	jmp .byte_processed
 
@@ -487,9 +487,11 @@ func(gen_icf_map_lh1_06_nogather)
 	and	tmp %+ d, tmp2 %+ d
 	neg	tmp
 
-	;; Check first 8 bytes of match
+	;; Check first 16 bytes of match
 	mov	prev_len, [next_in]
 	xor	prev_len, [next_in + tmp - 1]
+	mov	tmp3, [next_in + 8]
+	xor	tmp3, [next_in + tmp - 1 + 8]
 	neg	tmp
 
 	;; Set prev_dist
@@ -504,14 +506,22 @@ func(gen_icf_map_lh1_06_nogather)
 	mov	rcx, tmp2
 %endif
 
-	;; Set prev_len
+	;; Set prev_len, and the 16 byte length in tmp3
 	xor	tmp2, tmp2
 	tzcnt	prev_len, prev_len
 	shr	prev_len, 3
 	cmp	prev_len, MIN_DEF_MATCH
 	cmovl	prev_len, tmp2
+	tzcnt	tmp3, tmp3
+	shr	tmp3, 3
+	add	tmp3, 8
+	cmp	prev_len, 8
+	cmovne	tmp3, prev_len
 
 .byte_processed:
+	vpbroadcastd zprev_len, prev_len %+ d
+	vpbroadcastd zprev_len16, tmp3 %+ d
+	vpbroadcastd zprev_dcode, prev_dist %+ d
 	mov	word [hash_table + HASH_BYTES * hash], f_i %+ w
 
 	add	f_i, 1
@@ -606,19 +616,18 @@ align 64
 ;; 64 byte data
 datas_perm:
 	dq 0x0, 0x1, 0x0, 0x1, 0x1, 0x2, 0x1, 0x2
-drot_left:
-	dd 0xf, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6
-	dd 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe
-qword_shuf:
-	db 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7
-	db 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8
-	db 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9
-	db 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa
-	db 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb
-	db 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc
-	db 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd
-	db 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe
-	db 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf
+window_lo:
+	dd 0x0, 0x1, 0x2, 0x3, 0x1, 0x2, 0x3, 0x4
+	dd 0x2, 0x3, 0x4, 0x5, 0x3, 0x4, 0x5, 0x6
+window_hi:
+	dd 0x4, 0x5, 0x6, 0x7, 0x5, 0x6, 0x7, 0x8
+	dd 0x6, 0x7, 0x8, 0x9, 0x7, 0x8, 0x9, 0xa
+pack1:
+	dd 0x00, 0x10, 0x04, 0x14, 0x08, 0x18, 0x0c, 0x1c
+	dd 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+pack2:
+	dd 0x00, 0x01, 0x10, 0x11, 0x02, 0x03, 0x12, 0x13
+	dd 0x04, 0x05, 0x14, 0x15, 0x06, 0x07, 0x16, 0x17
 datas_shuf:
 	db 0x0, 0x1, 0x2, 0x3
 	db 0x1, 0x2, 0x3, 0x4
@@ -633,10 +642,6 @@ increment:
 	dd 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf
 
 ;; 16 byte data
-datas_perm2:
-	dq 0x0, 0x1
-datas_perm3:
-	dq 0x1, 0x2
 bswap_shuf:
 	db 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00
 	db 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08
@@ -655,3 +660,8 @@ twofiftyfour:
 	dd 0xfe
 shortest_matches:
 	dd MIN_DEF_MATCH
+eight:
+	dd 8
+;; 8 byte data
+sixtyfour:
+	dq 64

@@ -77,6 +77,7 @@ lsrc_x86_64 +=	igzip/igzip_body.asm \
 		igzip/igzip_deflate_hash.asm \
 		igzip/igzip_gen_icf_map_lh1_06.asm \
 		igzip/igzip_gen_icf_map_lh1_06_nogather.asm \
+		igzip/igzip_set_long_icf_fg_06_nogather.asm \
 		igzip/igzip_gen_icf_map_lh1_04.asm \
 		igzip/igzip_set_long_icf_fg_04.asm \
 		igzip/igzip_set_long_icf_fg_06.asm
@@ -87,6 +88,7 @@ extern_hdrs +=	include/igzip_lib.h
 check_tests +=  igzip/igzip_rand_test
 check_tests +=  igzip/igzip_wrapper_hdr_test
 check_tests +=  igzip/checksum32_funcs_test
+check_tests +=  igzip/igzip_long_match_test
 
 other_tests +=  igzip/igzip_file_perf igzip/igzip_hist_perf
 other_tests +=  igzip/igzip_perf

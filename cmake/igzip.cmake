@@ -65,6 +65,7 @@ set(IGZIP_X86_64_SOURCES
     igzip/igzip_deflate_hash.asm
     igzip/igzip_gen_icf_map_lh1_06.asm
     igzip/igzip_gen_icf_map_lh1_06_nogather.asm
+    igzip/igzip_set_long_icf_fg_06_nogather.asm
     igzip/igzip_gen_icf_map_lh1_04.asm
     igzip/igzip_set_long_icf_fg_04.asm
     igzip/igzip_set_long_icf_fg_06.asm
@@ -129,6 +130,7 @@ if(ISAL_BUILD_TESTS)
         igzip_rand_test
         igzip_wrapper_hdr_test
         checksum32_funcs_test
+        igzip_long_match_test
     )
 
     # Create check test executables

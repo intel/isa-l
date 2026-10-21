@@ -57,8 +57,9 @@
 %define match_offset r10
 %define tmp1 r11
 %define end_processed_orig r12
-%define dist_code r13
 %define tmp2 r13
+%define block_end rbx
+%define entry r14
 
 %define zmatch_lookup zmm0
 %define zmatch_lookup2 zmm1
@@ -74,6 +75,8 @@
 %define datas zmm11
 %define ztmp1 zmm12
 %define ztmp2 zmm13
+%define zrel zmm14
+%define zlimit zmm15
 %define zvect_size zmm16
 %define zmax_len zmm17
 %define ztwofiftyfour zmm18
@@ -92,7 +95,13 @@
 %define zlens_mask zmm31
 
 %ifidn __OUTPUT_FORMAT__, win64
-%define stack_size  8*16 + 4 * 8 + 8
+%ifdef NOGATHER
+%define gpr_offset 10*16
+%define stack_size  gpr_offset + 6 * 8 + 8
+%else
+%define gpr_offset 8*16
+%define stack_size  gpr_offset + 4 * 8 + 8
+%endif
 %define func(x) proc_frame x
 %macro FUNC_SAVE 0
 	alloc_stack	stack_size
@@ -104,10 +113,18 @@
 	vmovdqa	[rsp + 5*16], xmm11
 	vmovdqa	[rsp + 6*16], xmm12
 	vmovdqa	[rsp + 7*16], xmm13
-	save_reg	rsi, 8*16 + 0*8
-	save_reg	rdi, 8*16 + 1*8
-	save_reg	r12, 8*16 + 2*8
-	save_reg	r13, 8*16 + 3*8
+%ifdef NOGATHER
+	vmovdqa	[rsp + 8*16], xmm14
+	vmovdqa	[rsp + 9*16], xmm15
+%endif
+	save_reg	rsi, gpr_offset + 0*8
+	save_reg	rdi, gpr_offset + 1*8
+	save_reg	r12, gpr_offset + 2*8
+	save_reg	r13, gpr_offset + 3*8
+%ifdef NOGATHER
+	save_reg	rbx, gpr_offset + 4*8
+	save_reg	r14, gpr_offset + 5*8
+%endif
 	end_prolog
 %endm
 
@@ -120,11 +137,19 @@
 	vmovdqa	xmm11, [rsp + 5*16]
 	vmovdqa	xmm12, [rsp + 6*16]
 	vmovdqa	xmm13, [rsp + 7*16]
+%ifdef NOGATHER
+	vmovdqa	xmm14, [rsp + 8*16]
+	vmovdqa	xmm15, [rsp + 9*16]
+%endif
 
-	mov	rsi, [rsp + 8*16 + 0*8]
-	mov	rdi, [rsp + 8*16 + 1*8]
-	mov	r12, [rsp + 8*16 + 2*8]
-	mov	r13, [rsp + 8*16 + 3*8]
+	mov	rsi, [rsp + gpr_offset + 0*8]
+	mov	rdi, [rsp + gpr_offset + 1*8]
+	mov	r12, [rsp + gpr_offset + 2*8]
+	mov	r13, [rsp + gpr_offset + 3*8]
+%ifdef NOGATHER
+	mov	rbx, [rsp + gpr_offset + 4*8]
+	mov	r14, [rsp + gpr_offset + 5*8]
+%endif
 	add	rsp, stack_size
 %endm
 %else
@@ -132,9 +157,17 @@
 %macro FUNC_SAVE 0
 	push	r12
 	push	r13
+%ifdef NOGATHER
+	push	rbx
+	push	r14
+%endif
 %endm
 
 %macro FUNC_RESTORE 0
+%ifdef NOGATHER
+	pop	r14
+	pop	rbx
+%endif
 	pop	r13
 	pop	r12
 %endm
@@ -181,6 +214,124 @@ func(set_long_icf_fg_06)
 
 	cmp	next_in, end_processed
 	jae	.end_fill
+
+%ifdef NOGATHER
+	;; gen_icf_map_lh1_06_nogather has extended the matches of 8 bytes to up to 16
+	;; bytes, as .finish_entry would, so only look for a match of 16 bytes, which may
+	;; be longer.
+	vpandd	zlens, zmatch_lookup2, zlens_mask
+	vpcmpeqd k3, zlens, [len16]{1to16}
+
+	;; Speculatively increment
+	add	next_in, VECT_SIZE
+	add	match_lookup, ICF_CODE_BYTES * VECT_SIZE
+
+	ktestw	k3, k3
+	jz	.fill_loop
+
+	kmovw	match_offset %+ d, k3
+	tzcnt	match_offset %+ d, match_offset %+ d
+	mov	block_end, next_in
+	lea	next_in, [next_in + match_offset - VECT_SIZE]
+	lea	match_lookup, [match_lookup + ICF_CODE_BYTES * (match_offset - VECT_SIZE)]
+
+	;; Find the distance of the match
+	mov	entry %+ d, [match_lookup]
+	mov	dist %+ d, entry %+ d
+	shr	dist %+ d, DIST_OFFSET
+	and	dist %+ d, 0x1f
+	lea	tmp1, [dist_start]
+	movzx	dist %+ d, word [tmp1 + 2 * dist]
+	mov	tmp1 %+ d, entry %+ d
+	shr	tmp1 %+ d, EXTRA_BITS_OFFSET
+	add	dist, tmp1
+	mov	match_in, next_in
+	sub	match_in, dist
+
+	mov	len, 16
+	mov	tmp2, end_in
+	sub	tmp2, next_in
+
+	compare_z next_in, match_in, len, tmp2, tmp1, k3, ztmp1, ztmp2
+
+	vpbroadcastd zlens1, len %+ d
+	vpsubd	zlens1, zlens1, zincrement
+	vpaddd	zlens1, zlens1, ztwofiftyfour
+
+	;; The lanes from block_end to the end of the match map have lengths that .finish_entry
+	;; would not have extended yet, so compare them as at most 8 bytes
+	mov	tmp2, next_in
+	sub	tmp2, block_end
+	vpbroadcastd zrel, tmp2 %+ d
+	vpaddd	zrel, zrel, zincrement
+	mov	tmp2, end_processed_orig
+	sub	tmp2, block_end
+	vpbroadcastd zlimit, tmp2 %+ d
+
+	mov	tmp2, end_processed
+	sub	tmp2, next_in
+	cmp	len, tmp2
+	cmovg	len, tmp2
+
+	add	next_in, len
+	lea	match_lookup, [match_lookup + ICF_CODE_BYTES * len]
+	vmovdqu32 zmatch_lookup, [match_lookup]
+
+	vpbroadcastd zmatch_lookup2, entry %+ d
+	vpandd	zmatch_lookup2, zmatch_lookup2, znlen_mask
+
+	neg	len
+
+.update_match_lookup_16:
+	vpandd	zlens2, zlens_mask, [match_lookup + ICF_CODE_BYTES * len]
+	vpcmpud	k4, zrel, zlimit, 1
+	vpminud	zlens2 {k4}, zlens2, ztwosixtytwo
+	vpcmpgtd k3, zlens1, zlens2
+	vpcmpgtd k4, zlens1, ztwofiftysix
+	kandw	k3, k3, k4
+
+	vpcmpgtd k4, zlens1, zmax_len
+	vmovdqu32 zlens, zlens1
+	vmovdqu32 zlens {k4}, zmax_len
+
+	vpaddd	zlens2 {k3}{z}, zlens, zmatch_lookup2
+
+	vmovdqu32 [match_lookup + ICF_CODE_BYTES * len] {k3}, zlens2
+
+	knotw	k3, k3
+	ktestw	k3, k3
+	jnz	.cap_lens
+
+	add	len, VECT_SIZE
+	vpsubd	zlens1, zlens1, zvect_size
+	vpaddd	zrel, zrel, zvect_size
+
+	jmp	.update_match_lookup_16
+
+.cap_lens:
+	;; .finish_entry would not extend the lanes from block_end to where the search goes on,
+	;; so give the ones the fill left their 8 byte lengths back
+	mov	tmp2, next_in
+	sub	tmp2, block_end
+	jle	.fill_loop
+	vpbroadcastd zlimit, tmp2 %+ d
+.cap_loop:
+	cmp	len, 0
+	jge	.fill_loop
+	vpcmpud	k4 {k3}, zrel, zlimit, 1
+	vmovdqu32 zlens2, [match_lookup + ICF_CODE_BYTES * len]
+	vpandd	zlens, zlens2, zlens_mask
+	vpcmpgtd k4 {k4}, zlens, ztwosixtytwo
+	vpandd	zlens2, zlens2, znlen_mask
+	vpaddd	zlens2, zlens2, ztwosixtytwo
+	vmovdqu32 [match_lookup + ICF_CODE_BYTES * len] {k4}, zlens2
+	kxnorw	k3, k3, k3
+	add	len, VECT_SIZE
+	vpaddd	zrel, zrel, zvect_size
+	jmp	.cap_loop
+
+	;; The last vector, which may be shorter, has its matches of 8 bytes extended below
+%endif
 
 .finish_entry:
 	vpandd	zlens, zmatch_lookup2, zlens_mask
@@ -358,6 +509,10 @@ long_len2:
 	dd 0x7
 max_len:
 	dd 0xfe + 0x102
+%ifdef NOGATHER
+len16:
+	dd 0xfe + 16
+%endif
 vect_size:
 	dd VECT_SIZE
 twofiftyfour:

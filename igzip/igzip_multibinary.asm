@@ -64,6 +64,7 @@ extern set_long_icf_fg_04
 extern encode_deflate_icf_06
 extern set_long_icf_fg_06
 extern gen_icf_map_lh1_06_nogather
+extern set_long_icf_fg_06_nogather
 extern gen_icf_map_lh1_06
 
 extern adler32_base
@@ -118,7 +119,9 @@ mbin_interface		encode_deflate_icf
 mbin_dispatch_init6	encode_deflate_icf, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_base, encode_deflate_icf_04, encode_deflate_icf_06
 
 mbin_interface		set_long_icf_fg
-mbin_dispatch_init6	set_long_icf_fg, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_04, set_long_icf_fg_06
+;; set_long_icf_fg_06_nogather needs the 16 byte match lengths of gen_icf_map_lh1_06_nogather,
+;; so the two are dispatched with the same checks
+mbin_dispatch_init6	set_long_icf_fg, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_base, set_long_icf_fg_04, set_long_icf_fg_06, set_long_icf_fg_06_nogather
 
 mbin_interface		gen_icf_map_lh1
 ;; gen_icf_map_lh1_06_nogather looks up the hash table with scalar loads, which
