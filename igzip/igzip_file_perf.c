@@ -139,7 +139,10 @@ deflate_perf(struct isal_zstream *stream, uint8_t *inbuf, size_t infile_size, si
                 if (avail_in <= 0)
                         stream->end_of_stream = 1;
 
-                isal_deflate(stream);
+                if (COMP_OK != isal_deflate(stream)) {
+                        fprintf(stderr, "Error compressing input\n");
+                        exit(1);
+                }
 
                 if (stream->avail_in != 0)
                         break;

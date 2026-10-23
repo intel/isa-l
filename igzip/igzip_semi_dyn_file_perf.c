@@ -127,7 +127,10 @@ semi_dyn_stateless_perf(struct isal_zstream *stream, uint8_t *inbuf, uint64_t in
                 stream->avail_out = chunk_size + 8 * (1 + (chunk_size >> 16));
                 stream->hufftables = &hufftable;
                 remaining -= chunk_size;
-                isal_deflate_stateless(stream);
+                if (COMP_OK != isal_deflate_stateless(stream)) {
+                        fprintf(stderr, "Error compressing input\n");
+                        exit(1);
+                }
                 if (stream->avail_in != 0)
                         break;
         }
@@ -168,7 +171,10 @@ semi_dyn_stateful_perf(struct isal_zstream *stream, uint8_t *inbuf, uint64_t inf
                 stream->avail_in = chunk_size;
                 stream->hufftables = &hufftable;
                 remaining -= chunk_size;
-                isal_deflate(stream);
+                if (COMP_OK != isal_deflate(stream)) {
+                        fprintf(stderr, "Error compressing input\n");
+                        exit(1);
+                }
                 if (stream->internal_state.state != ZSTATE_NEW_HDR)
                         break;
         }

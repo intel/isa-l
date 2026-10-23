@@ -86,7 +86,10 @@ main(int argc, char *argv[])
                         stream.avail_out = BUF_SIZE;
                         stream.next_out = outbuf;
 
-                        isal_deflate(&stream);
+                        if (COMP_OK != isal_deflate(&stream)) {
+                                fprintf(stderr, "Error compressing input\n");
+                                exit(1);
+                        }
 
                         fwrite(outbuf, 1, BUF_SIZE - stream.avail_out, out);
                 } while (stream.avail_out == 0);
