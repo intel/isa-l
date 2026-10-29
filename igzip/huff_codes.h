@@ -48,7 +48,6 @@
 #define LIT_LEN        ISAL_DEF_LIT_LEN_SYMBOLS
 #define DIST_LEN       ISAL_DEF_DIST_SYMBOLS
 #define CODE_LEN_CODES 19
-#define HUFF_LEN       19
 #ifdef LONGER_HUFFTABLE
 #define DCODE_OFFSET 26
 #else
