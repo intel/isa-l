@@ -56,31 +56,30 @@
  %define arg3  r9
  %define tmp   r11
  %define return rax
- %define stack_size  8*32 + 8 	; must be an odd multiple of 8
+ %define stack_size  8*16 + 8 	; must be an odd multiple of 8
  %define func(x) proc_frame x
  %macro FUNC_SAVE 0
 	alloc_stack	stack_size
-	;; Until a sav_ymm256 is defined
-	vmovdqu	[rsp + 0*32], ymm6
-	vmovdqu	[rsp + 1*32], ymm7
-	vmovdqu	[rsp + 2*32], ymm8
-	vmovdqu	[rsp + 3*32], ymm9
-	vmovdqu	[rsp + 4*32], ymm10
-	vmovdqu	[rsp + 5*32], ymm11
-	vmovdqu	[rsp + 6*32], ymm14
-	vmovdqu	[rsp + 7*32], ymm15
+	vmovdqu	[rsp + 0*16], xmm6
+	vmovdqu	[rsp + 1*16], xmm7
+	vmovdqu	[rsp + 2*16], xmm8
+	vmovdqu	[rsp + 3*16], xmm9
+	vmovdqu	[rsp + 4*16], xmm10
+	vmovdqu	[rsp + 5*16], xmm11
+	vmovdqu	[rsp + 6*16], xmm14
+	vmovdqu	[rsp + 7*16], xmm15
 	end_prolog
  %endmacro
 
  %macro FUNC_RESTORE 0
-	vmovdqu	ymm6, [rsp + 0*32]
-	vmovdqu	ymm7, [rsp + 1*32]
-	vmovdqu	ymm8, [rsp + 2*32]
-	vmovdqu	ymm9, [rsp + 3*32]
-	vmovdqu	ymm10, [rsp + 4*32]
-	vmovdqu	ymm11, [rsp + 5*32]
-	vmovdqu	ymm14, [rsp + 6*32]
-	vmovdqu	ymm15, [rsp + 7*32]
+	vmovdqu	xmm6, [rsp + 0*16]
+	vmovdqu	xmm7, [rsp + 1*16]
+	vmovdqu	xmm8, [rsp + 2*16]
+	vmovdqu	xmm9, [rsp + 3*16]
+	vmovdqu	xmm10, [rsp + 4*16]
+	vmovdqu	xmm11, [rsp + 5*16]
+	vmovdqu	xmm14, [rsp + 6*16]
+	vmovdqu	xmm15, [rsp + 7*16]
 	add	rsp, stack_size
  %endmacro
 %endif
@@ -232,11 +231,13 @@ next_vect32:
 
 return_pass:
 	xor	DWORD(return), DWORD(return)
+	vzeroupper
 	FUNC_RESTORE
 	ret
 
 return_fail:
 	mov	return, 1
+	vzeroupper
 	FUNC_RESTORE
 	ret
 

@@ -212,11 +212,13 @@ next_vect32:
 
 return_pass:
 	xor	DWORD(return), DWORD(return)
+	vzeroupper
 	FUNC_RESTORE
 	ret
 
 return_fail:
 	mov	return, 1
+	vzeroupper
 	FUNC_RESTORE
 	ret
 

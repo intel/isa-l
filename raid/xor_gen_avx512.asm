@@ -137,6 +137,7 @@ next_vect:
 	jle	loop128
 
 return_pass:
+	vzeroupper
 	FUNC_RESTORE
 	xor	DWORD(return), DWORD(return)
 	ret
@@ -178,6 +179,7 @@ len_not_aligned:
 	and	tmp3, (128-1)		;Do the unaligned bytes 8 at a time
 
 	;; Run backwards 8 bytes at a time for (tmp3) bytes
+align 16
 loop8_bytes:
 	mov	tmp, vec		;Back to last vector
 	mov 	ptr, [arg2+vec*PS] 	;Fetch last pointer in array
@@ -204,6 +206,7 @@ nextvect_8bytes:
 	je	return_pass
 
 return_fail:
+	vzeroupper
 	FUNC_RESTORE
 	mov	return, 1
 	ret
