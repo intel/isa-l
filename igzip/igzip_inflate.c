@@ -1579,6 +1579,7 @@ decode_huffman_code_block_stateless_base(struct inflate_state *state, uint8_t *s
         uint8_t *next_in_tmp, *next_out_tmp;
         uint32_t avail_in_tmp, avail_out_tmp, total_out_tmp;
         uint32_t next_lits, sym_count;
+        uint32_t held_lits = 0;
         struct rfc1951_tables *rfc = &rfc_lookup_table;
 
         state->copy_overflow_length = 0;
@@ -1632,6 +1633,7 @@ decode_huffman_code_block_stateless_base(struct inflate_state *state, uint8_t *s
                                                 return ISAL_OUT_OVERFLOW;
                                         } else {
                                                 state->write_overflow_len -= 1;
+                                                held_lits = state->write_overflow_len;
                                                 continue;
                                         }
                                 }
@@ -1682,7 +1684,9 @@ decode_huffman_code_block_stateless_base(struct inflate_state *state, uint8_t *s
                                         return ISAL_END_INPUT;
                                 }
 
-                                if (state->next_out - look_back_dist < start_out)
+                                /* The match starts after the held literals, so its distance
+                                 * also counts them */
+                                if (look_back_dist > state->next_out - start_out + held_lits)
                                         return ISAL_INVALID_LOOKBACK;
 
                                 if (state->avail_out < repeat_length) {
