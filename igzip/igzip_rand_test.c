@@ -2592,6 +2592,158 @@ test_inflate(struct vect_result *in_vector)
         return ret;
 }
 
+/* Writes deflate bits, which fill each byte from its least significant bit */
+struct bit_writer {
+        uint8_t *next;
+        uint64_t bits;
+        uint32_t count;
+};
+
+static void
+write_bits(struct bit_writer *bw, uint32_t value, uint32_t count)
+{
+        bw->bits |= (uint64_t) value << bw->count;
+        bw->count += count;
+        while (bw->count >= 8) {
+                *bw->next++ = (uint8_t) bw->bits;
+                bw->bits >>= 8;
+                bw->count -= 8;
+        }
+}
+
+/* Writes a Huffman code, which deflate stores from its most significant bit */
+static void
+write_code(struct bit_writer *bw, uint32_t code, uint32_t length)
+{
+        while (length > 0) {
+                length--;
+                write_bits(bw, (code >> length) & 1, 1);
+        }
+}
+
+/* The errors that test_inflate_error() makes inflate find */
+enum inflate_error_kind { BAD_LIT_LEN_SYMBOL, BAD_DIST_SYMBOL, BAD_LOOK_BACK, BAD_KINDS };
+
+/*
+ * Inflates a block with fixed codes of lit_count literals followed by an invalid lit/len symbol,
+ * a length with an invalid distance symbol, or a length with a distance before the start of the
+ * output, with pad bytes after the block and out_space bytes of output space after the literals.
+ * Checks that inflate returns the error with the literals as its output, and with next_in +
+ * avail_in and next_out + avail_out at the ends of the buffers.
+ */
+int
+test_inflate_error(enum inflate_error_kind kind, uint32_t lit_count, uint32_t pad,
+                   uint32_t out_space, int stateful)
+{
+        static const char *kind_names[] = { "invalid lit/len symbol", "invalid distance symbol",
+                                            "invalid look back" };
+        struct inflate_state state;
+        struct bit_writer bw;
+        uint8_t *in_buf, *out_buf;
+        uint32_t in_size, out_size = lit_count + out_space, i;
+        int ret, error = kind == BAD_LOOK_BACK ? ISAL_INVALID_LOOKBACK : ISAL_INVALID_SYMBOL;
+
+        in_buf = malloc(lit_count + pad + 16);
+        out_buf = malloc(out_size + 1);
+        if (in_buf == NULL || out_buf == NULL) {
+                free(in_buf);
+                free(out_buf);
+                return MALLOC_FAILED;
+        }
+
+        bw.next = in_buf;
+        bw.bits = 0;
+        bw.count = 0;
+
+        /* Final block with fixed codes */
+        write_bits(&bw, 1, 1);
+        write_bits(&bw, 1, 2);
+
+        for (i = 0; i < lit_count; i++)
+                write_code(&bw, 0x30 + 'a', 8);
+
+        if (kind == BAD_LIT_LEN_SYMBOL) {
+                /* Lit/len symbol 286, which is not valid */
+                write_code(&bw, 0xc0 + 286 - 280, 8);
+        } else {
+                /* Length 3 */
+                write_code(&bw, 1, 7);
+
+                if (kind == BAD_DIST_SYMBOL) {
+                        /* Distance symbol 30, which is not valid */
+                        write_code(&bw, 30, 5);
+                } else {
+                        /* Distance 24577, before the start of the output */
+                        write_code(&bw, 29, 5);
+                        write_bits(&bw, 0, 13);
+                }
+        }
+
+        /* End of block, and the rest of the last byte */
+        write_code(&bw, 0, 7);
+        write_bits(&bw, 0, 7);
+
+        memset(bw.next, 0, pad);
+        in_size = bw.next - in_buf + pad;
+
+        isal_inflate_init(&state);
+        state.next_in = in_buf;
+        state.avail_in = in_size;
+        state.next_out = out_buf;
+        state.avail_out = out_size;
+
+        if (stateful)
+                ret = isal_inflate(&state);
+        else
+                ret = isal_inflate_stateless(&state);
+
+        if (ret != error || state.total_out != lit_count || state.next_out != out_buf + lit_count ||
+            state.avail_out != out_size - lit_count ||
+            state.next_in + state.avail_in != in_buf + in_size) {
+                printf("Inflate error state incorrect for %s %s with %u literals, %u pad, "
+                       "%u output space: ret %d total_out %u next_out %+ld avail_out %u "
+                       "next_in %+ld avail_in %u\n",
+                       kind_names[kind], stateful ? "stateful" : "stateless", lit_count, pad,
+                       out_space, ret, state.total_out, (long) (state.next_out - out_buf),
+                       state.avail_out, (long) (state.next_in - in_buf), state.avail_in);
+                ret = INFLATE_GENERAL_ERROR;
+        } else {
+                ret = IGZIP_COMP_OK;
+                for (i = 0; i < lit_count; i++)
+                        if (out_buf[i] != 'a')
+                                ret = INFLATE_OUTPUT_STREAM_INTEGRITY_ERROR;
+        }
+
+        free(in_buf);
+        free(out_buf);
+
+        return ret;
+}
+
+/*
+ * Runs test_inflate_error() with the error near and far from the ends of the buffers, which
+ * decoders can handle in different code
+ */
+int
+test_inflate_errors(void)
+{
+        static const uint32_t lit_counts[] = { 0, 1, 7, 100, 1000 };
+        static const uint32_t pads[] = { 0, 3, 16, 64 };
+        static const uint32_t out_spaces[] = { 0, 16, 300, 1024 };
+        uint32_t i, l, p, o;
+        int ret = 0;
+
+        /* i / 2 is the kind of error, and i % 2 selects stateful inflate */
+        for (i = 0; i < 2 * BAD_KINDS; i++)
+                for (l = 0; l < sizeof(lit_counts) / sizeof(lit_counts[0]); l++)
+                        for (p = 0; p < sizeof(pads) / sizeof(pads[0]); p++)
+                                for (o = 0; o < sizeof(out_spaces) / sizeof(out_spaces[0]); o++)
+                                        ret |= test_inflate_error(i / 2, lit_counts[l], pads[p],
+                                                                  out_spaces[o], i % 2);
+
+        return ret;
+}
+
 int
 test_large(uint8_t *in_buf, uint32_t in_size, uint64_t large_size)
 {
@@ -3161,6 +3313,16 @@ exit_stateful_change_flush:
                 if (ret)
                         break;
         }
+
+        if (options.verbose)
+                printf("................");
+        printf("%s\n", ret ? "Fail" : "Pass");
+        if (ret)
+                goto main_exit;
+
+        printf("igzip_rand_test inflate   Errors:       ");
+
+        ret = test_inflate_errors();
 
         if (options.verbose)
                 printf("................");

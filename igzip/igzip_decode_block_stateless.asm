@@ -583,7 +583,7 @@ decode_len_dist:
 
 	;; Check if a valid look back distances was decoded
 	cmp	copy_start, [rsp + start_out_mem_offset]
-	jl	invalid_look_back_distance
+	jl	invalid_look_back_distance_pre
 	MOVDQU	xmm1, [copy_start]
 
 	;; Set tmp2 to be the minimum of COPY_SIZE and repeat_length
@@ -738,6 +738,10 @@ out_buffer_overflow_lit:
 	jg	decode_len_dist_2
 	jmp	end_state
 
+invalid_look_back_distance_pre:
+	;; The main loop moves next_out past a copy before it decodes the
+	;; distance, so take back the bytes of the copy
+	sub	next_out, repeat_length
 invalid_look_back_distance:
 	mov	rax, INVALID_LOOKBACK
 	jmp	end
@@ -747,6 +751,8 @@ invalid_dist_symbol_ %+ next_sym:
 	jl	end_of_input
 	jmp	invalid_symbol
 invalid_dist_symbol_ %+ next_sym3:
+	;; Only the main loop gets here, after moving next_out past the copy
+	sub	next_out, repeat_length
 	cmp	read_in_length, next_sym3
 	jl	end_of_input
 invalid_symbol:
@@ -772,7 +778,10 @@ end:
 	mov	[state + _read_in], read_in
 	mov	[state + _read_in_length], read_in_length %+ d
 
-	;; Set avail_out
+	;; Set avail_out. The error exits of the main loop leave end_out and
+	;; end_in short by the buffer slops, so use the ends from the state.
+	mov	end_out %+ d, dword [state + _avail_out]
+	add	end_out, [state + _next_out]
 	sub	end_out, next_out
 	mov	dword [state + _avail_out], end_out %+ d
 
@@ -784,12 +793,14 @@ end:
 	;; Set next_out
 	mov	[state + _next_out], next_out
 
-	;; Set next_in
-	mov	[state + _next_in], next_in
-
 	;; Set avail_in
+	mov	end_in %+ d, dword [state + _avail_in]
+	add	end_in, [state + _next_in]
 	sub	end_in, next_in
 	mov	[state + _avail_in], end_in %+ d
+
+	;; Set next_in
+	mov	[state + _next_in], next_in
 
 	FUNC_RESTORE
 
