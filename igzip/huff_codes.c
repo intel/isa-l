@@ -1580,7 +1580,13 @@ create_hufftables_icf(struct BitBuf2 *bb, struct hufftables_icf *hufftables,
         assert(max_ll_code >= 256); // must be EOB code
         assert(max_d_code != 0);
 
-        /* Only the symbols that occur add to the lengths of the block */
+        /*
+         * Only the symbols that occur add to the lengths of the block. Each term multiplies a
+         * code length of at most 15 bits plus at most 13 extra bits, so 5 bits, by a symbol
+         * count of the block, and 32-bit arithmetic is enough: a term would have to count more
+         * than 2^32 / 28, over 153 million occurrences of one symbol in a single block, which
+         * takes a level buffer of hundreds of megabytes.
+         */
         for (i = 0; i < num_ll; i++) {
                 s = ll_syms[i];
                 if (s <= 256) {
