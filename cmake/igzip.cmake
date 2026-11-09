@@ -91,6 +91,7 @@ set(IGZIP_RISCV64_SOURCES
     igzip/riscv64/igzip_multibinary_riscv64.S
     igzip/riscv64/igzip_isal_adler32_rvv.S
     igzip/riscv64/igzip_isal_adler32_rvv128.S
+    igzip/riscv64/igzip_decode_huffman_code_block_riscv64.S
 )
 
 # Build source list based on architecture

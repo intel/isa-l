@@ -35,6 +35,12 @@ adler32_rvv128(uint32_t, uint8_t *, uint64_t);
 extern uint32_t
 adler32_base(uint32_t, uint8_t *, uint64_t);
 
+struct inflate_state;
+extern int
+decode_huffman_code_block_stateless_riscv64(struct inflate_state *, uint8_t *);
+extern int
+decode_huffman_code_block_stateless_base(struct inflate_state *, uint8_t *);
+
 DEFINE_INTERFACE_DISPATCHER(isal_adler32)
 {
 #if HAVE_RVV
@@ -49,4 +55,13 @@ DEFINE_INTERFACE_DISPATCHER(isal_adler32)
         } else
 #endif
                 return adler32_base;
+}
+
+DEFINE_INTERFACE_DISPATCHER(decode_huffman_code_block_stateless)
+{
+#if HAVE_RVV
+        if (getauxval(AT_HWCAP) & HWCAP_RV('V'))
+                return decode_huffman_code_block_stateless_riscv64;
+#endif
+        return decode_huffman_code_block_stateless_base;
 }
