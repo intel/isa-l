@@ -784,6 +784,8 @@ fix_code_lens(struct heap_tree *heap_space, uint32_t root_node, uint32_t *bl_cou
         // compute code lengths and code length counts
         code_len = 0;
         j = root_node;
+        /* Internal nodes count toward code_len_count[0], which the loop never zeroes */
+        code_len_count[0] = 0;
         for (i = root_node; i <= HEAP_TREE_NODE_START; i++) {
                 /*
                  * Handle internal nodes and leaves without a branch. An internal node sets the
