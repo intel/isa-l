@@ -303,6 +303,7 @@ run_benchmark(const void *buf, const size_t len, const crc_type_t type, const in
                                   crc = crc16_t10dif_copy(TEST_SEED, dst_buf, buffer, len));
                 }
                 free(dst_buf);
+                (void) crc; // read the volatile sink
                 break;
         default:
                 printf("Error: CRC type %d not found or not implemented\n", type);
