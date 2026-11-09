@@ -174,7 +174,7 @@ build_huff_tree(struct heap_tree *heap_space, uint64_t heap_size, uint64_t node_
          * the leaves before building the tree. Each tree entry is then written in full, as a
          * child id with a depth of 0.
          */
-        sort_keys(leaf, &heap[node_ptr + 2 - 2 * heap_size], heap_size);
+        sort_keys(leaf, &heap[node_ptr + 2 - 2 * heap_size], (uint32_t) heap_size);
         q.lo = q.top = q.next = q.end = 0;
 
         while (heap_size > 1) {
@@ -188,5 +188,5 @@ build_huff_tree(struct heap_tree *heap_space, uint64_t heap_size, uint64_t node_
         }
         h1 = min_key(&leaf, leaf_end, &q);
         heap[node_ptr] = h1 & 0xFFFF;
-        return node_ptr;
+        return (uint32_t) node_ptr;
 }
