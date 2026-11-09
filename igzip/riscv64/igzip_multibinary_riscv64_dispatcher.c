@@ -71,6 +71,11 @@ extern void
 set_long_icf_fg_rvv(uint8_t *, uint64_t, uint64_t, struct deflate_icf *);
 extern void
 set_long_icf_fg_base(uint8_t *, uint64_t, uint64_t, struct deflate_icf *);
+struct inflate_state;
+extern int
+decode_huffman_code_block_stateless_riscv64(struct inflate_state *, uint8_t *);
+extern int
+decode_huffman_code_block_stateless_base(struct inflate_state *, uint8_t *);
 
 DEFINE_INTERFACE_DISPATCHER(isal_adler32)
 {
@@ -163,4 +168,13 @@ DEFINE_INTERFACE_DISPATCHER(set_long_icf_fg)
                 return set_long_icf_fg_rvv;
 #endif
         return set_long_icf_fg_base;
+}
+
+DEFINE_INTERFACE_DISPATCHER(decode_huffman_code_block_stateless)
+{
+#if HAVE_RVV
+        if (getauxval(AT_HWCAP) & HWCAP_RV('V'))
+                return decode_huffman_code_block_stateless_riscv64;
+#endif
+        return decode_huffman_code_block_stateless_base;
 }
