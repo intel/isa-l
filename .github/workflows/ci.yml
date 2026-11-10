@@ -22,9 +22,6 @@ jobs:
           fetch-depth: 2
       - name: Install clang-format-18
         run: |
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo ./llvm.sh 18
           sudo apt update -y
           sudo apt install -y clang-format-18
       - name: Run format check
