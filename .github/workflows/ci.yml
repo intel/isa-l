@@ -148,10 +148,33 @@ jobs:
 
   run_tests_linux-riscv64-v:
     needs: check_format
+    # The cross compiler and libraries target RVA23 by default, so emulate RVA23 CPUs
+    # with the extensions and vector lengths that select each implementation
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # VLEN=128 selects adler32_rvv128, other VLENs select adler32_rvv
+          - name: vlen128-zvbc-ubsan
+            qemu_cpu: rva23u64,vlen=128,zbc=true,zvbc=true
+            cflags: -g -O2 -fsanitize=undefined -fno-sanitize=nonnull-attribute -fsanitize-undefined-trap-on-error
+          - name: vlen256-zvbc
+            qemu_cpu: rva23u64,vlen=256,zbc=true,zvbc=true
+            cflags: -g -O2
+          # RVV without vector CRC
+          - name: vlen512
+            qemu_cpu: rva23u64,vlen=512
+            cflags: -g -O2
+          # Base functions, built without V so that the compiler does not vectorize
+          - name: base
+            qemu_cpu: rva23u64,v=false
+            cflags: -g -O2 -march=rv64gc_zba_zbb_zbs
+    name: run_tests_linux-riscv64-v (${{ matrix.name }})
     runs-on: ubuntu-26.04
     env:
       QEMU_LD_PREFIX: /usr/riscv64-linux-gnu
-      QEMU_CPU: rv64,v=true
+      QEMU_CPU: ${{ matrix.qemu_cpu }}
+      CFLAGS: ${{ matrix.cflags }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install build dependencies
@@ -164,6 +187,13 @@ jobs:
       - name: Run tests
         # cross build, hence simulates test_checks.sh
         run: bash -c 'make -j $(nproc) check D="-D TEST_SEED=0"'
+      - name: Run unit tests
+        # all unit tests but erasure_code_base_test, which only tests the base functions
+        # and takes too long under emulation
+        run: >-
+          bash -c 'make -j $(nproc) D="-D TEST_SEED=0"
+          erasure_code/gf_vect_mul_base_test.run erasure_code/gf_vect_dot_prod_base_test.run
+          erasure_code/gf_vect_dot_prod_test.run erasure_code/gf_vect_mad_test.run'
 
   run_cmake_tests_unix:
     needs: check_format
@@ -205,6 +235,30 @@ jobs:
         run: cmake --build build --parallel
       - name: Run tests
         run: ctest --test-dir build --output-on-failure
+
+  run_cmake_tests_linux-riscv64:
+    needs: check_format
+    runs-on: ubuntu-26.04
+    env:
+      QEMU_LD_PREFIX: /usr/riscv64-linux-gnu
+      # The cross compiler and libraries target RVA23 by default
+      QEMU_CPU: rva23u64,zbc=true,zvbc=true
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install build dependencies
+        # riscv64 zlib comes from the ports archive, the default archive only has amd64
+        run: |
+          sudo dpkg --add-architecture riscv64
+          sudo sed -i '/^Types: deb/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
+          printf 'Types: deb\nURIs: http://ports.ubuntu.com/ubuntu-ports\nSuites: resolute resolute-updates\nComponents: main\nArchitectures: riscv64\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' | sudo tee /etc/apt/sources.list.d/ports-riscv64.sources
+          sudo apt update -y && sudo apt install -y gcc-riscv64-linux-gnu qemu-user-binfmt zlib1g-dev:riscv64
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=riscv64 -DCMAKE_C_COMPILER=riscv64-linux-gnu-gcc
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Run smoke tests
+        # quick tests only, the autotools job runs all tests under emulation
+        run: ctest --test-dir build --output-on-failure -R 'gf_inverse|xor_gen|pq_gen|crc|igzip_bounds|igzip_wrapper_hdr|checksum32|version|shim_inflate'
 
   run_cmake_tests_windows:
     needs: check_format
