@@ -274,14 +274,14 @@ main(int argc, char *argv[])
 
         // Test various size buffers and non-zero offsets
         for (l = 1; l < TEST_LEN; l++) {
+                failures = isal_zero_detect(a, l);
+
+                if (failures) {
+                        printf("Fail on detect non-zero with l=%lld\n", l);
+                        goto exit;
+                }
+
                 for (i = 0; i < l + BORDER_BYTES; i++) {
-                        failures = isal_zero_detect(a, l);
-
-                        if (failures) {
-                                printf("Fail on detect non-zero with l=%lld\n", l);
-                                goto exit;
-                        }
-
                         a[i] = 1;
                         ret_neg = isal_zero_detect(a, l);
 
