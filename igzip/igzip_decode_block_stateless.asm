@@ -520,6 +520,14 @@ loop_block:
 	mov	tmp3, (1 << ISAL_DECODE_LONG_BITS) - 1
 	and	tmp3, read_in
 
+	;; Find index to speculatively preload the next dist code from.
+	;; read_in_length may be as low as 9 here, but the last reload filled
+	;; all 64 bits of read_in and at most 48 were consumed since (15 + 13
+	;; for a dist code and its extra bits, 15 + 5 for a lit/len code and
+	;; its extra bits), so the low 16 bits already hold stream bits.
+	mov	next_bits %+ d, (1 << ISAL_DECODE_SHORT_BITS) - 1
+	and	next_bits, read_in
+
 	;; Start reloading read_in
 	mov	tmp1, [next_in]
 	SHLX	tmp1, tmp1, read_in_length
@@ -535,17 +543,15 @@ loop_block:
 	;; Specutively load next_sym for next loop if a literal was decoded
 	mov	next_sym %+ d, dword [state + _lit_huff_code + LARGE_SHORT_CODE_SIZE * tmp3]
 
-	;; Finish updating read_in_length for read_in
-	mov	tmp1, 64
-	sub	tmp1, read_in_length
-	shr	tmp1, 3
-	add	next_in, tmp1
-	lea	read_in_length, [read_in_length + 8 * tmp1]
-
 	;; Specultively load next dist code
-	mov	next_bits2, (1 << ISAL_DECODE_SHORT_BITS) - 1
-	and	next_bits2, read_in
-	movzx	next_sym3, word [state + _dist_huff_code + SMALL_SHORT_CODE_SIZE * next_bits2]
+	movzx	next_sym3, word [state + _dist_huff_code + SMALL_SHORT_CODE_SIZE * next_bits]
+
+	;; Finish updating read_in_length for read_in
+	mov	tmp2, 64
+	sub	tmp2, read_in_length
+	shr	tmp2, 3
+	add	next_in, tmp2
+	lea	read_in_length, [read_in_length + 8 * tmp2]
 
 	;; Check if next_sym2 is a literal, length, or end of block symbol
 	cmp	next_sym2, 256
