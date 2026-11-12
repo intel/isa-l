@@ -243,12 +243,14 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install build dependencies
-        # riscv64 zlib comes from the ports archive, the default archive only has amd64
+        # riscv64 zlib comes from the ports archive, the default archive only has amd64.
+        # Multi-arch libraries need the same version for both architectures, so allow
+        # downgrading the runner's newer host compiler packages to the archive versions.
         run: |
           sudo dpkg --add-architecture riscv64
           sudo sed -i '/^Types: deb/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
           printf 'Types: deb\nURIs: http://ports.ubuntu.com/ubuntu-ports\nSuites: resolute resolute-updates\nComponents: main\nArchitectures: riscv64\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' | sudo tee /etc/apt/sources.list.d/ports-riscv64.sources
-          sudo apt update -y && sudo apt install -y gcc-riscv64-linux-gnu qemu-user-binfmt zlib1g-dev:riscv64
+          sudo apt update -y && sudo apt install -y --allow-downgrades gcc-riscv64-linux-gnu qemu-user-binfmt zlib1g-dev:riscv64
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=riscv64 -DCMAKE_C_COMPILER=riscv64-linux-gnu-gcc
       - name: Build
