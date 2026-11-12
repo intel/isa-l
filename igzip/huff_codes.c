@@ -980,9 +980,11 @@ make_code_lens(const uint32_t *count, uint32_t n, uint32_t max_len, uint16_t *sy
         /* Limit the code lengths to max_len as fix_code_lens() does */
         code_len = max_depth;
         while (code_len > max_len) {
+                assert(depth_count[code_len] > 1);
                 for (i = max_len - 1; i != 0; i--)
                         if (depth_count[i] != 0)
                                 break;
+                assert(i != 0);
                 depth_count[i]--;
                 depth_count[i + 1] += 2;
                 depth_count[code_len - 1]++;
