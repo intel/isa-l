@@ -250,6 +250,10 @@ jobs:
           sudo sed -i '/^Types: deb/a Architectures: amd64 amd64v3' /etc/apt/sources.list.d/ubuntu.sources
           printf 'Types: deb\nURIs: http://ports.ubuntu.com/ubuntu-ports\nSuites: resolute resolute-updates\nComponents: main\nArchitectures: riscv64\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' | sudo tee /etc/apt/sources.list.d/ports-riscv64.sources
           sudo apt update -y && sudo apt install -y gcc-riscv64-linux-gnu qemu-user-binfmt zlib1g-dev:riscv64
+          # the systemd trigger that registers the binfmt handlers can fail here, so register
+          # the riscv64 handler directly
+          sudo /usr/lib/systemd/systemd-binfmt /usr/lib/binfmt.d/qemu-riscv64.conf
+          cat /proc/sys/fs/binfmt_misc/qemu-riscv64
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=riscv64 -DCMAKE_C_COMPILER=riscv64-linux-gnu-gcc
       - name: Build
