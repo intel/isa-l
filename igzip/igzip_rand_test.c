@@ -2549,6 +2549,70 @@ test_full_flush(uint8_t *in_buf, uint32_t in_size)
         return ret;
 }
 
+/*
+ * Inflates every prefix of a stream that starts with a dynamic block, stateless, and checks that
+ * next_in + avail_in stays at the end of the input. When the input ends inside the block header,
+ * inflate reads past its end, which must not move next_in past it.
+ */
+int
+test_inflate_truncated(void)
+{
+        struct isal_zstream stream;
+        struct inflate_state state;
+        uint8_t *in_buf, *z_buf, *out_buf;
+        uint32_t in_size = 4096, z_size = 2 * 4096 + 1024, len, i;
+        int ret = IGZIP_COMP_OK, inflate_ret;
+
+        in_buf = malloc(in_size);
+        z_buf = malloc(z_size);
+        out_buf = malloc(in_size);
+        if (in_buf == NULL || z_buf == NULL || out_buf == NULL) {
+                ret = MALLOC_FAILED;
+                goto exit_truncated_test;
+        }
+
+        for (i = 0; i < in_size; i++)
+                in_buf[i] = str2[i % (sizeof(str2) - 1)];
+
+        isal_deflate_stateless_init(&stream);
+        stream.next_in = in_buf;
+        stream.avail_in = in_size;
+        stream.next_out = z_buf;
+        stream.avail_out = z_size;
+        stream.end_of_stream = 1;
+        if (isal_deflate_stateless(&stream) != COMP_OK || (z_buf[0] & 6) != 4) {
+                printf("Deflate did not start the stream with a dynamic block\n");
+                ret = COMPRESS_GENERAL_ERROR;
+                goto exit_truncated_test;
+        }
+
+        for (len = 0; len <= stream.total_out; len++) {
+                isal_inflate_init(&state);
+                state.next_in = z_buf;
+                state.avail_in = len;
+                state.next_out = out_buf;
+                state.avail_out = in_size;
+
+                inflate_ret = isal_inflate_stateless(&state);
+
+                if (state.avail_in > len || state.next_in + state.avail_in != z_buf + len) {
+                        printf("Inflate of %u of %u bytes returned %d with next_in %+ld and "
+                               "avail_in %u\n",
+                               len, stream.total_out, inflate_ret, (long) (state.next_in - z_buf),
+                               state.avail_in);
+                        ret = INFLATE_INPUT_STREAM_INTEGRITY_ERROR;
+                        break;
+                }
+        }
+
+exit_truncated_test:
+        free(in_buf);
+        free(z_buf);
+        free(out_buf);
+
+        return ret;
+}
+
 int
 test_inflate(struct vect_result *in_vector)
 {
@@ -3153,6 +3217,16 @@ exit_stateful_change_flush:
                 if (ret)
                         goto main_exit;
         }
+
+        printf("igzip_rand_test inflate   Truncated:    ");
+
+        ret = test_inflate_truncated();
+
+        if (options.verbose)
+                printf("................");
+        printf("%s\n", ret ? "Fail" : "Pass");
+        if (ret)
+                goto main_exit;
 
         printf("igzip_rand_test inflate   Std Vectors:  ");
 
