@@ -30,7 +30,7 @@ update_state(struct isal_zstream *stream, uint8_t *start_in, uint8_t *next_in, u
         stream->avail_in = (uint32_t) (end_in - next_in);
 
         level_buf->icf_buf_next = next_out;
-        level_buf->icf_buf_avail_out = end_out - next_out;
+        level_buf->icf_buf_avail_out = (end_out - next_out) * sizeof(struct deflate_icf);
 }
 
 void

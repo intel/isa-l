@@ -188,7 +188,6 @@ update_state:
 	add	w1, w1, w7
 	stp	w3, w1, [x0, 8]
 	str	w1, [x0, 72]
-	asr	x6, x6, 2
 	str	x5, [x4, 4688]
 	str	x6, [x4, 4696]
 	ret

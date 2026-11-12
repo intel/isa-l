@@ -2549,6 +2549,275 @@ test_full_flush(uint8_t *in_buf, uint32_t in_size)
         return ret;
 }
 
+/* Compress with FULL_FLUSH and small output buffers at each level, supplying more input
+ * while a flush is still pending. Each input chunk is placed after data like the input,
+ * so a match against history that the flush has dropped decodes to the wrong data. */
+int
+test_full_flush_pending(uint8_t *in_buf, uint32_t in_size)
+{
+        int ret = IGZIP_COMP_OK;
+        struct isal_zstream stream;
+        uint32_t i, level, chunk, out_size, in_processed, z_size, level_buf_size;
+        uint8_t *z_buf, *chunk_buf, *level_buf = NULL;
+        const uint32_t max_chunk = 128;
+
+        if (in_size > 64 * 1024)
+                in_size = 64 * 1024;
+        if (in_size == 0)
+                return IGZIP_COMP_OK;
+
+        z_size = in_size + (in_size / 32 + 2) * (hdr_bytes + 5);
+        z_buf = malloc(z_size);
+        chunk_buf = malloc(IGZIP_HIST_SIZE + max_chunk);
+        level_buf = malloc(ISAL_DEF_LVL3_DEFAULT);
+        if (z_buf == NULL || chunk_buf == NULL || level_buf == NULL) {
+                ret = MALLOC_FAILED;
+                goto test_full_flush_pending_exit;
+        }
+
+        for (i = 0; i < IGZIP_HIST_SIZE; i++)
+                chunk_buf[i] = in_buf[(i + in_size / 2) % in_size];
+
+        for (level = ISAL_DEF_MIN_LEVEL; level <= ISAL_DEF_MAX_LEVEL && !ret; level++) {
+                level_buf_size = get_rand_level_buf_size(level);
+                if (level_buf_size > ISAL_DEF_LVL3_DEFAULT)
+                        level_buf_size = ISAL_DEF_LVL3_DEFAULT;
+
+                isal_deflate_init(&stream);
+                stream.level = level;
+                stream.level_buf = level_buf;
+                stream.level_buf_size = level_buf_size;
+                stream.flush = FULL_FLUSH;
+                stream.avail_in = 0;
+                stream.next_out = z_buf;
+                in_processed = 0;
+
+                while (stream.internal_state.state != ZSTATE_END) {
+                        if (stream.avail_in == 0 && in_processed < in_size) {
+                                chunk = rand() % (max_chunk - 31) + 32;
+                                if (chunk > in_size - in_processed)
+                                        chunk = in_size - in_processed;
+                                memcpy(chunk_buf + IGZIP_HIST_SIZE, in_buf + in_processed, chunk);
+                                stream.next_in = chunk_buf + IGZIP_HIST_SIZE;
+                                stream.avail_in = chunk;
+                                in_processed += chunk;
+                                stream.end_of_stream = in_processed == in_size;
+                        }
+
+                        out_size = rand() % 96 + 1;
+                        if (out_size > z_size - stream.total_out) {
+                                ret = COMPRESS_OUT_BUFFER_OVERFLOW;
+                                break;
+                        }
+                        stream.avail_out = out_size;
+
+                        ret = isal_deflate(&stream);
+                        if (ret)
+                                break;
+                }
+
+                if (!ret)
+                        ret = inflate_check(z_buf, stream.total_out, in_buf, in_size, 0, NULL, 0,
+                                            0);
+
+                if (ret) {
+                        printf("Failed on compress with pending full flush at level %u\n", level);
+                        print_error(ret);
+                }
+        }
+
+test_full_flush_pending_exit:
+        free(level_buf);
+        free(chunk_buf);
+        free(z_buf);
+
+        return ret;
+}
+
+/* Start a stream at the given level and compress data[prefix, prefix + first) with FULL_FLUSH,
+ * limiting the total output to out_size bytes (no limit when out_size is 0). With a dictionary
+ * structure, data[0, prefix) is the dictionary; otherwise it is compressed first with
+ * SYNC_FLUSH. prefix_out returns the output size before the full flush. */
+static int
+start_full_flush(struct isal_zstream *stream, uint32_t level, uint8_t *level_buf, uint8_t *data,
+                 uint32_t prefix, struct isal_dict *dict, uint32_t first, uint8_t *z_buf,
+                 uint32_t z_size, uint32_t out_size, uint32_t *prefix_out)
+{
+        int ret;
+
+        isal_deflate_init(stream);
+        stream->level = level;
+        stream->level_buf = level_buf;
+        stream->level_buf_size = ISAL_DEF_LVL3_DEFAULT;
+        stream->next_out = z_buf;
+        stream->avail_out = z_size;
+
+        if (dict != NULL) {
+                memset(dict, 0, sizeof(*dict));
+                ret = isal_deflate_process_dict(stream, dict, data, prefix);
+                if (!ret)
+                        ret = isal_deflate_reset_dict(stream, dict);
+                if (ret)
+                        return ret;
+        } else if (prefix) {
+                stream->flush = SYNC_FLUSH;
+                stream->next_in = data;
+                stream->avail_in = prefix;
+                ret = isal_deflate(stream);
+                if (ret)
+                        return ret;
+
+                if (stream->avail_in != 0 || stream->internal_state.state != ZSTATE_NEW_HDR)
+                        return COMPRESS_GENERAL_ERROR;
+        }
+
+        *prefix_out = stream->total_out;
+        if (out_size)
+                stream->avail_out = out_size - stream->total_out;
+
+        stream->flush = FULL_FLUSH;
+        stream->next_in = data + prefix;
+        stream->avail_in = first;
+
+        return isal_deflate(stream);
+}
+
+/* Leave the sync marker of a full flush pending at each level, then complete the stream with
+ * more input. When the full flush follows a sync flush or a dictionary, the internal buffer
+ * holds IGZIP_HIST_SIZE bytes of history, and the new input does not fit next to it. When the
+ * full flush starts the stream, no history is kept. The data after the sync marker must
+ * decompress on its own. */
+int
+test_full_flush_pending_marker(uint8_t *in_buf, uint32_t in_size)
+{
+        int ret = IGZIP_COMP_OK;
+        struct isal_zstream stream;
+        struct isal_dict *dict = NULL;
+        uint32_t i, j, level, start, prefix, first, out_size, prefix_out, full_out, pending_out;
+        uint32_t marker, found, period, data_size, z_size;
+        const uint32_t second = IGZIP_HIST_SIZE + 8 * 1024;
+        const char *start_name[] = { "", " after a sync flush", " after a dictionary" };
+        uint8_t *z_buf, *data, *level_buf;
+        int state;
+
+        if (in_size == 0)
+                return IGZIP_COMP_OK;
+
+        data_size = 2 * IGZIP_HIST_SIZE + 16 + second;
+        z_size = 2 * data_size + 1024;
+        z_buf = malloc(z_size);
+        data = malloc(data_size);
+        level_buf = malloc(ISAL_DEF_LVL3_DEFAULT);
+        dict = malloc(sizeof(*dict));
+        if (z_buf == NULL || data == NULL || level_buf == NULL || dict == NULL) {
+                ret = MALLOC_FAILED;
+                goto test_full_flush_pending_marker_exit;
+        }
+
+        /* Repeat the input within half the history, so that every level compresses the data
+         * with matches, including matches of the new input against data before the marker */
+        period = in_size < IGZIP_HIST_SIZE / 2 ? in_size : IGZIP_HIST_SIZE / 2;
+        for (i = 0; i < data_size; i++)
+                data[i] = in_buf[i % period];
+
+        for (level = ISAL_DEF_MIN_LEVEL; level <= ISAL_DEF_MAX_LEVEL && !ret; level++) {
+                /* The full flush starts the stream, follows a sync flush, or follows a
+                 * dictionary */
+                for (start = 0; start < 3 && !ret; start++) {
+                        prefix = start ? IGZIP_HIST_SIZE : 0;
+
+                        /* Find input and output sizes for the full flush that leave its sync
+                         * marker pending */
+                        first = 0;
+                        pending_out = 0;
+                        for (j = 0; j < 16 && !ret && !pending_out; j++) {
+                                first = (start ? 1024 : IGZIP_HIST_SIZE) + j;
+                                ret = start_full_flush(&stream, level, level_buf, data, prefix,
+                                                       start == 2 ? dict : NULL, first, z_buf,
+                                                       z_size, 0, &prefix_out);
+                                full_out = stream.total_out;
+
+                                for (out_size = full_out - 16; out_size < full_out && !ret;
+                                     out_size++) {
+                                        if (out_size <= prefix_out)
+                                                continue;
+
+                                        ret = start_full_flush(&stream, level, level_buf, data,
+                                                               prefix, start == 2 ? dict : NULL,
+                                                               first, z_buf, z_size, out_size,
+                                                               &prefix_out);
+                                        state = stream.internal_state.state;
+                                        if (!ret && stream.avail_in == 0 &&
+                                            (state == ZSTATE_SYNC_FLUSH ||
+                                             state == ZSTATE_TMP_SYNC_FLUSH)) {
+                                                pending_out = out_size;
+                                                break;
+                                        }
+                                }
+                        }
+
+                        if (!ret && !pending_out)
+                                continue;
+
+                        /* Complete the stream with IGZIP_HIST_SIZE + 8 KB more input */
+                        stream.next_in = data + prefix + first;
+                        stream.avail_in = second;
+                        stream.end_of_stream = 1;
+                        for (i = 0; i < 8 && stream.internal_state.state != ZSTATE_END && !ret;
+                             i++) {
+                                stream.avail_out = z_size - stream.total_out;
+                                ret = isal_deflate(&stream);
+                        }
+
+                        if (!ret && stream.internal_state.state != ZSTATE_END)
+                                ret = COMPRESS_LOOP_COUNT_OVERFLOW;
+
+                        if (!ret && start == 2)
+                                ret = inflate_check(z_buf, stream.total_out, data + prefix,
+                                                    first + second, 0, data, prefix, 0);
+                        else if (!ret)
+                                ret = inflate_check(z_buf, stream.total_out, data,
+                                                    prefix + first + second, 0, NULL, 0, 0);
+
+                        /* The sync marker follows the rest of the block, which fits in the
+                         * temporary output buffer */
+                        found = 0;
+                        for (marker = pending_out;
+                             marker < pending_out + 32 && marker + 4 <= stream.total_out;
+                             marker++) {
+                                if (z_buf[marker] == 0 && z_buf[marker + 1] == 0 &&
+                                    z_buf[marker + 2] == 0xff && z_buf[marker + 3] == 0xff) {
+                                        found = 1;
+                                        break;
+                                }
+                        }
+
+                        if (!ret && !found)
+                                ret = COMPRESS_GENERAL_ERROR;
+
+                        if (!ret)
+                                ret = inflate_check(z_buf + marker + 4,
+                                                    stream.total_out - marker - 4,
+                                                    data + prefix + first, second, 0, NULL, 0, 0);
+
+                        if (ret) {
+                                printf("Failed on compress with a pending full flush sync marker "
+                                       "at level %u%s\n",
+                                       level, start_name[start]);
+                                print_error(ret);
+                        }
+                }
+        }
+
+test_full_flush_pending_marker_exit:
+        free(dict);
+        free(level_buf);
+        free(data);
+        free(z_buf);
+
+        return ret;
+}
+
 int
 test_inflate(struct vect_result *in_vector)
 {
@@ -3069,6 +3338,8 @@ exit_stateful_sync_flush:
                 create_rand_repeat_data(in_buf, in_size);
 
                 ret |= test_full_flush(in_buf, in_size);
+                ret |= test_full_flush_pending(in_buf, in_size);
+                ret |= test_full_flush_pending_marker(in_buf, in_size);
 
                 in_buf -= offset;
 
