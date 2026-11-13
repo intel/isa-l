@@ -263,6 +263,7 @@ endif
 #lib $(lib_name): $(lib_name)(${objs})
 $(lib_name): $(objs)
 	@echo "  ---> Creating Lib $@"
+	@$(RM) $@
 	@$(AR) $(ARFLAGS) $^
 ifneq ($(lib_debug),1)
 	@$(STRIP_$(CC))
