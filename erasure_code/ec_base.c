@@ -51,12 +51,13 @@ unsigned char
 gf_mul(unsigned char a, unsigned char b)
 {
 #ifndef GF_LARGE_TABLES
-        int i;
-
-        if ((a == 0) || (b == 0))
-                return 0;
-
-        return gff_base[(i = gflog_base[a] + gflog_base[b]) > 254 ? i - 255 : i];
+        /*
+         * Branch-free: gflog_base[0] is a sentinel (511) and gff_base has a
+         * zeroed tail, so a zero operand indexes into the zeros and yields 0
+         * without a (a==0||b==0) test; the doubled antilog removes the
+         * reduction wrap. See the table comment in ec_base.h.
+         */
+        return gff_base[gflog_base[a] + gflog_base[b]];
 #else
         return gf_mul_table_base[b * 256 + a];
 #endif
