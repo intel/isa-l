@@ -119,7 +119,8 @@ other_src   += 	igzip/bitbuf2.asm  \
 
 perf_tests  +=  igzip/adler32_perf
 
-examples    += 	igzip/igzip_example igzip/igzip_inflate_example igzip/igzip_sync_flush_example
+examples    += 	igzip/igzip_example igzip/igzip_inflate_example igzip/igzip_sync_flush_example \
+		igzip/igzip_stateless_example
 
 igzip_igzip_rand_test_LDADD = libisal.la
 

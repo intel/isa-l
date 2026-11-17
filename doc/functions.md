@@ -206,6 +206,7 @@ Examples:
 - [raid example]
 - [crc example]
 - [igzip examples]
+- [igzip stateless example]
 
 ---
 
@@ -216,3 +217,4 @@ Examples:
 [crc combine example]: https://github.com/intel/isa-l/blob/master/examples/crc/crc_combine_example.c
 [igzip deflate example]: https://github.com/intel/isa-l/blob/master/igzip/igzip_example.c
 [igzip inflate example]: https://github.com/intel/isa-l/blob/master/igzip/igzip_inflate_example.c
+[igzip stateless example]: https://github.com/intel/isa-l/blob/master/igzip/igzip_stateless_example.c
