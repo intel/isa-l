@@ -95,7 +95,6 @@ extern rfc1951_lookup_table
 ;; rdi	arg1
 %define	tmp1		rdi
 %define look_back_dist2 rdi
-%define next_bits2	rdi
 %define next_sym3	rdi
 
 ;; rsi	arg2
