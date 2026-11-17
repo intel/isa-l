@@ -38,6 +38,14 @@
  *  This file defines the interface to optimized XOR calculation (RAID5) or P+Q
  *  dual parity (RAID6).  Operations are carried out on an array of pointers to
  *  sources and output arrays.
+ *
+ * Alignment requirements apply to each data buffer pointed to by `array`, not
+ * to the array of pointers itself. The 32-byte requirement for generation
+ * covers dispatched implementations using aligned 256-bit memory operations;
+ * the check functions require 16-byte alignment for aligned 128-bit loads.
+ * Follow the stated requirement for runtime-dispatched functions even if a
+ * particular implementation accepts less alignment. Length requirements are
+ * independent byte-count multiples; no 512-byte alignment is required.
  */
 
 #ifdef __cplusplus
@@ -53,7 +61,7 @@ extern "C" {
  * selects the appropriate version at runtime.
  *
  * @param vects   Number of source+dest vectors in array. Must be > 2.
- * @param len     Length of each vector in bytes.
+ * @param len     Length of each vector in bytes. May be any value.
  * @param array   Array of pointers to source and dest. For XOR the dest is
  *                the last pointer. ie array[vects-1]. Src and dest
  *                pointers must be aligned to 32B.
@@ -71,7 +79,7 @@ xor_gen(int vects, int len, void **array);
  * selects the appropriate version at runtime.
  *
  * @param vects   Number of vectors in array. Must be > 1.
- * @param len     Length of each vector in bytes.
+ * @param len     Length of each vector in bytes. May be any value.
  * @param array   Array of pointers to vectors. Src and dest pointers
  *                must be aligned to 16B.
  *
@@ -88,7 +96,7 @@ xor_check(int vects, int len, void **array);
  * selects the appropriate version at runtime.
  *
  * @param vects   Number of source+dest vectors in array. Must be > 3.
- * @param len     Length of each vector in bytes. Must be 32B aligned.
+ * @param len     Length of each vector in bytes. Must be a multiple of 32.
  * @param array   Array of pointers to source and dest. For P+Q the dest
  *                is the last two pointers. ie array[vects-2],
  *                array[vects-1].  P and Q parity vectors are
@@ -109,7 +117,7 @@ pq_gen(int vects, int len, void **array);
  * selects the appropriate version at runtime.
  *
  * @param vects  Number of vectors in array including P&Q. Must be > 3.
- * @param len    Length of each vector in bytes. Must be 16B aligned.
+ * @param len    Length of each vector in bytes. Must be a multiple of 16.
  * @param array  Array of pointers to source and P, Q. P and Q parity
  *               are assumed to be the last two pointers in the array.
  *               All pointers must be aligned to 16B.
@@ -185,7 +193,7 @@ xor_check_sse(int vects, int len, void **array);
  * @requires SSE4.1
  *
  * @param vects   Number of source+dest vectors in array. Must be > 3.
- * @param len     Length of each vector in bytes. Must be 16B aligned.
+ * @param len     Length of each vector in bytes. Must be a multiple of 16.
  * @param array   Array of pointers to source and dest. For P+Q the dest
  *                is the last two pointers. ie array[vects-2],
  *                array[vects-1]. P and Q parity vectors are
@@ -206,7 +214,7 @@ pq_gen_sse(int vects, int len, void **array);
  * @requires AVX
  *
  * @param vects   Number of source+dest vectors in array. Must be > 3.
- * @param len     Length of each vector in bytes. Must be 16B aligned.
+ * @param len     Length of each vector in bytes. Must be a multiple of 16.
  * @param array   Array of pointers to source and dest. For P+Q the dest
  *                is the last two pointers. ie array[vects-2],
  *                array[vects-1]. P and Q parity vectors are
