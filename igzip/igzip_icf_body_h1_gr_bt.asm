@@ -110,21 +110,24 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-m_out_end           equ  0	 ; local variable (8 bytes)
-m_out_start         equ	 8
-dist_mask_offset    equ 16
-hash_mask_offset    equ 24
-not_dist_mask_offset equ 32
-stream_offset       equ 40
-inbuf_slop_offset   equ 48
-skip_match_offset   equ 56
-skip_level_offset    equ 64
-gpr_save_mem_offset equ 80       ; gpr save area (8*8 bytes)
-xmm_save_mem_offset equ gpr_save_mem_offset + 8*8 ; xmm save area (4*16 bytes) (16 byte aligned)
-stack_size          equ 11*8 + 8*8 + 4*16
+;; 8 local variables (size: 8*8 bytes)
+m_out_end               equ 0
+m_out_start             equ 8
+hash_mask_offset        equ 16
+not_dist_mask_offset    equ 24
+stream_offset           equ 32
+inbuf_slop_offset       equ 40
+skip_match_offset       equ 48
+skip_level_offset       equ 56
+local_var_size          equ skip_level_offset + 8
+;; gpr save area (size: 8*8 bytes)
+gpr_save_mem_offset     equ local_var_size
+;; xmm save area (4*16 bytes) (16 byte aligned)
+xmm_save_mem_offset     equ gpr_save_mem_offset + 8*8
+;; +8 because stack address is odd multiple of 8 after a function call and
+;; we want it aligned to 16 bytes
+stack_size              equ xmm_save_mem_offset + 4*16 + 8
 
-;;; 8 because stack address is odd multiple of 8 after a function call and
-;;; we want it aligned to 16 bytes
 
 ;; Defines to generate functions for different architecture
 %xdefine ARCH 01
@@ -199,7 +202,6 @@ isal_deflate_icf_body_ %+ METHOD %+ _ %+ ARCH %+ :
 	mov	byte [stream + _internal_state_has_eob], 0
 
 	mov	tmp1 %+ d, dword[stream + _internal_state_dist_mask]
-	mov	[rsp + dist_mask_offset], tmp1
 	not	tmp1
 	mov	[rsp + not_dist_mask_offset], tmp1
 	mov	tmp1 %+ d, dword[stream + _internal_state_hash_mask]
