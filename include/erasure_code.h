@@ -139,7 +139,10 @@ ec_encode_data_base(int len, int k, int rows, unsigned char *gftbls, unsigned ch
  * @param gftbls Pointer to array of input tables generated from coding
  * 		 coefficients in ec_init_tables(). Must be of size 32*k*rows
  * @param data   Pointer to single input source used to update output parity.
- * @param coding Array of pointers to coded output buffers.
+ * @param coding Array of pointers to coded output buffers. Each call XORs
+ *               this source's contribution into the existing contents. For a
+ *               new encoding, zero the output buffers before the first call;
+ *               do not clear them between calls for different sources.
  * @returns none
  */
 void

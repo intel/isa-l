@@ -56,6 +56,13 @@ matrix. Next the parity for all (m - k) blocks are calculated at once.
 	ec_encode_data(len, k, p, g_tbls, frag_ptrs, &frag_ptrs[k]);
 ~~~
 
+For incremental encoding, `ec_encode_data_update()` adds one source's
+contribution to the existing contents of each output buffer using XOR. When
+building parity from scratch, zero the output buffers before the first call,
+then call the function for each source without clearing the outputs between
+calls. Unlike `ec_encode_data()`, this function does not overwrite the output
+buffers.
+
 ### RAID Functions
 
 Functions in the RAID section calculate and operate on XOR and P+Q parity found
