@@ -58,6 +58,7 @@ main(int argc, char *argv[])
         out = fopen(argv[2], "wb");
         if (!out) {
                 fprintf(stderr, "Can't open %s for writing\n", argv[2]);
+                fclose(in);
                 exit(1);
         }
 
@@ -74,6 +75,8 @@ main(int argc, char *argv[])
                 stream.level_buf_size = ISAL_DEF_LVL1_DEFAULT;
                 if (stream.level_buf == 0) {
                         printf("Failed to allocate level compression buffer\n");
+                        fclose(out);
+                        fclose(in);
                         exit(1);
                 }
         }
@@ -88,6 +91,8 @@ main(int argc, char *argv[])
 
                         if (COMP_OK != isal_deflate(&stream)) {
                                 fprintf(stderr, "Error compressing input\n");
+                                fclose(out);
+                                fclose(in);
                                 exit(1);
                         }
 
