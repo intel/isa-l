@@ -90,7 +90,7 @@ crc32_iscsi_avx2:
 	lea	r10, [rel crc32_iscsi_const]
 
 %ifidn __OUTPUT_FORMAT__, win64
-		sub	rsp, (16*7+8)
+		sub	rsp, (16*8+8)
         ; push the xmm registers into the stack to maintain
         vmovdqa  [rsp + 16*0], xmm6
         vmovdqa  [rsp + 16*1], xmm7
@@ -99,6 +99,7 @@ crc32_iscsi_avx2:
         vmovdqa  [rsp + 16*4], xmm10
         vmovdqa  [rsp + 16*5], xmm11
         vmovdqa  [rsp + 16*6], xmm12
+		vmovdqa  [rsp + 16*7], xmm15
 %endif
 
 	;; fastpath for short data
@@ -404,9 +405,11 @@ _cleanup:
     vmovdqa  xmm10, [rsp + 16*4]
     vmovdqa  xmm11, [rsp + 16*5]
     vmovdqa  xmm12, [rsp + 16*6]
+    vmovdqa  xmm15, [rsp + 16*7]
 
-	add	rsp, (16*7 + 8)
+	add	rsp, (16*8 + 8)
 %endif
+	vzeroupper
 	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

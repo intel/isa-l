@@ -73,9 +73,9 @@ default rel
 [bits 64]
 section .text
 
-%define y0      ymm6
-%define ytmp1   ymm7
-%define ygft1   ymm8
+%define y0      ymm0
+%define ytmp1   ymm1
+%define ygft1   ymm2
 
 align 16
 mk_global gf_vect_mul_avx2_gfni, function
@@ -100,10 +100,12 @@ loop32:
 
 return_pass:
 	xor     return, return
+	vzeroupper
 	ret
 
 return_fail:
 	mov	return, 1
+	vzeroupper
 	ret
 
 endproc_frame
