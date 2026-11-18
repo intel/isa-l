@@ -327,7 +327,7 @@ $IGZIP -d -N evil_traversal.gz || ret=1
 
 # The absolute path must NOT have been created
 if [ -f "$traversal_target" ]; then
-    echo "FAIL: path traversal succeeded — file written to $traversal_target"
+    echo "FAIL: path traversal succeeded - file written to $traversal_target"
     ret=1
 fi
 

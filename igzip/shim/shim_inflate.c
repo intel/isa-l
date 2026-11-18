@@ -149,7 +149,7 @@ inflate(z_streamp strm, int flush)
                 return Z_STREAM_ERROR;
         }
 
-        // set stream->avail_in, next_in, avail_out, next_out (from zstream)​
+        // set stream->avail_in, next_in, avail_out, next_out (from zstream)
         isal_strm_inflate->next_out = strm->next_out;
         isal_strm_inflate->avail_out = strm->avail_out;
         isal_strm_inflate->avail_in = strm->avail_in;

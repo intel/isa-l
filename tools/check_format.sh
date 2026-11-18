@@ -58,6 +58,11 @@ else
 	"installed so your code style is not being checked!"
 fi
 
+if ! bash "$(dirname "${BASH_SOURCE[0]}")/special-chars.sh" --check; then
+	echo "  Run ./tools/format.sh to fix special characters"
+	rc=1
+fi
+
 if hash grep; then
     echo "Checking for dos and whitespace violations..."
     for f in $(git ls-files); do

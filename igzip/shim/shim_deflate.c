@@ -272,7 +272,7 @@ deflate(z_streamp strm, int flush)
                 s->input_size = 0;
         }
 
-        // set stream->avail_in, next_in, avail_out, next_out (from zstream)​
+        // set stream->avail_in, next_in, avail_out, next_out (from zstream)
         isal_strm->next_out = strm->next_out;
         isal_strm->avail_out = strm->avail_out;
         isal_strm->next_in = strm->next_in;
