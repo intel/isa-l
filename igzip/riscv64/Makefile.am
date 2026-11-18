@@ -38,4 +38,5 @@ lsrc_riscv64 += \
 	igzip/riscv64/igzip_icf_finish_hash_hist_rvv.c \
 	igzip/riscv64/igzip_deflate_body_rvv.c \
 	igzip/riscv64/igzip_update_histogram_rvv.c \
-	igzip/riscv64/igzip_set_long_icf_fg_rvv.c
+	igzip/riscv64/igzip_set_long_icf_fg_rvv.c \
+	igzip/riscv64/igzip_decode_huffman_code_block_riscv64.S
