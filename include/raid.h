@@ -39,13 +39,17 @@
  *  dual parity (RAID6).  Operations are carried out on an array of pointers to
  *  sources and output arrays.
  *
- * Alignment requirements apply to each data buffer pointed to by `array`, not
- * to the array of pointers itself. The 32-byte requirement for generation
- * covers dispatched implementations using aligned 256-bit memory operations;
- * the check functions require 16-byte alignment for aligned 128-bit loads.
- * Follow the stated requirement for runtime-dispatched functions even if a
- * particular implementation accepts less alignment. Length requirements are
- * independent byte-count multiples; no 512-byte alignment is required.
+ *  Alignment requirements apply to each data buffer pointed to by `array`, not
+ *  to the array of pointers itself. The 32-byte requirement for generation
+ *  covers dispatched implementations using aligned 256-bit memory operations;
+ *  the check functions require 16-byte alignment for aligned 128-bit loads.
+ *  Follow the stated requirement for runtime-dispatched functions even if a
+ *  particular implementation accepts less alignment. Length requirements are
+ *  independent byte-count multiples; no 512-byte alignment is required.
+ *
+ *  For recovery of known missing data blocks, see
+ *  examples/ec/raid_recovery_example.c. Single-block recovery uses xor_gen();
+ *  two-block recovery uses the GF(2^8) operations in erasure_code.h.
  */
 
 #ifdef __cplusplus

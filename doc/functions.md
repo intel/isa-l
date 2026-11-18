@@ -93,6 +93,39 @@ RAID function usage is similar to erasure code except no coefficient expansion
 step is necessary. As seen in [raid example] the xor_gen() and xor_check()
 functions are used to generate and check parity.
 
+#### RAID Recovery
+
+The [RAID recovery example](../examples/ec/raid_recovery_example.c) demonstrates
+recovering one missing data block with `xor_gen()` and two missing data blocks
+with `ec_init_tables()` and `ec_encode_data()`, using parity from `pq_gen()`.
+It generates parity, overwrites missing data blocks, and checks recovered bytes
+against the originals for every single and double data erasure with 2-16 sources.
+
+The application must identify the missing blocks. `pq_check()` detects a parity
+mismatch but does not identify which block is corrupt. Recovery requires intact
+parity and surviving data, the original data-block order, and allocated output
+buffers. The example uses 32-byte-aligned buffers and lengths divisible by 32.
+Lost parity can be regenerated with `pq_gen()` after all data has been recovered.
+
+For matrix-based recovery as in [ec example], use
+`gf_gen_rs_matrix(encode_matrix, k + 2, k)` to match existing `pq_gen()` parity.
+The Cauchy matrix used by that example by default produces different parity.
+
+Build and run from the repository root with the Makefile build:
+
+```sh
+make -f Makefile.unx raid_recovery_example
+./raid_recovery_example
+```
+
+For an existing CMake build in `build`, compile against its library:
+
+```sh
+cc -Iinclude examples/ec/raid_recovery_example.c -Lbuild \
+	-Wl,-rpath,"$PWD/build" -lisal -o build/raid_recovery_example
+./build/raid_recovery_example
+```
+
 ### CRC Functions
 
 Functions in the CRC section include fast implementations of cyclic redundancy

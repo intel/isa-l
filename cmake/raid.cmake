@@ -90,6 +90,10 @@ set(RAID_HEADERS
 # Add to main extern headers list
 list(APPEND EXTERN_HEADERS ${RAID_HEADERS})
 
+add_executable(raid_recovery_example examples/ec/raid_recovery_example.c)
+target_link_libraries(raid_recovery_example PRIVATE isal)
+target_include_directories(raid_recovery_example PRIVATE include ${CMAKE_CURRENT_SOURCE_DIR})
+
 # Add test applications for raid module
 if(ISAL_BUILD_TESTS)
     # Check tests (unit tests that are run by CTest)
