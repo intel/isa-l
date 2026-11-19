@@ -309,6 +309,70 @@ declare Macros
 	declare_generic_reg	write_overflow_lits,26,w
 	declare_generic_reg	repeat_length,27,w
 
+/*
+	Fast path registers. The fast path keeps the whole decode state in
+	registers. It runs only while the input has at least FAST_IN_SLOP bytes
+	left and the output has at least FAST_OUT_SLOP bytes of space, so it needs
+	no per-symbol bounds checks. On exit, it recomputes avail_in, avail_out,
+	and total_out from the pointers.
+*/
+	declare_generic_reg	f_lit_tbl,	0, x
+	declare_generic_reg	f_dist_tbl,	1, x
+	declare_generic_reg	f_aux_tbl,	2, x
+	declare_generic_reg	f_entry,	5, w
+	declare_generic_reg	f_next_entry,	6, w
+	declare_generic_reg	f_cnt,		7, w
+	declare_generic_reg	f_dist,		10,w
+	declare_generic_reg	f_tmp0,		16,x
+	declare_generic_reg	f_last,		17,w
+	declare_generic_reg	f_sym_cnt,	19,w
+	declare_generic_reg	f_tmp1,		20,x
+	declare_generic_reg	f_len,		21,w
+	declare_generic_reg	f_end_in,	24,x
+	declare_generic_reg	f_end_out,	27,x
+	declare_generic_reg	f_tmp2,		30,x
+
+/*
+	A refill loads 8 bytes. One fast loop iteration writes at most 2 literals,
+	a 258-byte match, and 31 bytes of over-copy past next_out. Closer than
+	FAST_OUT_SLOP to the end of the output, the loop checks each symbol before
+	decoding it, and it stops FAST_OUT_MIN bytes from the end.
+*/
+#define FAST_IN_SLOP	8
+#define FAST_OUT_SLOP	320
+#define FAST_OUT_MIN	64
+
+#define AUX_DIST_START	0
+#define AUX_PATTERN_IDX	64
+#define AUX_PATTERN_STEP	(AUX_PATTERN_IDX + 16 * 16)
+
+/*
+	Refill read_in to at least 56 valid bits by loading 8 bytes. Requires
+	read_in_length < 64 and at least 8 readable bytes at next_in. Bits of
+	read_in above read_in_length are either zero or the stream bits that
+	belong there, so OR-ing in the new bytes is always correct.
+*/
+.macro fast_refill
+	ldr	f_tmp0, [next_in]
+	eor	w_f_tmp1, read_in_length, 63
+	lsl	f_tmp0, f_tmp0, x_read_in_length
+	lsr	w_f_tmp1, w_f_tmp1, 3
+	orr	read_in, read_in, f_tmp0
+	add	next_in, next_in, f_tmp1
+	orr	read_in_length, read_in_length, 56
+.endm
+
+/* Recompute avail_in, avail_out, and total_out from the fast path pointers */
+.macro fast_sync_state
+	add	f_tmp0, f_end_out, FAST_OUT_SLOP
+	sub	f_tmp0, f_tmp0, next_out
+	sub	w_f_tmp2, avail_out, w_f_tmp0
+	add	total_out, total_out, w_f_tmp2
+	mov	avail_out, w_f_tmp0
+	add	f_tmp0, f_end_in, FAST_IN_SLOP
+	sub	x_avail_in, f_tmp0, next_in
+.endm
+
 cdecl(decode_huffman_code_block_stateless_aarch64):
 	//save registers
 	push_stack
@@ -347,6 +411,31 @@ cdecl(decode_huffman_code_block_stateless_aarch64):
 	*/
 	mov	x_copy_overflow_length,xzr
 	str	xzr,[block_state_adr,_copy_overflow_len-_block_state]
+
+	/* Use the fast path while far enough from the ends of both buffers */
+	cmp	block_state, ISAL_BLOCK_CODED
+	bne	block_state_loop
+	cmp	avail_in, FAST_IN_SLOP
+	blo	block_state_loop
+	cmp	avail_out, FAST_OUT_MIN
+	blo	block_state_loop
+
+	add	f_end_in, next_in, x_avail_in
+	sub	f_end_in, f_end_in, FAST_IN_SLOP
+	add	f_end_out, next_out, x_avail_out
+	sub	f_end_out, f_end_out, FAST_OUT_SLOP
+	add	f_lit_tbl, state, _lit_huff_code
+	mov	f_dist_tbl, _dist_huff_code
+	add	f_dist_tbl, state, f_dist_tbl
+	adr	f_aux_tbl, fast_aux_table
+
+	cmp	read_in_length, 56
+	bhs	1f
+	fast_refill
+1:
+	and	f_tmp0, read_in, (1 << ISAL_DECODE_LONG_BITS) - 1
+	ldr	f_entry, [f_lit_tbl, f_tmp0, lsl 2]
+	b	fast_loop
 
 	/* while (state->block_state == ISAL_BLOCK_CODED) */
 block_state_loop:
@@ -670,6 +759,227 @@ byte_copy_loop:
 	strb	w_arg0, [next_out],1
 	bne	byte_copy_loop
 	b	decompress_data_end
+
+/*
+	Fast path main loop.
+
+	At the start of each iteration, f_entry holds the lit/len table entry for
+	read_in, and read_in holds at least 28 valid bits, enough for the longest
+	lit/len code (21 bits with length extra bits). After consuming the lit/len
+	code, the loop refills read_in to at least 56 bits, enough for the longest
+	distance code with extra bits (28 bits).
+*/
+	.balign	64
+fast_loop:
+	cmp	next_in, f_end_in
+	ccmp	next_out, f_end_out, 2, ls
+	bhi	fast_near_end
+fast_loop_body:
+	tbnz	f_entry, LARGE_FLAG_BIT_OFFSET, fast_long_lit
+	lsr	f_cnt, f_entry, LARGE_SHORT_CODE_LEN_OFFSET
+	ubfx	f_sym_cnt, f_entry, LARGE_SYM_COUNT_OFFSET, LARGE_SYM_COUNT_LEN
+	/* Invalid symbol: the slow path reports it */
+	cbz	f_cnt, fast_exit
+fast_lit_decoded:
+	lsr	read_in, read_in, x_f_cnt
+	sub	read_in_length, read_in_length, f_cnt
+	/* Speculatively write all packed symbols as literals */
+	str	f_entry, [next_out]
+	/* Look up the next symbol before the refill to shorten the dependency chain */
+	and	f_tmp0, read_in, (1 << ISAL_DECODE_LONG_BITS) - 1
+	ldr	f_next_entry, [f_lit_tbl, f_tmp0, lsl 2]
+	/*
+		If the last symbol is a length, the distance code follows it. Look
+		it up now, so a mispredicted length does not wait for the load.
+	*/
+	and	f_tmp0, read_in, (1 << ISAL_DECODE_SHORT_BITS) - 1
+	ldrh	f_dist, [f_dist_tbl, f_tmp0, lsl 1]
+	fast_refill
+	/*
+		Only the last packed symbol can be a length or end of block, and
+		then bit 8 or 9 of it is set. Those bits land at bits 0 and 1 of
+		f_entry >> (8 * f_sym_cnt).
+	*/
+	lsl	f_last, f_sym_cnt, 3
+	lsr	f_last, f_entry, f_last
+	tst	f_last, 3
+	bne	fast_len_or_eob
+	add	next_out, next_out, x_f_sym_cnt
+	mov	f_entry, f_next_entry
+	b	fast_loop
+
+fast_len_or_eob:
+	/* Keep the literals that precede the length or end of block symbol */
+	sub	f_sym_cnt, f_sym_cnt, 1
+	add	next_out, next_out, x_f_sym_cnt
+	lsl	f_last, f_sym_cnt, 3
+	lsr	f_last, f_entry, f_last
+	and	f_last, f_last, 0x3ff
+	cmp	f_last, 256
+	beq	fast_eob
+	sub	f_len, f_last, 254
+
+	/* Decode the distance symbol */
+	tbnz	f_dist, SMALL_FLAG_BIT_OFFSET, fast_long_dist
+	lsr	f_cnt, f_dist, SMALL_SHORT_CODE_LEN_OFFSET
+fast_dist_decoded:
+	cbz	f_cnt, fast_invalid_dist
+	lsr	read_in, read_in, x_f_cnt
+	sub	read_in_length, read_in_length, f_cnt
+
+	/* Read the distance extra bits and add the distance base */
+	ubfx	f_cnt, f_dist, DIST_SYM_EXTRA_OFFSET, DIST_SYM_EXTRA_LEN
+	and	f_dist, f_dist, DIST_SYM_MASK
+	ldrh	f_dist, [f_aux_tbl, x_f_dist, lsl 1]
+	mov	f_tmp1, -1
+	lsl	f_tmp1, f_tmp1, x_f_cnt
+	bic	f_tmp1, read_in, f_tmp1
+	lsr	read_in, read_in, x_f_cnt
+	sub	read_in_length, read_in_length, f_cnt
+	add	f_dist, f_dist, w_f_tmp1
+
+	/* Look up the next symbol before copying the match */
+	and	f_tmp0, read_in, (1 << ISAL_DECODE_LONG_BITS) - 1
+	ldr	f_entry, [f_lit_tbl, f_tmp0, lsl 2]
+
+	sub	f_tmp0, next_out, x_f_dist
+	cmp	f_tmp0, start_out
+	blo	fast_invalid_lookback
+
+	cmp	f_dist, 16
+	blo	fast_copy_short_dist
+
+	/* Distance is at least 16, so 16-byte chunks never overlap the source */
+	ldr	q16, [f_tmp0]
+	str	q16, [next_out]
+	cmp	f_len, 16
+	bhi	fast_copy_long
+	add	next_out, next_out, x_f_len
+	b	fast_loop
+
+fast_copy_long:
+	add	f_tmp1, next_out, x_f_len
+	add	next_out, next_out, 16
+	add	f_tmp0, f_tmp0, 16
+	cmp	f_dist, 32
+	blo	fast_copy_16
+fast_copy_32:
+	ldp	q16, q17, [f_tmp0], 32
+	stp	q16, q17, [next_out], 32
+	cmp	next_out, f_tmp1
+	blo	fast_copy_32
+	mov	next_out, f_tmp1
+	b	fast_loop
+fast_copy_16:
+	ldr	q16, [f_tmp0], 16
+	str	q16, [next_out], 16
+	cmp	next_out, f_tmp1
+	blo	fast_copy_16
+	mov	next_out, f_tmp1
+	b	fast_loop
+
+	/*
+		Distance is less than 16. Replicate the first f_dist bytes of the
+		source across a vector, then store the vector at steps of the
+		largest multiple of f_dist that fits in 16 bytes.
+	*/
+fast_copy_short_dist:
+	ldr	q16, [f_tmp0]
+	add	f_tmp2, f_aux_tbl, AUX_PATTERN_IDX
+	ldr	q17, [f_tmp2, x_f_dist, lsl 4]
+	add	f_tmp2, f_aux_tbl, AUX_PATTERN_STEP
+	ldrb	w_f_tmp2, [f_tmp2, x_f_dist]
+	tbl	v16.16b, {v16.16b}, v17.16b
+	add	f_tmp1, next_out, x_f_len
+1:
+	str	q16, [next_out]
+	add	next_out, next_out, f_tmp2
+	cmp	next_out, f_tmp1
+	blo	1b
+	mov	next_out, f_tmp1
+	b	fast_loop
+
+	/* The lit/len code is longer than ISAL_DECODE_LONG_BITS */
+fast_long_lit:
+	lsr	f_cnt, f_entry, LARGE_SHORT_MAX_LEN_OFFSET
+	mov	f_tmp1, -1
+	lsl	f_tmp1, f_tmp1, x_f_cnt
+	bic	f_tmp1, read_in, f_tmp1
+	and	f_entry, f_entry, LARGE_SHORT_SYM_MASK
+	add	f_entry, f_entry, w_f_tmp1, lsr ISAL_DECODE_LONG_BITS
+	add	f_tmp0, f_lit_tbl, _long_code_lookup_large
+	ldrh	f_entry, [f_tmp0, x_f_entry, lsl 1]
+	lsr	f_cnt, f_entry, LARGE_LONG_CODE_LEN_OFFSET
+	and	f_entry, f_entry, LARGE_LONG_SYM_MASK
+	mov	f_sym_cnt, 1
+	cbnz	f_cnt, fast_lit_decoded
+	/* Invalid symbol: the slow path reports it */
+	b	fast_exit
+
+	/* The distance code is longer than ISAL_DECODE_SHORT_BITS */
+fast_long_dist:
+	lsr	f_cnt, f_dist, SMALL_SHORT_CODE_LEN_OFFSET
+	mov	f_tmp1, -1
+	lsl	f_tmp1, f_tmp1, x_f_cnt
+	bic	f_tmp1, read_in, f_tmp1
+	and	f_dist, f_dist, SMALL_SHORT_SYM_MASK
+	add	f_dist, f_dist, w_f_tmp1, lsr ISAL_DECODE_SHORT_BITS
+	add	f_tmp0, f_dist_tbl, _long_code_lookup_small
+	ldrh	f_dist, [f_tmp0, x_f_dist, lsl 1]
+	lsr	f_cnt, f_dist, SMALL_LONG_CODE_LEN_OFFSET
+	b	fast_dist_decoded
+
+	/*
+		Near the end of the output, decode the next symbol only if its
+		output fits. Literals write 4 bytes, and a match of length len
+		after up to 2 literals writes at most len + 33 bytes. Leave long
+		codes to the slow path.
+	*/
+fast_near_end:
+	cmp	next_in, f_end_in
+	bhi	fast_exit
+	add	f_tmp1, f_end_out, FAST_OUT_SLOP
+	sub	f_tmp1, f_tmp1, next_out
+	cmp	f_tmp1, FAST_OUT_MIN
+	blo	fast_exit
+	tbnz	f_entry, LARGE_FLAG_BIT_OFFSET, fast_exit
+	ubfx	f_sym_cnt, f_entry, LARGE_SYM_COUNT_OFFSET, LARGE_SYM_COUNT_LEN
+	lsl	f_last, f_sym_cnt, 3
+	lsr	f_last, f_entry, f_last
+	tst	f_last, 3
+	beq	fast_loop_body
+	sub	f_last, f_sym_cnt, 1
+	lsl	f_last, f_last, 3
+	lsr	f_last, f_entry, f_last
+	and	f_last, f_last, 0x3ff
+	sub	f_last, f_last, 254 - 33
+	cmp	x_f_last, f_tmp1
+	bhi	fast_exit
+	b	fast_loop_body
+
+fast_eob:
+	mov	block_state, ISAL_BLOCK_INPUT_DONE
+	cmp	bfinal, 0
+	csel	block_state, block_state, bfinal, ne
+	str	block_state, [block_state_adr]
+fast_exit:
+	fast_sync_state
+	b	block_state_loop
+
+	/*
+		An invalid distance entry holds the code length. Consume it as the
+		slow path does, so both paths leave the same state.
+	*/
+fast_invalid_dist:
+	sub	read_in_length, read_in_length, f_dist
+fast_invalid_symbol:
+	fast_sync_state
+	b	invalid_symbol
+
+fast_invalid_lookback:
+	fast_sync_state
+	b	isal_invalid_lookback
+
 #ifndef __APPLE__
 	.size	decode_huffman_code_block_stateless_aarch64, .-decode_huffman_code_block_stateless_aarch64
 	.type	rfc_lookup_table, %object
@@ -699,4 +1009,35 @@ rfc_lookup_table:
 #endif
 #ifndef __APPLE__
 	.size	rfc_lookup_table, . - rfc_lookup_table
+	.type	fast_aux_table, %object
+#endif
+
+	.balign	16
+fast_aux_table:
+	/* dist_start: base distance for each distance symbol */
+	.short	0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0007, 0x0009, 0x000d
+	.short	0x0011, 0x0019, 0x0021, 0x0031, 0x0041, 0x0061, 0x0081, 0x00c1
+	.short	0x0101, 0x0181, 0x0201, 0x0301, 0x0401, 0x0601, 0x0801, 0x0c01
+	.short	0x1001, 0x1801, 0x2001, 0x3001, 0x4001, 0x6001, 0x0000, 0x0000
+	/* pattern_idx: byte i of row d is i % d, to replicate a d-byte pattern */
+	.byte	 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte	 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte	 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+	.byte	 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0
+	.byte	 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+	.byte	 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0
+	.byte	 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3
+	.byte	 0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 4, 5, 6, 0, 1
+	.byte	 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7
+	.byte	 0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 4, 5, 6
+	.byte	 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5
+	.byte	 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10, 0, 1, 2, 3, 4
+	.byte	 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11, 0, 1, 2, 3
+	.byte	 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12, 0, 1, 2
+	.byte	 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13, 0, 1
+	.byte	 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14, 0
+	/* pattern_step: largest multiple of d that is at most 16 */
+	.byte	16,16,16,15,16,15,12,14,16, 9,10,11,12,13,14,15
+#ifndef __APPLE__
+	.size	fast_aux_table, . - fast_aux_table
 #endif
