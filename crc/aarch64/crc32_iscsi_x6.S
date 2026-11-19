@@ -118,7 +118,7 @@
 
     crc0_data6  .req  x16
     crc0_data7  .req  x17
-    crc0_data8  .req  x18
+    crc0_data8  .req  x27
     crc0_data9  .req  x19
     crc0_data10 .req  x20
     crc0_data11 .req  x26
