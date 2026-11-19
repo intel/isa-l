@@ -2643,6 +2643,45 @@ test_large(uint8_t *in_buf, uint32_t in_size, uint64_t large_size)
         return ret;
 }
 
+/*
+ * Streams of a non-final dynamic block and a final empty fixed block, where the output buffer can
+ * end inside a lit/len decode table entry that holds literals followed by a length, and the match
+ * copies from the first byte of the output. Stateless inflate into each smaller buffer must return
+ * ISAL_OUT_OVERFLOW with the start of the output.
+ */
+/* 'a', copy 3 at distance 1, end of block: "aaaa" */
+static uint8_t out_overflow_0[] = { 0x0c, 0xc1, 0x01, 0x01, 0x00, 0x00, 0x00, 0x82,
+                                    0xa0, 0xad, 0xf8, 0x7f, 0x44, 0x81, 0xdb, 0x00 };
+/* 'a', 'b', copy 3 at distance 2, end of block: "ababa" */
+static uint8_t out_overflow_1[] = { 0x0c, 0xc1, 0x01, 0x01, 0x00, 0x00, 0x00, 0x82, 0xa0,
+                                    0xad, 0xf8, 0x7f, 0x44, 0x81, 0x7e, 0x03, 0x00 };
+
+int
+test_inflate_out_overflow(uint8_t *z_buf, uint32_t z_size, char *out)
+{
+        struct inflate_state state;
+        uint8_t out_buf[8];
+        uint32_t size, out_size = strlen(out);
+        int ret;
+
+        for (size = 0; size <= out_size; size++) {
+                isal_inflate_init(&state);
+                state.next_in = z_buf;
+                state.avail_in = z_size;
+                state.next_out = out_buf;
+                state.avail_out = size;
+                ret = isal_inflate_stateless(&state);
+                if (ret != (size < out_size ? ISAL_OUT_OVERFLOW : ISAL_DECOMP_OK) ||
+                    state.total_out != size || memcmp(out_buf, out, size)) {
+                        printf("Inflate into %u of %u bytes returned %d with %u bytes\n", size,
+                               out_size, ret, state.total_out);
+                        return INFLATE_OUT_BUFFER_OVERFLOW;
+                }
+        }
+
+        return 0;
+}
+
 /* Run multiple compression tests on data stored in a file */
 int
 test_compress_file(char *file_name)
@@ -3161,6 +3200,11 @@ exit_stateful_change_flush:
                 if (ret)
                         break;
         }
+
+        if (!ret)
+                ret = test_inflate_out_overflow(out_overflow_0, sizeof(out_overflow_0), "aaaa");
+        if (!ret)
+                ret = test_inflate_out_overflow(out_overflow_1, sizeof(out_overflow_1), "ababa");
 
         if (options.verbose)
                 printf("................");
