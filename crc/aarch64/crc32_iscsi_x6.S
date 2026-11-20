@@ -160,7 +160,7 @@ cdecl(crc32_iscsi_x6):
 
 .align_finish:
     cmp LEN, 1024
-    bls 1f
+    blo 1f
 #ifndef __APPLE__
     adrp     const_adr, .Lconstants
     add      const_adr, const_adr, #:lo12:.Lconstants
