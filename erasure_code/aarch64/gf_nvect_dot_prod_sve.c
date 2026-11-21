@@ -82,6 +82,10 @@ gf_nvect_dot_prod_sve_unrolled(int len, int vlen, unsigned char *gftbls, unsigne
 
         const svuint8_t mask0f = svdup_u8(0x0f);
         const svbool_t predicate_true = svptrue_b8();
+        // Each 32-byte coefficient table is two 16-byte halves and svtbl only indexes
+        // lanes 0-15, so load just 16 bytes per half. A full-vector load reads past the
+        // end of gftbls when the SVE vector length is above 128 bits.
+        const svbool_t predicate_tbl = svwhilelt_b8_s32(0, 16);
         int sve_len = svcntb();
         int pos = 0;
 
@@ -175,9 +179,9 @@ gf_nvect_dot_prod_sve_unrolled(int len, int vlen, unsigned char *gftbls, unsigne
                                 } else {
                                         const unsigned char *const tbl_base =
                                                 &gftbls[d * vlen * 32 + v * 32];
-                                        const svuint8_t tbl_lo = svld1_u8(predicate_true, tbl_base);
+                                        const svuint8_t tbl_lo = svld1_u8(predicate_tbl, tbl_base);
                                         const svuint8_t tbl_hi =
-                                                svld1_u8(predicate_true, tbl_base + 16);
+                                                svld1_u8(predicate_tbl, tbl_base + 16);
 
                                         // Batch 0
                                         const svuint8_t gf_lo0 = svtbl_u8(tbl_lo, src_lo0);
