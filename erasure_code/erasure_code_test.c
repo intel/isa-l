@@ -263,20 +263,21 @@ test_tbls_guard_page(int len)
         const size_t tbl_area = (max_tbl + page_size - 1) / page_size * page_size;
         const size_t map_size = tbl_area + page_size;
         unsigned char *region;
+        void *buf;
 
         for (i = 0; i < GUARD_TEST_K_MAX + GUARD_TEST_ROWS; i++) {
-                buffs[i] = malloc(len);
-                if (buffs[i] == NULL) {
+                if (posix_memalign(&buf, 64, len)) {
                         ret = -1;
                         goto free_buffs;
                 }
+                buffs[i] = buf;
         }
         for (i = 0; i < GUARD_TEST_ROWS; i++) {
-                ref[i] = malloc(len);
-                if (ref[i] == NULL) {
+                if (posix_memalign(&buf, 64, len)) {
                         ret = -1;
                         goto free_buffs;
                 }
+                ref[i] = buf;
         }
         ref_tbls = malloc(max_tbl);
         if (ref_tbls == NULL) {
@@ -356,9 +357,9 @@ unmap:
 #endif
 free_buffs:
         for (i = 0; i < GUARD_TEST_K_MAX + GUARD_TEST_ROWS; i++)
-                free(buffs[i]);
+                aligned_free(buffs[i]);
         for (i = 0; i < GUARD_TEST_ROWS; i++)
-                free(ref[i]);
+                aligned_free(ref[i]);
         free(ref_tbls);
         return ret;
 }
