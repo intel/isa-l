@@ -225,20 +225,27 @@ gf_gen_decode_matrix(unsigned char *encode_matrix, unsigned char *decode_matrix,
         return 0;
 }
 
-#define GUARD_TEST_ROWS 10
+#define GUARD_TEST_K_MAX 32
+#define GUARD_TEST_ROWS  10
 
 /* Regression test for reads past the end of g_tbls. The table is exactly the
  * documented size (32 * k * rows bytes) and is placed so that it ends at a page
  * boundary followed by an inaccessible guard page. Any read past the end of the
- * table faults. Parity is also checked against ec_encode_data_base().
+ * table faults. Parity is also checked against ec_encode_data_base(), using
+ * tables from ec_init_tables_base() since ec_init_tables() may produce a
+ * different (GFNI) format. The test uses its own buffers, so it does not depend
+ * on TEST_SOURCES.
  */
 static int
-test_tbls_guard_page(unsigned char **buffs, unsigned char **temp_buffs, int len)
+test_tbls_guard_page(int len)
 {
-        static const int k_list[] = { 1, 2, 3, 4, 5, 6, 7, 8, 10, 16, 32 };
-        const int k_max = 32;
+        static const int k_list[] = { 1, 2, 3, 4, 5, 6, 7, 8, 10, 16, GUARD_TEST_K_MAX };
+        const int k_max = GUARD_TEST_K_MAX;
         int i, j, k, rows, ret = 0;
-        unsigned char encode_matrix[(32 + GUARD_TEST_ROWS) * 32];
+        unsigned char encode_matrix[(GUARD_TEST_K_MAX + GUARD_TEST_ROWS) * GUARD_TEST_K_MAX];
+        unsigned char *buffs[GUARD_TEST_K_MAX + GUARD_TEST_ROWS] = { NULL };
+        unsigned char *ref[GUARD_TEST_ROWS] = { NULL };
+        unsigned char *ref_tbls = NULL;
 
 #ifdef _WIN32
         SYSTEM_INFO si;
@@ -257,24 +264,46 @@ test_tbls_guard_page(unsigned char **buffs, unsigned char **temp_buffs, int len)
         const size_t map_size = tbl_area + page_size;
         unsigned char *region;
 
-        assert(k_max + GUARD_TEST_ROWS <= TEST_SOURCES);
+        for (i = 0; i < GUARD_TEST_K_MAX + GUARD_TEST_ROWS; i++) {
+                buffs[i] = malloc(len);
+                if (buffs[i] == NULL) {
+                        ret = -1;
+                        goto free_buffs;
+                }
+        }
+        for (i = 0; i < GUARD_TEST_ROWS; i++) {
+                ref[i] = malloc(len);
+                if (ref[i] == NULL) {
+                        ret = -1;
+                        goto free_buffs;
+                }
+        }
+        ref_tbls = malloc(max_tbl);
+        if (ref_tbls == NULL) {
+                ret = -1;
+                goto free_buffs;
+        }
 
 #ifdef _WIN32
         region = VirtualAlloc(NULL, map_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-        if (region == NULL)
-                return -1;
+        if (region == NULL) {
+                ret = -1;
+                goto free_buffs;
+        }
         DWORD old_protect;
         if (!VirtualProtect(region + tbl_area, page_size, PAGE_NOACCESS, &old_protect)) {
-                VirtualFree(region, 0, MEM_RELEASE);
-                return -1;
+                ret = -1;
+                goto unmap;
         }
 #else
         region = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        if (region == MAP_FAILED)
-                return -1;
+        if (region == MAP_FAILED) {
+                ret = -1;
+                goto free_buffs;
+        }
         if (mprotect(region + tbl_area, page_size, PROT_NONE) != 0) {
-                munmap(region, map_size);
-                return -1;
+                ret = -1;
+                goto unmap;
         }
 #endif
 
@@ -290,11 +319,12 @@ test_tbls_guard_page(unsigned char **buffs, unsigned char **temp_buffs, int len)
 
                         gf_gen_cauchy1_matrix(encode_matrix, k + rows, k);
                         ec_init_tables(k, rows, &encode_matrix[k * k], g_tbls);
-                        ec_encode_data_base(len, k, rows, g_tbls, buffs, &temp_buffs[k]);
+                        ec_init_tables_base(k, rows, &encode_matrix[k * k], ref_tbls);
+                        ec_encode_data_base(len, k, rows, ref_tbls, buffs, ref);
                         ec_encode_data(len, k, rows, g_tbls, buffs, &buffs[k]);
 
                         for (j = 0; j < rows; j++) {
-                                if (memcmp(buffs[k + j], temp_buffs[k + j], len)) {
+                                if (memcmp(buffs[k + j], ref[j], len)) {
                                         printf("Fail table guard page encode (k=%d, rows=%d)\n", k,
                                                rows);
                                         ret = -1;
@@ -305,8 +335,11 @@ test_tbls_guard_page(unsigned char **buffs, unsigned char **temp_buffs, int len)
                                 break;
 
                         if (rows == 1) {
+                                /* Overwrite the output so a no-op cannot pass */
+                                for (int n = 0; n < len; n++)
+                                        buffs[k][n] = ref[0][n] ^ 0xff;
                                 gf_vect_dot_prod(len, k, g_tbls, buffs, buffs[k]);
-                                if (memcmp(buffs[k], temp_buffs[k], len)) {
+                                if (memcmp(buffs[k], ref[0], len)) {
                                         printf("Fail table guard page dot_prod (k=%d)\n", k);
                                         ret = -1;
                                         break;
@@ -315,11 +348,18 @@ test_tbls_guard_page(unsigned char **buffs, unsigned char **temp_buffs, int len)
                 }
         }
 
+unmap:
 #ifdef _WIN32
         VirtualFree(region, 0, MEM_RELEASE);
 #else
         munmap(region, map_size);
 #endif
+free_buffs:
+        for (i = 0; i < GUARD_TEST_K_MAX + GUARD_TEST_ROWS; i++)
+                free(buffs[i]);
+        for (i = 0; i < GUARD_TEST_ROWS; i++)
+                free(ref[i]);
+        free(ref_tbls);
         return ret;
 }
 
@@ -893,7 +933,7 @@ main(int argc, char *argv[])
 #endif
         }
 
-        if (test_tbls_guard_page(buffs, temp_buffs, TEST_LEN) != 0) {
+        if (test_tbls_guard_page(TEST_LEN) != 0) {
                 re = -1;
                 goto exit;
         }
