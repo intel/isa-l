@@ -166,6 +166,10 @@ gf_4vect_dot_prod_rvv:
     /* Move to next source vector */
     addi x_vec_i, x_vec_i, 8
     add a6, x_src, x_vec_i
+    /* do not read past the source pointer array on the last iteration */
+    blt x_vec_i, x_vec, 1f
+    addi a6, a6, -8
+1:
     ld x_ptr, 0(a6)
 
     /* dest 1 */
