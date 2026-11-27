@@ -1,5 +1,5 @@
 /**********************************************************************
-  Copyright (c) 2025 Institute of Software Chinese Academy of Sciences (ISCAS).
+  Copyright (c) 2025-2026 Institute of Software Chinese Academy of Sciences (ISCAS).
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@
 #ifdef __ASSEMBLY__
 
 /**
- * # mbin_interface : the wrapper layer for isal-l api
+ * # mbin_interface : the wrapper layer for isa-l api
  *
  * ## references:
  * * aarch64_multibinary.h
@@ -45,6 +45,8 @@
  * 	2. name must be \name\()_dispatcher
  * 	3. Prototype should be *"void * \name\()_dispatcher"*
  * 	4. The dispather should return the right function pointer , revision and a string information .
+ * 	5. The stack pointer sp must be 16-byte aligned under the standard RISC-V psABI.
+ *     So we set aside 80 as multiple of 16-byte for stack alignment even we don't use all of them.
  **/
 .macro mbin_interface name:req
 	.section .data
@@ -56,26 +58,30 @@
 	.section .text
 	.global \name\()_mbinit
 \name\()_mbinit:
-	addi        sp, sp, -56
-	sd          ra, 48(sp)
+	addi        sp, sp, -80
+	sd          ra, 64(sp)
 	sd          a0, 0(sp)
 	sd          a1, 8(sp)
 	sd          a2, 16(sp)
 	sd          a3, 24(sp)
 	sd          a4, 32(sp)
 	sd          a5, 40(sp)
+	sd          a6, 48(sp)
+	sd          a7, 56(sp)
 	call        \name\()_dispatcher
 	mv          t2, a0
 	la          t0, \name\()_dispatcher_info
 	sd          a0, 0(t0)
-	ld          ra, 48(sp)
+	ld          ra, 64(sp)
 	ld          a0, 0(sp)
 	ld          a1, 8(sp)
 	ld          a2, 16(sp)
 	ld          a3, 24(sp)
 	ld          a4, 32(sp)
 	ld          a5, 40(sp)
-	addi        sp, sp, 56
+	ld          a6, 48(sp)
+	ld          a7, 56(sp)
+	addi        sp, sp, 80
 	jr          t2
 .global \name\()
 .type \name,%function
