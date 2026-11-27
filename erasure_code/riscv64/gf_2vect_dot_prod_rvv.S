@@ -131,6 +131,10 @@ gf_2vect_dot_prod_rvv:
     /* calc for next */
     addi x_vec_i, x_vec_i, 8   /* move x_vec_i to next */
     add a6, x_src, x_vec_i
+    /* do not read past the source pointer array on the last iteration */
+    blt x_vec_i, x_vec, 1f
+    addi a6, a6, -8
+1:
     ld x_ptr, 0(a6)
 
     /* dest 1 */
