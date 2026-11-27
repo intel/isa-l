@@ -432,6 +432,11 @@ sym_count_loop:
 	cmp	next_lits,256
 	sub	write_overflow_len,write_overflow_len,1
 	beq	isal_out_overflow_1
+	/*
+		The match starts after the literals held in write_overflow_lits,
+		so its distance also counts them
+	*/
+	sub	start_out,start_out,write_overflow_len,uxtw
 	b	sym_count_loop
 
 sym_count_adjust:
