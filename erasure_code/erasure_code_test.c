@@ -31,6 +31,13 @@
 #include <stdlib.h>
 #include <string.h> // for memset, memcmp
 #include <assert.h>
+#include <stdint.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
 #include "erasure_code.h"
 #include "test.h"
 
@@ -216,6 +223,145 @@ gf_gen_decode_matrix(unsigned char *encode_matrix, unsigned char *decode_matrix,
         free(b);
         free(backup);
         return 0;
+}
+
+#define GUARD_TEST_K_MAX 32
+#define GUARD_TEST_ROWS  10
+
+/* Regression test for reads past the end of g_tbls. The table is exactly the
+ * documented size (32 * k * rows bytes) and is placed so that it ends at a page
+ * boundary followed by an inaccessible guard page. Any read past the end of the
+ * table faults. Parity is also checked against ec_encode_data_base(), using
+ * tables from ec_init_tables_base() since ec_init_tables() may produce a
+ * different (GFNI) format. The test uses its own buffers, so it does not depend
+ * on TEST_SOURCES.
+ */
+static int
+test_tbls_guard_page(int len)
+{
+        static const int k_list[] = { 1, 2, 3, 4, 5, 6, 7, 8, 10, 16, GUARD_TEST_K_MAX };
+        const int k_max = GUARD_TEST_K_MAX;
+        int i, j, k, rows, ret = 0;
+        unsigned char encode_matrix[(GUARD_TEST_K_MAX + GUARD_TEST_ROWS) * GUARD_TEST_K_MAX];
+        unsigned char *buffs[GUARD_TEST_K_MAX + GUARD_TEST_ROWS] = { NULL };
+        unsigned char *ref[GUARD_TEST_ROWS] = { NULL };
+        unsigned char *ref_tbls = NULL;
+
+#ifdef _WIN32
+        SYSTEM_INFO si;
+
+        GetSystemInfo(&si);
+        const size_t page_size = (size_t) si.dwPageSize;
+#else
+        const long ps = sysconf(_SC_PAGESIZE);
+
+        if (ps < 0)
+                return -1;
+        const size_t page_size = (size_t) ps;
+#endif
+        const size_t max_tbl = (size_t) 32 * k_max * GUARD_TEST_ROWS;
+        const size_t tbl_area = (max_tbl + page_size - 1) / page_size * page_size;
+        const size_t map_size = tbl_area + page_size;
+        unsigned char *region;
+        void *buf;
+
+        for (i = 0; i < GUARD_TEST_K_MAX + GUARD_TEST_ROWS; i++) {
+                if (posix_memalign(&buf, 64, len)) {
+                        ret = -1;
+                        goto free_buffs;
+                }
+                buffs[i] = buf;
+        }
+        for (i = 0; i < GUARD_TEST_ROWS; i++) {
+                if (posix_memalign(&buf, 64, len)) {
+                        ret = -1;
+                        goto free_buffs;
+                }
+                ref[i] = buf;
+        }
+        ref_tbls = malloc(max_tbl);
+        if (ref_tbls == NULL) {
+                ret = -1;
+                goto free_buffs;
+        }
+
+#ifdef _WIN32
+        region = VirtualAlloc(NULL, map_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        if (region == NULL) {
+                ret = -1;
+                goto free_buffs;
+        }
+        DWORD old_protect;
+        if (!VirtualProtect(region + tbl_area, page_size, PAGE_NOACCESS, &old_protect)) {
+                ret = -1;
+                goto unmap;
+        }
+#else
+        region = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (region == MAP_FAILED) {
+                ret = -1;
+                goto free_buffs;
+        }
+        if (mprotect(region + tbl_area, page_size, PROT_NONE) != 0) {
+                ret = -1;
+                goto unmap;
+        }
+#endif
+
+        for (i = 0; i < (int) (sizeof(k_list) / sizeof(k_list[0])) && ret == 0; i++) {
+                k = k_list[i];
+                for (j = 0; j < k; j++)
+                        for (int n = 0; n < len; n++)
+                                buffs[j][n] = rand();
+
+                for (rows = 1; rows <= GUARD_TEST_ROWS; rows++) {
+                        const size_t tbl_len = (size_t) 32 * k * rows;
+                        unsigned char *g_tbls = region + tbl_area - tbl_len;
+
+                        gf_gen_cauchy1_matrix(encode_matrix, k + rows, k);
+                        ec_init_tables(k, rows, &encode_matrix[k * k], g_tbls);
+                        ec_init_tables_base(k, rows, &encode_matrix[k * k], ref_tbls);
+                        ec_encode_data_base(len, k, rows, ref_tbls, buffs, ref);
+                        ec_encode_data(len, k, rows, g_tbls, buffs, &buffs[k]);
+
+                        for (j = 0; j < rows; j++) {
+                                if (memcmp(buffs[k + j], ref[j], len)) {
+                                        printf("Fail table guard page encode (k=%d, rows=%d)\n", k,
+                                               rows);
+                                        ret = -1;
+                                        break;
+                                }
+                        }
+                        if (ret != 0)
+                                break;
+
+                        if (rows == 1) {
+                                /* Overwrite the output so a no-op cannot pass */
+                                for (int n = 0; n < len; n++)
+                                        buffs[k][n] = ref[0][n] ^ 0xff;
+                                gf_vect_dot_prod(len, k, g_tbls, buffs, buffs[k]);
+                                if (memcmp(buffs[k], ref[0], len)) {
+                                        printf("Fail table guard page dot_prod (k=%d)\n", k);
+                                        ret = -1;
+                                        break;
+                                }
+                        }
+                }
+        }
+
+unmap:
+#ifdef _WIN32
+        VirtualFree(region, 0, MEM_RELEASE);
+#else
+        munmap(region, map_size);
+#endif
+free_buffs:
+        for (i = 0; i < GUARD_TEST_K_MAX + GUARD_TEST_ROWS; i++)
+                aligned_free(buffs[i]);
+        for (i = 0; i < GUARD_TEST_ROWS; i++)
+                aligned_free(ref[i]);
+        free(ref_tbls);
+        return ret;
 }
 
 int
@@ -786,6 +932,11 @@ main(int argc, char *argv[])
                 putchar('.');
                 fflush(stdout);
 #endif
+        }
+
+        if (test_tbls_guard_page(TEST_LEN) != 0) {
+                re = -1;
+                goto exit;
         }
 
         printf("done EC tests: Pass\n");
