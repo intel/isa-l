@@ -53,9 +53,10 @@ crc32_iscsi_3crc_fold(unsigned char *, int, unsigned int);
 extern unsigned int
 crc32_iscsi_refl_pmull(unsigned char *, int, unsigned int);
 
-#ifndef __APPLE__
 extern unsigned int
 crc32_iscsi_x6(unsigned char *, int, unsigned int);
+
+#ifndef __APPLE__
 extern unsigned int
 crc32_iscsi_fusion_p8_c10_asm(unsigned char *, int, unsigned int);
 #endif
@@ -156,6 +157,8 @@ DEFINE_INTERFACE_DISPATCHER(crc32_iscsi)
                 return crc32_iscsi_refl_pmull;
         }
 #elif defined(__APPLE__)
+        if (sysctlEnabled(SYSCTL_CRC32_KEY) && sysctlEnabled(SYSCTL_PMULL_KEY))
+                return crc32_iscsi_x6;
         if (sysctlEnabled(SYSCTL_CRC32_KEY))
                 return crc32_iscsi_3crc_fold;
         if (sysctlEnabled(SYSCTL_PMULL_KEY))

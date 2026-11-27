@@ -27,8 +27,6 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************/
 
-#ifndef __APPLE__
-
 #include "../include/aarch64_label.h"
 
 .text
@@ -118,7 +116,7 @@
 
     crc0_data6  .req  x16
     crc0_data7  .req  x17
-    crc0_data8  .req  x18
+    crc0_data8  .req  x27
     crc0_data9  .req  x19
     crc0_data10 .req  x20
     crc0_data11 .req  x26
@@ -150,9 +148,11 @@
 
 */
 
-.global crc32_iscsi_x6
+.global cdecl(crc32_iscsi_x6)
+#ifndef __APPLE__
 .type   crc32_iscsi_x6, %function
-crc32_iscsi_x6:
+#endif
+cdecl(crc32_iscsi_x6):
 
     push_stack
     cmp      w1, #0
@@ -160,9 +160,14 @@ crc32_iscsi_x6:
 
 .align_finish:
     cmp LEN, 1024
-    bls 1f
+    blo 1f
+#ifndef __APPLE__
     adrp     const_adr, .Lconstants
     add      const_adr, const_adr, #:lo12:.Lconstants
+#else
+    adrp     const_adr, .Lconstants@PAGE
+    add      const_adr, const_adr, .Lconstants@PAGEOFF
+#endif
     ldp      dconst0, dconst1, [const_adr]
     ldp      dconst2, dconst3, [const_adr, 16]
     ldr      dconst4, [const_adr, 32]
@@ -403,7 +408,9 @@ crc32_iscsi_x6:
     crc32_u32   wCRC, wCRC, wdata
     b       .align_finish
 
+#ifndef __APPLE__
 .size  crc32_iscsi_x6, .-crc32_iscsi_x6
+#endif
 
 ASM_DEF_RODATA
 .align 4
@@ -413,5 +420,3 @@ ASM_DEF_RODATA
     .quad     0xdd7e3b0c
     .quad     0x8f158014
     .quad     0xdaece73e
-
-#endif
